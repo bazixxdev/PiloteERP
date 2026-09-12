@@ -68,7 +68,7 @@ export function RequestValidationDialog({ editionId, actions, kinds }: { edition
               </select>
             </div>
             <div className="grid gap-1">
-              <Label>Pièce jointe (chemin ou lien)</Label>
+              <Label>Pièce (chemin ou lien) <span className="text-xs text-muted-foreground">— ou déposez le fichier après envoi</span></Label>
               <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="\\cress\Partage\…\devis.pdf" />
             </div>
           </div>

@@ -9,11 +9,14 @@ import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { AddDeliverableForm, AddFundingLineForm } from "./add-forms";
 import { DeliverableDone } from "./deliverable-done";
+import { AttachmentList } from "@/components/attachments/attachment-list";
+import { UploadForm } from "@/components/attachments/upload-form";
 
 export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: TabCtx) {
   const rw = canEditFunding(me.role);
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
   const funderOpts = funders.map((f) => ({ value: f.id, label: f.name }));
+  const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const reminderDays = settings.reminderDaysBefore.split(",").map(Number);
   const totalRequested = e.fundingLines.reduce((s, f) => s + (f.amountRequested ?? 0), 0);
   const totalGranted = e.fundingLines.reduce((s, f) => s + (f.amountGranted ?? 0), 0);
@@ -56,6 +59,14 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
                     <Field label="Pluriannuel"><div className="py-1"><AutoField model="fundingLine" id={f.id} field="multiYear" type="bool" value={f.multiYear} readOnly={!rw} placeholder="oui" /></div></Field>
                   </div>
                   <div className="mt-2"><AutoField model="fundingLine" id={f.id} field="notes" type="textarea" rows={1} value={f.notes} readOnly={!rw} placeholder="Notes, justificatifs à conserver, lieu de stockage…" /></div>
+
+                  <div className="mt-3 rounded-lg bg-muted/50 p-2">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pièces (convention, notification, bilan remis)</span>
+                      {(rw || isPilot) && <UploadForm editionId={e.id} kinds={kinds} defaultKind="contract" fundingLineId={f.id} compact />}
+                    </div>
+                    <AttachmentList items={e.attachments.filter((a) => a.fundingLineId === f.id)} refs={refs} compact />
+                  </div>
 
                   <div className="mt-3 rounded-lg bg-muted/50 p-2">
                     <div className="mb-1 flex items-center justify-between">

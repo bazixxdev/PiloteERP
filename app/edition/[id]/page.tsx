@@ -42,7 +42,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
     actions: e.actions.length,
     financements: e.fundingLines.length,
     validations: e.validations.filter((v) => v.status === "pending").length,
-    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.comments.length,
+    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.comments.length + e.attachments.length,
   };
 
   return (

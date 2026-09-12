@@ -60,6 +60,7 @@ export const editionFullInclude = {
   comments: { include: { author: true }, orderBy: { createdAt: "asc" as const } },
   changes: { include: { author: true }, orderBy: { createdAt: "desc" as const }, take: 30 },
   indicators: { orderBy: { order: "asc" as const } },
+  attachments: { include: { uploadedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" as const } },
 };
 
 export type EditionFull = NonNullable<Awaited<ReturnType<typeof loadEdition>>>;

@@ -10,7 +10,8 @@ export type RefFamily =
   | "codir_decision"
   | "role"
   | "work_rhythm"
-  | "time_visibility";
+  | "time_visibility"
+  | "attachment_kind";
 
 export type RefDef = { code: string; label: string; color?: string };
 
@@ -66,6 +67,15 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "part_time", label: "Temps partiel (28 h)" },
     { code: "apprentice", label: "Alternance (21 h)" },
   ],
+  attachment_kind: [
+    { code: "quote", label: "Devis" },
+    { code: "contract", label: "Convention signée" },
+    { code: "notification", label: "Courrier de notification" },
+    { code: "receipt", label: "Justificatif de dépense" },
+    { code: "report_sent", label: "Bilan remis au financeur" },
+    { code: "minutes", label: "Compte rendu (COPIL, GT)" },
+    { code: "other", label: "Autre pièce" },
+  ],
   time_visibility: [
     { code: "self", label: "La personne seule" },
     { code: "self_pole_lead_raf", label: "La personne, son responsable de pôle, la RAF et la direction" },
@@ -84,6 +94,7 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   role: "Rôles",
   work_rhythm: "Rythmes de travail",
   time_visibility: "Visibilité du temps",
+  attachment_kind: "Natures de pièces jointes",
 };
 
 // Heures attendues par semaine selon le rythme (informatif seulement, EF-D4).

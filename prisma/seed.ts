@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
 import { dayjs } from "../lib/format";
 import { randomBytes } from "node:crypto";
+import { mkdirSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
+import path from "node:path";
 
 const prisma = new PrismaClient();
 
@@ -20,7 +22,37 @@ const between = (a: number, b: number) => a + Math.floor(rnd() * (b - a + 1));
 const today = dayjs("2026-09-12");
 const d = (offsetDays: number) => today.add(offsetDays, "day").toDate();
 
+// Petit PDF valide d'une page avec un titre : sert de pièce jointe fictive.
+function placeholderPdf(title: string): Buffer {
+  const text = title.replace(/[()\\]/g, "");
+  const objs = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${text.length + 60} >>\nstream\nBT /F1 18 Tf 60 760 Td (${text}) Tj ET\nBT /F1 11 Tf 60 730 Td (Document fictif - prototype Pilote) Tj ET\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((o, i) => { offsets.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => String(o).padStart(10, "0") + " 00000 n \n").join("");
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
+const UPLOADS = path.join(process.cwd(), "uploads");
+function storePdf(title: string): { storedName: string; size: number } {
+  mkdirSync(UPLOADS, { recursive: true });
+  const storedName = `${randomBytes(12).toString("hex")}.pdf`;
+  const buf = placeholderPdf(title);
+  writeFileSync(path.join(UPLOADS, storedName), buf);
+  return { storedName, size: buf.length };
+}
+
 async function reset() {
+  await prisma.attachment.deleteMany();
+  try { for (const f of readdirSync(UPLOADS)) if (f.endsWith(".pdf")) unlinkSync(path.join(UPLOADS, f)); } catch { /* dossier absent */ }
   await prisma.changeLog.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.docLink.deleteMany();
@@ -292,6 +324,14 @@ async function main() {
           },
         });
         fundingIds.push(line.id);
+        if (y.year === 2026 && ["contracted", "justified"].includes(status)) {
+          const pdf = storePdf(`Convention ${f.name} ${y.year} - ${pd.name}`);
+          await prisma.attachment.create({ data: { editionId: edition.id, fundingLineId: line.id, kind: "contract", label: `Convention ${f.name} ${y.year}`, fileName: `${pd.code}-${f.name}-convention-${y.year}.pdf`, mimeType: "application/pdf", uploadedById: raf.id, createdAt: dayjs(`${y.year}-03-${12 + fi}`).toDate(), ...pdf } });
+          if (fi === 0) {
+            const pdf2 = storePdf(`Notification ${f.name} ${y.year} - ${pd.name}`);
+            await prisma.attachment.create({ data: { editionId: edition.id, fundingLineId: line.id, kind: "notification", label: `Courrier de notification ${f.name}`, fileName: `${pd.code}-${f.name}-notification.pdf`, mimeType: "application/pdf", uploadedById: raf.id, createdAt: dayjs(`${y.year}-02-${12 + fi}`).toDate(), ...pdf2 } });
+          }
+        }
         if (!isFuture) {
           const nDeliv = between(1, 2);
           for (let di = 0; di < nDeliv; di++) {
@@ -370,7 +410,7 @@ async function main() {
   const ages = [1, 3, 6, 9, 14, 21];
   for (let i = 0; i < 6; i++) {
     const e = editions2026[i * 3];
-    await prisma.validationRequest.create({
+    const v = await prisma.validationRequest.create({
       data: {
         editionId: e.id,
         actionId: e.actionIds[0],
@@ -378,24 +418,28 @@ async function main() {
         label: labels[i],
         requesterId: e.pilotId,
         amount: amounts[i],
-        attachmentUrl: amounts[i] ? `\\\\cress\\Partage\\Budget et convention\\Devis\\2026-${100 + i}.pdf` : null,
+        attachmentUrl: null,
         requiredLevel: (() => { const a = amounts[i]; return a === null ? 1 : a > 3000 ? 3 : a > 500 ? 2 : 1; })(),
         status: "pending",
         targetDelayDays: 5,
         createdAt: d(-ages[i]),
       },
     });
+    if (amounts[i]) {
+      const pdf = storePdf(`${labels[i]} - ${amounts[i]} EUR`);
+      await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: labels[i], fileName: `devis-2026-${100 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: d(-ages[i]), ...pdf } });
+    }
   }
   for (let i = 0; i < 3; i++) {
     const e = editions2026[i * 3 + 1];
-    await prisma.validationRequest.create({
+    const v = await prisma.validationRequest.create({
       data: {
         editionId: e.id,
         kind: "quote",
         label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i],
         requesterId: e.pilotId,
         amount: [900, 1500, 600][i],
-        attachmentUrl: `\\\\cress\\Partage\\Budget et convention\\Devis\\2026-${200 + i}.pdf`,
+        attachmentUrl: null,
         requiredLevel: 2,
         status: "approved",
         deciderId: i === 0 ? director.id : leadB.id,
@@ -405,6 +449,8 @@ async function main() {
         createdAt: d(-between(31, 60)),
       },
     });
+    const pdf = storePdf(`${["Devis location de salle", "Devis graphiste", "Devis intervenant"][i]}`);
+    await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], fileName: `devis-2026-${200 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: v.createdAt, ...pdf } });
   }
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);

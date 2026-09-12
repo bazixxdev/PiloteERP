@@ -8,8 +8,13 @@ import { fmtDate } from "@/lib/format";
 import type { TabCtx } from "./types";
 import { AddCommentForm, AddDocLinkForm } from "./add-forms";
 import { EditionUrl } from "./edition-url";
+import { AttachmentList } from "@/components/attachments/attachment-list";
+import { UploadForm } from "@/components/attachments/upload-form";
+import { REF_DEFAULTS, refLabel } from "@/lib/refs";
+import { canEditFunding } from "@/lib/rights";
 
-export function DocumentsTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
+export function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
+  const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const codir = isCodir(me.role);
   const rw = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId);
   const visible = e.docLinks.filter((d) => !d.codirOnly || codir);
@@ -66,6 +71,12 @@ export function DocumentsTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
         </Section>
       </div>
 
+      <div className="grid content-start gap-4">
+      <Section title="Pièces qui font foi" description="Devis, conventions, notifications, justificatifs, bilans remis : petites pièces gardées avec l'édition (5 Mo au plus). Le dossier complet reste sur le serveur." testId="pieces">
+        <AttachmentList items={e.attachments} refs={refs} emptyText="Aucune pièce déposée sur cette édition." />
+        {(rw || canEditFunding(me.role)) && <div className="mt-3"><UploadForm editionId={e.id} kinds={kinds} defaultKind="other" /></div>}
+      </Section>
+
       <Section title="Discussion" description="Fil de l'édition, en lien ou à la place du canal Teams.">
         <ul className="mb-3 max-h-[420px] space-y-2 overflow-y-auto" data-testid="comments">
           {e.comments.length === 0 && <li className="text-sm text-muted-foreground">Aucun message.</li>}
@@ -78,6 +89,7 @@ export function DocumentsTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
         </ul>
         <AddCommentForm editionId={e.id} />
       </Section>
+      </div>
     </div>
   );
 }

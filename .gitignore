@@ -48,3 +48,7 @@ prisma/prototype.db-journal
 
 # la .env ne contient que le chemin SQLite
 !.env
+
+# pièces jointes déposées dans le prototype
+/uploads/*
+!/uploads/.gitkeep

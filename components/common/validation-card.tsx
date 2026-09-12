@@ -6,6 +6,8 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { isWebLink } from "@/lib/docs";
+import { AttachmentList, type AttachmentRow } from "@/components/attachments/attachment-list";
+import type { ReactNode } from "react";
 
 export type ValidationForCard = {
   id: string; kind: string; label: string; amount: number | null; attachmentUrl: string | null; requiredLevel: number; status: string;
@@ -16,7 +18,7 @@ export type ValidationForCard = {
 
 const LEVEL_LABEL = ["", "niveau 1 · pilote", "niveau 2 · responsable de pôle", "niveau 3 · direction"];
 
-export function ValidationCard({ v, refs, canDecide, showEdition, index }: { v: ValidationForCard; refs: RefMap; canDecide: boolean; showEdition?: boolean; index?: number }) {
+export function ValidationCard({ v, refs, canDecide, showEdition, index, attachments = [], upload }: { v: ValidationForCard; refs: RefMap; canDecide: boolean; showEdition?: boolean; index?: number; attachments?: AttachmentRow[]; upload?: ReactNode }) {
   const age = dayjs().diff(dayjs(v.createdAt), "day");
   const overdue = v.status === "pending" && age > v.targetDelayDays;
   return (
@@ -44,6 +46,12 @@ export function ValidationCard({ v, refs, canDecide, showEdition, index }: { v: 
           )}
         </div>
       </div>
+      {(attachments.length > 0 || upload) && (
+        <div className="mt-2 rounded-lg bg-muted/50 p-2">
+          <AttachmentList items={attachments} refs={refs} compact emptyText="Aucune pièce jointe pour l'instant." />
+          {upload && <div className="mt-1.5">{upload}</div>}
+        </div>
+      )}
       {v.status === "pending" ? (
         canDecide ? <div className="mt-2"><DecideButtons id={v.id} /></div> : <p className="mt-2 text-xs text-muted-foreground">En attente d'un valideur de {LEVEL_LABEL[v.requiredLevel]}.</p>
       ) : (
