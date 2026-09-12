@@ -22,11 +22,12 @@ const NAV = [
 export function Sidebar({ pendingCount, remindersCount }: { pendingCount: number; remindersCount: number }) {
   const pathname = usePathname();
   return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col bg-sidebar text-sidebar-foreground print:hidden">
-      <Link href="/portefeuille" className="m-3 flex items-center gap-2 rounded-xl bg-white p-2">
-        <Image src="/logo-cress.png" alt="CRESS Centre-Val de Loire" width={150} height={57} priority className="h-auto w-[150px]" />
+    <aside className="flex h-screen w-14 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] lg:w-56 print:hidden">
+      <Link href="/portefeuille" className="m-2 flex items-center justify-center gap-2 rounded-xl bg-white p-1.5 lg:m-3 lg:p-2">
+        <Image src="/logo-cress.png" alt="CRESS Centre-Val de Loire" width={150} height={57} priority className="hidden h-auto w-[150px] lg:block" />
+        <span className="text-lg font-black text-primary lg:hidden">c</span>
       </Link>
-      <div className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">Pilote · prototype</div>
+      <div className="hidden px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60 lg:block">Pilote · prototype</div>
       <nav className="flex flex-1 flex-col gap-0.5 px-2">
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition"));
@@ -35,20 +36,21 @@ export function Sidebar({ pendingCount, remindersCount }: { pendingCount: number
             <Link
               key={item.href}
               href={item.href}
+              title={item.label}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent",
+                "flex items-center justify-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent lg:justify-start lg:px-3",
                 active && "bg-sidebar-accent text-white shadow-sm",
               )}
             >
               <item.icon className="size-4 opacity-80" />
-              <span className="flex-1">{item.label}</span>
-              {badge > 0 && <span className="rounded-full bg-coral px-1.5 text-[11px] font-semibold text-white">{badge}</span>}
+              <span className="hidden flex-1 lg:inline">{item.label}</span>
+              {badge > 0 && <span className="hidden rounded-full bg-coral px-1.5 text-[11px] font-semibold text-white lg:inline">{badge}</span>}
             </Link>
           );
         })}
       </nav>
-      <div className="p-4 text-[11px] leading-snug text-sidebar-foreground/60">
-        Données fictives. Interface en français, sauvegarde automatique.
+      <div className="hidden p-4 text-[11px] leading-snug text-sidebar-foreground/60 lg:block">
+        Données fictives. Sauvegarde automatique. Appuyez sur <kbd className="rounded border border-sidebar-border px-1">?</kbd> pour les raccourcis.
       </div>
     </aside>
   );

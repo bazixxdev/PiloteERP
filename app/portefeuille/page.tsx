@@ -77,15 +77,15 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <EmptyState title={codir ? "Rien à signaler" : "Aucune édition ne correspond"} hint={codir ? "Aucune alerte ni validation en attente : la revue CODIR peut être courte." : "Élargissez les filtres ou créez une édition depuis l'admin."} />
       ) : (
         <div className="overflow-x-auto rounded-2xl border bg-card">
-          <table className="w-full text-sm" data-testid="portfolio-table">
+          <table className="w-full table-fixed text-sm" style={{ minWidth: 1100 }} data-testid="portfolio-table">
+            <colgroup>{["19%", "10%", "8%", "13%", "13%", "9%", "9%", "4%", "15%"].map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
             <thead className="bg-muted/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5">Projet</th>
-                <th className="px-3 py-2.5">Pôle</th>
                 <th className="px-3 py-2.5">Pilote</th>
                 <th className="px-3 py-2.5">Statut</th>
-                <th className="px-3 py-2.5">Prochain jalon</th>
-                <th className="px-3 py-2.5">Livrable financeur</th>
+                <th className="px-3 py-2.5 whitespace-nowrap">Prochain jalon</th>
+                <th className="px-3 py-2.5 whitespace-nowrap">Livrable financeur</th>
                 <th className="px-3 py-2.5">Enveloppe</th>
                 <th className="px-3 py-2.5">Temps</th>
                 <th className="px-3 py-2.5 text-center">Valid.</th>
@@ -102,29 +102,28 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                   <tr key={r.id} className={cn("hover:bg-muted/40", r.hasDanger && "bg-danger-soft/30")}>
                     <td className="px-4 py-2.5">
                       <Link href={`/edition/${r.id}`} className="font-medium text-primary hover:underline">{r.project.name}</Link>
-                      <div className="text-xs text-muted-foreground">{r.year} · {r.project.analyticCode}</div>
+                      <div className="text-xs text-muted-foreground">{r.year} · {r.project.analyticCode} · {r.project.pole.name}</div>
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{r.project.pole.name}</td>
-                    <td className="px-3 py-2.5">{r.project.pilot.name}</td>
+                    <td className="truncate px-3 py-2.5 text-xs" title={r.project.pilot.name}>{r.project.pilot.name}</td>
                     <td className="px-3 py-2.5"><StatusBadge label={refLabel(refs, "edition_status", r.status)} color={refColor(refs, "edition_status", r.status)} /></td>
                     <td className="px-3 py-2.5">
                       {ms ? (
                         <div className={cn(msDays !== null && msDays < 0 && "text-danger")}>
-                          <div className="max-w-[180px] truncate">{ms.name}</div>
-                          <div className="text-xs text-muted-foreground">{fmtDate(ms.date)}{msDays !== null && msDays < 0 ? ` · ${-msDays} j de retard` : ""}</div>
+                          <div className="truncate" title={ms.name}>{ms.name}</div>
+                          <div className="truncate text-xs text-muted-foreground">{fmtDate(ms.date)}{msDays !== null && msDays < 0 ? ` · ${-msDays} j de retard` : ""}</div>
                         </div>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="px-3 py-2.5">
                       {dl ? (
                         <div className={cn(dlDays !== null && dlDays <= settings.deliverableAlertDays && "text-[#8a5a00]", dlDays !== null && dlDays < 0 && "text-danger")}>
-                          <div className="max-w-[180px] truncate">{dl.label}</div>
-                          <div className="text-xs text-muted-foreground">{dl.funder} · {fmtDate(dl.dueDate)}</div>
+                          <div className="truncate" title={dl.label}>{dl.label}</div>
+                          <div className="truncate text-xs text-muted-foreground">{dl.funder} · {fmtDate(dl.dueDate)}</div>
                         </div>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-3 py-2.5"><Gauge value={r.used} max={r.budgetEnvelope} alertPercent={settings.envelopeAlertPercent} compact /></td>
-                    <td className="px-3 py-2.5 tabular">
+                    <td className="px-2 py-2.5"><Gauge value={r.used} max={r.budgetEnvelope} alertPercent={settings.envelopeAlertPercent} compact /></td>
+                    <td className="px-3 py-2.5 text-xs tabular whitespace-nowrap">
                       <span className={cn(r.timeTarget && r.timeConsumed > r.timeTarget && "text-danger font-medium")}>{fmtNumber(r.timeConsumed, 0)} h</span>
                       <span className="text-muted-foreground"> / {r.timeTarget ? `${fmtNumber(r.timeTarget, 0)} h` : "—"}</span>
                     </td>

@@ -3,6 +3,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { Toaster } from "@/components/ui/sonner";
+import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/session";
 import { computeReminders } from "@/lib/alerts";
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </div>
         </div>
         <Toaster position="bottom-right" richColors />
+        <Shortcuts />
       </body>
     </html>
   );

@@ -17,7 +17,7 @@ export function AlertChips({ alerts, max = 3, size = "sm" }: { alerts: Alert[]; 
             key={i}
             title={a.label}
             className={cn(
-              "inline-flex max-w-[260px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-medium ring-1 ring-inset",
+              "inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-0.5 font-medium ring-1 ring-inset",
               size === "sm" ? "text-[11px]" : "text-sm",
               a.level === "danger" ? "bg-danger-soft text-danger ring-danger/30" : "bg-warning-soft text-[#8a5a00] ring-warning/40",
             )}

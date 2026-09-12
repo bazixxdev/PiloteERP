@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, MessageSquare, History } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,14 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   const [pending, start] = useTransition();
   const router = useRouter();
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Une sauvegarde en cours ne doit pas être perdue en quittant la page.
+  useEffect(() => {
+    if (!pending) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [pending]);
   const locked = (date: string) => p.lockedMonths.includes(date.slice(0, 7));
   const isFuture = (date: string) => dayjs(date).isAfter(dayjs(), "day");
 

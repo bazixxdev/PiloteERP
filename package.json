@@ -10,7 +10,8 @@
     "seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "test": "playwright test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "screenshots": "tsx scripts/screenshots.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

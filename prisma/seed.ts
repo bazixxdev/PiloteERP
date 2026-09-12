@@ -341,7 +341,8 @@ async function main() {
           await prisma.timeEntry.create({ data: { personId: p.id, timeCodeId: fonct.id, date: date.toDate(), hours: fonctHours, locked: date.month() === 6 } });
           left -= fonctHours;
         }
-        const chosen = myEditions.slice(0, between(1, Math.min(3, myEditions.length)));
+        const startIdx = myEditions.length ? between(0, myEditions.length - 1) : 0;
+        const chosen = [...myEditions.slice(startIdx), ...myEditions.slice(0, startIdx)].slice(0, between(1, Math.min(3, myEditions.length)));
         for (let ci = 0; ci < chosen.length; ci++) {
           const e = chosen[ci];
           const hours = ci === chosen.length - 1 ? Math.round(left * 2) / 2 : Math.min(left, between(1, 4));

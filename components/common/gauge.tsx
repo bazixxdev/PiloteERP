@@ -6,8 +6,8 @@ export function Gauge({ value, max, alertPercent = 80, label, className, compact
   const p = Math.round((value / max) * 100);
   const color = p >= 100 ? "bg-danger" : p >= alertPercent ? "bg-warning" : "bg-mint";
   return (
-    <div className={cn("flex items-center gap-2", className)} title={label}>
-      <div className={cn("h-2 overflow-hidden rounded-full bg-muted", compact ? "w-16" : "w-28")}>
+    <div className={cn("flex items-center gap-2 whitespace-nowrap", className)} title={label}>
+      <div className={cn("h-2 overflow-hidden rounded-full bg-muted", compact ? "w-12" : "w-28")}>
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${Math.min(100, p)}%` }} />
       </div>
       <span className="tabular text-xs text-muted-foreground">{p} %</span>
