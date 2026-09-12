@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, MessageSquare, History } from "lucide-react";
+import { Lock, MessageSquare, History, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { saveTime, copyPreviousWeek } from "@/app/actions/time";
+import { saveTime, copyPreviousWeek, declareWeek } from "@/app/actions/time";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ type Entry = { date: string; projectId: string | null; actionId: string | null; 
 
 const rowKey = (r: { projectId: string | null; actionId: string | null; timeCodeId: string | null }) => `${r.projectId ?? ""}|${r.actionId ?? ""}|${r.timeCodeId ?? ""}`;
 
-export function TimeGrid(p: { personId: string; weekStart: string; days: string[]; rows: GridRow[]; entries: Entry[]; lockedMonths: string[]; expectedWeek: number; readOnly: boolean; canCopyPrevious: boolean }) {
+export function TimeGrid(p: { personId: string; weekStart: string; days: string[]; rows: GridRow[]; entries: Entry[]; lockedMonths: string[]; expectedByDay: (number | null)[]; weekKey: string; declaredAt: string | null; readOnly: boolean; canCopyPrevious: boolean }) {
   const [cells, setCells] = useState<Record<string, { hours: number; comment: string | null }>>(() => {
     const m: Record<string, { hours: number; comment: string | null }> = {};
     for (const e of p.entries) m[`${rowKey(e)}@${e.date}`] = { hours: e.hours, comment: e.comment };
@@ -37,7 +37,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
 
   const dayTotals = useMemo(() => p.days.map((d) => p.rows.reduce((s, r) => s + (cells[`${rowKey(r)}@${d}`]?.hours ?? 0), 0)), [cells, p.days, p.rows]);
   const weekTotal = dayTotals.reduce((s, x) => s + x, 0);
-  const expectedDay = p.expectedWeek / 5;
+  const expectedWeek = p.expectedByDay.some((x) => x !== null) ? p.expectedByDay.reduce<number>((s, x) => s + (x ?? 0), 0) : null;
 
   const save = (r: GridRow, date: string, hours: number, comment?: string | null) => {
     const k = `${rowKey(r)}@${date}`;
@@ -67,13 +67,14 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
         <thead>
           <tr className="bg-muted/60 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <th className="w-[320px] px-4 py-2 text-left">Projet / action / code</th>
-            {p.days.map((d) => {
+            {p.days.map((d, i) => {
               const dj = dayjs(d);
               const today = dj.isSame(dayjs(), "day");
               return (
                 <th key={d} className={cn("w-24 px-2 py-2 text-center", today && "text-primary")}>
                   <div>{dj.format("ddd")}</div>
                   <div className={cn("text-[11px] font-normal normal-case", today && "font-semibold")}>{dj.format("D MMM")}{locked(d) && <Lock className="ml-1 inline size-3" />}</div>
+                  <div className="text-[10px] font-normal normal-case text-muted-foreground/80" title="Heures attendues selon votre rythme (informatif)">{p.expectedByDay[i] === null ? "—" : p.expectedByDay[i] === 0 ? "non travaillé" : `${fmtNumber(p.expectedByDay[i]!, 2)} h`}</div>
                 </th>
               );
             })}
@@ -100,7 +101,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
                           ref={(el) => { inputs.current[`${ri}:${di}`] = el; }}
                           data-testid={`cell-${ri}-${di}`}
                           type="number"
-                          step="0.5"
+                          step="0.25"
                           min="0"
                           max="24"
                           inputMode="decimal"
@@ -165,15 +166,30 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
                 )}
               </div>
             </td>
-            {dayTotals.map((t, i) => (
-              <td key={i} className={cn("px-2 py-2 text-center tabular", t > expectedDay + 1 && "text-warning", t > 0 && t < expectedDay - 1 && "text-muted-foreground")}>{t ? `${fmtNumber(t, 1)} h` : "—"}</td>
-            ))}
+            {dayTotals.map((t, i) => {
+              const exp = p.expectedByDay[i];
+              return <td key={i} className={cn("px-2 py-2 text-center tabular", exp !== null && t > exp + 0.5 && "text-warning", exp !== null && t > 0 && t < exp - 0.5 && "text-muted-foreground")}>{t ? `${fmtNumber(t, 2)} h` : "—"}</td>;
+            })}
             <td className="px-2 py-2 text-right tabular" data-testid="week-total">
-              {fmtNumber(weekTotal, 1)} h <span className="font-normal text-muted-foreground">/ {p.expectedWeek} h</span>
+              {fmtNumber(weekTotal, 2)} h <span className="font-normal text-muted-foreground">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h` : "· référence non configurée"}</span>
             </td>
           </tr>
         </tfoot>
       </table>
+      {!p.readOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-4 py-2 text-sm" data-testid="week-declaration">
+          {p.declaredAt ? (
+            <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Semaine déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
+          ) : (
+            <span className="text-muted-foreground">Quand tout est saisi, déclarez la semaine complète : la RAF le voit dans la clôture.</span>
+          )}
+          {!p.declaredAt && (
+            <Button size="sm" variant="outline" disabled={pending || weekTotal === 0} data-testid="declare-week" onClick={() => start(async () => { const r = await declareWeek(p.weekKey); if (!r.ok) toast.error(r.error); else { toast.success("Semaine déclarée complète"); router.refresh(); } })}>
+              <CheckCircle2 />Cette semaine est complète
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

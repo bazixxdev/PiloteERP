@@ -21,7 +21,7 @@ async function counters() {
     prisma.validationRequest.count({ where: { status: "pending" } }),
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
-      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true },
+      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true },
     }),
     prisma.person.findFirst({ where: { role: "raf" } }),
   ]);

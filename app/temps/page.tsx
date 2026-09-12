@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { canSeeTimeOf } from "@/lib/rights";
 import { dayjs, fmtNumber, monthKey } from "@/lib/format";
-import { expectedWeekHours, parseWeek, weekDays, weekKey } from "@/lib/time";
+import { expectedHoursOn, loadRhythms, parseWeek, rhythmAt, weekDays, weekKey } from "@/lib/time";
 import { TimeGrid, type GridRow } from "./grid";
 import { PersonSelect } from "./person-select";
 
@@ -24,6 +24,13 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const end = start.add(1, "week");
   const year = start.year();
 
+  const [rhythms, personFull, declaration] = await Promise.all([
+    loadRhythms(),
+    prisma.person.findUnique({ where: { id: person.id }, include: { rhythmPeriods: { include: { rhythm: true } } } }),
+    prisma.weekDeclaration.findUnique({ where: { personId_week: { personId: person.id, week: weekKey(start) } } }),
+  ]);
+  const expectedByDay = days.map((d) => { const r = personFull ? rhythmAt(personFull, d, rhythms) : null; return r ? expectedHoursOn(r, d) : null; });
+  const rhythmLabel = personFull ? rhythmAt(personFull, start, rhythms)?.label ?? "Référence hebdomadaire non configurée" : "";
   const [editions, entries, locks, personCodes, prevWeekCount] = await Promise.all([
     prisma.edition.findMany({
       where: { year, status: { in: ["in_progress", "validated"] }, team: { some: { personId: person.id } } },
@@ -58,7 +65,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
 
   const lockedMonths = new Set(locks.map((l) => l.month));
   const weekLocked = days.every((d) => lockedMonths.has(monthKey(d.toDate())));
-  const expected = expectedWeekHours(person.workRhythm);
+  const expected = expectedByDay.some((x) => x !== null) ? expectedByDay.reduce<number>((s, x) => s + (x ?? 0), 0) : null;
   const total = entries.reduce((s, t) => s + t.hours, 0);
   const prevKey = weekKey(start.subtract(1, "week"));
   const nextKey = weekKey(start.add(1, "week"));
@@ -91,7 +98,9 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
         rows={rows}
         entries={entries.map((t) => ({ date: dayjs(t.date).format("YYYY-MM-DD"), projectId: t.projectId, actionId: t.actionId, timeCodeId: t.timeCodeId, hours: t.hours, comment: t.comment }))}
         lockedMonths={[...lockedMonths]}
-        expectedWeek={expected}
+        expectedByDay={expectedByDay}
+        weekKey={weekKey(start)}
+        declaredAt={declaration ? dayjs(declaration.declaredAt).format("D MMM à HH:mm") : null}
         readOnly={readOnly}
         canCopyPrevious={!readOnly && prevWeekCount > 0 && entries.length === 0 && !weekLocked}
       />
@@ -102,8 +111,9 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
         </Section>
         <Section title="Repères">
           <ul className="space-y-1 text-sm text-muted-foreground">
-            <li>Total de la semaine : <strong className="text-foreground tabular">{fmtNumber(total, 1)} h</strong> pour un rythme attendu de {expected} h. Informatif seulement : aucun solde, aucune récupération.</li>
-            <li>Tab et flèches pour circuler ; Entrée valide la cellule. Sauvegarde automatique.</li>
+            <li>Total de la semaine : <strong className="text-foreground tabular">{fmtNumber(total, 1)} h</strong>{expected !== null ? ` pour ${fmtNumber(expected, 2)} h attendues` : " · référence hebdomadaire non configurée"} · rythme : {rhythmLabel} (semaine {start.isoWeek() % 2 === 0 ? "paire" : "impaire"}). Informatif seulement : aucun solde, aucune récupération.</li>
+            <li>Une fois la semaine saisie, déclarez-la complète : la RAF le voit dans la clôture. Une correction ultérieure annule la déclaration.</li>
+            <li>Tab et flèches pour circuler ; Entrée valide la cellule ; heures avec décimales (7,5 · 8,25 · 6,5). Sauvegarde automatique.</li>
             <li>Une fois le mois verrouillé par la RAF, les saisies passent en lecture seule.</li>
           </ul>
         </Section>

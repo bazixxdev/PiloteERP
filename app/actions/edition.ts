@@ -5,12 +5,13 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
 import { canDecideValidation, canEditActions, canEditFunding, canWriteLayer, requiredLevelFor } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
+import { budgetOf } from "@/lib/budget";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function ctx(editionId: string) {
   const me = await getCurrentPerson();
-  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true } });
+  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true, expenses: true } });
   if (!e) throw new Error("Édition introuvable");
   return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: e.project.poleId === me.poleId };
 }
@@ -85,7 +86,7 @@ export async function setTeam(editionId: string, personIds: string[]): Promise<R
 export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number }): Promise<Result<{ id: string; requiredLevel: number }>> {
   const c = await ctx(input.editionId);
   const settings = await getSettings();
-  const remaining = c.e.budgetEnvelope == null ? null : c.e.budgetEnvelope - c.e.committed - c.e.spent;
+  const remaining = budgetOf(c.e).available;
   const computed = requiredLevelFor(input.amount, settings, remaining);
   const level = input.requiredLevel ?? computed;
   const v = await prisma.validationRequest.create({
@@ -107,8 +108,8 @@ export async function requestValidation(input: { editionId: string; actionId?: s
 
 export async function computeRequiredLevel(editionId: string, amount: number | null): Promise<number> {
   const settings = await getSettings();
-  const e = await prisma.edition.findUnique({ where: { id: editionId } });
-  const remaining = !e || e.budgetEnvelope == null ? null : e.budgetEnvelope - e.committed - e.spent;
+  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { expenses: true } });
+  const remaining = e ? budgetOf(e).available : null;
   return requiredLevelFor(amount, settings, remaining);
 }
 
@@ -119,10 +120,13 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   if (!v) return { ok: false, error: "Demande introuvable" };
   if (v.status !== "pending") return { ok: false, error: "Cette demande est déjà traitée." };
   if (!canDecideValidation(me, v)) return { ok: false, error: `Cette demande requiert le niveau ${v.requiredLevel} sur ce projet : vous ne pouvez pas la décider.` };
-  await prisma.validationRequest.update({ where: { id }, data: { status: decision, deciderId: me.id, decidedAt: new Date(), decisionComment: comment.trim() || null } });
+  // Une seule décision, même en cas de double clic : la mise à jour ne passe que si la demande est encore en attente.
+  const changed = await prisma.validationRequest.updateMany({ where: { id, status: "pending" }, data: { status: decision, deciderId: me.id, decidedAt: new Date(), decisionComment: comment.trim() || null } });
+  if (changed.count === 0) return { ok: false, error: "Cette demande vient d'être traitée par quelqu'un d'autre." };
   if (decision === "approved" && (v.kind === "quote" || v.kind === "expense") && v.amount) {
-    await prisma.edition.update({ where: { id: v.editionId }, data: { committed: { increment: v.amount } } });
-    await prisma.changeLog.create({ data: { editionId: v.editionId, field: "committed", before: null, after: `+${v.amount} (${v.label})`, authorId: me.id } });
+    // Le devis approuvé crée l'engagement une seule fois (validationId unique) ; le réalisé viendra s'y rattacher.
+    await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, committed: v.amount, validationId: v.id }, update: {} });
+    await prisma.changeLog.create({ data: { editionId: v.editionId, field: "engagement", before: null, after: `+${v.amount} € (${v.label})`, authorId: me.id } });
   }
   revalidatePath("/", "layout");
   return { ok: true };
@@ -148,7 +152,7 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
       operationalObjectives: src.operationalObjectives, calendar: src.calendar, partners: src.partners, method: src.method, governance: src.governance,
       ownIndicators: src.ownIndicators, timeNeed: src.timeNeed, budgetNeed: src.budgetNeed,
       team: { create: src.team.map((t) => ({ personId: t.personId })) },
-      personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays })) },
+      personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays, plannedDays: p.plannedDays })) },
       indicators: { create: src.indicators.map((i) => ({ label: i.label, target: i.target, imposed: i.imposed, order: i.order })) },
       docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
       actions: {
@@ -197,4 +201,15 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
   }
   revalidatePath("/", "layout");
   return { ok: true, data: { created, stopped, skipped } };
+}
+
+
+// Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé.
+export async function addExpense(editionId: string, label: string, spent: number, reference: string): Promise<Result> {
+  const c = await ctx(editionId);
+  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre une dépense." };
+  if (!reference.trim()) return { ok: false, error: "Une référence (facture, ligne du suivi) est requise." };
+  await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed" } });
+  revalidatePath(path(editionId));
+  return { ok: true };
 }

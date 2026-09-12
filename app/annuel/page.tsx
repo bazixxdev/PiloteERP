@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { AnnuelFilters } from "./filters";
 
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
-const STATE_DOT: Record<string, string> = { done: "bg-mint", doing: "bg-primary", late: "bg-danger", todo: "bg-muted-foreground/40" };
+const STATE_DOT: Record<string, string> = { done: "bg-mint", doing: "bg-primary", todo: "bg-muted-foreground/40" };
 
 // Vue annuelle par personne (EF-G3, EF-B3) et vue par pôle (EF-G6).
 export default async function AnnuelPage({ searchParams }: { searchParams: Promise<{ annee?: string; pole?: string }> }) {
@@ -58,13 +58,13 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
             <tr>
               <th className="sticky left-0 z-10 bg-muted/60 px-3 py-2">Personne</th>
               {MONTHS.map((m, i) => <th key={m} className={cn("px-1.5 py-2 text-center", dayjs().year() === year && dayjs().month() === i && "text-primary")}>{m}</th>)}
-              <th className="px-3 py-2 text-right">Jours vendus / dispo.</th>
+              <th className="px-3 py-2 text-right">Jours prévus / dispo.</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {people.map((p) => {
               const myEditions = p.teams.map((t) => t.edition).filter((e) => e.year === year);
-              const sold = p.personDays.filter((d) => d.edition.year === year && d.edition.status !== "closed").reduce((s, d) => s + d.soldDays, 0);
+              const sold = p.personDays.filter((d) => d.edition.year === year && d.edition.status !== "closed").reduce((s, d) => s + d.plannedDays, 0);
               const over = sold > p.availableDays;
               const actions = p.actions.filter((a) => a.milestoneDate && dayjs(a.milestoneDate).year() === year);
               return (
@@ -84,7 +84,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                         <div className="flex min-w-0 flex-col gap-0.5">
                           {cell.slice(0, 3).map((a) => (
                             <Link key={a.id} href={`/edition/${a.editionId}?onglet=actions`} className="flex min-w-0 items-center gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
-                              <span className={cn("size-1.5 shrink-0 rounded-full", STATE_DOT[a.state])} />
+                              <span className={cn("size-1.5 shrink-0 rounded-full", a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[a.state])} />
                               <span className="truncate">{a.name}</span>
                             </Link>
                           ))}
@@ -103,7 +103,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Chaque pastille est un jalon d'action dont la personne est responsable ; les jours vendus sont saisis par la RAF et les responsables de pôle sur chaque édition (onglet Fiche du séminaire).</p>
+      <p className="mt-3 text-xs text-muted-foreground">Chaque pastille est un jalon d'action dont la personne est responsable ; les jours prévus (charge) se règlent sur chaque édition, onglet Temps, ou au séminaire.</p>
     </div>
   );
 }

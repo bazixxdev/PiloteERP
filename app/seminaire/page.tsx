@@ -30,8 +30,8 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
     include: { pole: true, personDays: { where: { edition: { year: target } }, include: { edition: { include: { project: true } } } } },
     orderBy: [{ pole: { name: "asc" } }, { order: "asc" }],
   });
-  const load = people.map((p) => ({ p, sold: p.personDays.reduce((s, d) => s + d.soldDays, 0) })).filter((x) => x.sold > 0 || x.p.role !== "assistant");
-  const over = load.filter((x) => x.sold > x.p.availableDays);
+  const load = people.map((p) => ({ p, planned: p.personDays.reduce((s, d) => s + d.plannedDays, 0), sold: p.personDays.reduce((s, d) => s + d.soldDays, 0) })).filter((x) => x.planned > 0 || x.sold > 0 || x.p.role !== "assistant");
+  const over = load.filter((x) => x.planned > x.p.availableDays);
   const canDays = ["raf", "director", "pole_lead"].includes(me.role);
 
   return (
@@ -51,21 +51,22 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
         />
       </Section>
 
-      <Section title="2 · Contrôle de charge" description={`Jours vendus dans les conventions ${target}, toutes éditions confondues, contre les jours disponibles. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."}`} testId="load-control">
+      <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes éditions) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."}`} testId="load-control">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <table className="w-full text-sm" data-testid="load-table">
             <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <tr><th className="py-1.5">Personne</th><th className="py-1.5 text-right">Vendus</th><th className="py-1.5 text-right">Dispo.</th><th className="py-1.5 pl-3">Charge</th></tr>
+              <tr><th className="py-1.5">Personne</th><th className="py-1.5 text-right">Prévus</th><th className="py-1.5 text-right" title="Référence financeur">Conv.</th><th className="py-1.5 text-right">Dispo.</th><th className="py-1.5 pl-3">Charge</th></tr>
             </thead>
             <tbody className="divide-y">
-              {load.map(({ p, sold }) => {
-                const pct = p.availableDays ? Math.round((sold / p.availableDays) * 100) : 0;
-                const isOver = sold > p.availableDays;
+              {load.map(({ p, planned, sold }) => {
+                const pct = p.availableDays ? Math.round((planned / p.availableDays) * 100) : 0;
+                const isOver = planned > p.availableDays;
                 return (
                   <tr key={p.id} className={cn(isOver && "bg-danger-soft/40")} data-testid={`load-row-${p.id}`}>
                     <td className="py-1.5"><div className="font-medium">{p.name}</div><div className="text-xs text-muted-foreground">{p.pole?.name ?? "transversal"}</div></td>
-                    <td className={cn("py-1.5 text-right tabular", isOver && "font-semibold text-danger")}>{fmtNumber(sold, 0)} j</td>
-                    <td className="py-1.5 text-right tabular text-muted-foreground">{p.availableDays} j</td>
+                    <td className={cn("py-1.5 text-right tabular", isOver && "font-semibold text-danger")}>{fmtNumber(planned, 0)} j</td>
+                    <td className="py-1.5 text-right tabular text-muted-foreground">{fmtNumber(sold, 0)} j</td>
+                    <td className="py-1.5 text-right tabular text-muted-foreground">{p.availableDays ? `${p.availableDays} j` : "non renseigné"}</td>
                     <td className="py-1.5 pl-3">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-20 overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", isOver ? "bg-danger" : pct >= 90 ? "bg-warning" : "bg-mint")} style={{ width: `${Math.min(100, pct)}%` }} /></div>
@@ -79,7 +80,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
           </table>
 
           <div>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Détail par édition {canDays ? "(modifiable)" : "(saisi par la RAF et les responsables de pôle)"}</div>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Détail par édition · prévus / conventionnés {canDays ? "(modifiable)" : "(saisi par la RAF et les responsables de pôle)"}</div>
             <div className="max-h-[520px] overflow-y-auto rounded-xl border">
               <table className="w-full text-sm">
                 <tbody className="divide-y">
@@ -88,7 +89,8 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
                       <tr key={d.id} className="hover:bg-muted/30">
                         <td className="px-3 py-1 text-muted-foreground">{p.name}</td>
                         <td className="px-3 py-1"><Link href={`/edition/${d.editionId}`} className="hover:underline">{d.edition.project.name}</Link> <StatusBadge label={refLabel(refs, "edition_status", d.edition.status)} color={refColor(refs, "edition_status", d.edition.status)} className="ml-1" /></td>
-                        <td className="w-28 px-3 py-1"><AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} readOnly={!canDays} suffix="j" refreshOnSave /></td>
+                        <td className="w-24 px-2 py-1" title="Jours prévus (charge)"><AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} readOnly={!canDays} suffix="j" refreshOnSave /></td>
+                        <td className="w-24 px-2 py-1 text-muted-foreground" title="Jours conventionnés (référence)"><AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} readOnly={!canDays} suffix="j" refreshOnSave /></td>
                       </tr>
                     )),
                   )}

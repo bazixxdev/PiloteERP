@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
-import { expectedDayHours, workingDaysOfMonth } from "@/lib/time";
+import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
 
 export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
@@ -25,12 +25,16 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const month = /^\d{4}-\d{2}$/.test(mois ?? "") ? mois! : dayjs().subtract(1, "month").format("YYYY-MM");
   const start = dayjs(month + "-01");
   const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
-  const [people, entries, locks, settings] = await Promise.all([
+  const [people, entries, locks, settings, rhythms, rhythmPeople, declarations] = await Promise.all([
     getPeople(),
     prisma.timeEntry.findMany({ where: { date: range }, select: { personId: true, date: true, hours: true } }),
     prisma.monthLock.findMany({ where: { month }, include: { lockedBy: true } }),
     getSettings(),
+    loadRhythms(),
+    prisma.person.findMany({ include: { rhythmPeriods: { include: { rhythm: true } } } }),
+    prisma.weekDeclaration.findMany(),
   ]);
+  const weeksOfMonth = [...new Set(workingDaysOfMonth(month).map((d) => weekKey(d)))];
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);
   const rows: ClotureRow[] = people
@@ -39,16 +43,19 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
       const mine = entries.filter((t) => t.personId === p.id);
       const daysDone = new Set(mine.map((t) => dayjs(t.date).format("YYYY-MM-DD"))).size;
       const hours = mine.reduce((s, t) => s + t.hours, 0);
-      const expected = days.length * expectedDayHours(p.workRhythm);
-      const ratio = days.length ? daysDone / days.length : 0;
+      const rp = rhythmPeople.find((x) => x.id === p.id)!;
+      const exp = expectedDaysOfMonth(rp, month, rhythms);
+      const declared = weeksOfMonth.filter((w) => declarations.some((d) => d.personId === p.id && d.week === w)).length;
+      const ratio = exp.days.length ? daysDone / exp.days.length : 0;
       const lock = locks.find((l) => l.personId === p.id);
       return {
-        id: p.id, name: p.name, pole: p.pole?.name ?? "—", hours, expected, daysDone, daysExpected: days.length,
-        status: lock ? "locked" : ratio >= 0.9 ? "complete" : ratio > 0 ? "partial" : "missing",
+        id: p.id, name: p.name, pole: p.pole?.name ?? "—", hours, expected: exp.hours, daysDone, daysExpected: exp.days.length,
+        declaredWeeks: declared, weeks: weeksOfMonth.length,
+        status: lock ? "locked" : declared === weeksOfMonth.length && weeksOfMonth.length > 0 ? "declared" : ratio >= 0.9 ? "complete" : ratio > 0 ? "partial" : "missing",
         lockedBy: lock ? `${lock.lockedBy.name} · ${dayjs(lock.lockedAt).format("D MMM")}` : null,
       } as ClotureRow;
     });
-  const summary = { complete: rows.filter((r) => r.status === "complete").length, partial: rows.filter((r) => r.status === "partial").length, missing: rows.filter((r) => r.status === "missing").length, locked: rows.filter((r) => r.status === "locked").length };
+  const summary = { complete: rows.filter((r) => r.status === "complete" || r.status === "declared").length, partial: rows.filter((r) => r.status === "partial").length, missing: rows.filter((r) => r.status === "missing").length, locked: rows.filter((r) => r.status === "locked").length };
   const prev = start.subtract(1, "month").format("YYYY-MM");
   const next = start.add(1, "month").format("YYYY-MM");
 
@@ -56,7 +63,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
     <div className="p-6">
       <PageHeader
         title="Clôture mensuelle"
-        subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés écoulés · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}, ${summary.partial} partiel${summary.partial > 1 ? "s" : ""}, ${summary.missing} manquant${summary.missing > 1 ? "s" : ""}.`}
+        subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés écoulés · ${weeksOfMonth.length} semaines · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}, ${summary.partial} partiel${summary.partial > 1 ? "s" : ""}, ${summary.missing} manquant${summary.missing > 1 ? "s" : ""}.`}
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="icon" aria-label="Mois précédent"><Link href={`/cloture?mois=${prev}`}><ChevronLeft /></Link></Button>

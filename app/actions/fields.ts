@@ -33,13 +33,22 @@ async function allowed(model: Model, id: string, field: string, personId: string
     return canEditActions(role, ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
   if (model === "fundingLine" || model === "deliverable") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements.";
+  if (model === "expense") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
     if (!ind) return "Indicateur introuvable";
     const ctx = await editionContext(ind.editionId, personId);
     return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) ? null : "Vous ne pouvez pas modifier ces indicateurs.";
   }
-  if (model === "editionPersonDays") return role === "raf" || role === "director" || role === "pole_lead" ? null : "Les jours vendus sont saisis par la RAF et les responsables de pôle.";
+  if (model === "editionPersonDays") {
+    if (role === "raf" || role === "director" || role === "pole_lead") return null;
+    if (field === "plannedDays") {
+      const d = await prisma.editionPersonDays.findUnique({ where: { id } });
+      if (d) { const ctx = await editionContext(d.editionId, personId); if (ctx.isPilot) return null; }
+      return "La charge planifiée est proposée par le pilote et ajustée par la RAF ou le responsable de pôle.";
+    }
+    return "Les jours conventionnés sont saisis par la RAF et les responsables de pôle.";
+  }
   if (model === "docLink") {
     const d = await prisma.docLink.findUnique({ where: { id } });
     if (!d) return "Lien introuvable";

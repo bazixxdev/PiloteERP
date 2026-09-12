@@ -6,7 +6,7 @@ import { Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode } from "@/app/actions/admin";
+import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod } from "@/app/actions/admin";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -23,7 +23,7 @@ function useRun() {
   return { pending, run };
 }
 
-export function AddSimpleForm({ kind, placeholder, compact, family, projectId }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition"; placeholder: string; compact?: boolean; family?: string; projectId?: string }) {
+export function AddSimpleForm({ kind, placeholder, compact, family, projectId }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition" | "rhythm"; placeholder: string; compact?: boolean; family?: string; projectId?: string }) {
   const [v, setV] = useState(kind === "edition" ? String(new Date().getFullYear() + 1) : "");
   const { pending, run } = useRun();
   const router = useRouter();
@@ -35,6 +35,7 @@ export function AddSimpleForm({ kind, placeholder, compact, family, projectId }:
         case "pole": return createPole(v);
         case "refValue": return createRefValue(family!, v);
         case "edition": return createEdition(projectId!, Number(v));
+        case "rhythm": return createRhythm(v);
         default: return createRef(kind, v);
       }
     };
@@ -96,5 +97,22 @@ export function ImportForm() {
       <textarea className="min-h-24 rounded-lg border bg-card p-2 font-mono text-xs" value={text} onChange={(e) => setText(e.target.value)} placeholder={"nom\nNouveau financeur"} />
       <Button size="sm" disabled={pending || !text.trim()} onClick={() => run(() => importCsv(table, text), (r) => { const d = (r as { data?: { created: number; skipped: string[] } }).data; toast.success(`${d?.created ?? 0} créé(s), ${d?.skipped.length ?? 0} ignoré(s)`); setText(""); })}><Upload />Importer</Button>
     </div>
+  );
+}
+
+
+// Nouvelle période de rythme pour une personne (changement d'option, passage à temps partiel…).
+export function RhythmPeriodForm({ personId, rhythms }: { personId: string; rhythms: Opt[] }) {
+  const [rhythmId, setRhythmId] = useState(rhythms[0]?.value ?? "");
+  const [from, setFrom] = useState("");
+  const { pending, run } = useRun();
+  return (
+    <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); if (!from) return; run(() => addRhythmPeriod(personId, rhythmId, from), () => setFrom("")); }}>
+      <select className="h-7 max-w-[160px] rounded-lg border bg-card px-1 text-xs" value={rhythmId} onChange={(e) => setRhythmId(e.target.value)} aria-label="Rythme">
+        {rhythms.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+      </select>
+      <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 w-32 text-xs" aria-label="À partir du" />
+      <Button type="submit" size="xs" variant="outline" disabled={pending || !from}><Plus /></Button>
+    </form>
   );
 }

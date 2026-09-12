@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment } from "@/app/actions/edition";
+import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense } from "@/app/actions/edition";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -95,6 +95,21 @@ export function AddCommentForm({ editionId }: { editionId: string }) {
     <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!body.trim()) return; run(() => addComment(editionId, body), () => setBody("")); }}>
       <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Écrire un message à l'équipe projet…" className="h-9" data-testid="comment-input" />
       <Button type="submit" disabled={pending || !body.trim()} data-testid="comment-submit">Envoyer</Button>
+    </form>
+  );
+}
+
+export function AddExpenseForm({ editionId }: { editionId: string }) {
+  const [label, setLabel] = useState("");
+  const [spent, setSpent] = useState("");
+  const [ref, setRef] = useState("");
+  const { pending, run } = useRun();
+  return (
+    <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !ref.trim()) return; run(() => addExpense(editionId, label, Number(spent.replace(",", ".")) || 0, ref), () => { setLabel(""); setSpent(""); setRef(""); }); }}>
+      <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Dépense sans devis" className="h-8 w-44" />
+      <Input type="number" step="any" value={spent} onChange={(e) => setSpent(e.target.value)} placeholder="Réalisé €" className="h-8 w-28" />
+      <Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence (obligatoire)" className="h-8 w-44" />
+      <Button type="submit" size="sm" variant="outline" disabled={pending || !label.trim() || !ref.trim()}><Plus />Enregistrer</Button>
     </form>
   );
 }

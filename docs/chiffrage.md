@@ -29,6 +29,10 @@ Ces postes n'existent pas dans le prototype et pèsent autant que les écrans eu
 
 **Total V1 sur mesure : 55 à 70 jours-homme**, soit, à un tarif associatif de 500 à 650 € HT/jour, **28 000 à 45 000 € HT** de réalisation, plus l'hébergement (≈ 30 à 60 € HT/mois pour 15 comptes) et une maintenance annuelle de 10 à 15 % du montant initial. À comparer aux SaaS sur 24 mois (ENF-6 : 20 à 30 € par utilisateur et par mois, soit 7 200 à 10 800 € de licences pour 15 comptes, plus la mise en place).
 
+## Note sur le cahier des charges « application v1-byGPT » (13/09)
+
+Ce document décrit un produit plus complet (cycle de vie à 9 statuts, livrables à 7 états, circuits configurables, relevés d'indicateurs, champs personnalisés, corbeille, revue photographiée). Réalisé tel quel, il représente **100 à 140 jours-homme**, soit 50 000 à 90 000 € HT : le double du scénario ci-dessus. Le chiffrage V1 retient ses corrections de fond (convention partagée, budget sans double comptage, rythmes historisés, déclaration de complétude, idempotence, passation) et reporte le reste en V2 — voir `evolutions.md`.
+
 ## Hypothèses et limites
 
 - Le temps « prototype » mesure une session d'assistant de code avec un brief très précis ; il n'est pas transposable tel quel à un développement classique. Il montre surtout que le modèle et les écrans sont clairs : la plupart du coût V1 est ailleurs (auth, hébergement, mails, recettes).

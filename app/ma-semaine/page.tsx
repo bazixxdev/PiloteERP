@@ -44,7 +44,7 @@ export default async function MaSemainePage() {
                     <Link href={`/edition/${a.editionId}?onglet=actions`} className="font-medium hover:underline">{a.name}</Link>
                     <div className="truncate text-xs text-muted-foreground">{a.edition.project.name} · {a.edition.year}</div>
                   </div>
-                  <StatusBadge label={refLabel(refs, "action_state", a.state)} color={refColor(refs, "action_state", a.state)} />
+                  <StatusBadge label={a.daysLeft < 0 ? "En retard" : refLabel(refs, "action_state", a.state)} color={a.daysLeft < 0 ? "danger" : refColor(refs, "action_state", a.state)} />
                   <span className={cn("w-28 text-right text-xs", tone(a.daysLeft))}>{fmtDate(a.milestoneDate)}<br />{dayLabel(a.daysLeft)}</span>
                 </li>
               ))}

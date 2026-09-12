@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
 import { dayjs, monthKey } from "@/lib/format";
+import { weekKey } from "@/lib/time";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -29,7 +30,18 @@ export async function saveTime(input: TimeCellKey & { date: string; hours: numbe
   } else {
     await prisma.timeEntry.create({ data: { ...where, hours, comment: input.comment ?? null } });
   }
+  // Toute modification après déclaration de complétude annule cette déclaration sur la semaine.
+  await prisma.weekDeclaration.deleteMany({ where: { personId, week: weekKey(date) } });
   revalidatePath("/temps");
+  return { ok: true };
+}
+
+// « Cette semaine est complète » : déclaration de la personne, lue par la RAF à la clôture ; ne verrouille rien.
+export async function declareWeek(week: string): Promise<Result> {
+  const me = await getCurrentPerson();
+  await prisma.weekDeclaration.upsert({ where: { personId_week: { personId: me.id, week } }, create: { personId: me.id, week }, update: { declaredAt: new Date() } });
+  revalidatePath("/temps");
+  revalidatePath("/cloture");
   return { ok: true };
 }
 

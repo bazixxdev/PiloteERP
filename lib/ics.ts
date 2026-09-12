@@ -93,7 +93,7 @@ export async function teamEvents(base: string): Promise<{ name: string; events: 
 }
 
 // Événements publics (site internet) : actions cochées « public », éditions en cours, sans jeton.
-export async function publicEvents(base: string): Promise<{ name: string; events: IcsEvent[] }> {
+export async function publicEvents(): Promise<{ name: string; events: IcsEvent[] }> {
   const from = dayjs().subtract(30, "day").toDate();
   const actions = await prisma.action.findMany({ where: { isPublic: true, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } }, orderBy: { milestoneDate: "asc" } });
   return {

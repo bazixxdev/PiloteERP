@@ -53,6 +53,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                       <td className="w-28 py-1 pr-2"><AutoField model="action" id={a.id} field="timeTarget" type="number" value={a.timeTarget} readOnly={!rw} suffix="h" /></td>
                       <td className={cn("w-24 py-1 pr-2 text-right tabular", over && "font-semibold text-danger")}>{fmtNumber(c, 0)} h</td>
                       <td className="min-w-[130px] py-1 pr-2">
+                        {lateMilestone && <span className="mb-0.5 inline-block rounded-full bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`action-late-${i}`}>en retard</span>}
                         {rw ? (
                           <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`action-state-${i}`} />
                         ) : (
@@ -86,7 +87,7 @@ function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"][
   const todayPct = today.year() === year ? (today.diff(start, "day") / total) * 100 : null;
   const dated = actions.filter((a) => a.milestoneDate);
   if (dated.length === 0) return <p className="text-sm text-muted-foreground">Aucun jalon daté pour l'instant.</p>;
-  const colorOf = (state: string) => ({ done: "bg-mint", doing: "bg-primary", late: "bg-danger", todo: "bg-muted-foreground/40" }[state] ?? "bg-muted-foreground/40");
+  const colorOf = (state: string) => ({ done: "bg-mint", doing: "bg-primary", todo: "bg-muted-foreground/40" }[state] ?? "bg-muted-foreground/40");
   return (
     <div className="relative" data-testid="timeline">
       <div className="mb-1 grid grid-cols-12 text-center text-[10px] font-semibold text-muted-foreground">
@@ -99,10 +100,10 @@ function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"][
           return (
             <div key={a.id} className="relative h-7 border-t border-dashed border-border/70">
               <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(${pct}% - 6px)` }}>
-                <div className={cn("size-3 rounded-full ring-2 ring-card", colorOf(a.state))} />
+                <div className={cn("size-3 rounded-full ring-2 ring-card", a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") ? "bg-danger" : colorOf(a.state))} />
               </div>
               <div className="absolute top-1/2 -translate-y-1/2 truncate text-xs" style={{ left: pct > 70 ? undefined : `calc(${pct}% + 10px)`, right: pct > 70 ? `calc(${100 - pct}% + 10px)` : undefined, maxWidth: "40%" }}>
-                {a.name} <span className="text-muted-foreground">· {dayjs(a.milestoneDate!).format("D MMM")} · {refLabel(refs, "action_state", a.state)}</span>
+                {a.name} <span className="text-muted-foreground">· {dayjs(a.milestoneDate!).format("D MMM")} · {refLabel(refs, "action_state", a.state)}</span>{a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") && <span className="ml-1 rounded-full bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
               </div>
             </div>
           );

@@ -2,6 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
 import { dayjs } from "../lib/format";
+import { DEFAULT_RHYTHMS, expectedHoursOn, rhythmAt } from "../lib/time";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -52,6 +53,10 @@ function storePdf(title: string): { storedName: string; size: number } {
 
 async function reset() {
   await prisma.attachment.deleteMany();
+  await prisma.expense.deleteMany();
+  await prisma.weekDeclaration.deleteMany();
+  await prisma.personRhythmPeriod.deleteMany();
+  await prisma.rhythm.deleteMany();
   try { for (const f of readdirSync(UPLOADS)) if (f.endsWith(".pdf")) unlinkSync(path.join(UPLOADS, f)); } catch { /* dossier absent */ }
   await prisma.changeLog.deleteMany();
   await prisma.comment.deleteMany();
@@ -94,6 +99,9 @@ async function main() {
   for (const [family, defs] of Object.entries(REF_DEFAULTS)) {
     await prisma.refValue.createMany({ data: defs.map((v, i) => ({ family, code: v.code, label: v.label, color: v.color ?? null, order: i })) });
   }
+
+  const rhythms = await Promise.all(DEFAULT_RHYTHMS.map((r, i) => prisma.rhythm.create({ data: { ...r, order: i } })));
+  const rhythmByCode = (code: string) => rhythms.find((r) => r.code === code)!;
 
   const funderNames = ["Région", "État", "FSE", "ADEME", "Banque des Territoires", "DREETS", "Cap'Asso", "ESS France", "Cotisations"];
   const funders = await Promise.all(funderNames.map((name) => prisma.funder.create({ data: { name } })));
@@ -149,6 +157,20 @@ async function main() {
     );
   }
   const [director, raf, assistant, leadA, leadB] = people;
+  // Périodes de rythme : tout le monde depuis le 01/01/2026 ; Camille passe à 80 % au 1er septembre ; Thomas passe d'option A à B au 1er juillet.
+  for (const p of people) {
+    if (p.name === "Camille Aubert") {
+      await prisma.personRhythmPeriod.create({ data: { personId: p.id, rhythmId: rhythmByCode("option_a").id, from: dayjs("2026-01-01").toDate(), to: dayjs("2026-08-31").toDate() } });
+      await prisma.personRhythmPeriod.create({ data: { personId: p.id, rhythmId: rhythmByCode("part_time").id, from: dayjs("2026-09-01").toDate() } });
+    } else if (p.name === "Thomas Guérin") {
+      await prisma.personRhythmPeriod.create({ data: { personId: p.id, rhythmId: rhythmByCode("option_a").id, from: dayjs("2026-01-01").toDate(), to: dayjs("2026-06-30").toDate() } });
+      await prisma.personRhythmPeriod.create({ data: { personId: p.id, rhythmId: rhythmByCode("option_b").id, from: dayjs("2026-07-01").toDate() } });
+      await prisma.person.update({ where: { id: p.id }, data: { workRhythm: "option_b" } });
+    } else {
+      await prisma.personRhythmPeriod.create({ data: { personId: p.id, rhythmId: rhythmByCode(p.workRhythm).id, from: dayjs("2026-01-01").toDate() } });
+    }
+  }
+  const personsWithRhythm = await prisma.person.findMany({ include: { rhythmPeriods: { include: { rhythm: true } } } });
   await prisma.pole.update({ where: { id: poles[0].id }, data: { leadId: leadA.id } });
   await prisma.pole.update({ where: { id: poles[1].id }, data: { leadId: leadB.id } });
   await prisma.pole.update({ where: { id: poles[2].id }, data: { leadId: director.id } });
@@ -250,10 +272,9 @@ async function main() {
           evaluation: isPast ? "Objectifs atteints à 90 % ; la fréquentation a dépassé la cible." : null,
           report: isPast ? `Bilan ${y.year} — ${pd.name}\n\nLe projet a été mené conformément au cadre validé. Les actions prévues ont été réalisées, les livrables financeurs remis dans les délais. Points d'amélioration : anticiper la communication et mieux répartir le temps entre les membres de l'équipe.` : null,
           budgetEnvelope: isFuture ? null : pd.envelope,
-          committed: isFuture ? 0 : Math.round(pd.envelope * (isPast ? 0.55 : [0.2, 0.45, 0.6, 0.85, 0.95][pi % 5])),
-          spent: isFuture ? 0 : Math.round(pd.envelope * (isPast ? 0.42 : [0.1, 0.2, 0.1, 0.05, 0.08][pi % 5])),
+          spent: isFuture ? 0 : Math.round(pd.envelope * (isPast ? 0.1 : [0.05, 0.08, 0.04, 0.03, 0.06][pi % 5])), // réalisé hors devis (frais divers)
           team: { create: team.map((p) => ({ personId: p.id })) },
-          personDays: { create: team.map((p, i) => ({ personId: p.id, soldDays: i === 0 ? between(20, 60) : between(5, 25) })) },
+          personDays: { create: team.map((p, i) => { const planned = i === 0 ? between(20, 60) : between(5, 25); return { personId: p.id, plannedDays: planned, soldDays: Math.round(planned * [0.5, 0.8, 1, 1.2][between(0, 3)]) }; }) },
           indicators: {
             create: [
               { label: "Participants", target: String(between(50, 400)), actual: isFuture ? null : String(between(40, 350)), imposed: true, order: 0 },
@@ -273,6 +294,19 @@ async function main() {
         },
       });
 
+      // Dépenses directes : devis engagés, factures rattachées (pas de double comptage)
+      if (!isFuture) {
+        const share = isPast ? [0.3, 0.25, 0.2] : [[0.1, 0.1], [0.25, 0.15], [0.3, 0.2, 0.1], [0.5, 0.3], [0.45, 0.35, 0.15]][pi % 5];
+        const suppliers = ["Imprimerie du Loiret", "Traiteur Les Saveurs", "Studio Graphique Nord", "Location Salle Beaugency", "Cabinet Études & Co", "Transport Berry"];
+        for (let xi = 0; xi < share.length; xi++) {
+          const committed = Math.round(pd.envelope * share[xi]);
+          const spent = isPast ? committed : Math.round(committed * [0, 0.4, 1, 0.9][(pi + xi) % 4]);
+          await prisma.expense.create({
+            data: { editionId: edition.id, label: ["Impression du programme", "Prestation traiteur", "Conception graphique", "Location de salle", "Étude externe", "Déplacements partenaires"][(pi + xi) % 6], supplier: suppliers[(pi + xi) % 6], committed, spent, status: isPast || spent >= committed ? "closed" : "open", reference: `FAC-${y.year}-${100 + pi * 3 + xi}`, createdAt: dayjs(`${y.year}-0${(xi % 8) + 1}-15`).toDate() },
+          });
+        }
+      }
+
       // Actions
       const actionIds: string[] = [];
       const actionOwners: Record<string, string> = {};
@@ -290,7 +324,7 @@ async function main() {
         } else {
           const offset = -120 + ai * 40 + (pi % 5) * 7; // jalons répartis de -120 à +200 jours
           milestone = d(offset);
-          state = offset < -10 ? (rnd() < 0.9 ? "done" : "late") : offset < 20 ? "doing" : "todo";
+          state = offset < -10 ? (rnd() < 0.85 ? "done" : "doing") : offset < 20 ? "doing" : "todo";
         }
         const publicNames = ["Petit-déjeuner ORESS", "Conférence 1", "Conférence 2", "Conférence 3", "Soirée de remise", "Jour J", "Journée du lab", "Rencontre régionale", "Rencontre annuelle", "Restitution publique"];
         const a = await prisma.action.create({
@@ -380,7 +414,10 @@ async function main() {
       for (let day = 0; day < 5; day++) {
         const date = weekStart.add(day, "day");
         if (date.isAfter(today)) continue;
-        const dailyHours = p.workRhythm === "part_time" ? 5.6 : p.workRhythm === "apprentice" ? 4.2 : p.workRhythm === "option_b" ? 7.8 : 7;
+        const pr = personsWithRhythm.find((x) => x.id === p.id)!;
+        const rhythm = rhythmAt(pr, date, rhythms);
+        const dailyHours = rhythm ? expectedHoursOn(rhythm, date) : 7;
+        if (dailyHours === 0) continue; // jour non travaillé (vendredi option B, temps partiel)
         let left = dailyHours;
         const fonctHours = day === 0 ? 1.5 : 0;
         if (fonctHours) {
@@ -391,7 +428,7 @@ async function main() {
         const chosen = [...myEditions.slice(startIdx), ...myEditions.slice(0, startIdx)].slice(0, between(1, Math.min(3, myEditions.length)));
         for (let ci = 0; ci < chosen.length; ci++) {
           const e = chosen[ci];
-          const hours = ci === chosen.length - 1 ? Math.round(left * 2) / 2 : Math.min(left, between(1, 4));
+          const hours = ci === chosen.length - 1 ? Math.round(left * 4) / 4 : Math.min(left, between(1, 4));
           if (hours <= 0) continue;
           left -= hours;
           const mine = e.actionIds.filter((id) => e.actionOwners[id] === p.id);
@@ -401,6 +438,12 @@ async function main() {
       }
     }
     await prisma.monthLock.create({ data: { personId: p.id, month: "2026-07", lockedById: raf.id, lockedAt: dayjs("2026-08-08").toDate() } });
+    // Semaines déclarées complètes : toutes sauf la dernière (et aucune pour les retardataires sur septembre)
+    for (let w = 0; w < 7; w++) {
+      const ws = startWeek.add(w, "week");
+      if (lateOnes.includes(p.id) && w >= 5) continue;
+      await prisma.weekDeclaration.create({ data: { personId: p.id, week: `${ws.isoWeekYear()}-W${String(ws.isoWeek()).padStart(2, "0")}`, declaredAt: ws.add(5, "day").toDate() } });
+    }
   }
 
   // Validations : 6 en attente d'âges différents, 3 approuvées
@@ -449,6 +492,7 @@ async function main() {
         createdAt: d(-between(31, 60)),
       },
     });
+    await prisma.expense.create({ data: { editionId: e.id, label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], committed: [900, 1500, 600][i], spent: [900, 0, 600][i], status: i === 1 ? "open" : "closed", validationId: v.id, reference: i === 1 ? null : `FAC-2026-${300 + i}` } });
     const pdf = storePdf(`${["Devis location de salle", "Devis graphiste", "Devis intervenant"][i]}`);
     await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], fileName: `devis-2026-${200 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: v.createdAt, ...pdf } });
   }

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export default async function RappelsPage() {
   const settings = await getSettings();
   const [editions, raf] = await Promise.all([
-    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true } }),
+    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true } }),
     prisma.person.findFirst({ where: { role: "raf" } }),
   ]);
   const days = settings.reminderDaysBefore.split(",").map(Number);

@@ -9,7 +9,8 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
 
   // Engagé avant.
   await page.getByRole("tab", { name: "Budget" }).click();
-  const before = Number((await page.getByTestId("budget-committed").inputValue()) || 0);
+  const euros = (t: string) => Number(t.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+  const before = euros(await page.getByTestId("budget-committed").innerText());
 
   // 1. Le pilote demande la validation d'un devis de 1 800 € : niveau 2 calculé (seuil 500 € / 3 000 €).
   await page.getByTestId("request-validation-open").click();
@@ -32,7 +33,7 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   // 3. Le devis approuvé remonte dans l'engagé de l'édition.
   await openEditionByName(page, "Observatoire régional (ORESS)");
   await page.getByRole("tab", { name: "Budget" }).click();
-  await expect(page.getByTestId("budget-committed")).toHaveValue(String(before + 1800));
+  await expect.poll(async () => euros(await page.getByTestId("budget-committed").innerText())).toBe(before + 1800);
 
   // 4. Séminaire : la direction crée les éditions 2027 en lot, le contrôle de charge s'affiche.
   await iAm(page, "Claire Vasseur");

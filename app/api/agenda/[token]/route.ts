@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const base = new URL(req.url).origin;
   const settings = await prisma.settings.findUnique({ where: { id: 1 } });
   let feed: { name: string; events: Awaited<ReturnType<typeof teamEvents>>["events"] } | null = null;
-  if (token === "public") feed = await publicEvents(base);
+  if (token === "public") feed = await publicEvents();
   else if (settings?.teamIcsToken && token === settings.teamIcsToken) feed = await teamEvents(base);
   else {
     const p = await prisma.person.findUnique({ where: { icsToken: token } });

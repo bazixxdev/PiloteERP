@@ -134,3 +134,27 @@ export async function importCsv(table: "personnes" | "financeurs" | "projets", t
   revalidatePath("/", "layout");
   return { ok: true, data: { created, skipped } };
 }
+
+// Rythmes de travail : création d'un rythme, et période d'effet pour une personne (le rythme peut changer).
+export async function createRhythm(label: string): Promise<Result> {
+  const d = await guard(); if (d) return { ok: false, error: d };
+  const code = label.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24);
+  if (!code) return { ok: false, error: "Libellé vide" };
+  await prisma.rhythm.create({ data: { code, label: label.trim(), hoursEven: "7,7,7,7,7,0,0", hoursOdd: "7,7,7,7,7,0,0", order: await prisma.rhythm.count() } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function addRhythmPeriod(personId: string, rhythmId: string, from: string): Promise<Result> {
+  const d = await guard(); if (d) return { ok: false, error: d };
+  const start = new Date(from);
+  if (Number.isNaN(start.getTime())) return { ok: false, error: "Date de début invalide" };
+  // La période précédente encore ouverte se ferme la veille.
+  const open = await prisma.personRhythmPeriod.findFirst({ where: { personId, to: null }, orderBy: { from: "desc" } });
+  if (open && open.from < start) await prisma.personRhythmPeriod.update({ where: { id: open.id }, data: { to: new Date(start.getTime() - 86400000) } });
+  await prisma.personRhythmPeriod.create({ data: { personId, rhythmId, from: start } });
+  const r = await prisma.rhythm.findUnique({ where: { id: rhythmId } });
+  if (r) await prisma.person.update({ where: { id: personId }, data: { workRhythm: r.code } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

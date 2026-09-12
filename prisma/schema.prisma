@@ -30,6 +30,8 @@ model Person {
   active        Boolean  @default(true)
   order         Int      @default(0)
   icsToken      String?  @unique // jeton du flux agenda personnel (.ics)
+  rhythmPeriods PersonRhythmPeriod[]
+  weekDeclarations WeekDeclaration[]
 
   ledPoles           Pole[]              @relation("PoleLead")
   timeCodes          PersonTimeCode[]
@@ -174,6 +176,7 @@ model Edition {
   changes      ChangeLog[]
   indicators   Indicator[]
   attachments  Attachment[]
+  expenses     Expense[]
 
   @@unique([projectId, year])
 }
@@ -191,7 +194,8 @@ model EditionPersonDays {
   id            String  @id @default(cuid())
   editionId     String
   personId      String
-  soldDays      Float   @default(0)
+  soldDays      Float   @default(0) // jours mentionnés dans les conventions (référence financeur)
+  plannedDays   Float   @default(0) // charge de travail prévue (jours), mesure de la charge
   availableDays Float?
   edition       Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
   person        Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -301,6 +305,7 @@ model ValidationRequest {
   targetDelayDays Int       @default(5)
   createdAt       DateTime  @default(now())
   attachments     Attachment[]
+  expense         Expense?
 }
 
 model Settings {
@@ -317,6 +322,7 @@ model Settings {
   serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
   teamIcsToken              String? // jeton du flux agenda équipe (.ics)
   apiToken                  String? // jeton des exports pour Excel / outils externes
+  hoursPerDay               Float   @default(7) // coefficient heures → jours, avec son origine dans la notice
 }
 
 model DocLink {
@@ -382,4 +388,54 @@ model Attachment {
   uploadedById  String
   uploadedBy    Person             @relation(fields: [uploadedById], references: [id])
   createdAt     DateTime           @default(now())
+}
+
+// Rythmes de travail (accord d'entreprise) : heures par jour, semaine paire / impaire (option B : un vendredi sur deux).
+model Rhythm {
+  id        String               @id @default(cuid())
+  code      String               @unique
+  label     String
+  hoursEven String // 7 valeurs lundi→dimanche, semaine paire, ex. "7.5,7.5,7.5,7.5,6.5,0,0"
+  hoursOdd  String // idem semaine impaire
+  order     Int                  @default(0)
+  periods   PersonRhythmPeriod[]
+}
+
+// Le rythme d'une personne peut changer (passage à temps partiel, changement d'option) : périodes d'effet.
+model PersonRhythmPeriod {
+  id       String    @id @default(cuid())
+  personId String
+  person   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  rhythmId String
+  rhythm   Rhythm    @relation(fields: [rhythmId], references: [id])
+  from     DateTime
+  to       DateTime?
+}
+
+// Déclaration « cette semaine est complète » par la personne, avant la clôture de la RAF.
+model WeekDeclaration {
+  id         String   @id @default(cuid())
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  week       String // AAAA-Wnn
+  declaredAt DateTime @default(now())
+
+  @@unique([personId, week])
+}
+
+// Dépense directe : un devis approuvé crée l'engagement une seule fois ; le réalisé rattaché ne compte pas deux fois.
+model Expense {
+  id           String             @id @default(cuid())
+  editionId    String
+  edition      Edition            @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  label        String
+  supplier     String?
+  committed    Float              @default(0) // montant engagé (devis approuvé)
+  spent        Float              @default(0) // réalisé rattaché (factures), saisi par la RAF
+  status       String             @default("open") // open | closed (reliquat soldé ou annulé)
+  reference    String?
+  validationId String?            @unique
+  validation   ValidationRequest? @relation(fields: [validationId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 }

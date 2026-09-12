@@ -9,7 +9,8 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib/refs";
 import { canAdmin } from "@/lib/rights";
 import { cn } from "@/lib/utils";
-import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm } from "./forms";
+import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./forms";
+import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 
 const SECTIONS = [
@@ -27,14 +28,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const current = SECTIONS.some((s) => s.key === section) ? section! : "personnes";
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
   const rw = canAdmin(me.role);
-  const [people, poles, projects, funders, missions, timeCodes, refValues] = await Promise.all([
-    prisma.person.findMany({ include: { timeCodes: true }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
+  const [people, poles, projects, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
+    prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
     prisma.project.findMany({ include: { pole: true, pilot: true, mission: true, editions: { orderBy: { year: "asc" } } }, orderBy: { name: "asc" } }),
     prisma.funder.findMany({ orderBy: { name: "asc" } }),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
     prisma.timeCode.findMany({ orderBy: { order: "asc" } }),
     prisma.refValue.findMany({ orderBy: [{ family: "asc" }, { order: "asc" }] }),
+    prisma.rhythm.findMany({ orderBy: { order: "asc" } }),
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
   const refOpt = (fam: RefFamily) => REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) }));
@@ -61,7 +63,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="name" type="text" value={p.name} readOnly={!rw} inputClassName="font-medium" /></td>
                     <td className="min-w-[200px] py-0.5"><AutoField model="person" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} readOnly={!rw} placeholder="— transversal —" /></td>
                     <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="role" type="select" value={p.role} options={refOpt("role")} allowEmpty={false} readOnly={!rw} /></td>
-                    <td className="min-w-[150px] py-0.5"><AutoField model="person" id={p.id} field="workRhythm" type="select" value={p.workRhythm} options={refOpt("work_rhythm")} allowEmpty={false} readOnly={!rw} /></td>
+                    <td className="min-w-[260px] py-0.5">
+                      <div className="text-xs">
+                        {p.rhythmPeriods.length === 0 ? <span className="text-muted-foreground">{rhythms.find((r) => r.code === p.workRhythm)?.label ?? "Référence non configurée"}</span> : p.rhythmPeriods.slice(0, 2).map((rp) => (
+                          <div key={rp.id} className={cn(rp.to && "text-muted-foreground")}>{rp.rhythm.label.split(" · ")[0]} <span className="text-muted-foreground">depuis le {fmtDate(rp.from)}{rp.to ? ` jusqu'au ${fmtDate(rp.to)}` : ""}</span></div>
+                        ))}
+                      </div>
+                      {rw && <RhythmPeriodForm personId={p.id} rhythms={rhythms.map((r) => ({ value: r.id, label: r.label.split(" · ")[0] }))} />}
+                    </td>
                     <td className="w-28 py-0.5"><AutoField model="person" id={p.id} field="availableDays" type="number" value={p.availableDays} readOnly={!rw} suffix="j" /></td>
                     <td className="py-0.5"><AutoField model="person" id={p.id} field="active" type="bool" value={p.active} readOnly={!rw} /></td>
                   </tr>
@@ -82,6 +91,22 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   ))}
                 </tbody>
               </table>
+            </Section>
+
+            <Section title="Rythmes de travail" description="Heures attendues par jour, lundi → dimanche, semaine paire puis impaire (option B : un vendredi sur deux). Informatif : aucun solde." actions={rw ? <AddSimpleForm kind="rhythm" placeholder="Nouveau rythme" compact /> : undefined}>
+              <table className="w-full text-xs" data-testid="rhythms">
+                <thead><tr className="text-left text-muted-foreground"><th className="py-1">Rythme</th><th className="py-1">Semaine paire (L,M,M,J,V,S,D)</th><th className="py-1">Semaine impaire</th></tr></thead>
+                <tbody className="divide-y">
+                  {rhythms.map((r) => (
+                    <tr key={r.id}>
+                      <td className="min-w-[180px] py-0.5"><AutoField model="rhythm" id={r.id} field="label" type="text" value={r.label} readOnly={!rw} /></td>
+                      <td className="min-w-[150px] py-0.5"><AutoField model="rhythm" id={r.id} field="hoursEven" type="text" value={r.hoursEven} readOnly={!rw} inputClassName="font-mono" /></td>
+                      <td className="min-w-[150px] py-0.5"><AutoField model="rhythm" id={r.id} field="hoursOdd" type="text" value={r.hoursOdd} readOnly={!rw} inputClassName="font-mono" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Coefficient heures → jours (réalisé, exports)</span><AutoField model="settings" id="1" field="hoursPerDay" type="number" value={settings.hoursPerDay} readOnly={!rw} suffix="h/j" /></div>
             </Section>
 
             <Section title="Codes de temps par poste" description="Codes « fonctionnement » et « non travaillé » proposés à chaque personne dans sa grille de saisie.">
@@ -199,7 +224,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div className="grid gap-4 lg:grid-cols-2">
           <Section title="Export" description="Réversibilité : toutes les données, à tout moment (ENF-5).">
             <div className="flex flex-wrap gap-2">
-              {["personnes", "projets", "editions", "actions", "financements", "livrables", "temps", "validations"].map((t) => (
+              {["personnes", "projets", "editions", "actions", "financements", "livrables", "temps", "depenses", "validations"].map((t) => (
                 <Button key={t} asChild size="sm" variant="outline"><a href={`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />{t}.csv</a></Button>
               ))}
               <Button asChild size="sm"><a href={`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />Tout (JSON)</a></Button>

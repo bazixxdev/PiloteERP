@@ -27,7 +27,6 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "todo", label: "À faire", color: "muted" },
     { code: "doing", label: "En cours", color: "primary" },
     { code: "done", label: "Fait", color: "mint" },
-    { code: "late", label: "En retard", color: "danger" },
   ],
   funding_status: [
     { code: "to_submit", label: "À déposer", color: "muted" },
@@ -62,10 +61,10 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "assistant", label: "Assistant·e" },
   ],
   work_rhythm: [
-    { code: "option_a", label: "Option A (35 h)" },
-    { code: "option_b", label: "Option B (39 h)" },
+    { code: "option_a", label: "Option A (36 h 30)" },
+    { code: "option_b", label: "Option B (9 jours / quinzaine)" },
     { code: "part_time", label: "Temps partiel (28 h)" },
-    { code: "apprentice", label: "Alternance (21 h)" },
+    { code: "apprentice", label: "Alternance (35 h)" },
   ],
   attachment_kind: [
     { code: "quote", label: "Devis" },
@@ -95,14 +94,6 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   work_rhythm: "Rythmes de travail",
   time_visibility: "Visibilité du temps",
   attachment_kind: "Natures de pièces jointes",
-};
-
-// Heures attendues par semaine selon le rythme (informatif seulement, EF-D4).
-export const RHYTHM_HOURS: Record<string, number> = {
-  option_a: 35,
-  option_b: 39,
-  part_time: 28,
-  apprentice: 21,
 };
 
 export type RefMap = Record<string, Record<string, RefDef>>;

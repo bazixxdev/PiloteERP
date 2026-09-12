@@ -1,4 +1,5 @@
 import { daysFromNow, dayjs } from "./format";
+import { budgetOf, type ExpenseLike } from "./budget";
 
 export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "envelope" | "time_over" | "validation_pending";
 
@@ -6,8 +7,8 @@ export type Alert = { kind: AlertKind; level: "warning" | "danger"; label: strin
 
 type EditionForAlerts = {
   budgetEnvelope: number | null;
-  committed: number;
   spent: number;
+  expenses: ExpenseLike[];
   actions: { name: string; milestoneDate: Date | null; state: string; timeTarget: number | null; timeEntries?: { hours: number }[] }[];
   fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[] }[];
   validations: { status: string }[];
@@ -39,7 +40,7 @@ export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[
 
   const env = e.budgetEnvelope ?? 0;
   if (env > 0) {
-    const used = ((e.committed + e.spent) / env) * 100;
+    const used = (budgetOf(e).used / env) * 100;
     if (used >= 100) alerts.push({ kind: "envelope", level: "danger", label: `Enveloppe dépassée (${Math.round(used)} %)` });
     else if (used >= s.envelopeAlertPercent) alerts.push({ kind: "envelope", level: "warning", label: `Enveloppe à ${Math.round(used)} %` });
   }

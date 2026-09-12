@@ -1,12 +1,14 @@
 import { prisma } from "./db";
 import { computeAlerts, nextDeliverable, nextMilestone, type Alert } from "./alerts";
 import { dayjs } from "./format";
+import { budgetOf } from "./budget";
 
 export const editionListInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true } },
   actions: { include: { timeEntries: { select: { hours: true } }, owner: true }, orderBy: { order: "asc" as const } },
   fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } } } },
   validations: true,
+  expenses: true,
   team: { include: { person: true } },
 };
 
@@ -43,8 +45,9 @@ export async function loadPortfolio(settings: { envelopeAlertPercent: number; de
       pendingValidations: e.validations.filter((v) => v.status === "pending").length,
       nextMilestone: nextMilestone(e),
       nextDeliverable: nextDeliverable(e),
-      used: e.committed + e.spent,
-      remaining: e.budgetEnvelope == null ? null : e.budgetEnvelope - e.committed - e.spent,
+      budget: budgetOf(e),
+      used: budgetOf(e).used,
+      remaining: budgetOf(e).available,
     };
   });
 }
@@ -61,6 +64,7 @@ export const editionFullInclude = {
   changes: { include: { author: true }, orderBy: { createdAt: "desc" as const }, take: 30 },
   indicators: { orderBy: { order: "asc" as const } },
   attachments: { include: { uploadedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" as const } },
+  expenses: { include: { validation: { select: { requester: { select: { name: true } }, decidedAt: true } } }, orderBy: { createdAt: "asc" as const } },
 };
 
 export type EditionFull = NonNullable<Awaited<ReturnType<typeof loadEdition>>>;

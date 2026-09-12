@@ -29,7 +29,7 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   expect(anon.status()).toBe(401);
 
   // Une pièce trop lourde est refusée.
-  await page.getByTestId("upload-file").setInputFiles({ name: "gros.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(6 * 1024 * 1024, 1) });
+  await page.getByTestId("upload-file").setInputFiles({ name: "gros.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(5 * 1024 * 1024 + 1024, 1) });
   await page.getByTestId("upload-submit").click();
   await expect(page.getByText("Pièce trop lourde")).toBeVisible();
 

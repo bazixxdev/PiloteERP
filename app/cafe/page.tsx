@@ -100,11 +100,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
           <div className="rounded-2xl border bg-card p-5">
             <h2 className={cn("mb-2 font-semibold", big ? "text-2xl" : "text-base")}>Temps à saisir</h2>
             {agenda.missingTime.length === 0 ? <p className="text-muted-foreground">Tout le monde est à jour.</p> : (
-              <ul className="grid gap-1">
-                {agenda.missingTime.map((m) => (
-                  <li key={m.person.id}><span className="font-medium">{m.person.name}</span> <span className="text-muted-foreground">· {m.missing.length} jour{m.missing.length > 1 ? "s" : ""} sans saisie</span></li>
-                ))}
-              </ul>
+              <p>{agenda.missingTime.length} personne{agenda.missingTime.length > 1 ? "s ont" : " a"} des jours sans saisie sur la quinzaine. <span className="text-muted-foreground">Chacun voit les siens dans « Ma semaine » ; la RAF a le détail dans la clôture.</span></p>
             )}
           </div>
         </div>

@@ -127,7 +127,8 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(pf).toContainText("Livrable dans 10 j");
   await expect(pf).toContainText("31 %");
   await page.goto(editionUrl + "?onglet=budget");
-  await expect(page.getByTestId("budget-committed")).toHaveValue("2500");
+  await expect(page.getByTestId("budget-committed")).toContainText("2");
+  await expect(page.getByTestId("budget-committed")).toContainText("500");
   await expect(page.getByTestId("budget-remaining")).toContainText("5");
   await page.goto("/cafe");
   await expect(page.getByText("Cartographie des élus")).toBeVisible();
