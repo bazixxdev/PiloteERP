@@ -68,8 +68,8 @@ export function RequestValidationDialog({ editionId, actions, kinds }: { edition
               </select>
             </div>
             <div className="grid gap-1">
-              <Label>Pièce jointe (lien)</Label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="file://serveur/devis/…" />
+              <Label>Pièce jointe (chemin ou lien)</Label>
+              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="\\cress\Partage\…\devis.pdf" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

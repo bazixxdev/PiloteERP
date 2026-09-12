@@ -185,6 +185,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Visibilité du temps saisi" description="Qui voit les temps de qui (EF-K6). Le temps agrégé par projet et par action reste lisible par tous ceux qui pilotent.">
             <AutoField model="settings" id="1" field="timeVisibility" type="select" value={settings.timeVisibility} options={refOpt("time_visibility")} allowEmpty={false} readOnly={!rw} testId="setting-time-visibility" />
           </Section>
+          <Section title="Dossier de référence sur le serveur" description="Gabarit du chemin proposé sur chaque édition ; {code} et {annee} sont remplacés.">
+            <AutoField model="settings" id="1" field="serverPathTemplate" type="text" value={settings.serverPathTemplate} readOnly={!rw} inputClassName="font-mono text-xs" />
+          </Section>
           <Section title="Règles de saisie du temps" description="Affichées à chaque personne dans « Mes temps » (EF-D8).">
             <AutoField model="settings" id="1" field="timeRules" type="textarea" rows={6} value={settings.timeRules} readOnly={!rw} placeholder="Qui saisit, où vont les réunions transverses, quels codes par poste…" />
           </Section>

@@ -306,6 +306,8 @@ model Settings {
   timeVisibility            String @default("self_pole_lead_raf") // self | self_pole_lead_raf | codir | all
   horizonDays               Int    @default(90)
   timeRules                 String @default("")
+  // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee})
+  serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
 }
 
 model DocLink {

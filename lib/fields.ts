@@ -54,7 +54,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   editionPersonDays: { soldDays: { type: "number" }, availableDays: { type: "number" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },
-    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" },
+    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" } },

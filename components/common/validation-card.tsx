@@ -5,6 +5,7 @@ import type { RefMap } from "@/lib/refs";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { isWebLink } from "@/lib/docs";
 
 export type ValidationForCard = {
   id: string; kind: string; label: string; amount: number | null; attachmentUrl: string | null; requiredLevel: number; status: string;
@@ -30,7 +31,7 @@ export function ValidationCard({ v, refs, canDecide, showEdition, index }: { v: 
           <div className="mt-1 text-xs text-muted-foreground">
             {showEdition && v.edition && <><Link href={`/edition/${v.edition.id}?onglet=validations`} className="text-primary hover:underline">{v.edition.project.name} · {v.edition.year}</Link> · </>}
             Demandé par {v.requester.name} le {fmtDate(v.createdAt)}{v.action ? ` · action « ${v.action.name} »` : ""} · {LEVEL_LABEL[v.requiredLevel]}
-            {v.attachmentUrl && <> · <a href={v.attachmentUrl} className="text-primary hover:underline">pièce jointe</a></>}
+            {v.attachmentUrl && (isWebLink(v.attachmentUrl) ? <> · <a href={v.attachmentUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">pièce jointe</a></> : <> · <span className="font-mono" title={v.attachmentUrl}>pièce jointe sur le serveur</span></>)}
           </div>
         </div>
         <div className="flex items-center gap-2">

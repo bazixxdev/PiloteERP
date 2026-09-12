@@ -81,9 +81,9 @@ export function AddDocLinkForm({ editionId, canCodir }: { editionId: string; can
   return (
     <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !url.trim()) return; run(() => addDocLink(editionId, label, url, codir), () => { setLabel(""); setUrl(""); setCodir(false); }); }}>
       <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Libellé" className="h-8 w-48" />
-      <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Lien (serveur, OneDrive, Teams…)" className="h-8 w-72" />
+      <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="\\serveur\Partage\… ou https://teams…" className="h-8 w-72" />
       {canCodir && <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={codir} onChange={(e) => setCodir(e.target.checked)} className="accent-primary" /> CODIR seulement</label>}
-      <Button type="submit" size="sm" variant="outline" disabled={pending || !label.trim() || !url.trim()}><Plus />Lien</Button>
+      <Button type="submit" size="sm" variant="outline" disabled={pending || !label.trim() || !url.trim()}><Plus />Ajouter</Button>
     </form>
   );
 }
