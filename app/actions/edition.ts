@@ -178,3 +178,23 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// Séminaire (EF-A5, EF-H4) : création en série des éditions N+1 selon la décision prise sur chaque projet.
+export async function batchCreateEditions(year: number, decisions: { editionId: string; decision: "renew" | "adjust" | "stop" }[]): Promise<Result<{ created: number; stopped: number; skipped: string[] }>> {
+  const me = await getCurrentPerson();
+  if (!["director", "raf", "pole_lead"].includes(me.role)) return { ok: false, error: "La création en série est réservée au CODIR." };
+  let created = 0, stopped = 0;
+  const skipped: string[] = [];
+  for (const d of decisions) {
+    const src = await prisma.edition.findUnique({ where: { id: d.editionId }, include: { project: true } });
+    if (!src) continue;
+    await prisma.edition.update({ where: { id: src.id }, data: { codirDecision: d.decision, codirDate: new Date() } });
+    if (d.decision === "stop") { stopped++; continue; }
+    const res = await renewEdition(src.id);
+    if (!res.ok) { skipped.push(`${src.project.name} : ${res.error}`); continue; }
+    await prisma.edition.update({ where: { id: res.data!.id }, data: { year, status: d.decision === "adjust" ? "rechallenged" : "proposed" } });
+    created++;
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, data: { created, stopped, skipped } };
+}
