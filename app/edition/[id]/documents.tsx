@@ -8,11 +8,11 @@ import { AddCommentForm, AddDocLinkForm } from "./add-forms";
 
 export function DocumentsTab({ e, me, isPilot, isTeam }: TabCtx) {
   const codir = isCodir(me.role);
-  const rw = canWriteLayer(me.role, "year", isPilot, isTeam);
+  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId);
   const links = e.docLinks.filter((d) => !d.codirOnly || codir);
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Section title="Documents" description="Liens vers les dossiers de référence : pas de copie de fichiers ici." actions={rw ? undefined : undefined}>
+      <Section title="Documents" description="Liens vers les dossiers de référence : pas de copie de fichiers ici.">
         {links.length === 0 ? (
           <p className="text-sm text-muted-foreground">Aucun lien.</p>
         ) : (

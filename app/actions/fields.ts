@@ -11,11 +11,11 @@ export type SaveResult = { ok: true } | { ok: false; error: string };
 async function editionContext(editionId: string, personId: string) {
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true } });
   if (!e) throw new Error("Édition introuvable");
-  return { edition: e, isPilot: e.project.pilotId === personId, isTeam: e.team.some((t) => t.personId === personId) };
+  return { edition: e, isPilot: e.project.pilotId === personId, isTeam: e.team.some((t) => t.personId === personId), poleId: e.project.poleId };
 }
 
 // Vérifie que la personne courante a le droit d'écrire ce champ (EF-K1, EF-B1b).
-async function allowed(model: Model, id: string, field: string, personId: string, role: string): Promise<string | null> {
+async function allowed(model: Model, id: string, field: string, personId: string, role: string, myPoleId: string | null): Promise<string | null> {
   const def = FIELDS[model][field];
   if (model === "edition") {
     const ctx = await editionContext(id, personId);
@@ -23,28 +23,28 @@ async function allowed(model: Model, id: string, field: string, personId: string
     if (field === "status" || field === "decisionDate" || field === "conditionalStart") {
       return role === "director" || role === "raf" ? null : "Seules la direction et la RAF changent le statut.";
     }
-    return canWriteLayer(role, layer, ctx.isPilot, ctx.isTeam) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
+    return canWriteLayer(role, layer, ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {
     const a = await prisma.action.findUnique({ where: { id } });
     if (!a) return "Action introuvable";
     const ctx = await editionContext(a.editionId, personId);
     const own = a.ownerId === personId;
-    return canEditActions(role, ctx.isPilot, ctx.isTeam) || own ? null : "Vous ne pouvez pas modifier cette action.";
+    return canEditActions(role, ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
   if (model === "fundingLine" || model === "deliverable") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
     if (!ind) return "Indicateur introuvable";
     const ctx = await editionContext(ind.editionId, personId);
-    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam) ? null : "Vous ne pouvez pas modifier ces indicateurs.";
+    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) ? null : "Vous ne pouvez pas modifier ces indicateurs.";
   }
   if (model === "editionPersonDays") return role === "raf" || role === "director" || role === "pole_lead" ? null : "Les jours vendus sont saisis par la RAF et les responsables de pôle.";
   if (model === "docLink") {
     const d = await prisma.docLink.findUnique({ where: { id } });
     if (!d) return "Lien introuvable";
     const ctx = await editionContext(d.editionId, personId);
-    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam) ? null : "Vous ne pouvez pas modifier ce lien.";
+    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam, ctx.poleId === myPoleId) ? null : "Vous ne pouvez pas modifier ce lien.";
   }
   return canAdmin(role) ? null : "Réservé à l'administration (direction, RAF).";
 }
@@ -54,7 +54,7 @@ export async function saveField(model: Model, id: string, field: string, raw: un
     const def = FIELDS[model]?.[field];
     if (!def) return { ok: false, error: `Champ non modifiable : ${model}.${field}` };
     const me = await getCurrentPerson();
-    const denied = await allowed(model, id, field, me.id, me.role);
+    const denied = await allowed(model, id, field, me.id, me.role, me.poleId);
     if (denied) return { ok: false, error: denied };
     const value = coerce(def.type, raw);
 

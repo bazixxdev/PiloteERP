@@ -10,7 +10,7 @@ import type { TabCtx } from "./types";
 import { AddActionForm } from "./add-forms";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
-  const writable = canEditActions(me.role, isPilot, isTeam);
+  const writable = canEditActions(me.role, isPilot, isTeam, e.project.poleId === me.poleId);
   const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
   const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));

@@ -7,7 +7,7 @@ import type { TabCtx } from "./types";
 import { AddIndicatorForm } from "./add-forms";
 
 export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
-  const rw = canWriteLayer(me.role, "year", isPilot, isTeam);
+  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId);
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
       <Section
@@ -32,7 +32,7 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
         </div>
       </Section>
 
-      <Section title="Indicateurs" description="Cible et réalisé, imposés par les financeurs ou propres au projet." actions={rw ? undefined : undefined}>
+      <Section title="Indicateurs" description="Cible et réalisé, imposés par les financeurs ou propres au projet.">
         <table className="mb-3 w-full text-sm" data-testid="indicators">
           <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr><th className="py-1">Indicateur</th><th className="w-20 py-1">Cible</th><th className="w-20 py-1">Réalisé</th><th className="w-10 py-1" title="Imposé par un financeur">Imp.</th></tr>

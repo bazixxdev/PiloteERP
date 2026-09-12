@@ -1,11 +1,10 @@
 import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { ValidationCard } from "@/components/common/validation-card";
-import { validationLevelOf } from "@/lib/rights";
+import { canDecideValidation } from "@/lib/rights";
 import type { TabCtx } from "./types";
 
 export function ValidationsTab({ e, me, refs }: TabCtx) {
-  const myLevel = validationLevelOf(me.role);
   const pending = e.validations.filter((v) => v.status === "pending");
   const done = e.validations.filter((v) => v.status !== "pending");
   return (
@@ -14,7 +13,7 @@ export function ValidationsTab({ e, me, refs }: TabCtx) {
         {pending.length === 0 ? (
           <EmptyState title="Aucune validation en attente" hint="Devis, dépense, envoi, changement de périmètre ou jalon financeur : tout passe par une demande datée." />
         ) : (
-          <div className="grid gap-2">{pending.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={myLevel >= v.requiredLevel} index={i} />)}</div>
+          <div className="grid gap-2">{pending.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={canDecideValidation(me, { ...v, edition: e })} index={i} />)}</div>
         )}
       </Section>
       {done.length > 0 && (

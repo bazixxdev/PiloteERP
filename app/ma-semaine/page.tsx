@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { loadAgenda } from "@/lib/agenda";
 import { loadPortfolio } from "@/lib/queries";
-import { validationLevelOf } from "@/lib/rights";
+import { canDecideValidation } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -16,12 +16,11 @@ import { cn } from "@/lib/utils";
 export default async function MaSemainePage() {
   const [me, settings, refs] = await Promise.all([getCurrentPerson(), getSettings(), getRefs()]);
   const [agenda, portfolio] = await Promise.all([loadAgenda(settings.horizonDays), loadPortfolio(settings, { statuses: ["in_progress", "validated"] })]);
-  const myLevel = validationLevelOf(me.role);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
   const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id && a.daysLeft <= 14);
   const myDeliverables = agenda.deliverables.filter((d) => d.fundingLine.edition.project.pilotId === me.id || me.role === "raf");
-  const toDecide = agenda.validations.filter((v) => myLevel >= v.requiredLevel && v.requesterId !== me.id && (me.role !== "pole_lead" || v.edition.project.poleId === me.poleId));
+  const toDecide = agenda.validations.filter((v) => canDecideValidation(me, v));
   const myRequests = agenda.validations.filter((v) => v.requesterId === me.id);
   const missing = agenda.missingTime.find((m) => m.person.id === me.id)?.missing ?? [];
   const myEditions = portfolio.filter((e) => e.project.pilotId === me.id || e.team.some((t) => t.personId === me.id));

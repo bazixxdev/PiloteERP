@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ValidationCard } from "@/components/common/validation-card";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
-import { validationLevelOf } from "@/lib/rights";
+import { canDecideValidation, validationLevelOf } from "@/lib/rights";
 import { fmtEuro } from "@/lib/format";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
   });
   const pending = all.filter((v) => v.status === "pending");
   const decided = all.filter((v) => v.status !== "pending").slice(0, 12);
-  const forMe = pending.filter((v) => myLevel >= v.requiredLevel && v.requesterId !== me.id && (me.role !== "pole_lead" || v.edition.project.poleId === me.poleId));
+  const forMe = pending.filter((v) => canDecideValidation(me, v));
   const levelFilter = niveau ? Number(niveau) : null;
   const byLevel = levelFilter ? pending.filter((v) => v.requiredLevel === levelFilter) : pending;
 
@@ -37,7 +37,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
         subtitle={`${pending.length} en attente · seuils : ${fmtEuro(settings.validationThresholdLevel1)} (niveau 2) et ${fmtEuro(settings.validationThresholdLevel2)} (niveau 3) ; au-delà de l'enveloppe restante, niveau 3.`}
       />
 
-      <Section title="À traiter par moi" description={`${me.name} · ${me.role === "assistant" || me.role === "contributor" ? "vous ne validez pas" : `vous validez jusqu'au niveau ${myLevel}`}.`} className="mb-4" testId="for-me">
+      <Section title="À traiter par moi" description={`${me.name} · ${me.role === "assistant" || me.role === "contributor" ? "vous ne validez pas" : `vous validez jusqu'au niveau ${myLevel}${me.role === "pilot" ? " sur vos projets" : me.role === "pole_lead" ? " sur votre pôle" : ""}`}.`} className="mb-4" testId="for-me">
         {forMe.length === 0 ? <EmptyState title="Rien à valider pour vous" hint="Les demandes de votre niveau apparaîtront ici avec leur âge et le délai cible." /> : (
           <div className="grid gap-2">{forMe.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide showEdition index={i} />)}</div>
         )}
@@ -54,7 +54,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
 
       <Section title="File complète par valideur" description="Toutes les demandes en attente, les plus anciennes en premier." className="mb-4">
         {byLevel.length === 0 ? <p className="text-sm text-muted-foreground">Aucune demande à ce niveau.</p> : (
-          <div className="grid gap-2">{byLevel.map((v) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={myLevel >= v.requiredLevel && v.requesterId !== me.id} showEdition />)}</div>
+          <div className="grid gap-2">{byLevel.map((v) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={canDecideValidation(me, v)} showEdition />)}</div>
         )}
       </Section>
 

@@ -24,7 +24,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
       <div className="grid gap-4">
         {LAYERS.map((layer) => {
-          const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam);
+          const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam, e.project.poleId === me.poleId);
           const filled = layer.fields.filter((f) => { const v = row[f]; return v !== null && v !== undefined && v !== "" && v !== false; }).length;
           const empty = filled === 0;
           return (

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { canEditActions, canEditFunding, canWriteLayer, requiredLevelFor, validationLevelOf } from "@/lib/rights";
+import { canDecideValidation, canEditActions, canEditFunding, canWriteLayer, requiredLevelFor } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -12,14 +12,14 @@ async function ctx(editionId: string) {
   const me = await getCurrentPerson();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true } });
   if (!e) throw new Error("Édition introuvable");
-  return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id) };
+  return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: e.project.poleId === me.poleId };
 }
 
 const path = (id: string) => `/edition/${id}`;
 
 export async function addAction(editionId: string, name: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
-  if (!canEditActions(c.me.role, c.isPilot, c.isTeam)) return { ok: false, error: "Vous ne pouvez pas ajouter d'action ici." };
+  if (!canEditActions(c.me.role, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'action ici." };
   const count = await prisma.action.count({ where: { editionId } });
   const a = await prisma.action.create({ data: { editionId, name: name.trim() || "Nouvelle action", ownerId: c.isPilot ? c.me.id : c.e.project.pilotId, order: count } });
   revalidatePath(path(editionId));
@@ -46,7 +46,7 @@ export async function addDeliverable(fundingLineId: string, label: string, dueDa
 
 export async function addIndicator(editionId: string, label: string, imposed: boolean): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam)) return { ok: false, error: "Vous ne pouvez pas ajouter d'indicateur." };
+  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'indicateur." };
   const count = await prisma.indicator.count({ where: { editionId } });
   await prisma.indicator.create({ data: { editionId, label: label.trim() || "Indicateur", imposed, order: count } });
   revalidatePath(path(editionId));
@@ -55,7 +55,7 @@ export async function addIndicator(editionId: string, label: string, imposed: bo
 
 export async function addDocLink(editionId: string, label: string, url: string, codirOnly: boolean): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam)) return { ok: false, error: "Vous ne pouvez pas ajouter de lien." };
+  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter de lien." };
   await prisma.docLink.create({ data: { editionId, label: label.trim() || "Lien", url: url.trim(), codirOnly: codirOnly && ["director", "raf", "pole_lead"].includes(c.me.role) } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -115,10 +115,10 @@ export async function computeRequiredLevel(editionId: string, amount: number | n
 // Décision : le devis approuvé remonte dans l'engagé de l'édition (EF-E2).
 export async function decideValidation(id: string, decision: "approved" | "refused", comment: string): Promise<Result> {
   const me = await getCurrentPerson();
-  const v = await prisma.validationRequest.findUnique({ where: { id } });
+  const v = await prisma.validationRequest.findUnique({ where: { id }, include: { edition: { include: { project: true } } } });
   if (!v) return { ok: false, error: "Demande introuvable" };
   if (v.status !== "pending") return { ok: false, error: "Cette demande est déjà traitée." };
-  if (validationLevelOf(me.role) < v.requiredLevel) return { ok: false, error: `Cette demande requiert le niveau ${v.requiredLevel} : vous ne pouvez pas la décider.` };
+  if (!canDecideValidation(me, v)) return { ok: false, error: `Cette demande requiert le niveau ${v.requiredLevel} sur ce projet : vous ne pouvez pas la décider.` };
   await prisma.validationRequest.update({ where: { id }, data: { status: decision, deciderId: me.id, decidedAt: new Date(), decisionComment: comment.trim() || null } });
   if (decision === "approved" && (v.kind === "quote" || v.kind === "expense") && v.amount) {
     await prisma.edition.update({ where: { id: v.editionId }, data: { committed: { increment: v.amount } } });

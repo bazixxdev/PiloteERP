@@ -20,7 +20,7 @@ export function isCodir(role: string): boolean {
   return CODIR_ROLES.includes(role as Role);
 }
 
-export function canWriteLayer(role: string, layer: Layer, isPilotOfEdition: boolean, isTeamMember: boolean): boolean {
+export function canWriteLayer(role: string, layer: Layer, isPilotOfEdition: boolean, isTeamMember: boolean, samePole = true): boolean {
   switch (layer) {
     case "strategic":
       return role === "director";
@@ -31,13 +31,15 @@ export function canWriteLayer(role: string, layer: Layer, isPilotOfEdition: bool
     case "budget":
       return role === "raf" || role === "director";
     case "proposal":
+      return role === "director" || isPilotOfEdition;
     case "year":
-      return role === "director" || isPilotOfEdition || (role === "pole_lead") || (isTeamMember && role !== "assistant");
+      return role === "director" || isPilotOfEdition || (role === "pole_lead" && samePole) || (isTeamMember && role !== "assistant");
   }
 }
 
-export function canEditActions(role: string, isPilotOfEdition: boolean, isTeamMember: boolean): boolean {
-  return role === "director" || role === "pole_lead" || isPilotOfEdition || (isTeamMember && role === "contributor") || role === "raf";
+// Actions : le pilote, l'équipe projet, le responsable de pôle sur son pôle, la direction.
+export function canEditActions(role: string, isPilotOfEdition: boolean, isTeamMember: boolean, samePole = true): boolean {
+  return role === "director" || (role === "pole_lead" && samePole) || isPilotOfEdition || (isTeamMember && role !== "assistant");
 }
 
 export function canEditFunding(role: string): boolean {
@@ -52,13 +54,24 @@ export function canAdmin(role: string): boolean {
   return role === "director" || role === "raf";
 }
 
-// Niveau de validation qu'une personne peut approuver.
+// Niveau de validation qu'une personne peut approuver (1 pilote, 2 responsable de pôle, 3 direction ; la RAF est informée, pas valideuse).
 export function validationLevelOf(role: string): number {
   if (role === "director") return 3;
   if (role === "pole_lead") return 2;
-  if (role === "raf") return 2;
   if (role === "pilot") return 1;
   return 0;
+}
+
+// Peut-on décider cette demande ? Le pilote seulement sur son édition, le responsable de pôle seulement sur son pôle, jamais sa propre demande.
+export function canDecideValidation(
+  me: { id: string; role: string; poleId: string | null },
+  v: { requiredLevel: number; requesterId: string; edition: { project: { pilotId: string; poleId: string } } },
+): boolean {
+  if (v.requesterId === me.id) return false;
+  if (validationLevelOf(me.role) < v.requiredLevel) return false;
+  if (me.role === "pole_lead") return v.edition.project.poleId === me.poleId;
+  if (me.role === "pilot") return v.edition.project.pilotId === me.id;
+  return true;
 }
 
 // Qui voit les temps de qui (EF-K6).

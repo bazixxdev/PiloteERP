@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, WidthType } from "docx";
 import { prisma } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
+import { getRefs } from "@/lib/session";
+import { refLabel } from "@/lib/refs";
 
 // Export du bilan (EF-I3) : .md ou .docx basique.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -9,6 +11,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const format = new URL(req.url).searchParams.get("format") ?? "md";
   const e = await prisma.edition.findUnique({ where: { id }, include: { project: { include: { pilot: true, pole: true } }, indicators: { orderBy: { order: "asc" } }, fundingLines: { include: { funder: true } }, actions: { orderBy: { order: "asc" } } } });
   if (!e) return new NextResponse("Introuvable", { status: 404 });
+  const refs = await getRefs();
+  const state = (code: string) => refLabel(refs, "action_state", code);
 
   const title = `Bilan ${e.year} — ${e.project.name}`;
   const meta = `Pôle ${e.project.pole.name} · Pilote ${e.project.pilot.name} · Code ${e.project.analyticCode} · Financeurs : ${e.fundingLines.map((f) => f.funder.name).join(", ") || "—"}`;
@@ -33,7 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             ],
           }),
           new Paragraph({ text: "Actions", heading: HeadingLevel.HEADING_1 }),
-          ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${a.state}` })),
+          ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}` })),
           new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype).` }),
         ],
       }],
@@ -48,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     "## Bilan", "", e.report ?? "—", "",
     "## Indicateurs", "", "| Indicateur | Cible | Réalisé | Imposé |", "|---|---|---|---|",
     ...e.indicators.map((i) => `| ${i.label} | ${i.target ?? ""} | ${i.actual ?? ""} | ${i.imposed ? "oui" : ""} |`), "",
-    "## Actions", "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${a.state}`), "",
+    "## Actions", "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
     `_Exporté le ${fmtDate(new Date())} depuis Pilote (prototype)._`, "",
   ].join("\n");
   return new NextResponse(md, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}.md"` } });
