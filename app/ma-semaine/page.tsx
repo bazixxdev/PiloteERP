@@ -12,6 +12,7 @@ import { canDecideValidation } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { IcsCard } from "@/components/common/ics-card";
 
 export default async function MaSemainePage() {
   const [me, settings, refs] = await Promise.all([getCurrentPerson(), getSettings(), getRefs()]);
@@ -114,6 +115,8 @@ export default async function MaSemainePage() {
           )}
         </Section>
       </div>
+
+      <div className="mt-4"><IcsCard kind="me" personId={me.id} /></div>
 
       <Section title="Mes éditions" description="Les éditions où je pilote ou contribue, avec leurs alertes." className="mt-4">
         {myEditions.length === 0 ? <Empty text="Aucune édition en cours pour moi." /> : (

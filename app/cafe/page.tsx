@@ -7,11 +7,14 @@ import { refLabel } from "@/lib/refs";
 import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Presentation } from "./presentation";
+import { IcsCard } from "@/components/common/ics-card";
+import { getCurrentPerson } from "@/lib/session";
+import { canAdmin } from "@/lib/rights";
 
 // Écran projetable du café du lundi (EF-H1) : la quinzaine à venir, blocages, qui attend quoi de qui.
 export default async function CafePage({ searchParams }: { searchParams: Promise<{ plein?: string }> }) {
   const { plein } = await searchParams;
-  const [settings, refs] = await Promise.all([getSettings(), getRefs()]);
+  const [settings, refs, me] = await Promise.all([getSettings(), getRefs(), getCurrentPerson()]);
   const agenda = await loadAgenda(15);
   const late = agenda.milestones.filter((a) => a.daysLeft < 0);
   const soon = agenda.milestones.filter((a) => a.daysLeft >= 0);
@@ -106,6 +109,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </div>
+      {!big && <div className="mt-4"><IcsCard kind="team" canRegenerate={canAdmin(me.role)} /></div>}
       {!big && <p className="mt-4 text-xs text-muted-foreground">Horizon des alertes : {settings.horizonDays} jours dans le reste de l'outil ; ici, quinze jours.</p>}
     </div>
   );

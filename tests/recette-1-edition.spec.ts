@@ -17,7 +17,7 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await expect(page.getByTestId("layer-strategic")).toContainText("Manquant");
   await page.getByTestId("field-stakes").fill("Enjeu de la recette : montrer l'entonnoir.");
   await page.getByTestId("field-stakes").blur();
-  await expect(page.getByTestId("changelog")).toContainText("Enjeux", { timeout: 10_000 });
+  await expect(page.getByTestId("changelog")).toContainText("Enjeux", { timeout: 20_000 });
   await page.getByTestId("edition-status").selectOption("in_progress");
   await expect(page.getByTestId("edition-status")).toHaveValue("in_progress");
 

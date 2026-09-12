@@ -29,6 +29,7 @@ model Person {
   availableDays Int      @default(200)
   active        Boolean  @default(true)
   order         Int      @default(0)
+  icsToken      String?  @unique // jeton du flux agenda personnel (.ics)
 
   ledPoles           Pole[]              @relation("PoleLead")
   timeCodes          PersonTimeCode[]
@@ -308,6 +309,7 @@ model Settings {
   timeRules                 String @default("")
   // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee})
   serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
+  teamIcsToken              String? // jeton du flux agenda équipe (.ics)
 }
 
 model DocLink {

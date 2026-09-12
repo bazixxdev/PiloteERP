@@ -1,0 +1,93 @@
+import { prisma } from "./db";
+import { dayjs } from "./format";
+import { randomBytes } from "node:crypto";
+
+// Flux agenda iCal (sens outil → Outlook). Événements « journée entière », format standard, sans dépendance Microsoft.
+
+function esc(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, (m) => "\\" + m);
+}
+
+function fold(line: string): string {
+  // RFC 5545 : lignes de 75 octets maximum, repli avec un espace.
+  const out: string[] = [];
+  let cur = "";
+  for (const ch of line) {
+    if (Buffer.byteLength(cur + ch) > 73) { out.push(cur); cur = " " + ch; } else cur += ch;
+  }
+  out.push(cur);
+  return out.join("\r\n");
+}
+
+export type IcsEvent = { uid: string; date: Date; summary: string; description?: string; url?: string; category?: string };
+
+export function buildIcs(name: string, events: IcsEvent[]): string {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRESS Centre-Val de Loire//Pilote prototype//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    `X-WR-CALNAME:${esc(name)}`, "X-WR-TIMEZONE:Europe/Paris", "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H",
+  ];
+  for (const e of events) {
+    const d = dayjs(e.date);
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${e.uid}@pilote.cress`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${d.format("YYYYMMDD")}`,
+      `DTEND;VALUE=DATE:${d.add(1, "day").format("YYYYMMDD")}`,
+      `SUMMARY:${esc(e.summary)}`,
+      ...(e.description ? [`DESCRIPTION:${esc(e.description)}`] : []),
+      ...(e.url ? [`URL:${e.url}`] : []),
+      ...(e.category ? [`CATEGORIES:${esc(e.category)}`] : []),
+      "TRANSP:TRANSPARENT",
+      "END:VEVENT",
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.map(fold).join("\r\n") + "\r\n";
+}
+
+export function newToken(): string {
+  return randomBytes(18).toString("base64url");
+}
+
+const LIVE = ["in_progress", "validated"];
+
+// Événements d'une personne : ses jalons, les livrables des projets qu'elle pilote (tous pour la RAF), ses validations à traiter.
+export async function personEvents(personId: string, base: string): Promise<{ name: string; events: IcsEvent[] } | null> {
+  const p = await prisma.person.findUnique({ where: { id: personId } });
+  if (!p) return null;
+  const from = dayjs().subtract(60, "day").toDate();
+  const [actions, deliverables, validations] = await Promise.all([
+    prisma.action.findMany({ where: { ownerId: p.id, state: { not: "done" }, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } } }),
+    prisma.deliverable.findMany({ where: { done: false, dueDate: { gte: from }, fundingLine: { edition: { status: { in: LIVE }, ...(p.role === "raf" ? {} : { project: { pilotId: p.id } }) } } }, include: { fundingLine: { include: { funder: true, edition: { include: { project: true } } } } } }),
+    p.role === "director" || p.role === "pole_lead" || p.role === "pilot"
+      ? prisma.validationRequest.findMany({ where: { status: "pending" }, include: { edition: { include: { project: true } } } })
+      : Promise.resolve([]),
+  ]);
+  const events: IcsEvent[] = [
+    ...actions.map((a) => ({ uid: `action-${a.id}`, date: a.milestoneDate!, summary: `Jalon · ${a.name}`, description: `${a.edition.project.name} · ${a.edition.year}`, url: `${base}/edition/${a.editionId}?onglet=actions`, category: "Pilote · jalon" })),
+    ...deliverables.map((d) => ({ uid: `deliv-${d.id}`, date: d.dueDate, summary: `Livrable ${d.fundingLine.funder.name} · ${d.label}`, description: `${d.fundingLine.edition.project.name} · ${d.fundingLine.edition.year}`, url: `${base}/edition/${d.fundingLine.editionId}?onglet=financements`, category: "Pilote · livrable financeur" })),
+    ...validations
+      .filter((v) => (p.role === "director" && v.requiredLevel <= 3) || (p.role === "pole_lead" && v.requiredLevel <= 2 && v.edition.project.poleId === p.poleId) || (p.role === "pilot" && v.requiredLevel === 1 && v.edition.project.pilotId === p.id))
+      .filter((v) => v.requesterId !== p.id)
+      .map((v) => ({ uid: `valid-${v.id}`, date: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), summary: `À valider · ${v.label}`, description: `${v.edition.project.name} · délai cible`, url: `${base}/validations`, category: "Pilote · validation" })),
+  ];
+  return { name: `Pilote · échéances de ${p.name}`, events };
+}
+
+// Événements de toute l'équipe : jalons et livrables des éditions en cours.
+export async function teamEvents(base: string): Promise<{ name: string; events: IcsEvent[] }> {
+  const from = dayjs().subtract(60, "day").toDate();
+  const [actions, deliverables] = await Promise.all([
+    prisma.action.findMany({ where: { state: { not: "done" }, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { owner: true, edition: { include: { project: true } } } }),
+    prisma.deliverable.findMany({ where: { done: false, dueDate: { gte: from }, fundingLine: { edition: { status: { in: LIVE } } } }, include: { fundingLine: { include: { funder: true, edition: { include: { project: { include: { pilot: true } } } } } } } }),
+  ]);
+  return {
+    name: "Pilote · échéances de l'équipe",
+    events: [
+      ...actions.map((a) => ({ uid: `action-${a.id}`, date: a.milestoneDate!, summary: `Jalon · ${a.name} (${a.owner?.name ?? "—"})`, description: `${a.edition.project.name} · ${a.edition.year}`, url: `${base}/edition/${a.editionId}?onglet=actions`, category: "Pilote · jalon" })),
+      ...deliverables.map((d) => ({ uid: `deliv-${d.id}`, date: d.dueDate, summary: `Livrable ${d.fundingLine.funder.name} · ${d.label} (${d.fundingLine.edition.project.pilot.name})`, description: `${d.fundingLine.edition.project.name} · ${d.fundingLine.edition.year}`, url: `${base}/edition/${d.fundingLine.editionId}?onglet=financements`, category: "Pilote · livrable financeur" })),
+    ],
+  };
+}

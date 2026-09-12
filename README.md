@@ -9,4 +9,4 @@ Prototype fonctionnel, données 100 % fictives. Next.js 15 · Prisma + SQLite ·
 5. `npm run lint && npm run build` — vérifications ; `npm test` — recettes Playwright (le serveur de dev doit tourner, ou laissez Playwright le lancer).
 6. `npm run screenshots` — une capture par écran dans `docs/screens/`.
 
-Docs : `CLAUDE.md` (brief), `docs/charte.md`, `docs/decisions.md`, `docs/chiffrage.md`, `docs/integrations.md`. Tests : trois recettes + une simulation collective à six personas.
+Docs : `CLAUDE.md` (brief), `docs/charte.md`, `docs/decisions.md`, `docs/chiffrage.md`, `docs/integrations.md`, `docs/evolutions.md`. Tests : trois recettes, une simulation collective à six personas, le flux agenda.

@@ -2,6 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
 import { dayjs } from "../lib/format";
+import { randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
 
@@ -51,6 +52,7 @@ async function main() {
   await prisma.settings.create({
     data: {
       id: 1,
+      teamIcsToken: randomBytes(18).toString("base64url"),
       timeRules:
         "Chaque salarié·e saisit ses heures chaque semaine, au plus tard le lundi suivant. Les réunions transverses (café du lundi, réunion d'équipe) vont sur « Fonctionnement ». Les congés et absences vont sur « Non travaillé ». La RAF verrouille le mois dans les dix jours qui suivent.",
     },
@@ -109,7 +111,7 @@ async function main() {
     const p = peopleDefs[i];
     people.push(
       await prisma.person.create({
-        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i },
+        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i, icsToken: randomBytes(18).toString("base64url") },
       }),
     );
   }
