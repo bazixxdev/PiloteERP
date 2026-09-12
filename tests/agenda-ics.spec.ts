@@ -27,3 +27,25 @@ test("le flux iCal personnel expose les jalons de la personne, le flux équipe t
   expect(team.status()).toBe(200);
   expect((await team.text()).match(/BEGIN:VEVENT/g)!.length).toBeGreaterThan(20);
 });
+
+// Connexions « gratuites » : jeton d'API sur les exports (Excel), flux public pour le site.
+test("les exports exigent le jeton d'API hors de l'outil ; le flux public est ouvert", async ({ page, request }) => {
+  await page.goto("/admin?section=donnees");
+  await iAm(page, "Nadia Ferrand");
+  const url = await page.getByTestId("api-url-temps").innerText();
+  expect(url).toMatch(/jeton=/);
+
+  const ok = await request.get(url);
+  expect(ok.status()).toBe(200);
+  expect(await ok.text()).toContain("personne;date;projet");
+
+  const bad = await request.get(url.replace(/jeton=.*$/, "jeton=faux"));
+  expect(bad.status()).toBe(401);
+
+  const pub = await request.get("/api/agenda/public.ics");
+  expect(pub.status()).toBe(200);
+  const ics = await pub.text();
+  expect(ics).toContain("X-WR-CALNAME:CRESS Centre-Val de Loire · agenda");
+  expect(ics).toContain("SUMMARY:Soirée de remise");
+  expect(ics).not.toContain("Reporting national");
+});

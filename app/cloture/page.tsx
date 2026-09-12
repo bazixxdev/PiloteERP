@@ -5,7 +5,7 @@ import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson, getPeople } from "@/lib/session";
+import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDayHours, workingDaysOfMonth } from "@/lib/time";
@@ -25,11 +25,13 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const month = /^\d{4}-\d{2}$/.test(mois ?? "") ? mois! : dayjs().subtract(1, "month").format("YYYY-MM");
   const start = dayjs(month + "-01");
   const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
-  const [people, entries, locks] = await Promise.all([
+  const [people, entries, locks, settings] = await Promise.all([
     getPeople(),
     prisma.timeEntry.findMany({ where: { date: range }, select: { personId: true, date: true, hours: true } }),
     prisma.monthLock.findMany({ where: { month }, include: { lockedBy: true } }),
+    getSettings(),
   ]);
+  const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);
   const rows: ClotureRow[] = people
     .filter((p) => p.role !== "assistant" || entries.some((t) => t.personId === p.id))
@@ -61,8 +63,8 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
             <span className="min-w-32 text-center text-sm font-medium">{monthLabel(month)}</span>
             <Button asChild variant="outline" size="icon" aria-label="Mois suivant"><Link href={`/cloture?mois=${next}`}><ChevronRight /></Link></Button>
             <span className="mx-1 h-5 w-px bg-border" />
-            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=projet`}><Download />CSV par projet</a></Button>
-            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=personne`}><Download />CSV par personne</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=projet${jeton}`}><Download />CSV par projet</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=personne${jeton}`}><Download />CSV par personne</a></Button>
           </div>
         }
       />

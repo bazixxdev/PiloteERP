@@ -10,6 +10,7 @@ import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib
 import { canAdmin } from "@/lib/rights";
 import { cn } from "@/lib/utils";
 import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm } from "./forms";
+import { ApiCard } from "@/components/common/api-card";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
@@ -199,10 +200,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Export" description="Réversibilité : toutes les données, à tout moment (ENF-5).">
             <div className="flex flex-wrap gap-2">
               {["personnes", "projets", "editions", "actions", "financements", "livrables", "temps", "validations"].map((t) => (
-                <Button key={t} asChild size="sm" variant="outline"><a href={`/admin/export?table=${t}`}><Download />{t}.csv</a></Button>
+                <Button key={t} asChild size="sm" variant="outline"><a href={`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />{t}.csv</a></Button>
               ))}
-              <Button asChild size="sm"><a href="/admin/export?table=tout&format=json"><Download />Tout (JSON)</a></Button>
+              <Button asChild size="sm"><a href={`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />Tout (JSON)</a></Button>
             </div>
+          </Section>
+          <Section title="Connexions externes" description="Jeton d'API : il protège les exports ouverts depuis Excel ou un autre outil (dans l'outil, aucun jeton n'est nécessaire).">
+            <div className="mb-4 grid items-center gap-2 sm:grid-cols-[1fr_320px]">
+              <span className="text-sm">Jeton d'API</span>
+              <AutoField model="settings" id="1" field="apiToken" type="text" value={settings.apiToken} readOnly={!rw} inputClassName="font-mono text-xs" refreshOnSave testId="setting-api-token" />
+            </div>
+            <ApiCard apiToken={settings.apiToken} />
           </Section>
           <Section title="Import CSV" description="Création seulement (les doublons sont ignorés). Première ligne = en-têtes.">
             {rw ? <ImportForm /> : <p className="text-sm text-muted-foreground">Réservé à l'administration.</p>}

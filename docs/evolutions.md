@@ -9,6 +9,7 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | 12/09/2026 | Documents : chemin serveur à copier + liens web, dossier de référence par convention (`\\cress\Partage\Action\{code}\{annee}`) | Fichiers sur le NAS en VPN, OneDrive « rien sauf par erreur », canaux Teams par projet (S4.34-47, S8.36-38) |
 | 12/09/2026 | Flux agenda iCal personnel et équipe (`/api/agenda/{jeton}.ics`), abonnement depuis Outlook | L'agenda Outlook est l'outil d'organisation n°1, il ne donne pas la vue projet (S8.17-18, S8.28, S8.40) ; format standard sans dépendance Microsoft |
 | 12/09/2026 | Simulation collective à six personas en test automatisé | Les interactions entre rôles méritent un test à part |
+| 12/09/2026 | Connexions « gratuites » : adresse de l'édition pour un onglet Teams ; jeton d'API et adresses prêtes pour Excel (*Données → À partir du web*) ; flux iCal public des actions cochées « Public » pour le site | Canaux Teams par projet (S8.36) ; l'Excel de la RAF reste la référence (EF-C5, EF-E4) ; refonte du site en 2026 |
 
 ## V1 (janvier 2027) — retenu, à chiffrer
 
@@ -18,6 +19,9 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Connexion par compte Microsoft (Entra ID), MFA, journal des connexions | Question 4 (Microsoft) | ENF-10, EF-K4 |
 | Mails de rappel (J-30/J-7) et relances de temps | Cron + envoi (Graph ou SMTP) | EF-C2, EF-D5 |
 | Export `.xlsx` formaté pour la RAF ; import budget engagé/réalisé par CSV | Format de l'Excel de la RAF | ENF-8, EF-E1b |
+| Bilan financeur pré-rempli par ligne de financement (.docx : texte, indicateurs imposés, jours, dépenses) | Modèles attendus par chaque financeur | EF-B4, EF-I3 |
+| Rapport d'activité annuel assemblé par mission, avec chiffres clés | — | EF-B4, EF-G7 |
+| Webhooks sortants (validation, statut, livrable J-7) vers Power Automate ou tout automate | — ; donne l'autonomie au référent sans intégration par service | ENF-12, EF-C2 |
 | Corbeille et restauration | — | EF-K1 |
 | Postgres hébergé UE, sauvegardes | Choix d'hébergeur | ENF-3, ENF-7 |
 
@@ -29,6 +33,7 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Relais du fil de discussion vers le canal Teams du projet | Choix d'usage Teams vs fil dans l'outil | EF-J2 |
 | Navigation dans le dossier SharePoint depuis l'édition | Bascule des fichiers du NAS vers SharePoint | EF-J1 |
 | Accès invité partenaire par projet | Question 8 | EF-K5 |
+| Mes actions dans Microsoft To Do / Planner | Question 4 ; double saisie de l'état | EF-G2 |
 | Formulaire d'entrée des demandes internes | — | EF-J3 |
 | Indicateurs consolidés CRESS pour la revue trimestrielle | Usage de six mois | EF-G7 |
 
@@ -39,4 +44,5 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Planning hebdomadaire dans l'outil (remplacer l'agenda) | L'agenda Outlook reste l'agenda ; tâches optionnelles en V1 (cahier des charges 2.4) |
 | Gestion documentaire, copie des fichiers | EF-J4 |
 | Comptabilité, clés de répartition, compteur d'heures | EF-E4, partie 5 du cahier des charges |
-| Liaison Dolibarr | Instance obsolète, écart assumé (ENF-8) |
+| Liaison Dolibarr | Instance obsolète, écart assumé (ENF-8) ; un export CSV des congés suffirait un jour |
+| Signature électronique des devis, journal des envois newsletter/LinkedIn, plateformes financeurs | Le flux de validation interne suffit ; pas d'API exploitable côté financeurs |

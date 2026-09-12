@@ -53,6 +53,7 @@ async function main() {
     data: {
       id: 1,
       teamIcsToken: randomBytes(18).toString("base64url"),
+      apiToken: randomBytes(18).toString("base64url"),
       timeRules:
         "Chaque salarié·e saisit ses heures chaque semaine, au plus tard le lundi suivant. Les réunions transverses (café du lundi, réunion d'équipe) vont sur « Fonctionnement ». Les congés et absences vont sur « Non travaillé ». La RAF verrouille le mois dans les dix jours qui suivent.",
     },
@@ -259,8 +260,9 @@ async function main() {
           milestone = d(offset);
           state = offset < -10 ? (rnd() < 0.9 ? "done" : "late") : offset < 20 ? "doing" : "todo";
         }
+        const publicNames = ["Petit-déjeuner ORESS", "Conférence 1", "Conférence 2", "Conférence 3", "Soirée de remise", "Jour J", "Journée du lab", "Rencontre régionale", "Rencontre annuelle", "Restitution publique"];
         const a = await prisma.action.create({
-          data: { editionId: edition.id, name: pd.actions[ai], ownerId: owner.id, milestoneDate: milestone, timeTarget: between(4, 20) * 7, state, order: ai },
+          data: { editionId: edition.id, name: pd.actions[ai], ownerId: owner.id, milestoneDate: milestone, timeTarget: between(4, 20) * 7, state, order: ai, isPublic: publicNames.includes(pd.actions[ai]) },
         });
         actionIds.push(a.id);
         actionOwners[a.id] = owner.id;

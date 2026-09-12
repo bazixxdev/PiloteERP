@@ -41,7 +41,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     spent: { type: "number", layer: "budget", label: "Réalisé (€)" },
   },
   action: {
-    name: { type: "text" }, ownerId: { type: "select" }, milestoneDate: { type: "date" }, timeTarget: { type: "number" }, state: { type: "select" }, fundingLineId: { type: "select" },
+    name: { type: "text" }, ownerId: { type: "select" }, milestoneDate: { type: "date" }, timeTarget: { type: "number" }, state: { type: "select" }, fundingLineId: { type: "select" }, isPublic: { type: "bool" },
   },
   fundingLine: {
     funderId: { type: "select" }, scheme: { type: "text" }, status: { type: "select" }, amountRequested: { type: "number" }, amountGranted: { type: "number" },
@@ -54,7 +54,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   editionPersonDays: { soldDays: { type: "number" }, availableDays: { type: "number" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },
-    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" },
+    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" } },

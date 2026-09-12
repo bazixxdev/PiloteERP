@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { exportAllowed } from "@/lib/export-auth";
 
 // Export CSV par table, ou JSON complet (ENF-5).
 function csv(rows: Record<string, unknown>[]): string {
@@ -10,6 +11,7 @@ function csv(rows: Record<string, unknown>[]): string {
 }
 
 export async function GET(req: Request) {
+  if (!(await exportAllowed(req))) return new NextResponse("Jeton d'API requis", { status: 401 });
   const url = new URL(req.url);
   const table = url.searchParams.get("table") ?? "tout";
   const format = url.searchParams.get("format") ?? "csv";

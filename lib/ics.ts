@@ -91,3 +91,13 @@ export async function teamEvents(base: string): Promise<{ name: string; events: 
     ],
   };
 }
+
+// Événements publics (site internet) : actions cochées « public », éditions en cours, sans jeton.
+export async function publicEvents(base: string): Promise<{ name: string; events: IcsEvent[] }> {
+  const from = dayjs().subtract(30, "day").toDate();
+  const actions = await prisma.action.findMany({ where: { isPublic: true, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } }, orderBy: { milestoneDate: "asc" } });
+  return {
+    name: "CRESS Centre-Val de Loire · agenda",
+    events: actions.map((a) => ({ uid: `public-${a.id}`, date: a.milestoneDate!, summary: a.name, description: a.edition.project.name, category: "CRESS" })),
+  };
+}

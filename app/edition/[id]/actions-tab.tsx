@@ -34,6 +34,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   <th className="py-1.5 pr-2 text-right">Consommé</th>
                   <th className="py-1.5 pr-2">État</th>
                   <th className="py-1.5 pr-2">Ligne de financement</th>
+                  <th className="py-1.5 pr-2 text-center" title="Événement public : apparaît dans l'agenda du site internet">Public</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -59,6 +60,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                         )}
                       </td>
                       <td className="min-w-[160px] py-1 pr-2"><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— projet —" /></td>
+                      <td className="py-1 pr-2 text-center"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} /></td>
                     </tr>
                   );
                 })}

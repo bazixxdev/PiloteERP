@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { iAm } from "./helpers";
 
 // Recette 2 (lot 2) : chaque personne saisit une semaine en moins d'une minute, la RAF verrouille un mois et exporte.
-test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un mois et exporte", async ({ page, request }) => {
+test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un mois et exporte", async ({ page }) => {
   await page.goto("/temps?semaine=2026-W36");
   await iAm(page, "Maxime Roussel");
   await page.goto("/temps?semaine=2026-W36");
@@ -38,7 +38,7 @@ test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un
   await row.getByRole("button", { name: "Verrouiller" }).click();
   await expect(row).toContainText("Verrouillé", { timeout: 10_000 });
 
-  const csv = await request.get("/cloture/export?mois=2026-08&par=personne");
+  const csv = await page.request.get("/cloture/export?mois=2026-08&par=personne");
   expect(csv.status()).toBe(200);
   expect(csv.headers()["content-type"]).toContain("text/csv");
   expect(await csv.text()).toContain("Maxime Roussel");

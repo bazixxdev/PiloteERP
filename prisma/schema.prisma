@@ -210,6 +210,7 @@ model Action {
   fundingLineId String?
   fundingLine   FundingLine? @relation(fields: [fundingLineId], references: [id])
   order         Int          @default(0)
+  isPublic      Boolean      @default(false) // événement public : flux agenda du site
   timeEntries   TimeEntry[]
   validations   ValidationRequest[]
 }
@@ -310,6 +311,7 @@ model Settings {
   // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee})
   serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
   teamIcsToken              String? // jeton du flux agenda équipe (.ics)
+  apiToken                  String? // jeton des exports pour Excel / outils externes
 }
 
 model DocLink {

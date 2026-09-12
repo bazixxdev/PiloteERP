@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { exportAllowed } from "@/lib/export-auth";
 import { dayjs } from "@/lib/format";
 
 // Export mensuel des temps, agrégé par projet ou par personne (EF-D5), vers l'Excel de la RAF.
 export async function GET(req: Request) {
+  if (!(await exportAllowed(req))) return new NextResponse("Jeton d'API requis", { status: 401 });
   const url = new URL(req.url);
   const month = url.searchParams.get("mois") ?? dayjs().format("YYYY-MM");
   const par = url.searchParams.get("par") === "personne" ? "personne" : "projet";

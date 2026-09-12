@@ -7,6 +7,7 @@ import { isWebLink, serverPath } from "@/lib/docs";
 import { fmtDate } from "@/lib/format";
 import type { TabCtx } from "./types";
 import { AddCommentForm, AddDocLinkForm } from "./add-forms";
+import { EditionUrl } from "./edition-url";
 
 export function DocumentsTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
   const codir = isCodir(me.role);
@@ -58,6 +59,10 @@ export function DocumentsTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
           )}
           {rw && <AddDocLinkForm editionId={e.id} canCodir={codir} />}
           <p className="mt-2 text-xs text-muted-foreground">Un chemin (\\serveur\…) va dans « Sur le serveur », une adresse https:// dans « Liens ».</p>
+        </Section>
+
+        <Section title="Cette édition dans Teams" description="Dans le canal du projet : Ajouter un onglet → Site web, puis coller cette adresse. La fiche s'ouvre là où l'équipe discute.">
+          <EditionUrl editionId={e.id} />
         </Section>
       </div>
 
