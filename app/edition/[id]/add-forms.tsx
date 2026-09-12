@@ -53,9 +53,9 @@ export function AddDeliverableForm({ fundingLineId }: { fundingLineId: string })
   const { pending, run } = useRun();
   return (
     <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !due) return; run(() => addDeliverable(fundingLineId, label, due), () => { setLabel(""); setDue(""); }); }}>
-      <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Livrable dû (bilan qualitatif, justificatifs…)" className="h-7 w-64 text-xs" />
-      <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-7 w-36 text-xs" />
-      <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim() || !due}><Plus />Livrable</Button>
+      <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Livrable dû (bilan qualitatif, justificatifs…)" className="h-7 w-64 text-xs" data-testid="add-deliverable-label" />
+      <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-7 w-36 text-xs" data-testid="add-deliverable-date" />
+      <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim() || !due} data-testid="add-deliverable-submit"><Plus />Livrable</Button>
     </form>
   );
 }
