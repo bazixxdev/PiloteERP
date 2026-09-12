@@ -1,36 +1,12 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pilote — prototype de l'outil de pilotage des projets (CRESS)
 
-## Getting Started
+Prototype fonctionnel, données 100 % fictives. Next.js 15 · Prisma + SQLite · Tailwind + shadcn/ui.
 
-First, run the development server:
+1. `npm install` — installe les dépendances et génère le client Prisma.
+2. `npx prisma migrate dev` — crée la base `prisma/prototype.db`.
+3. `npm run seed` — charge les données de démonstration (15 personnes, 20 projets, 50 éditions).
+4. `npm run dev` — ouvre http://localhost:3000 ; le sélecteur « Je suis… » en haut à droite change la personne et ses droits.
+5. `npm run lint && npm run build` — vérifications ; `npm test` — recettes Playwright (le serveur de dev doit tourner, ou laissez Playwright le lancer).
+6. `npm run screenshots` — une capture par écran dans `docs/screens/`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Docs : `CLAUDE.md` (brief), `docs/charte.md`, `docs/decisions.md`, `docs/chiffrage.md`.

@@ -18,7 +18,13 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "playwright-report/**",
+      "test-results/**",
     ],
+  },
+  {
+    // Interface en français : les apostrophes dans le JSX sont voulues.
+    rules: { "react/no-unescaped-entities": "off" },
   },
 ];
 

@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# base de démo
+prisma/prototype.db
+prisma/prototype.db-journal
+/test-results
+/playwright-report
+
+# la .env ne contient que le chemin SQLite
+!.env

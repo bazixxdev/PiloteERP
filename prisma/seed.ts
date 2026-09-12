@@ -1,0 +1,409 @@
+// Données de démonstration : tout est fictif (personnes, montants, dates).
+import { PrismaClient } from "@prisma/client";
+import dayjs from "dayjs";
+import { REF_DEFAULTS } from "../lib/refs";
+
+const prisma = new PrismaClient();
+
+// Générateur déterministe pour un seed reproductible.
+let seedState = 20260912;
+function rnd(): number {
+  seedState |= 0;
+  seedState = (seedState + 0x6d2b79f5) | 0;
+  let t = Math.imul(seedState ^ (seedState >>> 15), 1 | seedState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+const pick = <T>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
+const between = (a: number, b: number) => a + Math.floor(rnd() * (b - a + 1));
+const today = dayjs("2026-09-12");
+const d = (offsetDays: number) => today.add(offsetDays, "day").toDate();
+
+async function reset() {
+  await prisma.changeLog.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.docLink.deleteMany();
+  await prisma.indicator.deleteMany();
+  await prisma.validationRequest.deleteMany();
+  await prisma.monthLock.deleteMany();
+  await prisma.timeEntry.deleteMany();
+  await prisma.deliverable.deleteMany();
+  await prisma.action.deleteMany();
+  await prisma.fundingLine.deleteMany();
+  await prisma.editionPersonDays.deleteMany();
+  await prisma.editionTeam.deleteMany();
+  await prisma.edition.deleteMany();
+  await prisma.project.deleteMany();
+  await prisma.personTimeCode.deleteMany();
+  await prisma.pole.updateMany({ data: { leadId: null } });
+  await prisma.person.deleteMany();
+  await prisma.pole.deleteMany();
+  await prisma.timeCode.deleteMany();
+  await prisma.mission.deleteMany();
+  await prisma.funder.deleteMany();
+  await prisma.refValue.deleteMany();
+  await prisma.settings.deleteMany();
+}
+
+async function main() {
+  await reset();
+
+  await prisma.settings.create({
+    data: {
+      id: 1,
+      timeRules:
+        "Chaque salarié·e saisit ses heures chaque semaine, au plus tard le lundi suivant. Les réunions transverses (café du lundi, réunion d'équipe) vont sur « Fonctionnement ». Les congés et absences vont sur « Non travaillé ». La RAF verrouille le mois dans les dix jours qui suivent.",
+    },
+  });
+
+  for (const [family, defs] of Object.entries(REF_DEFAULTS)) {
+    await prisma.refValue.createMany({ data: defs.map((v, i) => ({ family, code: v.code, label: v.label, color: v.color ?? null, order: i })) });
+  }
+
+  const funderNames = ["Région", "État", "FSE", "ADEME", "Banque des Territoires", "DREETS", "Cap'Asso", "ESS France", "Cotisations"];
+  const funders = await Promise.all(funderNames.map((name) => prisma.funder.create({ data: { name } })));
+
+  const missions = await Promise.all(
+    [
+      "Représenter et défendre l'ESS régionale",
+      "Observer et rendre visible l'ESS",
+      "Accompagner la transition et les coopérations",
+      "Sensibiliser, former et communiquer",
+    ].map((name, i) => prisma.mission.create({ data: { name, order: i } })),
+  );
+
+  const timeCodes = await Promise.all(
+    [
+      { code: "FONCT", label: "Fonctionnement (réunions transverses, vie d'équipe)", kind: "operating" },
+      { code: "GEST", label: "Gestion administrative et financière", kind: "operating" },
+      { code: "COM", label: "Communication interne", kind: "operating" },
+      { code: "FORM", label: "Formation reçue", kind: "operating" },
+      { code: "NT", label: "Non travaillé (congés, absences)", kind: "non_worked" },
+    ].map((t, i) => prisma.timeCode.create({ data: { ...t, order: i } })),
+  );
+
+  const poles = await Promise.all(
+    ["Représentation et observation", "Transition et coopération territoriale", "Sensibilisation et communication"].map((name) => prisma.pole.create({ data: { name } })),
+  );
+
+  type P = { name: string; role: string; rhythm: string; pole: number | null; days: number };
+  const peopleDefs: P[] = [
+    { name: "Claire Vasseur", role: "director", rhythm: "option_b", pole: null, days: 205 },
+    { name: "Nadia Ferrand", role: "raf", rhythm: "option_a", pole: null, days: 200 },
+    { name: "Léa Morin", role: "assistant", rhythm: "part_time", pole: null, days: 160 },
+    { name: "Julien Barbot", role: "pole_lead", rhythm: "option_b", pole: 0, days: 205 },
+    { name: "Sophie Delaunay", role: "pole_lead", rhythm: "option_a", pole: 1, days: 200 },
+    { name: "Maxime Roussel", role: "pilot", rhythm: "option_a", pole: 0, days: 200 },
+    { name: "Inès Cabral", role: "pilot", rhythm: "option_b", pole: 0, days: 205 },
+    { name: "Thomas Guérin", role: "pilot", rhythm: "option_a", pole: 1, days: 200 },
+    { name: "Camille Aubert", role: "pilot", rhythm: "part_time", pole: 1, days: 160 },
+    { name: "Yasmine Benali", role: "pilot", rhythm: "option_a", pole: 1, days: 200 },
+    { name: "Hugo Lemaire", role: "pilot", rhythm: "option_b", pole: 2, days: 205 },
+    { name: "Élise Fontaine", role: "pilot", rhythm: "option_a", pole: 2, days: 200 },
+    { name: "Romain Tessier", role: "pilot", rhythm: "option_a", pole: 2, days: 200 },
+    { name: "Lucas Perrin", role: "contributor", rhythm: "apprentice", pole: 2, days: 120 },
+    { name: "Manon Girard", role: "contributor", rhythm: "apprentice", pole: 1, days: 120 },
+  ];
+  const people: Awaited<ReturnType<typeof prisma.person.create>>[] = [];
+  for (let i = 0; i < peopleDefs.length; i++) {
+    const p = peopleDefs[i];
+    people.push(
+      await prisma.person.create({
+        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i },
+      }),
+    );
+  }
+  const [director, raf, assistant, leadA, leadB] = people;
+  await prisma.pole.update({ where: { id: poles[0].id }, data: { leadId: leadA.id } });
+  await prisma.pole.update({ where: { id: poles[1].id }, data: { leadId: leadB.id } });
+  await prisma.pole.update({ where: { id: poles[2].id }, data: { leadId: director.id } });
+
+  // Codes de temps utiles par poste
+  for (const p of people) {
+    const codes = p.role === "raf" || p.role === "assistant" ? timeCodes : timeCodes.filter((t) => ["FONCT", "FORM", "NT"].includes(t.code));
+    await prisma.personTimeCode.createMany({ data: codes.map((t) => ({ personId: p.id, timeCodeId: t.id })) });
+  }
+
+  const pilotsOf = (poleIdx: number) => people.filter((p, i) => peopleDefs[i].pole === poleIdx && (p.role === "pilot"));
+  const membersOf = (poleIdx: number) => people.filter((p, i) => peopleDefs[i].pole === poleIdx);
+
+  type PD = { name: string; code: string; pole: number; mission: number; actions: string[]; funders: number[]; envelope: number };
+  const projectDefs: PD[] = [
+    { name: "Vœux et assemblée générale", code: "REP-01", pole: 0, mission: 0, actions: ["Préparer les vœux", "Convoquer l'AG", "Rapport d'activité", "Logistique de l'AG", "Bilan de l'AG"], funders: [8, 0], envelope: 9000 },
+    { name: "AIESSE et campagnes électorales", code: "REP-02", pole: 0, mission: 0, actions: ["Note de positionnement", "Rencontres candidats", "Lettre AIESSE n°1", "Lettre AIESSE n°2", "Plaidoyer régional"], funders: [0, 8, 7], envelope: 6000 },
+    { name: "Réseau Femmes et ESS", code: "REP-03", pole: 0, mission: 0, actions: ["Cycle de rencontres", "Baromètre égalité", "Restitution publique"], funders: [1, 0], envelope: 12000 },
+    { name: "Observatoire régional (ORESS)", code: "OBS-01", pole: 0, mission: 1, actions: ["Collecte des données", "Chiffres de l'emploi", "Petit-déjeuner ORESS", "Note de conjoncture", "Mise à jour du site", "Comité technique"], funders: [0, 1, 7], envelope: 18000 },
+    { name: "Étude santé et économie", code: "OBS-02", pole: 0, mission: 1, actions: ["Cadrage", "Entretiens", "Rédaction", "Restitution"], funders: [0, 5], envelope: 15000 },
+    { name: "Chroniquer la TESS", code: "TES-01", pole: 1, mission: 2, actions: ["Repérage d'initiatives", "Rédaction des chroniques", "Diffusion", "Bilan annuel"], funders: [3, 0], envelope: 8000 },
+    { name: "Cycle de conférences transition", code: "TES-02", pole: 1, mission: 2, actions: ["Programme", "Intervenants", "Conférence 1", "Conférence 2", "Conférence 3", "Évaluation"], funders: [3, 0, 4], envelope: 14000 },
+    { name: "Mobilité solidaire", code: "TES-03", pole: 1, mission: 2, actions: ["Diagnostic territorial", "Ateliers", "Note d'opportunité"], funders: [3, 1], envelope: 10000 },
+    { name: "Carte et ressource TESS", code: "TES-04", pole: 1, mission: 2, actions: ["Collecte", "Cartographie", "Publication", "Animation"], funders: [0, 4], envelope: 7000 },
+    { name: "Lab des coopérations", code: "TES-05", pole: 1, mission: 2, actions: ["Appel à projets", "Sélection", "Accompagnement", "Journée du lab", "Bilan"], funders: [4, 0, 1], envelope: 22000 },
+    { name: "Club des collectivités", code: "COO-01", pole: 1, mission: 2, actions: ["Réunion 1", "Réunion 2", "Réunion 3", "Newsletter club"], funders: [0, 8], envelope: 5000 },
+    { name: "PTCE et ESSOR", code: "COO-02", pole: 1, mission: 2, actions: ["Animation du réseau", "Plateforme ESSOR", "Rencontre régionale", "Suivi des PTCE", "Bilan"], funders: [1, 0, 5], envelope: 20000 },
+    { name: "Dispositif local d'accompagnement (DLA)", code: "DLA-01", pole: 1, mission: 2, actions: ["Diagnostics", "Ingénieries collectives", "Comité d'appui", "Reporting national", "Bilan qualitatif", "Bilan financier"], funders: [1, 2, 4, 0], envelope: 45000 },
+    { name: "Structures en difficulté", code: "COO-03", pole: 1, mission: 2, actions: ["Référencement", "Orientation AIO", "Ingénieries"], funders: [5, 0], envelope: 9000 },
+    { name: "Mois de l'ESS et Prix ESS", code: "SEN-01", pole: 2, mission: 3, actions: ["Appel à événements", "Programme régional", "Jury du Prix", "Soirée de remise", "Communication", "Bilan"], funders: [0, 7, 8], envelope: 16000 },
+    { name: "Sensibilisation des jeunes", code: "SEN-02", pole: 2, mission: 3, actions: ["Interventions hors scolaire", "Relations universités", "Forums et salons", "Kit pédagogique"], funders: [0, 1, 2], envelope: 11000 },
+    { name: "Newsletter et lettre aux adhérents", code: "COM-01", pole: 2, mission: 3, actions: ["Newsletter mensuelle", "Lettre aux adhérents", "Base de contacts"], funders: [8, 0], envelope: 3000 },
+    { name: "Refonte du site internet", code: "COM-02", pole: 2, mission: 3, actions: ["Cahier des charges", "Choix du prestataire", "Recette", "Mise en ligne", "Formation de l'équipe"], funders: [0, 4, 8], envelope: 25000 },
+    { name: "Forum régional de l'ESS", code: "SEN-03", pole: 2, mission: 3, actions: ["Lieu et date", "Programme", "Partenaires", "Inscriptions", "Jour J", "Bilan"], funders: [0, 1, 7], envelope: 30000 },
+    { name: "Communauté des financeurs", code: "COO-04", pole: 1, mission: 0, actions: ["Cartographie des financeurs", "Rencontre annuelle", "Fiches dispositifs"], funders: [4, 0, 5], envelope: 6000 },
+  ];
+
+  const deliverableLabels = ["Bilan qualitatif", "Bilan financier", "Justificatifs de dépenses", "Rapport intermédiaire", "Mentions du financeur"];
+  const stakesTexts = [
+    "Renforcer la visibilité de l'ESS auprès des décideurs régionaux.",
+    "Consolider un dispositif reconduit chaque année, sans perdre les acquis.",
+    "Structurer une action nouvelle avec des partenaires encore à confirmer.",
+    "Tenir l'engagement pris auprès des financeurs sur les indicateurs.",
+  ];
+
+  const allEditions: { id: string; projectId: string; year: number; poleIdx: number; pilotId: string; actionIds: string[]; teamIds: string[] }[] = [];
+
+  for (let pi = 0; pi < projectDefs.length; pi++) {
+    const pd = projectDefs[pi];
+    const pilots = pilotsOf(pd.pole);
+    const pilot = pilots[pi % pilots.length];
+    const guarantor = pd.pole === 0 ? leadA : pd.pole === 1 ? leadB : director;
+    const project = await prisma.project.create({
+      data: { name: pd.name, analyticCode: pd.code, poleId: poles[pd.pole].id, pilotId: pilot.id, guarantorId: guarantor.id, missionId: missions[pd.mission].id, recurring: true, createdAt: dayjs("2024-01-15").toDate() },
+    });
+
+    const years: { year: number; status: string }[] = [
+      { year: 2025, status: "closed" },
+      { year: 2026, status: "in_progress" },
+    ];
+    if (pi % 2 === 0) years.push({ year: 2027, status: pi % 4 === 0 ? "proposed" : "rechallenged" });
+
+    for (const y of years) {
+      const members = membersOf(pd.pole).filter((m) => m.id !== pilot.id);
+      const team = [pilot, ...members.slice(0, between(1, 3))];
+      const isPast = y.year === 2025;
+      const isFuture = y.year === 2027;
+      const filledByDirection = !isFuture || pi % 4 === 0;
+
+      const edition = await prisma.edition.create({
+        data: {
+          projectId: project.id,
+          year: y.year,
+          status: y.status,
+          decisionDate: isFuture ? null : dayjs(`${y.year - 1}-12-10`).toDate(),
+          conditionalStart: isFuture && pi % 6 === 0,
+          stakes: filledByDirection ? pick(stakesTexts) : null,
+          axis: filledByDirection ? `Mission ${pd.mission + 1} du plan opérationnel` : null,
+          sressMeasure: filledByDirection ? "Mesure SRESS n°" + between(1, 12) : null,
+          yearPriorities: filledByDirection ? "Consolider les partenariats existants et sécuriser le financement pluriannuel." : null,
+          expectedOutcome: filledByDirection ? "Un bilan réutilisable dans le rapport d'activité, des indicateurs financeurs tenus." : null,
+          plannedFunders: filledByDirection ? pd.funders.map((f) => funderNames[f]).join(", ") : null,
+          directExpenseEnvelope: filledByDirection ? pd.envelope : null,
+          fte: filledByDirection ? Math.round((team.length * 0.3 + 0.2) * 10) / 10 : null,
+          imposedIndicators: filledByDirection && pd.funders.includes(2) ? "Nombre de participants, nombre de structures accompagnées, répartition femmes / hommes." : filledByDirection ? "Nombre de participants, nombre de structures touchées." : null,
+          operationalObjectives: isFuture ? null : `Mener à bien les ${pd.actions.length} actions prévues et tenir les jalons.`,
+          calendar: isFuture ? null : "Lancement au premier trimestre, temps fort au second semestre, bilan en décembre.",
+          partners: isFuture ? null : "Réseau régional, collectivités partenaires, têtes de réseau nationales.",
+          method: isFuture ? null : "Groupe de travail mensuel, points d'étape en réunion de pôle.",
+          governance: isFuture ? null : "COPIL semestriel avec les financeurs ; suivi en CODIR trimestriel.",
+          ownIndicators: isFuture ? null : "Nombre d'événements, taux de satisfaction, retombées presse.",
+          timeNeed: isFuture ? null : `${between(30, 120)} jours toutes personnes confondues`,
+          budgetNeed: isFuture ? null : `${pd.envelope} € de dépenses directes`,
+          codirDecision: isFuture ? null : "renew",
+          codirDate: isFuture ? null : dayjs(`${y.year - 1}-12-10`).toDate(),
+          boardValidated: !isFuture,
+          boardDate: isFuture ? null : dayjs(`${y.year - 1}-12-18`).toDate(),
+          venues: isPast ? "Orléans, Tours, Blois" : null,
+          evaluation: isPast ? "Objectifs atteints à 90 % ; la fréquentation a dépassé la cible." : null,
+          report: isPast ? `Bilan ${y.year} — ${pd.name}\n\nLe projet a été mené conformément au cadre validé. Les actions prévues ont été réalisées, les livrables financeurs remis dans les délais. Points d'amélioration : anticiper la communication et mieux répartir le temps entre les membres de l'équipe.` : null,
+          budgetEnvelope: isFuture ? null : pd.envelope,
+          committed: isFuture ? 0 : Math.round(pd.envelope * (isPast ? 0.55 : [0.2, 0.45, 0.6, 0.85, 0.95][pi % 5])),
+          spent: isFuture ? 0 : Math.round(pd.envelope * (isPast ? 0.42 : [0.1, 0.2, 0.1, 0.05, 0.08][pi % 5])),
+          team: { create: team.map((p) => ({ personId: p.id })) },
+          personDays: { create: team.map((p, i) => ({ personId: p.id, soldDays: i === 0 ? between(20, 60) : between(5, 25) })) },
+          indicators: {
+            create: [
+              { label: "Participants", target: String(between(50, 400)), actual: isFuture ? null : String(between(40, 350)), imposed: true, order: 0 },
+              { label: "Structures touchées", target: String(between(10, 80)), actual: isFuture ? null : String(between(8, 70)), imposed: true, order: 1 },
+              { label: "Taux de satisfaction", target: "85 %", actual: isFuture ? null : `${between(78, 96)} %`, imposed: false, order: 2 },
+            ],
+          },
+          docLinks: {
+            create: [
+              { label: "Dossier de référence (serveur)", url: `file://serveur/projets/${pd.code}/${y.year}`, codirOnly: false },
+              { label: "Convention signée", url: `file://serveur/conventions/${pd.code}-${y.year}.pdf`, codirOnly: false },
+              ...(y.year === 2026 ? [{ label: "Note CODIR sur le financement", url: `file://serveur/codir/${pd.code}-note.docx`, codirOnly: true }] : []),
+            ],
+          },
+        },
+      });
+
+      // Actions
+      const actionIds: string[] = [];
+      const nActions = isFuture ? pd.actions.length : pd.actions.length;
+      for (let ai = 0; ai < nActions; ai++) {
+        const owner = team[ai % team.length];
+        let milestone: Date;
+        let state: string;
+        if (isPast) {
+          milestone = dayjs(`2025-0${(ai % 9) + 1}-15`).toDate();
+          state = "done";
+        } else if (isFuture) {
+          milestone = dayjs(`2027-0${(ai % 9) + 1}-15`).toDate();
+          state = "todo";
+        } else {
+          const offset = -120 + ai * 45 + (pi % 3) * 10; // jalons répartis de -120 à +200 jours
+          milestone = d(offset);
+          state = offset < -10 ? (rnd() < 0.9 ? "done" : "late") : offset < 20 ? "doing" : "todo";
+        }
+        const a = await prisma.action.create({
+          data: { editionId: edition.id, name: pd.actions[ai], ownerId: owner.id, milestoneDate: milestone, timeTarget: between(4, 20) * 7, state, order: ai },
+        });
+        actionIds.push(a.id);
+      }
+
+      // Lignes de financement (jamais mono-financeur)
+      const fundingIds: string[] = [];
+      for (let fi = 0; fi < pd.funders.length; fi++) {
+        const f = funders[pd.funders[fi]];
+        const requested = Math.round((pd.envelope * (fi === 0 ? 0.5 : 0.3)) / 100) * 100 + 2000;
+        const status = isPast ? "justified" : isFuture ? "to_submit" : ["contracted", "notified", "submitted", "contracted"][fi % 4];
+        const line = await prisma.fundingLine.create({
+          data: {
+            editionId: edition.id,
+            funderId: f.id,
+            scheme: f.name === "FSE" ? "FSE+ 2021-2027 — axe inclusion" : f.name === "Région" ? "Convention pluriannuelle d'objectifs" : f.name === "Cotisations" ? "Fonds propres" : "Appel à projets " + y.year,
+            status,
+            amountRequested: requested,
+            amountGranted: status === "to_submit" || status === "submitted" ? null : requested - between(0, 15) * 100,
+            submittedAt: status === "to_submit" ? null : dayjs(`${y.year - 1}-11-${10 + fi}`).toDate(),
+            answeredAt: ["notified", "contracted", "justified"].includes(status) ? dayjs(`${y.year}-02-${10 + fi}`).toDate() : null,
+            contractedAt: ["contracted", "justified"].includes(status) ? dayjs(`${y.year}-03-${10 + fi}`).toDate() : null,
+            analyticCode: `${pd.code}-${f.name.slice(0, 3).toUpperCase()}`,
+            allocationKeyRef: `Clé ${y.year} — onglet ${pd.code}`,
+            multiYear: f.name === "FSE" || (f.name === "Région" && pi % 3 === 0),
+            notes: fi === 0 ? "Financeur principal." : null,
+          },
+        });
+        fundingIds.push(line.id);
+        if (!isFuture) {
+          const nDeliv = between(1, 2);
+          for (let di = 0; di < nDeliv; di++) {
+            const due = isPast ? dayjs(`2026-0${di + 2}-28`).toDate() : d(between(-3, 150));
+            await prisma.deliverable.create({
+              data: { fundingLineId: line.id, label: deliverableLabels[(fi + di) % deliverableLabels.length], dueDate: due, done: isPast, doneAt: isPast ? due : null },
+            });
+          }
+        }
+      }
+      // Rattacher quelques actions à une ligne
+      for (let ai = 0; ai < actionIds.length; ai += 2) {
+        await prisma.action.update({ where: { id: actionIds[ai] }, data: { fundingLineId: fundingIds[ai % fundingIds.length] } });
+      }
+
+      if (y.year === 2026) {
+        await prisma.comment.createMany({
+          data: [
+            { editionId: edition.id, authorId: pilot.id, body: "Point d'étape fait en réunion de pôle : les partenaires sont confirmés.", createdAt: d(-25) },
+            { editionId: edition.id, authorId: guarantor.id, body: "Merci. Pensez à mettre à jour le livrable financeur avant l'échéance.", createdAt: d(-20) },
+          ],
+        });
+        await prisma.changeLog.createMany({
+          data: [
+            { editionId: edition.id, field: "stakes", before: null, after: "Renforcer…", authorId: director.id, createdAt: dayjs("2025-11-20").toDate() },
+            { editionId: edition.id, field: "operationalObjectives", before: null, after: "Mener à bien…", authorId: pilot.id, createdAt: dayjs("2026-01-08").toDate() },
+          ],
+        });
+      }
+
+      allEditions.push({ id: edition.id, projectId: project.id, year: y.year, poleIdx: pd.pole, pilotId: pilot.id, actionIds, teamIds: team.map((t) => t.id) });
+    }
+  }
+
+  // Temps saisis : 8 semaines pour 10 personnes, 2 en retard, juillet verrouillé.
+  const editions2026 = allEditions.filter((e) => e.year === 2026);
+  const timeKeepers = people.filter((p) => p.role !== "assistant").slice(0, 12);
+  const lateOnes = [timeKeepers[6].id, timeKeepers[9].id];
+  const fonct = timeCodes.find((t) => t.code === "FONCT")!;
+  const startWeek = today.subtract(8, "week").startOf("isoWeek");
+  for (const p of timeKeepers.slice(0, 10)) {
+    const myEditions = editions2026.filter((e) => e.teamIds.includes(p.id));
+    for (let w = 0; w < 8; w++) {
+      const weekStart = startWeek.add(w, "week");
+      if (lateOnes.includes(p.id) && w >= 6) continue; // deux personnes en retard sur les deux dernières semaines
+      for (let day = 0; day < 5; day++) {
+        const date = weekStart.add(day, "day");
+        if (date.isAfter(today)) continue;
+        const dailyHours = p.workRhythm === "part_time" ? 5.6 : p.workRhythm === "apprentice" ? 4.2 : p.workRhythm === "option_b" ? 7.8 : 7;
+        let left = dailyHours;
+        const fonctHours = day === 0 ? 1.5 : 0;
+        if (fonctHours) {
+          await prisma.timeEntry.create({ data: { personId: p.id, timeCodeId: fonct.id, date: date.toDate(), hours: fonctHours, locked: date.month() === 6 } });
+          left -= fonctHours;
+        }
+        const chosen = myEditions.slice(0, between(1, Math.min(3, myEditions.length)));
+        for (let ci = 0; ci < chosen.length; ci++) {
+          const e = chosen[ci];
+          const hours = ci === chosen.length - 1 ? Math.round(left * 2) / 2 : Math.min(left, between(1, 4));
+          if (hours <= 0) continue;
+          left -= hours;
+          const actionId = rnd() < 0.7 ? e.actionIds[between(0, e.actionIds.length - 1)] : null;
+          await prisma.timeEntry.create({ data: { personId: p.id, projectId: e.projectId, actionId, date: date.toDate(), hours, locked: date.month() === 6, comment: rnd() < 0.1 ? "Déplacement inclus" : null } });
+        }
+      }
+    }
+    await prisma.monthLock.create({ data: { personId: p.id, month: "2026-07", lockedById: raf.id, lockedAt: dayjs("2026-08-08").toDate() } });
+  }
+
+  // Validations : 6 en attente d'âges différents, 3 approuvées
+  const kinds = ["quote", "expense", "sending", "quote", "scope_change", "quote"];
+  const labels = ["Devis traiteur soirée", "Frais de déplacement partenaires", "Envoi de la newsletter spéciale", "Devis impression programme", "Extension du périmètre à deux départements", "Devis prestataire vidéo"];
+  const amounts = [1800, 320, null, 640, null, 4200];
+  const ages = [1, 3, 6, 9, 14, 21];
+  for (let i = 0; i < 6; i++) {
+    const e = editions2026[i * 3];
+    await prisma.validationRequest.create({
+      data: {
+        editionId: e.id,
+        actionId: e.actionIds[0],
+        kind: kinds[i],
+        label: labels[i],
+        requesterId: e.pilotId,
+        amount: amounts[i],
+        attachmentUrl: amounts[i] ? `file://serveur/devis/${2026}-${100 + i}.pdf` : null,
+        requiredLevel: (() => { const a = amounts[i]; return a === null ? 1 : a > 3000 ? 3 : a > 500 ? 2 : 1; })(),
+        status: "pending",
+        targetDelayDays: 5,
+        createdAt: d(-ages[i]),
+      },
+    });
+  }
+  for (let i = 0; i < 3; i++) {
+    const e = editions2026[i * 3 + 1];
+    await prisma.validationRequest.create({
+      data: {
+        editionId: e.id,
+        kind: "quote",
+        label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i],
+        requesterId: e.pilotId,
+        amount: [900, 1500, 600][i],
+        attachmentUrl: `file://serveur/devis/2026-${200 + i}.pdf`,
+        requiredLevel: 2,
+        status: "approved",
+        deciderId: i === 0 ? director.id : leadB.id,
+        decidedAt: d(-between(5, 30)),
+        decisionComment: "OK, dans l'enveloppe.",
+        targetDelayDays: 5,
+        createdAt: d(-between(31, 60)),
+      },
+    });
+  }
+
+  console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
+  void assistant;
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

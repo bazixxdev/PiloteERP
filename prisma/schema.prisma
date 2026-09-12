@@ -1,0 +1,351 @@
+// Schéma du prototype « Pilote ». SQLite pour la démo, portable vers Postgres
+// (aucun type spécifique SQLite ; les listes de valeurs sont des tables).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Pole {
+  id       String    @id @default(cuid())
+  name     String
+  leadId   String?
+  lead     Person?   @relation("PoleLead", fields: [leadId], references: [id])
+  members  Person[]  @relation("PoleMembers")
+  projects Project[]
+}
+
+model Person {
+  id            String   @id @default(cuid())
+  name          String
+  poleId        String?
+  pole          Pole?    @relation("PoleMembers", fields: [poleId], references: [id])
+  role          String // pilot | contributor | pole_lead | director | raf | assistant
+  workRhythm    String // option_a | option_b | part_time | apprentice
+  availableDays Int      @default(200)
+  active        Boolean  @default(true)
+  order         Int      @default(0)
+
+  ledPoles           Pole[]              @relation("PoleLead")
+  timeCodes          PersonTimeCode[]
+  pilotedProjects    Project[]           @relation("ProjectPilot")
+  guaranteedProjects Project[]           @relation("ProjectGuarantor")
+  teams              EditionTeam[]
+  personDays         EditionPersonDays[]
+  actions            Action[]
+  timeEntries        TimeEntry[]
+  monthLocks         MonthLock[]         @relation("LockOwner")
+  locksDone          MonthLock[]         @relation("LockedBy")
+  requests           ValidationRequest[] @relation("Requester")
+  decisions          ValidationRequest[] @relation("Decider")
+  comments           Comment[]
+  changes            ChangeLog[]
+}
+
+model TimeCode {
+  id      String           @id @default(cuid())
+  code    String           @unique
+  label   String
+  kind    String // operating | non_worked
+  order   Int              @default(0)
+  persons PersonTimeCode[]
+  entries TimeEntry[]
+}
+
+model PersonTimeCode {
+  personId   String
+  timeCodeId String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  timeCode   TimeCode @relation(fields: [timeCodeId], references: [id], onDelete: Cascade)
+
+  @@id([personId, timeCodeId])
+}
+
+model Mission {
+  id       String    @id @default(cuid())
+  name     String
+  order    Int       @default(0)
+  projects Project[]
+}
+
+model Funder {
+  id    String        @id @default(cuid())
+  name  String        @unique
+  lines FundingLine[]
+}
+
+// Listes de valeurs modifiables (statuts, états, rôles, rythmes, natures de validation…)
+model RefValue {
+  id     String  @id @default(cuid())
+  family String
+  code   String
+  label  String
+  color  String?
+  order  Int     @default(0)
+
+  @@unique([family, code])
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  name          String
+  analyticCode  String
+  poleId        String
+  pole          Pole      @relation(fields: [poleId], references: [id])
+  pilotId       String
+  pilot         Person    @relation("ProjectPilot", fields: [pilotId], references: [id])
+  guarantorId   String?
+  guarantor     Person?   @relation("ProjectGuarantor", fields: [guarantorId], references: [id])
+  missionId     String
+  mission       Mission   @relation(fields: [missionId], references: [id])
+  strategicAxis String?
+  recurring     Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  editions      Edition[]
+  timeEntries   TimeEntry[]
+}
+
+model Edition {
+  id               String    @id @default(cuid())
+  projectId        String
+  project          Project   @relation(fields: [projectId], references: [id])
+  year             Int
+  status           String    @default("proposed") // rechallenged | proposed | validated | in_progress | closed
+  decisionDate     DateTime?
+  conditionalStart Boolean   @default(false)
+
+  // Couche 1 — cadre stratégique (direction)
+  stakes          String?
+  axis            String?
+  sressMeasure    String?
+  yearPriorities  String?
+  expectedOutcome String?
+
+  // Couche 2 — cadre de moyens (RAF + direction)
+  plannedFunders        String?
+  directExpenseEnvelope Float?
+  fte                   Float?
+  imposedIndicators     String?
+
+  // Couche 3 — proposition opérationnelle (pilote)
+  operationalObjectives String?
+  calendar              String?
+  partners              String?
+  method                String?
+  governance            String?
+  ownIndicators         String?
+  timeNeed              String?
+  budgetNeed            String?
+
+  // Couche 4 — validation
+  codirDecision  String? // renew | adjust | stop
+  codirDate      DateTime?
+  boardValidated Boolean   @default(false)
+  boardDate      DateTime?
+
+  // Au fil de l'année
+  venues         String?
+  equipment      String?
+  evidenceToKeep String?
+  evaluation     String?
+  report         String?
+
+  // Budget (écrit par la RAF)
+  budgetEnvelope Float?
+  committed      Float @default(0)
+  spent          Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team         EditionTeam[]
+  personDays   EditionPersonDays[]
+  actions      Action[]
+  fundingLines FundingLine[]
+  validations  ValidationRequest[]
+  docLinks     DocLink[]
+  comments     Comment[]
+  changes      ChangeLog[]
+  indicators   Indicator[]
+
+  @@unique([projectId, year])
+}
+
+model EditionTeam {
+  editionId String
+  personId  String
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([editionId, personId])
+}
+
+model EditionPersonDays {
+  id            String  @id @default(cuid())
+  editionId     String
+  personId      String
+  soldDays      Float   @default(0)
+  availableDays Float?
+  edition       Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  person        Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, personId])
+}
+
+model Action {
+  id            String       @id @default(cuid())
+  editionId     String
+  edition       Edition      @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  name          String
+  ownerId       String?
+  owner         Person?      @relation(fields: [ownerId], references: [id])
+  milestoneDate DateTime?
+  timeTarget    Float? // heures
+  state         String       @default("todo") // todo | doing | done | late
+  fundingLineId String?
+  fundingLine   FundingLine? @relation(fields: [fundingLineId], references: [id])
+  order         Int          @default(0)
+  timeEntries   TimeEntry[]
+  validations   ValidationRequest[]
+}
+
+model FundingLine {
+  id               String        @id @default(cuid())
+  editionId        String
+  edition          Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  funderId         String
+  funder           Funder        @relation(fields: [funderId], references: [id])
+  scheme           String?
+  status           String        @default("to_submit") // to_submit | submitted | notified | contracted | justified
+  amountRequested  Float?
+  amountGranted    Float?
+  submittedAt      DateTime?
+  answeredAt       DateTime?
+  contractedAt     DateTime?
+  analyticCode     String?
+  allocationKeyRef String?
+  multiYear        Boolean       @default(false)
+  notes            String?
+  deliverables     Deliverable[]
+  actions          Action[]
+}
+
+model Deliverable {
+  id            String      @id @default(cuid())
+  fundingLineId String
+  fundingLine   FundingLine @relation(fields: [fundingLineId], references: [id], onDelete: Cascade)
+  label         String
+  dueDate       DateTime
+  done          Boolean     @default(false)
+  doneAt        DateTime?
+}
+
+model TimeEntry {
+  id         String    @id @default(cuid())
+  personId   String
+  person     Person    @relation(fields: [personId], references: [id])
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id])
+  actionId   String?
+  action     Action?   @relation(fields: [actionId], references: [id])
+  timeCodeId String?
+  timeCode   TimeCode? @relation(fields: [timeCodeId], references: [id])
+  date       DateTime
+  hours      Float
+  comment    String?
+  locked     Boolean   @default(false)
+
+  @@index([personId, date])
+}
+
+model MonthLock {
+  id         String   @id @default(cuid())
+  personId   String
+  person     Person   @relation("LockOwner", fields: [personId], references: [id])
+  month      String // AAAA-MM
+  lockedById String
+  lockedBy   Person   @relation("LockedBy", fields: [lockedById], references: [id])
+  lockedAt   DateTime @default(now())
+
+  @@unique([personId, month])
+}
+
+model ValidationRequest {
+  id              String    @id @default(cuid())
+  editionId       String
+  edition         Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  actionId        String?
+  action          Action?   @relation(fields: [actionId], references: [id])
+  kind            String // quote | expense | sending | scope_change | funder_milestone
+  label           String
+  requesterId     String
+  requester       Person    @relation("Requester", fields: [requesterId], references: [id])
+  amount          Float?
+  attachmentUrl   String?
+  requiredLevel   Int       @default(1)
+  status          String    @default("pending") // pending | approved | refused
+  deciderId       String?
+  decider         Person?   @relation("Decider", fields: [deciderId], references: [id])
+  decidedAt       DateTime?
+  decisionComment String?
+  targetDelayDays Int       @default(5)
+  createdAt       DateTime  @default(now())
+}
+
+model Settings {
+  id                        Int    @id @default(1)
+  validationThresholdLevel1 Float  @default(500)
+  validationThresholdLevel2 Float  @default(3000)
+  reminderDaysBefore        String @default("30,7")
+  envelopeAlertPercent      Int    @default(80)
+  deliverableAlertDays      Int    @default(30)
+  timeVisibility            String @default("self_pole_lead_raf") // self | self_pole_lead_raf | codir | all
+  horizonDays               Int    @default(90)
+  timeRules                 String @default("")
+}
+
+model DocLink {
+  id        String  @id @default(cuid())
+  editionId String
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  codirOnly Boolean @default(false)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  editionId String
+  edition   Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    Person   @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model ChangeLog {
+  id        String   @id @default(cuid())
+  editionId String
+  edition   Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  field     String
+  before    String?
+  after     String?
+  authorId  String
+  author    Person   @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Indicator {
+  id        String  @id @default(cuid())
+  editionId String
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  label     String
+  target    String?
+  actual    String?
+  imposed   Boolean @default(false)
+  order     Int     @default(0)
+}
