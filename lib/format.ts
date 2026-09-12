@@ -11,7 +11,7 @@ dayjs.extend(customParseFormat);
 
 export { dayjs };
 
-export function fmtDate(d: Date | string | null | undefined, format = "D MMM YYYY"): string {
+export function fmtDate(d: Date | string | dayjs.Dayjs | null | undefined, format = "D MMM YYYY"): string {
   if (!d) return "—";
   return dayjs(d).format(format);
 }

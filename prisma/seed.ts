@@ -1,7 +1,7 @@
 // Données de démonstration : tout est fictif (personnes, montants, dates).
 import { PrismaClient } from "@prisma/client";
-import dayjs from "dayjs";
 import { REF_DEFAULTS } from "../lib/refs";
+import { dayjs } from "../lib/format";
 
 const prisma = new PrismaClient();
 
@@ -159,7 +159,7 @@ async function main() {
     "Tenir l'engagement pris auprès des financeurs sur les indicateurs.",
   ];
 
-  const allEditions: { id: string; projectId: string; year: number; poleIdx: number; pilotId: string; actionIds: string[]; teamIds: string[] }[] = [];
+  const allEditions: { id: string; projectId: string; year: number; poleIdx: number; pilotId: string; actionIds: string[]; actionOwners: Record<string, string>; teamIds: string[] }[] = [];
 
   for (let pi = 0; pi < projectDefs.length; pi++) {
     const pd = projectDefs[pi];
@@ -178,7 +178,7 @@ async function main() {
 
     for (const y of years) {
       const members = membersOf(pd.pole).filter((m) => m.id !== pilot.id);
-      const team = [pilot, ...members.slice(0, between(1, 3))];
+      const team = [pilot, ...members.slice(0, between(1, 3)), ...(pi % 5 === 0 ? [director] : []), ...(pi % 7 === 0 ? [raf] : [])];
       const isPast = y.year === 2025;
       const isFuture = y.year === 2027;
       const filledByDirection = !isFuture || pi % 4 === 0;
@@ -238,6 +238,7 @@ async function main() {
 
       // Actions
       const actionIds: string[] = [];
+      const actionOwners: Record<string, string> = {};
       const nActions = isFuture ? pd.actions.length : pd.actions.length;
       for (let ai = 0; ai < nActions; ai++) {
         const owner = team[ai % team.length];
@@ -250,7 +251,7 @@ async function main() {
           milestone = dayjs(`2027-0${(ai % 9) + 1}-15`).toDate();
           state = "todo";
         } else {
-          const offset = -120 + ai * 45 + (pi % 3) * 10; // jalons répartis de -120 à +200 jours
+          const offset = -120 + ai * 40 + (pi % 5) * 7; // jalons répartis de -120 à +200 jours
           milestone = d(offset);
           state = offset < -10 ? (rnd() < 0.9 ? "done" : "late") : offset < 20 ? "doing" : "todo";
         }
@@ -258,6 +259,7 @@ async function main() {
           data: { editionId: edition.id, name: pd.actions[ai], ownerId: owner.id, milestoneDate: milestone, timeTarget: between(4, 20) * 7, state, order: ai },
         });
         actionIds.push(a.id);
+        actionOwners[a.id] = owner.id;
       }
 
       // Lignes de financement (jamais mono-financeur)
@@ -314,16 +316,16 @@ async function main() {
         });
       }
 
-      allEditions.push({ id: edition.id, projectId: project.id, year: y.year, poleIdx: pd.pole, pilotId: pilot.id, actionIds, teamIds: team.map((t) => t.id) });
+      allEditions.push({ id: edition.id, projectId: project.id, year: y.year, poleIdx: pd.pole, pilotId: pilot.id, actionIds, actionOwners, teamIds: team.map((t) => t.id) });
     }
   }
 
   // Temps saisis : 8 semaines pour 10 personnes, 2 en retard, juillet verrouillé.
   const editions2026 = allEditions.filter((e) => e.year === 2026);
-  const timeKeepers = people.filter((p) => p.role !== "assistant").slice(0, 12);
+  const timeKeepers = [director, raf, ...people.filter((p) => p.poleId)].slice(0, 12);
   const lateOnes = [timeKeepers[6].id, timeKeepers[9].id];
   const fonct = timeCodes.find((t) => t.code === "FONCT")!;
-  const startWeek = today.subtract(8, "week").startOf("isoWeek");
+  const startWeek = today.subtract(7, "week").startOf("isoWeek");
   for (const p of timeKeepers.slice(0, 10)) {
     const myEditions = editions2026.filter((e) => e.teamIds.includes(p.id));
     for (let w = 0; w < 8; w++) {
@@ -345,7 +347,8 @@ async function main() {
           const hours = ci === chosen.length - 1 ? Math.round(left * 2) / 2 : Math.min(left, between(1, 4));
           if (hours <= 0) continue;
           left -= hours;
-          const actionId = rnd() < 0.7 ? e.actionIds[between(0, e.actionIds.length - 1)] : null;
+          const mine = e.actionIds.filter((id) => e.actionOwners[id] === p.id);
+          const actionId = mine.length && rnd() < 0.75 ? mine[between(0, mine.length - 1)] : null;
           await prisma.timeEntry.create({ data: { personId: p.id, projectId: e.projectId, actionId, date: date.toDate(), hours, locked: date.month() === 6, comment: rnd() < 0.1 ? "Déplacement inclus" : null } });
         }
       }

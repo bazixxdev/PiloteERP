@@ -1,0 +1,75 @@
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { PageHeader } from "@/components/common/page-header";
+import { Section } from "@/components/common/section";
+import { EmptyState } from "@/components/common/empty-state";
+import { Button } from "@/components/ui/button";
+import { prisma } from "@/lib/db";
+import { getCurrentPerson, getPeople } from "@/lib/session";
+import { canLockMonths } from "@/lib/rights";
+import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
+import { expectedDayHours, workingDaysOfMonth } from "@/lib/time";
+import { ClotureTable, type ClotureRow } from "./table";
+
+export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
+  const { mois } = await searchParams;
+  const me = await getCurrentPerson();
+  if (!canLockMonths(me.role)) {
+    return (
+      <div className="p-6">
+        <PageHeader title="Clôture mensuelle" />
+        <EmptyState title="Réservé à la RAF et à la direction" hint="Choisissez « Nadia Ferrand (RAF) » dans le sélecteur en haut à droite pour voir cet écran." />
+      </div>
+    );
+  }
+  const month = /^\d{4}-\d{2}$/.test(mois ?? "") ? mois! : dayjs().subtract(1, "month").format("YYYY-MM");
+  const start = dayjs(month + "-01");
+  const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
+  const [people, entries, locks] = await Promise.all([
+    getPeople(),
+    prisma.timeEntry.findMany({ where: { date: range }, select: { personId: true, date: true, hours: true } }),
+    prisma.monthLock.findMany({ where: { month }, include: { lockedBy: true } }),
+  ]);
+  const days = workingDaysOfMonth(month);
+  const rows: ClotureRow[] = people
+    .filter((p) => p.role !== "assistant" || entries.some((t) => t.personId === p.id))
+    .map((p) => {
+      const mine = entries.filter((t) => t.personId === p.id);
+      const daysDone = new Set(mine.map((t) => dayjs(t.date).format("YYYY-MM-DD"))).size;
+      const hours = mine.reduce((s, t) => s + t.hours, 0);
+      const expected = days.length * expectedDayHours(p.workRhythm);
+      const ratio = days.length ? daysDone / days.length : 0;
+      const lock = locks.find((l) => l.personId === p.id);
+      return {
+        id: p.id, name: p.name, pole: p.pole?.name ?? "—", hours, expected, daysDone, daysExpected: days.length,
+        status: lock ? "locked" : ratio >= 0.9 ? "complete" : ratio > 0 ? "partial" : "missing",
+        lockedBy: lock ? `${lock.lockedBy.name} · ${dayjs(lock.lockedAt).format("D MMM")}` : null,
+      } as ClotureRow;
+    });
+  const summary = { complete: rows.filter((r) => r.status === "complete").length, partial: rows.filter((r) => r.status === "partial").length, missing: rows.filter((r) => r.status === "missing").length, locked: rows.filter((r) => r.status === "locked").length };
+  const prev = start.subtract(1, "month").format("YYYY-MM");
+  const next = start.add(1, "month").format("YYYY-MM");
+
+  return (
+    <div className="p-6">
+      <PageHeader
+        title="Clôture mensuelle"
+        subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés écoulés · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}, ${summary.partial} partiel${summary.partial > 1 ? "s" : ""}, ${summary.missing} manquant${summary.missing > 1 ? "s" : ""}.`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="icon" aria-label="Mois précédent"><Link href={`/cloture?mois=${prev}`}><ChevronLeft /></Link></Button>
+            <span className="min-w-32 text-center text-sm font-medium">{monthLabel(month)}</span>
+            <Button asChild variant="outline" size="icon" aria-label="Mois suivant"><Link href={`/cloture?mois=${next}`}><ChevronRight /></Link></Button>
+            <span className="mx-1 h-5 w-px bg-border" />
+            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=projet`}><Download />CSV par projet</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=personne`}><Download />CSV par personne</a></Button>
+          </div>
+        }
+      />
+      <ClotureTable month={month} rows={rows} />
+      <Section title="Total du mois" className="mt-4">
+        <p className="text-sm text-muted-foreground">{fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes. Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction.</p>
+      </Section>
+    </div>
+  );
+}
