@@ -201,7 +201,7 @@ function SlotPicker({ t, pending, run }: { t: TaskView; pending: boolean; run: (
   );
 }
 
-// Édition rattachée, modifiable après coup : recherche, choix, action de l'édition au besoin, ou détacher.
+// Édition rattachée, modifiable après coup : le chip s'ouvre (changer, action de l'édition, ouvrir, détacher) ; la croix détache d'un clic.
 function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void; editions: EditionOpt[] }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -209,16 +209,35 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
   const current = editions.find((e) => e.id === t.edition?.id);
   const set = (editionId: string | null, actionId: string | null = null) => run(() => updateTask(t.id, { editionId, actionId }), () => { setOpen(false); setQ(""); });
   return (
-    <span className="inline-flex items-center gap-1">
-      {t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="rounded-full bg-secondary px-1.5 py-px text-primary hover:underline" title="Ouvrir l'édition">{t.edition.name} · {t.edition.year}{t.action ? ` · ${t.action.name}` : ""}</Link>}
+    <span className="inline-flex items-center">
       <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ(""); }}>
         <PopoverTrigger asChild>
-          <button type="button" className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px hover:bg-muted", !t.edition && "border border-dashed")} data-testid={`task-edition-${t.id}`} title={t.edition ? "Changer l'édition rattachée" : "Rattacher une édition"}><AtSign className="size-3" aria-hidden />{t.edition ? "" : "Édition"}</button>
+          <button
+            type="button" data-testid={`task-edition-${t.id}`}
+            title={t.edition ? "Changer l'édition rattachée, choisir une action, ou détacher" : "Rattacher une édition"}
+            className={cn("inline-flex max-w-[260px] items-center gap-1 px-1.5 py-px hover:bg-muted", t.edition ? "rounded-l-full bg-secondary text-primary" : "rounded-sm border border-dashed")}
+          >
+            <AtSign className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{t.edition ? `${t.edition.name} · ${t.edition.year}${t.action ? ` · ${t.action.name}` : ""}` : "Édition"}</span>
+          </button>
         </PopoverTrigger>
         <PopoverContent className="w-80" align="start">
-          <div className="mb-2 text-xs font-semibold">Rattacher à une édition</div>
-          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Projet, année…" aria-label="Rechercher une édition" className="mb-2 h-8" data-testid="task-edition-search" />
-          <ul className="max-h-56 overflow-y-auto" role="listbox" aria-label="Éditions">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold">{t.edition ? "Édition rattachée" : "Rattacher à une édition"}</span>
+            {t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="text-[11px] text-primary hover:underline">Ouvrir l'édition →</Link>}
+          </div>
+          {current && current.actions.length > 0 && (
+            <div className="mb-2 border-b pb-2">
+              <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>Action de cette édition (facultatif)</label>
+              <select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
+                <option value="">— l'édition entière —</option>
+                {current.actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="text-[10px] text-muted-foreground">{t.edition ? "Changer pour une autre édition" : "Choisir l'édition"}</div>
+          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Projet, année…" aria-label="Rechercher une édition" className="my-1.5 h-8" data-testid="task-edition-search" />
+          <ul className="max-h-48 overflow-y-auto" role="listbox" aria-label="Éditions">
             {list.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">Aucune édition ne correspond.</li>}
             {list.map((e) => (
               <li key={e.id} role="option" aria-selected={e.id === t.edition?.id}>
@@ -228,18 +247,12 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
               </li>
             ))}
           </ul>
-          {current && current.actions.length > 0 && (
-            <div className="mt-2 border-t pt-2">
-              <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>Action de cette édition (facultatif)</label>
-              <select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
-                <option value="">— l'édition entière —</option>
-                {current.actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-          )}
-          {t.edition && <div className="mt-2 flex justify-end"><Button size="xs" variant="ghost" disabled={pending} onClick={() => set(null)}>Détacher</Button></div>}
+          {t.edition && <div className="mt-2 flex justify-end border-t pt-2"><Button size="xs" variant="ghost" disabled={pending} onClick={() => set(null)} className="text-danger hover:text-danger">Détacher de l'édition</Button></div>}
         </PopoverContent>
       </Popover>
+      {t.edition && (
+        <button type="button" aria-label="Détacher de l'édition" title="Détacher de l'édition" disabled={pending} onClick={() => set(null)} className="rounded-r-full bg-secondary py-px pr-1.5 pl-0.5 text-primary hover:bg-danger-soft hover:text-danger" data-testid={`task-detach-${t.id}`}><X className="size-3" /></button>
+      )}
     </span>
   );
 }

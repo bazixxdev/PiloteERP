@@ -79,9 +79,9 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await relire.locator("[data-testid^=task-edition-]").click();
   await page.locator("[id^=task-action-]").selectOption({ label: "Communication" });
   await expect(relire).toContainText("· Communication");
-  await relire.locator("[data-testid^=task-edition-]").click();
-  await page.getByRole("button", { name: "Détacher" }).click();
+  await relire.locator("[data-testid^=task-detach-]").click();
   await expect(relire).not.toContainText("Mois de l'ESS");
+  await expect(relire.locator("[data-testid^=task-edition-]")).toContainText("Édition");
 
   // Une autre personne ne voit pas ces tâches.
   await iAm(page, "Lucas Perrin");
