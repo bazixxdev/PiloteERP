@@ -11,7 +11,7 @@ const GROUPS = [
   { caption: "Espace de travail", items: [
     { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
     { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
-    { href: "/temps", label: "Mes temps", icon: Clock },
+    { href: "/temps", label: "Temps", icon: Clock },
     { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
     { href: "/validations", label: "Validations", icon: CheckSquare },
   ] },

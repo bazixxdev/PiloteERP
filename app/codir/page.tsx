@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckSquare, Euro, Flag, Clock, AlertTriangle, Users } from "lucide-react";
+import { CheckSquare, Euro, Flag, Clock, AlertTriangle, Users, Maximize2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { ValidationCard } from "@/components/common/validation-card";
@@ -75,16 +75,19 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
         title="Les sujets à décider."
         subtitle={<span>{inAlert} édition{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length} éditions · <SessionTimer minutes={20} /></span>}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "" })}>Tous les pôles</Link></Button>
-              {poles.map(([id, name]) => <Button key={id} asChild size="sm" variant={sp.pole === id ? "default" : "outline"}><Link href={qs({ pole: id })}>{name.split(" ")[0]}</Link></Button>)}
-            </div>
-            <Button asChild variant={big ? "outline" : "default"} ><Link href={big ? qs({ plein: "" }) : qs({ plein: "1" })}>{big ? "Quitter la projection" : "Projeter"}</Link></Button>
+          <>
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR <span className="text-muted-foreground">· Échap</span></Link></Button>
-          </div>
+            <Button asChild variant={big ? "outline" : "default"} data-testid="codir-project"><Link href={big ? qs({ plein: "" }) : qs({ plein: "1" })}><Maximize2 />{big ? "Quitter la projection" : "Projeter"}</Link></Button>
+          </>
         }
       />
+
+      {/* Filtre par pôle, sous l'en-tête ; le bouton Projeter reste en haut à droite. */}
+      <div className="mb-4 flex flex-wrap items-center gap-1" data-testid="codir-poles">
+        <span className="mr-1 text-[11px] text-muted-foreground">Pôle</span>
+        <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "" })}>Tous les pôles</Link></Button>
+        {poles.map(([id, name]) => <Button key={id} asChild size="sm" variant={sp.pole === id ? "default" : "outline"}><Link href={qs({ pole: id })}>{name.split(" ")[0]}</Link></Button>)}
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.3fr]">
         <Block icon={CheckSquare} title="Validations en attente" count={pending.length} tone="coral">

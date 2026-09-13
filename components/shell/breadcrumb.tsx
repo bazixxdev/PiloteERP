@@ -7,7 +7,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/portefeuille/, "Pilotage", "Portefeuille"],
   [/^\/edition/, "Projets", "Édition"],
   [/^\/ma-semaine/, "Mon travail", "Ma semaine"],
-  [/^\/temps/, "Mon travail", "Mes temps"],
+  [/^\/temps/, "Mon travail", "Temps"],
   [/^\/cloture/, "Mon travail", "Clôture mensuelle"],
   [/^\/annuel/, "Pilotage", "Vue annuelle"],
   [/^\/validations/, "Pilotage", "Validations"],

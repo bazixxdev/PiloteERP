@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // Navigation basse (mobile, maquette V2 chapitre 06) : trois entrées accessibles au pouce.
 const ITEMS = [
   { href: "/ma-semaine", symbol: "☷", label: "Ma semaine" },
-  { href: "/temps", symbol: "◷", label: "Mes temps" },
+  { href: "/temps", symbol: "◷", label: "Temps" },
   { href: "/portefeuille", symbol: "▦", label: "Projets", match: ["/portefeuille", "/edition"] },
 ];
 
