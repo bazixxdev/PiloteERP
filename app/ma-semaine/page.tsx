@@ -14,23 +14,26 @@ import { cn } from "@/lib/utils";
 import { IcsCard } from "@/components/common/ics-card";
 import { prisma } from "@/lib/db";
 import { expectedHoursOn, loadRhythms, rhythmAt, weekDays } from "@/lib/time";
+import { loadMyTasks } from "@/lib/tasks";
+import { TaskList, slotLabel } from "@/components/tasks/task-list";
 
 // Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
 // les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
-type Item = { id: string; kind: "action" | "deliverable" | "milestone"; title: string; sub: string; href: string; date: Date; daysLeft: number; owner?: string | null };
+type Item = { id: string; kind: "action" | "deliverable" | "milestone" | "task"; title: string; sub: string; href: string; date: Date; daysLeft: number; owner?: string | null };
 
 export default async function MaSemainePage() {
   const [me, settings, refs] = await Promise.all([getCurrentPerson(), getSettings(), getRefs()]);
   const weekStart = dayjs().startOf("isoWeek");
   const weekEnd = weekStart.add(6, "day");
   const days = weekDays(weekStart, 5);
-  const [agenda, portfolio, unread, personFull, rhythms, weekEntries] = await Promise.all([
+  const [agenda, portfolio, unread, personFull, rhythms, weekEntries, tasks] = await Promise.all([
     loadAgenda(settings.horizonDays),
     loadPortfolio(settings, { statuses: ["in_progress", "validated"] }),
     prisma.notification.findMany({ where: { personId: me.id, readAt: null }, include: { sender: true }, orderBy: { createdAt: "desc" } }),
     prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } } } }),
     loadRhythms(),
     prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: weekStart.toDate(), lt: weekStart.add(1, "week").toDate() } }, select: { hours: true, date: true } }),
+    loadMyTasks(me.id),
   ]);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
@@ -51,10 +54,21 @@ export default async function MaSemainePage() {
     ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · Édition ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
     ...myDeliverables.map((d): Item => ({ id: `d-${d.id}`, kind: "deliverable", title: d.label, sub: `${d.fundingLine.edition.project.name} · Livrable pour ${d.fundingLine.funder.name}`, href: `/edition/${d.fundingLine.editionId}?onglet=financements`, date: d.dueDate, daysLeft: d.daysLeft })),
     ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
+    // Les tâches datées en retard rejoignent le retard ; les autres vivent dans « Mes tâches » (pas de doublon).
+    ...tasks.filter((t) => !t.done && t.dueDate && dayjs(t.dueDate).isBefore(dayjs(), "day")).map((t): Item => ({ id: `t-${t.id}`, kind: "task", title: t.label, sub: t.edition ? `${t.edition.name} · ${t.edition.year}` : "tâche personnelle", href: "#mes-taches", date: dayjs(t.dueDate!).toDate(), daysLeft: dayjs(t.dueDate!).startOf("day").diff(dayjs().startOf("day"), "day") })),
   ].sort((a, b) => a.daysLeft - b.daysLeft);
   const late = items.filter((i) => i.daysLeft < 0);
   const thisWeek = items.filter((i) => i.daysLeft >= 0 && !dayjs(i.date).isAfter(weekEnd, "day"));
   const later = items.filter((i) => i.daysLeft >= 0 && dayjs(i.date).isAfter(weekEnd, "day"));
+
+  // Aujourd'hui : échéances du jour, tâches du jour, créneaux posés, heures saisies face au rythme.
+  const todayRhythm = personFull ? rhythmAt(personFull, dayjs(), rhythms) : null;
+  const todayExpected = todayRhythm ? expectedHoursOn(todayRhythm, dayjs()) : null;
+  const todayHours = weekEntries.filter((t) => dayjs(t.date).isSame(dayjs(), "day")).reduce((s, t) => s + t.hours, 0);
+  const todayItems = items.filter((i) => i.daysLeft === 0);
+  const todayTasks = tasks.filter((t) => !t.done && t.dueDate && dayjs(t.dueDate).isSame(dayjs(), "day"));
+  const todaySlots = tasks.flatMap((t) => t.slots.filter((sl) => dayjs(sl.startAt).isSame(dayjs(), "day")).map((sl) => ({ sl, t }))).sort((a, b) => a.sl.startAt.localeCompare(b.sl.startAt));
+  const openTasks = tasks.filter((t) => !t.done).length;
 
   const overdueValidation = toDecide.filter((v) => v.age > v.targetDelayDays).sort((a, b) => b.age - a.age)[0];
   const attention = late[0]
@@ -62,12 +76,12 @@ export default async function MaSemainePage() {
     : overdueValidation
       ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/validations" }
       : null;
-  const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0;
+  const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0 && openTasks === 0;
 
   const dayLabel = (n: number) => (n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} j`);
   const badgeColor = (n: number) => (n < 0 ? "danger" : n <= 7 ? "warning" : "muted");
   const firstName = me.name.split(/\s+/)[0];
-  const kindLabel = { action: "Action", deliverable: "Livrable", milestone: "Jalon d'équipe" };
+  const kindLabel = { action: "Action", deliverable: "Livrable", milestone: "Jalon d'équipe", task: "Tâche" };
 
   const ItemRow = ({ it }: { it: Item }) => (
     <Row late={it.daysLeft < 0}>
@@ -112,7 +126,26 @@ export default async function MaSemainePage() {
         </div>
       )}
 
-      {/* Sur mobile, une seule colonne dans l'ordre : retard, semaine, validations, temps, plus tard. Sur grand écran, deux colonnes. */}
+      {/* Aujourd'hui : la journée en un coup d'œil — ce qui est dû, ce que j'ai prévu de faire, mes heures. */}
+      {(
+        <div className="mb-4 rounded-md border bg-card px-4 py-3" data-testid="today">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h4 className="text-[13px] font-bold">Aujourd'hui · {dayjs().format("dddd D MMMM")}</h4>
+            <span className="text-[11px] text-muted-foreground"><b className="tabular text-foreground">{fmtNumber(todayHours, 1)} h</b> saisies{todayExpected ? ` sur ${fmtNumber(todayExpected, 1)} h attendues` : ""} · <Link href="/temps" className="text-primary hover:underline">saisir</Link></span>
+          </div>
+          {todayItems.length + todayTasks.length + todaySlots.length === 0 ? (
+            <p className="mt-1 text-[11px] text-muted-foreground">Rien de daté aujourd'hui. Posez un créneau sur une tâche pour organiser la journée.</p>
+          ) : (
+            <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+              {todaySlots.map(({ sl, t }) => <li key={sl.id} className="flex items-center gap-2"><span className="w-28 shrink-0 font-semibold tabular text-primary">{sl.allDay ? "Journée" : slotLabel(sl).split(" · ")[1]}</span><span className="truncate">{t.label}</span></li>)}
+              {todayTasks.filter((t) => !todaySlots.some((x) => x.t.id === t.id)).map((t) => <li key={t.id} className="flex items-center gap-2"><span className="w-28 shrink-0 text-muted-foreground">Tâche due</span><span className="truncate">{t.label}</span></li>)}
+              {todayItems.map((it) => <li key={it.id} className="flex items-center gap-2"><span className="w-28 shrink-0 text-muted-foreground">{kindLabel[it.kind]} due</span><Link href={it.href} className="truncate hover:underline">{it.title}</Link></li>)}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Sur mobile, une seule colonne dans l'ordre : retard, semaine, tâches, validations, temps, plus tard. Sur grand écran, deux colonnes. */}
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <div className="contents lg:grid lg:content-start lg:gap-4">
           <Panel title="En retard" aside={late.length ? <StatusBadge label={`${late.length} à reprendre`} color="danger" dot={false} /> : <span className="text-[11px] text-muted-foreground">Aucun retard</span>} testId="late" className="order-1">
@@ -121,7 +154,10 @@ export default async function MaSemainePage() {
           <Panel title="Cette semaine" aside={<span className="text-[11px] text-muted-foreground">Jusqu'au {weekEnd.format("D MMMM")}</span>} testId="this-week" className="order-2">
             {thisWeek.length === 0 ? <Note>✓ Aucune échéance d'ici dimanche.</Note> : thisWeek.map((it) => <ItemRow key={it.id} it={it} />)}
           </Panel>
-          <details className="group order-5 overflow-hidden rounded-md border bg-card" data-testid="later">
+          <Panel title="Mes tâches" aside={<span className="text-[11px] text-muted-foreground">{openTasks ? `${openTasks} en cours` : "Rien en cours"} · privées</span>} testId="my-tasks" className="order-3 scroll-mt-4" id="mes-taches">
+            <TaskList tasks={tasks} />
+          </Panel>
+          <details className="group order-6 overflow-hidden rounded-md border bg-card" data-testid="later">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5">
               <h4 className="text-[13px] font-bold">Plus tard</h4>
               <span className="text-[11px] text-primary"><span className="group-open:hidden">Voir les échéances à {settings.horizonDays} jours ({later.length})</span><span className="hidden group-open:inline">Replier</span></span>
@@ -131,7 +167,7 @@ export default async function MaSemainePage() {
         </div>
 
         <div className="contents lg:grid lg:content-start lg:gap-4">
-          <Panel title="Mes validations" aside={toDecide.length ? <StatusBadge label={`${toDecide.length} à traiter`} color="warning" dot={false} /> : <span className="text-[11px] text-muted-foreground">Rien à décider</span>} testId="my-validations" className="order-3">
+          <Panel title="Mes validations" aside={toDecide.length ? <StatusBadge label={`${toDecide.length} à traiter`} color="warning" dot={false} /> : <span className="text-[11px] text-muted-foreground">Rien à décider</span>} testId="my-validations" className="order-4">
             {toDecide.length + myRequests.length === 0 ? <Note>Aucune demande en attente.</Note> : (
               <>
                 {toDecide.map((v) => (
@@ -156,7 +192,7 @@ export default async function MaSemainePage() {
             )}
           </Panel>
 
-          <div className="order-4 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
+          <div className="order-5 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
             <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mes temps à saisir</h4><span aria-hidden>◷</span></div>
             <p className="mt-2 mb-4 text-xs text-muted-foreground">
               {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est saisie jusqu'ici.<br /></> : null}
@@ -198,9 +234,9 @@ export default async function MaSemainePage() {
   );
 }
 
-function Panel({ title, aside, children, testId, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; testId?: string; className?: string }) {
+function Panel({ title, aside, children, testId, className, id }: { title: string; aside?: React.ReactNode; children: React.ReactNode; testId?: string; className?: string; id?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-md border bg-card", className)} data-testid={testId}>
+    <div className={cn("overflow-hidden rounded-md border bg-card", className)} data-testid={testId} id={id}>
       <div className="flex items-center justify-between border-b px-4 py-3.5"><h4 className="text-[13px] font-bold">{title}</h4>{aside}</div>
       {children}
     </div>

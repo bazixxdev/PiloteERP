@@ -19,7 +19,8 @@ function fold(line: string): string {
   return out.join("\r\n");
 }
 
-export type IcsEvent = { uid: string; date: Date; summary: string; description?: string; url?: string; category?: string };
+// Un événement est « journée entière » par défaut (échéance) ; avec `end`, c'est une plage horaire (créneau de travail), marquée occupée.
+export type IcsEvent = { uid: string; date: Date; end?: Date; busy?: boolean; summary: string; description?: string; url?: string; category?: string };
 
 export function buildIcs(name: string, events: IcsEvent[]): string {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -29,17 +30,17 @@ export function buildIcs(name: string, events: IcsEvent[]): string {
   ];
   for (const e of events) {
     const d = dayjs(e.date);
+    const utc = (x: Date) => new Date(x).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
     lines.push(
       "BEGIN:VEVENT",
       `UID:${e.uid}@pilote.cress`,
       `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${d.format("YYYYMMDD")}`,
-      `DTEND;VALUE=DATE:${d.add(1, "day").format("YYYYMMDD")}`,
+      ...(e.end ? [`DTSTART:${utc(e.date)}`, `DTEND:${utc(e.end)}`] : [`DTSTART;VALUE=DATE:${d.format("YYYYMMDD")}`, `DTEND;VALUE=DATE:${d.add(1, "day").format("YYYYMMDD")}`]),
       `SUMMARY:${esc(e.summary)}`,
       ...(e.description ? [`DESCRIPTION:${esc(e.description)}`] : []),
       ...(e.url ? [`URL:${e.url}`] : []),
       ...(e.category ? [`CATEGORIES:${esc(e.category)}`] : []),
-      "TRANSP:TRANSPARENT",
+      e.busy ? "TRANSP:OPAQUE" : "TRANSP:TRANSPARENT",
       "END:VEVENT",
     );
   }
@@ -58,14 +59,18 @@ export async function personEvents(personId: string, base: string): Promise<{ na
   const p = await prisma.person.findUnique({ where: { id: personId } });
   if (!p) return null;
   const from = dayjs().subtract(60, "day").toDate();
-  const [actions, deliverables, validations] = await Promise.all([
+  const [actions, deliverables, validations, tasks] = await Promise.all([
     prisma.action.findMany({ where: { ownerId: p.id, state: { not: "done" }, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } } }),
     prisma.deliverable.findMany({ where: { done: false, dueDate: { gte: from }, fundingLine: { edition: { status: { in: LIVE }, ...(p.role === "raf" ? {} : { project: { pilotId: p.id } }) } } }, include: { fundingLine: { include: { funder: true, edition: { include: { project: true } } } } } }),
     p.role === "director" || p.role === "pole_lead" || p.role === "pilot"
       ? prisma.validationRequest.findMany({ where: { status: "pending" }, include: { edition: { include: { project: true } } } })
       : Promise.resolve([]),
+    prisma.task.findMany({ where: { personId: p.id, done: false }, include: { edition: { include: { project: true } }, slots: { where: { endAt: { gte: from } } } } }),
   ]);
   const events: IcsEvent[] = [
+    // Tâches personnelles : l'échéance en journée entière, chaque créneau posé en plage horaire occupée (ou journée occupée).
+    ...tasks.filter((t) => t.dueDate && t.dueDate >= from).map((t) => ({ uid: `task-${t.id}`, date: t.dueDate!, summary: `Tâche · ${t.label}`, description: t.edition ? `${t.edition.project.name} · ${t.edition.year}` : "Tâche personnelle", url: `${base}/ma-semaine`, category: "Pilote · tâche" })),
+    ...tasks.flatMap((t) => t.slots.map((s) => ({ uid: `slot-${s.id}`, date: s.startAt, end: s.allDay ? undefined : s.endAt, busy: true, summary: `Travail · ${t.label}`, description: t.edition ? `${t.edition.project.name} · ${t.edition.year}` : "Créneau de travail", url: `${base}/ma-semaine`, category: "Pilote · créneau" }))),
     ...actions.map((a) => ({ uid: `action-${a.id}`, date: a.milestoneDate!, summary: `Jalon · ${a.name}`, description: `${a.edition.project.name} · ${a.edition.year}`, url: `${base}/edition/${a.editionId}?onglet=actions`, category: "Pilote · jalon" })),
     ...deliverables.map((d) => ({ uid: `deliv-${d.id}`, date: d.dueDate, summary: `Livrable ${d.fundingLine.funder.name} · ${d.label}`, description: `${d.fundingLine.edition.project.name} · ${d.fundingLine.edition.year}`, url: `${base}/edition/${d.fundingLine.editionId}?onglet=financements`, category: "Pilote · livrable financeur" })),
     ...validations

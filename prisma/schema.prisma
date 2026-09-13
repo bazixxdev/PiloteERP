@@ -51,6 +51,7 @@ model Person {
   uploads            Attachment[]
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
+  tasks              Task[]
   notifications      Notification[]     @relation("NotificationRecipient")
   notificationsSent  Notification[]     @relation("NotificationSender")
 }
@@ -219,6 +220,7 @@ model Edition {
   attachments  Attachment[]
   expenses     Expense[]
   decisions    Decision[]
+  tasks        Task[]
 
   @@unique([projectId, year])
 }
@@ -261,6 +263,7 @@ model Action {
   isPublic      Boolean      @default(false) // événement public : flux agenda du site
   timeEntries   TimeEntry[]
   validations   ValidationRequest[]
+  tasks         Task[]
 }
 
 model FundingLine {
@@ -514,4 +517,37 @@ model Notification {
   readAt    DateTime?
 
   @@index([personId, readAt])
+}
+
+// Tâche personnelle (to-do privée) : libellé, échéance facultative, rattachement facultatif à une édition ou une action.
+// La personne est portée en base pour cloisonner ; à l'écran, c'est toujours la personne connectée, jamais un choix.
+model Task {
+  id        String     @id @default(cuid())
+  personId  String
+  person    Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label     String
+  dueDate   DateTime?
+  done      Boolean    @default(false)
+  doneAt    DateTime?
+  editionId String?
+  edition   Edition?   @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  actionId  String?
+  action    Action?    @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  createdAt DateTime   @default(now())
+  slots     WorkSlot[]
+
+  @@index([personId, done])
+}
+
+// Créneau de travail posé sur une tâche : une journée entière (allDay) ou une plage horaire (de 9 h à 11 h le 23/09).
+// Distinct de l'échéance : la deadline dit « pour quand », le créneau dit « quand je m'y mets ». Apparaît dans le flux agenda, comme « occupé ».
+model WorkSlot {
+  id      String   @id @default(cuid())
+  taskId  String
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startAt DateTime
+  endAt   DateTime
+  allDay  Boolean  @default(false)
+
+  @@index([taskId])
 }

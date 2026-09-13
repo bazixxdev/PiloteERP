@@ -12,6 +12,7 @@ import { TabsNav, type TabKey } from "./tabs-nav";
 import { EditionPicker } from "./edition-picker";
 import { RenewDialog } from "./renew-dialog";
 import { RequestValidationDialog } from "./request-validation-dialog";
+import { CreateTaskButton } from "./create-task-button";
 import { FicheTab } from "./fiche";
 import { ActionsTab } from "./actions-tab";
 import { FinancementsTab } from "./financements";
@@ -65,6 +66,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">Projet commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
           <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
           <RequestValidationDialog
             editionId={e.id}
