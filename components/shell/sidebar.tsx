@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
 // Barre latérale V2 : fond clair, logo CRESS sur fond transparent, la liste des pôles en repère.
 // Les groupes suivent le profil : un salarié commence par Ma semaine, Temps et ses projets ; les accès collectifs ou
-// occasionnels viennent ensuite, et les écrans CODIR, Séminaire et Admin n'apparaissent qu'à ceux qui y ont un rôle.
+// occasionnels viennent ensuite, et les écrans CODIR et Séminaire n'apparaissent qu'aux rôles CODIR. L'admin est dans le menu utilisateur.
 type Item = { href: string; label: string; icon: typeof Briefcase };
 type Group = { caption: string; items: Item[] };
 
 function groupsFor(role: string): Group[] {
   const codir = ["director", "raf", "pole_lead"].includes(role);
-  const admin = role === "director" || role === "raf";
   const work: Item[] = codir
     ? [
         { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
@@ -42,7 +41,6 @@ function groupsFor(role: string): Group[] {
     { caption: codir ? "Espace de travail" : "Mon travail", items: work },
     { caption: "Toute la CRESS", items: collective },
     ...(direction.length ? [{ caption: "Direction", items: direction }] : []),
-    ...(admin ? [{ caption: "Réglages", items: [{ href: "/admin", label: "Admin", icon: Settings }] }] : []),
   ];
 }
 

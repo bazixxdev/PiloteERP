@@ -16,6 +16,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/seminaire/, "Collectif", "Séminaire"],
   [/^\/rappels/, "Collectif", "Rappels"],
   [/^\/admin/, "Réglages", "Admin"],
+  [/^\/compte/, "Réglages", "Mon compte"],
 ];
 
 const EDITION_TABS: Record<string, string> = { fiche: "Fiche", actions: "Actions", financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };

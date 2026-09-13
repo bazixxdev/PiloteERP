@@ -13,7 +13,7 @@ export function Gauge({ value, max, alertPercent = 80, label, className, compact
     <div className={cn("min-w-[72px]", compact ? "w-24" : "w-40", className)} title={[label, over].filter(Boolean).join(" · ") || undefined}>
       <div className="flex items-baseline justify-between gap-2 text-xs tabular">
         {amount ? <span>{amount}</span> : <span className="text-muted-foreground">{fmtNumber(value, 0)}</span>}
-        <b className={cn("font-semibold", text)}>{p} %</b>
+        <b className={cn("font-semibold whitespace-nowrap", text)}>{p} %</b>
       </div>
       <div className="mt-1 h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]">
         <div className={cn("h-full rounded-[3px] transition-all", color)} style={{ width: `${Math.min(100, p)}%` }} />

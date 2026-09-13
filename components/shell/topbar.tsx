@@ -7,6 +7,7 @@ import { Breadcrumb } from "./breadcrumb";
 import { prisma } from "@/lib/db";
 import { NotificationsBell } from "./notifications-bell";
 import { byRelevance } from "@/lib/scope";
+import { canAdmin } from "@/lib/rights";
 import { withBase } from "@/lib/base-path";
 import { fmtDate } from "@/lib/format";
 
@@ -33,7 +34,7 @@ export async function Topbar() {
       </div>
       <div className="flex items-center gap-2">
         <NotificationsBell items={notifications.map((n) => ({ id: n.id, title: n.title, body: n.body, link: n.link, createdAt: fmtDate(n.createdAt, "D MMM à HH:mm"), readAt: n.readAt ? n.readAt.toISOString() : null, sender: n.sender?.name ?? null }))} />
-        <PersonSwitcher people={people.map(map)} current={map(current)} />
+        <PersonSwitcher people={people.map(map)} current={map(current)} canAdmin={canAdmin(current.role)} />
       </div>
     </header>
   );

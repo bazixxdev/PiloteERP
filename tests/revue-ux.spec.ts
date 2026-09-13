@@ -78,3 +78,30 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   await expect(page.locator("[data-testid^=agenda-]")).toHaveCount(5);
   await expect(page.getByTestId("codir-all")).toHaveAttribute("open", "");
 });
+
+test("le menu utilisateur donne accès au compte, à l'admin selon les droits, au changement d'utilisateur et à la déconnexion", async ({ page }) => {
+  await page.goto("/portefeuille");
+  await iAm(page, "Claire Vasseur");
+  await page.getByTestId("person-switcher").click();
+  await expect(page.getByTestId("menu-admin")).toBeVisible();
+  await page.getByTestId("menu-account").click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Mon compte");
+  await expect(page.locator("section", { hasText: "Identité et poste" })).toContainText("Claire Vasseur");
+
+  // La recherche de la modale filtre par nom, rôle ou pôle.
+  await page.getByTestId("person-switcher").click();
+  await page.getByTestId("menu-switch").click();
+  await page.getByTestId("person-search").fill("contrib");
+  const options = page.getByTestId("person-chooser").getByRole("option");
+  await expect(options.first()).toContainText("Contributeur");
+  await options.filter({ hasText: "Lucas Perrin" }).click();
+  await expect(page.getByTestId("person-switcher")).toContainText("Lucas Perrin");
+
+  // Un contributeur n'a ni Admin dans le menu, ni dans la barre latérale ; la déconnexion ouvre le choix de personne.
+  await page.getByTestId("person-switcher").click();
+  await expect(page.getByTestId("menu-admin")).toHaveCount(0);
+  await page.getByTestId("menu-logout").click();
+  await expect(page.getByTestId("person-chooser")).toContainText("Se déconnecter");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("aside").getByRole("link", { name: "Admin" })).toHaveCount(0);
+});
