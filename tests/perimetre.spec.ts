@@ -12,9 +12,16 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   await expect(table.getByRole("link", { name: "Sensibilisation des jeunes" })).toBeVisible();
   await expect(table.getByRole("link", { name: "Chroniquer la TESS" })).toHaveCount(0);
 
-  // Élargir à toute la CRESS.
+  // Ce qui me concerne d'abord : « Je pilote » en tête, puis « Je contribue », puis « Mon pôle ».
+  const groups = table.locator("tr[data-testid^=group-]");
+  await expect(groups.first()).toContainText("Je pilote");
+  const firstRowAfterHeader = table.locator("tbody tr").nth(1);
+  await expect(firstRowAfterHeader).toContainText("Inès Cabral");
+
+  // Élargir à toute la CRESS : les autres pôles arrivent en dernier.
   await page.getByTestId("perimeter-cress").click();
   await expect(table.getByRole("link", { name: "Chroniquer la TESS" })).toBeVisible();
+  await expect(table.locator("tr[data-testid=group-3]")).toContainText("Autres pôles");
 
   // Une édition hors de son pôle : consultable, avec le bandeau.
   await table.getByRole("link", { name: "Chroniquer la TESS" }).click();

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
-import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { inMyScope, isTransversal, perimeterFrom, byRelevance, TIER_LABEL, type Tier } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { loadPortfolio } from "@/lib/queries";
 import { refColor, refLabel } from "@/lib/refs";
@@ -43,6 +43,10 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     );
   }
   if (codir) rows = rows.filter((r) => r.alerts.length > 0 || r.pendingValidations > 0);
+  // Ce qui me concerne d'abord : je pilote, je contribue, mon pôle, le reste ; puis les alertes fortes.
+  const ranked = byRelevance(me, rows, (r) => ({ project: r.project, teamIds: r.team.map((t) => t.personId), ownerIds: r.actions.map((a) => a.ownerId ?? "") }), (a, b) => Number(b.hasDanger) - Number(a.hasDanger) || b.alerts.length - a.alerts.length);
+  const groups = [0, 1, 2, 3].map((t) => ({ tier: t as Tier, rows: ranked.filter((r) => r.tier === t) })).filter((g) => g.rows.length > 0);
+  const showGroups = !codir && !isTransversal(me) && groups.length > 1;
   // Les alertes d'abord (fortes, puis modérées), ensuite l'ordre alphabétique.
   const rank = (r: (typeof rows)[number]) => (r.hasDanger ? 0 : r.alerts.length > 0 ? 1 : 2);
   rows = [...rows].sort((a, b) => rank(a) - rank(b) || a.project.name.localeCompare(b.project.name, "fr"));
@@ -114,7 +118,13 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {groups.flatMap((g) => [
+                ...(showGroups ? [(
+                  <tr key={`g-${g.tier}`} className="bg-muted/40" data-testid={`group-${g.tier}`}>
+                    <td colSpan={9} className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{TIER_LABEL[g.tier]} · {g.rows.length}</td>
+                  </tr>
+                )] : []),
+                ...g.rows.map((r) => {
                 const ms = r.nextMilestone;
                 const dl = r.nextDeliverable;
                 const msDays = ms ? daysFromNow(ms.date) : null;
@@ -158,7 +168,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-3"><AlertChips alerts={r.alerts} max={codir ? 4 : 2} /></td>
                   </tr>
                 );
-              })}
+                }),
+              ])}
             </tbody>
           </table>
         </div>

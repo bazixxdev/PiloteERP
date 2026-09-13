@@ -29,6 +29,8 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
     orderBy: [{ pole: { name: "asc" } }, { order: "asc" }],
   });
   const editions = await loadPortfolio(settings, { year, statuses: ["in_progress", "validated", "proposed", "rechallenged"] });
+  // Moi d'abord, puis mon pôle, puis les autres.
+  people.sort((a, b) => Number(b.id === me.id) - Number(a.id === me.id) || (me.poleId ? Number(b.poleId === me.poleId) - Number(a.poleId === me.poleId) : 0) || (a.pole?.name ?? "").localeCompare(b.pole?.name ?? "") || a.order - b.order);
   const poleEditions = sp.pole ? editions.filter((e) => e.project.poleId === sp.pole) : [];
 
   return (

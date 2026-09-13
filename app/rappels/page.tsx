@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { inMyScope, isTransversal, perimeterFrom, relevanceTier, TIER_LABEL } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { computeReminders } from "@/lib/alerts";
 import { fmtDate } from "@/lib/format";
@@ -21,7 +21,10 @@ export default async function RappelsPage({ searchParams }: { searchParams: Prom
   ]);
   const days = settings.reminderDaysBefore.split(",").map(Number);
   const scoped = perimeter === "pole" ? editions.filter((e) => inMyScope(me, e.project, e.team.map((t) => t.personId))) : editions;
-  const reminders = computeReminders(scoped, raf?.name ?? null, days, settings.horizonDays);
+  const tierOf = new Map(scoped.map((e) => [e.id, relevanceTier(me, e.project, e.team.map((t) => t.personId), e.actions.map((a) => a.ownerId ?? ""))]));
+  const reminders = computeReminders(scoped, raf?.name ?? null, days, settings.horizonDays)
+    .map((r) => ({ ...r, tier: tierOf.get(r.editionId) ?? 3 }))
+    .sort((a, b) => (isTransversal(me) ? 0 : a.tier - b.tier) || a.daysLeft - b.daysLeft);
   return (
     <div className="p-4 md:p-6">
       <PageHeader title="Rappels" subtitle={`Rappels automatiques J-${days.join(" et J-")} avant chaque livrable financeur et chaque jalon interne, horizon ${settings.horizonDays} jours. Dans le prototype, ils s'affichent ici au lieu d'un mail.`} />
@@ -41,7 +44,7 @@ export default async function RappelsPage({ searchParams }: { searchParams: Prom
                   </td>
                   <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : "Jalon interne"}</span></td>
                   <td className="px-3 py-2">{r.label}</td>
-                  <td className="px-3 py-2"><Link href={`/edition/${r.editionId}?onglet=${r.kind === "deliverable" ? "financements" : "actions"}`} className="text-primary hover:underline">{r.project}</Link></td>
+                  <td className="px-3 py-2"><Link href={`/edition/${r.editionId}?onglet=${r.kind === "deliverable" ? "financements" : "actions"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.who.join(", ")}</td>
                 </tr>
               ))}

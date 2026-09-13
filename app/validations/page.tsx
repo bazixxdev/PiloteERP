@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { canDecideValidation, validationLevelOf } from "@/lib/rights";
 import { attachmentInclude } from "@/lib/attachments";
-import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { inMyScope, isTransversal, perimeterFrom, byRelevance } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { fmtEuro } from "@/lib/format";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
   });
   const perimeter = perimeterFrom(me, perimetre);
   const scoped = perimeter === "pole" ? all.filter((v) => inMyScope(me, v.edition.project, v.edition.team.map((t) => t.personId))) : all;
-  const pending = scoped.filter((v) => v.status === "pending");
+  const pending = byRelevance(me, scoped.filter((v) => v.status === "pending"), (v) => ({ project: v.edition.project, teamIds: v.edition.team.map((t) => t.personId) }), (a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const decided = scoped.filter((v) => v.status !== "pending").slice(0, 12);
   const forMe = pending.filter((v) => canDecideValidation(me, v));
   const levelFilter = niveau ? Number(niveau) : null;

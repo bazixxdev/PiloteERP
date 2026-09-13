@@ -30,3 +30,21 @@ export function perimeterFrom(me: Viewer, param: string | undefined): Perimeter 
   if (param === "cress" || param === "pole") return param;
   return isTransversal(me) ? "cress" : "pole";
 }
+
+// Ordre de pertinence pour une personne : 0 je pilote · 1 je contribue (équipe ou action) · 2 mon pôle · 3 le reste.
+export type Tier = 0 | 1 | 2 | 3;
+export const TIER_LABEL: Record<Tier, string> = { 0: "Je pilote", 1: "Je contribue", 2: "Mon pôle", 3: "Autres pôles" };
+
+export function relevanceTier(me: Viewer, p: ProjectPoles & { pilotId?: string; guarantorId?: string | null }, teamIds: string[] = [], actionOwnerIds: string[] = []): Tier {
+  if (p.pilotId === me.id) return 0;
+  if (teamIds.includes(me.id) || actionOwnerIds.includes(me.id) || p.guarantorId === me.id) return 1;
+  if (inMyPole(me, p)) return 2;
+  return 3;
+}
+
+// Tri stable par pertinence puis par un critère secondaire (alerte, ancienneté…).
+export function byRelevance<T>(me: Viewer, items: T[], pick: (x: T) => { project: ProjectPoles & { pilotId?: string; guarantorId?: string | null }; teamIds?: string[]; ownerIds?: string[] }, secondary?: (a: T, b: T) => number): (T & { tier: Tier })[] {
+  return items
+    .map((x) => { const k = pick(x); return { ...x, tier: relevanceTier(me, k.project, k.teamIds, k.ownerIds) }; })
+    .sort((a, b) => a.tier - b.tier || (secondary ? secondary(a, b) : 0));
+}

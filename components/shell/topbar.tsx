@@ -7,15 +7,17 @@ import { Breadcrumb } from "./breadcrumb";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { NotificationsBell } from "./notifications-bell";
+import { byRelevance } from "@/lib/scope";
 import { fmtDate } from "@/lib/format";
 
 export async function Topbar() {
   const [current, people, refs] = await Promise.all([getCurrentPerson(), getPeople(), getRefs()]);
-  const editions = await prisma.edition.findMany({
+  const rawEditions = await prisma.edition.findMany({
     where: { status: { not: "closed" } },
-    select: { id: true, year: true, project: { select: { name: true } } },
+    select: { id: true, year: true, project: { select: { name: true, poleId: true, pilotId: true, guarantorId: true, secondaryPoles: { select: { poleId: true } } } }, team: { select: { personId: true } } },
     orderBy: [{ project: { name: "asc" } }, { year: "desc" }],
   });
+  const editions = byRelevance(current, rawEditions, (e) => ({ project: e.project, teamIds: e.team.map((t) => t.personId) }));
   const notifications = await prisma.notification.findMany({ where: { personId: current.id }, include: { sender: true }, orderBy: { createdAt: "desc" }, take: 20 });
   const map = (p: (typeof people)[number]) => ({ id: p.id, name: p.name, role: p.role, roleLabel: refLabel(refs, "role", p.role), poleName: p.pole?.name ?? null });
   return (
