@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
+import { DossiersNav } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
@@ -26,6 +27,7 @@ export default async function FinanceursPage() {
   const rw = canEditFunding(me.role);
   return (
     <div className="p-4 md:p-6">
+      <DossiersNav current="financeurs" />
       <PageHeader title="Financeurs" subtitle={`${funders.length} financeurs · leurs interlocuteurs, leurs conventions et les éditions qu'ils financent. Les contacts sont tenus par la RAF : le minimum utile, pas de synchronisation avec Outlook.`} actions={rw ? <AddFunderForm /> : undefined} />
       {funders.length === 0 ? <EmptyState title="Aucun financeur" hint="Ajoutez-en un ; ils servent ensuite aux lignes de financement et aux conventions." /> : (
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${funders.length} financeurs`}>

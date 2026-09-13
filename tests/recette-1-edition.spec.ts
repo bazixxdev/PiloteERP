@@ -3,7 +3,7 @@ import { iAm } from "./helpers";
 
 // Recette 1 (lot 1) : la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes.
 test("la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes", async ({ page }) => {
-  await page.goto("/admin?section=projets");
+  await page.goto("/projets");
   await iAm(page, "Claire Vasseur");
 
   // 1. La direction crée un projet et sa première édition.

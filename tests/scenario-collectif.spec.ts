@@ -12,7 +12,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   const monday = dayjs().startOf("isoWeek");
 
   // 1. La direction crée le projet, cadre la couche 1 et met l'édition en cours.
-  await page.goto("/admin?section=projets");
+  await page.goto("/projets");
   await iAm(page, "Claire Vasseur");
   await page.getByTestId("cp-name").fill("Projet collectif Bêta");
   await page.getByTestId("cp-code").fill("COL-01");

@@ -7,12 +7,18 @@ export const COOKIE = "pilote_person";
 
 export type CurrentPerson = NonNullable<Awaited<ReturnType<typeof loadPerson>>>;
 
+// Personne courante : celle du cookie ; sinon un directeur actif, sinon n'importe quelle personne active, sinon la première.
+// Ne jamais planter parce qu'une case « Actif » a été décochée ou que la base a été reseedée (cookie périmé).
 async function loadPerson(id: string | undefined) {
   if (id) {
     const p = await prisma.person.findUnique({ where: { id }, include: { pole: true } });
     if (p) return p;
   }
-  return prisma.person.findFirst({ where: { role: "director", active: true }, include: { pole: true }, orderBy: { order: "asc" } });
+  return (
+    (await prisma.person.findFirst({ where: { role: "director", active: true }, include: { pole: true }, orderBy: { order: "asc" } })) ??
+    (await prisma.person.findFirst({ where: { active: true }, include: { pole: true }, orderBy: { order: "asc" } })) ??
+    prisma.person.findFirst({ include: { pole: true }, orderBy: { order: "asc" } })
+  );
 }
 
 // Personne courante (sélecteur « Je suis… »). Par défaut : la direction.

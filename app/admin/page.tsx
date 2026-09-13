@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { withBase } from "@/lib/base-path";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -10,13 +11,12 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib/refs";
 import { canAdmin } from "@/lib/rights";
 import { cn } from "@/lib/utils";
-import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm, RhythmPeriodForm, ProjectPolesPicker } from "./forms";
+import { AddSimpleForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./forms";
 import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
-  { key: "projets", label: "Projets et éditions" },
   { key: "referentiels", label: "Référentiels" },
   { key: "parametres", label: "Paramètres" },
   { key: "donnees", label: "Import / export" },
@@ -26,13 +26,13 @@ const COLOR_OPTS = ["primary", "info", "mint", "warning", "danger", "coral", "mu
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
   const { section } = await searchParams;
+  if (section === "projets") redirect("/projets");
   const current = SECTIONS.some((s) => s.key === section) ? section! : "personnes";
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
   const rw = canAdmin(me.role);
-  const [people, poles, projects, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
+  const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
-    prisma.project.findMany({ include: { pole: true, pilot: true, mission: true, secondaryPoles: true, editions: { orderBy: { year: "asc" } } }, orderBy: { name: "asc" } }),
     prisma.funder.findMany({ orderBy: { name: "asc" } }),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
     prisma.timeCode.findMany({ orderBy: { order: "asc" } }),
@@ -129,42 +129,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      {current === "projets" && (
-        <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
-          <table className="w-full text-sm" data-testid="projects-table">
-            <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-              <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5" title="Pôle principal, puis pôles associés pour un projet commun">Pôles</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>
-            </thead>
-            <tbody className="divide-y">
-              {projects.map((p) => (
-                <tr key={p.id}>
-                  <td className="min-w-[200px] py-0.5"><AutoField model="project" id={p.id} field="name" type="text" value={p.name} readOnly={!rw} inputClassName="font-medium" /></td>
-                  <td className="w-24 py-0.5"><AutoField model="project" id={p.id} field="analyticCode" type="text" value={p.analyticCode} readOnly={!rw} inputClassName="tabular" /></td>
-                  <td className="min-w-[220px] py-0.5">
-                    <AutoField model="project" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} allowEmpty={false} readOnly={!rw} refreshOnSave />
-                    <div className="mt-0.5 pl-2"><ProjectPolesPicker projectId={p.id} mainPoleId={p.poleId} poles={opt(poles)} selected={p.secondaryPoles.map((x) => x.poleId)} readOnly={!rw} /></div>
-                  </td>
-                  <td className="min-w-[150px] py-0.5"><AutoField model="project" id={p.id} field="pilotId" type="select" value={p.pilotId} options={opt(people)} allowEmpty={false} readOnly={!rw} /></td>
-                  <td className="min-w-[150px] py-0.5"><AutoField model="project" id={p.id} field="guarantorId" type="select" value={p.guarantorId} options={opt(people)} readOnly={!rw} /></td>
-                  <td className="min-w-[180px] py-0.5"><AutoField model="project" id={p.id} field="missionId" type="select" value={p.missionId} options={opt(missions)} allowEmpty={false} readOnly={!rw} /></td>
-                  <td className="py-0.5"><AutoField model="project" id={p.id} field="recurring" type="bool" value={p.recurring} readOnly={!rw} /></td>
-                  <td className="py-0.5">
-                    <div className="flex flex-wrap gap-1">
-                      {p.editions.map((e) => <Link key={e.id} href={`/edition/${e.id}`} className="rounded-sm bg-muted px-2 py-0.5 text-xs hover:bg-secondary">{e.year}</Link>)}
-                      {rw && <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact />}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Section>
-      )}
 
       {current === "referentiels" && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <Section title="Financeurs" actions={rw ? <AddSimpleForm kind="funder" placeholder="Nouveau financeur" compact /> : undefined}>
-            <ul className="divide-y text-sm">{funders.map((f) => <li key={f.id}><AutoField model="funder" id={f.id} field="name" type="text" value={f.name} readOnly={!rw} /></li>)}</ul>
+          <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans « Projets et financements ».">
+            <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>. Les projets et leurs éditions sont aussi dans <Link href="/projets" className="text-primary hover:underline">Projets et éditions</Link>.</p>
           </Section>
           <Section title="Missions du plan opérationnel" actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle mission" compact /> : undefined}>
             <ul className="divide-y text-sm">{missions.map((m) => <li key={m.id}><AutoField model="mission" id={m.id} field="name" type="text" value={m.name} readOnly={!rw} /></li>)}</ul>

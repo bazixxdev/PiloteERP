@@ -15,8 +15,9 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/codir/, "Collectif", "Écran CODIR"],
   [/^\/seminaire/, "Collectif", "Séminaire"],
   [/^\/rappels/, "Collectif", "Rappels"],
-  [/^\/conventions/, "Pilotage", "Conventions"],
-  [/^\/financeurs/, "Pilotage", "Financeurs"],
+  [/^\/projets/, "Projets et financements", "Projets et éditions"],
+  [/^\/conventions/, "Projets et financements", "Conventions"],
+  [/^\/financeurs/, "Projets et financements", "Financeurs"],
   [/^\/admin/, "Réglages", "Admin"],
   [/^\/compte/, "Réglages", "Mon compte"],
 ];

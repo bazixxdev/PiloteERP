@@ -94,6 +94,12 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       await prisma.fundingLine.update({ where: { id }, data: { [field]: value } });
     } else if (model === "deliverable" && field === "done") {
       await prisma.deliverable.update({ where: { id }, data: { done: value as boolean, doneAt: value ? new Date() : null } });
+    } else if (model === "person" && field === "active" && value === false) {
+      // Garde-fous : on ne se désactive pas soi-même, et il reste toujours une direction active.
+      if (id === me.id) return { ok: false, error: "Vous ne pouvez pas vous désactiver vous-même." };
+      const target = await prisma.person.findUnique({ where: { id } });
+      if (target?.role === "director" && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+      await prisma.person.update({ where: { id }, data: { active: false } });
     } else if (model === "settings") {
       await prisma.settings.update({ where: { id: 1 }, data: { [field]: value } });
     } else {

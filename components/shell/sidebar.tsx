@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, Landmark } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
@@ -30,8 +30,7 @@ function groupsFor(role: string): Group[] {
   const collective: Item[] = [
     { href: "/cafe", label: "Écran café", icon: Coffee },
     { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
-    { href: "/conventions", label: "Conventions", icon: FileSignature },
-    { href: "/financeurs", label: "Financeurs", icon: Landmark },
+    { href: "/projets", label: "Projets et financements", icon: FileSignature },
     { href: "/rappels", label: "Rappels", icon: Bell },
   ];
   const direction: Item[] = codir ? [
@@ -64,7 +63,7 @@ export function Sidebar({ pendingCount, remindersCount, role }: { pendingCount: 
             <div className="mb-1.5 hidden px-2 text-[10px] font-semibold text-muted-foreground lg:block">{g.caption}</div>
             <nav className="grid gap-[3px]" aria-label={g.caption}>
               {g.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture"));
+                const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs")));
                 const badge = item.href === "/validations" ? pendingCount : item.href === "/rappels" ? remindersCount : 0;
                 return (
                   <Link
