@@ -87,10 +87,7 @@ export default async function MaSemainePage() {
           <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">Bonjour {firstName}.</h1>
           <p className="mt-1 text-xs text-muted-foreground">Semaine du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · ce qui vous attend, dans l'ordre.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline"><Link href="/cafe">Écran café</Link></Button>
-          <Button asChild><Link href="/temps"><Clock />Saisir mes temps</Link></Button>
-        </div>
+        <Button asChild><Link href="/temps"><Clock />Saisir mes temps</Link></Button>
       </div>
 
       {attention ? (

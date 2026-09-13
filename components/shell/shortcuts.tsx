@@ -4,14 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const GO: Record<string, string> = { p: "/portefeuille", s: "/ma-semaine", t: "/temps", a: "/annuel", v: "/validations", c: "/cafe", o: "/codir", m: "/seminaire", l: "/cloture", r: "/rappels", d: "/admin" };
-const LIST: [string, string][] = [
-  ["⌘K", "Trouver une édition"], ["g puis p", "Portefeuille"], ["g puis s", "Ma semaine"], ["g puis t", "Temps"], ["g puis a", "Vue annuelle"],
-  ["g puis v", "Validations"], ["g puis c", "Écran café"], ["g puis o", "Écran CODIR"], ["g puis m", "Séminaire"], ["g puis l", "Clôture"], ["g puis d", "Admin"], ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"],
+type Go = { key: string; href: string; label: string; roles?: string[] };
+const CODIR = ["director", "raf", "pole_lead"];
+const ADMIN = ["director", "raf"];
+const GOS: Go[] = [
+  { key: "p", href: "/portefeuille", label: "Portefeuille" }, { key: "s", href: "/ma-semaine", label: "Ma semaine" }, { key: "t", href: "/temps", label: "Temps" },
+  { key: "a", href: "/annuel", label: "Vue annuelle" }, { key: "v", href: "/validations", label: "Validations" }, { key: "c", href: "/cafe", label: "Écran café" },
+  { key: "o", href: "/codir", label: "Écran CODIR", roles: CODIR }, { key: "m", href: "/seminaire", label: "Séminaire", roles: CODIR },
+  { key: "l", href: "/cloture", label: "Clôture", roles: ADMIN }, { key: "d", href: "/admin", label: "Admin", roles: ADMIN },
 ];
 
-// Raccourcis clavier façon Linear : « g » puis une lettre.
-export function Shortcuts() {
+// Raccourcis clavier façon Linear : « g » puis une lettre. Seuls les écrans du profil sont proposés (même règle que la barre latérale).
+export function Shortcuts({ role }: { role: string }) {
+  const gos = GOS.filter((g) => !g.roles || g.roles.includes(role));
+  const GO: Record<string, string> = Object.fromEntries(gos.map((g) => [g.key, g.href]));
+  const LIST: [string, string][] = [["⌘K", "Trouver une édition"], ...gos.map((g): [string, string] => [`g puis ${g.key}`, g.label]), ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"]];
   const router = useRouter();
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -26,7 +33,8 @@ export function Shortcuts() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, role]);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-sm">

@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         </div>
         <MobileNav />
         <Toaster position="bottom-right" richColors />
-        <Shortcuts />
+        <Shortcuts role={c.role} />
       </body>
     </html>
   );
