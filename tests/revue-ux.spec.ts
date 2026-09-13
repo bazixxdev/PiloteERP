@@ -62,6 +62,8 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   await expect(sidebar.getByRole("link", { name: "Écran CODIR" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Admin" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Validations" })).not.toContainText(/\d/);
+  await page.goto("/portefeuille");
+  await expect(page.getByTestId("codir-mode")).toHaveCount(0);
   await page.goto("/validations");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Validations");
   await expect(page.getByText("0 à traiter par moi")).toBeVisible();

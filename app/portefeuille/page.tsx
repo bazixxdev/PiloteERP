@@ -11,6 +11,7 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { inMyScope, isTransversal, perimeterFrom, byRelevance, TIER_LABEL, type Tier } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { loadPortfolio } from "@/lib/queries";
+import { isCodir } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
   const [settings, refs, poles, me] = await Promise.all([getSettings(), getRefs(), prisma.pole.findMany({ orderBy: { name: "asc" } }), getCurrentPerson()]);
-  const codir = sp.mode === "codir";
+  // Le mode CODIR n'existe que pour les rôles CODIR : ni bouton, ni vue filtrée pour les autres.
+  const codir = sp.mode === "codir" && isCodir(me.role);
   const everything = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
   const perimeter = perimeterFrom(me, sp.perimetre);
   const all = perimeter === "pole" ? everything.filter((r) => inMyScope(me, r.project, r.team.map((t) => t.personId))) : everything;
@@ -70,9 +72,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         actions={
           codir ? (
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR</Link></Button>
-          ) : (
+          ) : isCodir(me.role) ? (
             <Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode CODIR</Link></Button>
-          )
+          ) : undefined
         }
       />
 
