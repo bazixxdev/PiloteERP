@@ -37,8 +37,8 @@ async function main() {
   await page.goto(base + "/portefeuille");
   await iAm("Claire Vasseur");
   await shot("01-portefeuille", "/portefeuille");
-  await shot("02-ecran-codir", "/codir", true);
   const editionUrl = await page.getByTestId("portfolio-table").getByRole("link", { name: "Observatoire régional (ORESS)" }).first().getAttribute("href");
+  await shot("02-ecran-codir", "/codir", true);
   await shot("03-edition-fiche", `${editionUrl}?onglet=fiche`, true);
   await shot("04-edition-actions", `${editionUrl}?onglet=actions`);
   await shot("05-edition-financements", `${editionUrl}?onglet=financements`, true);
