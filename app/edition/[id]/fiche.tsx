@@ -2,7 +2,8 @@ import { AutoField } from "@/components/inline/auto-field";
 import { Section } from "@/components/common/section";
 import { Button } from "@/components/ui/button";
 import { withBase } from "@/lib/base-path";
-import { FileDown } from "lucide-react";
+import { FileDown, MessageSquareText, X } from "lucide-react";
+import Link from "next/link";
 import { FIELDS } from "@/lib/fields";
 import { canWriteLayer, LAYER_OWNER_LABEL, type Layer } from "@/lib/rights";
 import { REF_DEFAULTS, refLabel } from "@/lib/refs";
@@ -12,6 +13,8 @@ import { inMyPole } from "@/lib/scope";
 import { TeamPicker } from "./team-picker";
 import { FicheLayer, type LayerField } from "./fiche-layer";
 import type { RemarkView } from "./remarks";
+import { cn } from "@/lib/utils";
+import { isCodir } from "@/lib/rights";
 
 // Les quatre couches de la fiche (numérotées comme dans la maquette V2), plus le suivi au fil de l'année.
 const LAYERS: { key: Layer; no: string; title: string; owner: string; fields: string[] }[] = [
@@ -25,7 +28,7 @@ const LAYERS: { key: Layer; no: string; title: string; owner: string; fields: st
 const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && v !== false;
 
 // Fiche en lecture d'abord : texte compact par couche, chaque propriétaire retrouve « Modifier cette couche » ; équipe et historique en retrait.
-export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
+export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: TabCtx) {
   const row = e as unknown as Record<string, unknown>;
   const canStatus = me.role === "director" || me.role === "raf";
   const layerFilled = (l: (typeof LAYERS)[number]) => l.fields.some((f) => isFilled(row[f]));
@@ -33,8 +36,8 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
   const nextEmpty = LAYERS.slice(0, 4).find((l) => !layerFilled(l));
   const codirOpts = REF_DEFAULTS.codir_decision.map((c) => ({ value: c.code, label: refLabel(refs, "codir_decision", c.code) }));
   const teamNames = e.team.map((t) => t.person.name);
-  // Remarques : la direction, la RAF, le responsable de pôle (garant ou pôle associé) les écrivent ; le pilote et l'équipe les traitent.
-  const canRemark = me.role === "director" || me.role === "raf" || (me.role === "pole_lead" && (e.project.guarantorId === me.id || inMyPole(me, e.project)));
+  // Remarques : un droit du CODIR (direction, RAF, responsables de pôle) — la relecture des fiches se fait en CODIR ; le pilote et l'équipe les traitent.
+  const canRemark = isCodir(me.role);
   const canResolve = isPilot || isTeam || canRemark;
   const remarks: RemarkView[] = e.remarks.map((r) => ({ id: r.id, field: r.field, body: r.body, author: r.author.name, authorId: r.authorId, createdAt: fmtDate(r.createdAt), resolvedAt: r.resolvedAt ? fmtDate(r.resolvedAt) : null, resolvedBy: r.resolvedBy?.name ?? null }));
   const openRemarks = remarks.filter((r) => !r.resolvedAt).length;
@@ -42,6 +45,15 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
       <div className="grid gap-3">
+        {/* Mode relecture : réservé à qui peut annoter ; hors de ce mode, la fiche reste propre, seules les remarques posées se voient. */}
+        {canRemark && (
+          <div className={cn("flex flex-wrap items-center justify-between gap-2 rounded-md px-3.5 py-2 text-xs", feedback ? "border border-primary/40 bg-info-soft text-primary" : "bg-muted text-muted-foreground")} data-testid="feedback-bar">
+            <span>{feedback ? <><b>Mode relecture.</b> Cliquez « Remarque » sous une rubrique pour l'annoter ; le pilote la verra en place et sera prévenu.</> : "Relire cette fiche et laisser des remarques au pilote, rubrique par rubrique ?"}</span>
+            <Button asChild size="xs" variant={feedback ? "outline" : "default"}>
+              <Link href={`/edition/${e.id}?onglet=fiche${feedback ? "" : "&relecture=1"}`} data-testid="feedback-toggle">{feedback ? <><X />Quitter la relecture</> : <><MessageSquareText />Relire et annoter</>}</Link>
+            </Button>
+          </div>
+        )}
         {openRemarks > 0 && (
           <div className="flex items-center justify-between gap-3 rounded-md bg-warning-soft px-3.5 py-2.5 text-xs text-warning-foreground" data-testid="fiche-remarks-banner"><span><b>{openRemarks} remarque{openRemarks > 1 ? "s" : ""} à traiter</b> sur cette fiche, posée{openRemarks > 1 ? "s" : ""} par {[...new Set(remarks.filter((r) => !r.resolvedAt).map((r) => r.author))].join(", ")}. Elles apparaissent sous les rubriques concernées.</span></div>
         )}
@@ -64,7 +76,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
             <FicheLayer
               key={layer.key} editionId={e.id} layerKey={layer.key} no={layer.no} title={layer.title} owner={layer.owner}
               ownerMissingLabel={LAYER_OWNER_LABEL[layer.key]} fields={fields} writable={writable} defaultEditing={writable && !layerFilled(layer)}
-              remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark} canResolve={canResolve} meId={me.id} isDirector={me.role === "director"}
+              remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark && Boolean(feedback)} canResolve={canResolve} meId={me.id} isDirector={me.role === "director"}
             />
           );
         })}

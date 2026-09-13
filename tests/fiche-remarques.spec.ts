@@ -13,7 +13,9 @@ test("la direction pose une remarque sur une rubrique, le pilote la voit en plac
   await expect(page.getByTestId("field-deliveryDate")).toContainText("30 novembre 2026");
   await expect(page.getByTestId("field-sponsorId")).toContainText("Claire Vasseur");
 
-  // La direction pose une remarque sur « Calendrier ».
+  // Hors mode relecture, pas de bouton « Remarque » ; la direction active la relecture puis annote « Calendrier ».
+  await expect(page.getByTestId("remark-add-calendar")).toHaveCount(0);
+  await page.getByTestId("feedback-toggle").click();
   await page.getByTestId("remark-add-calendar").click();
   await page.getByTestId("remark-body-calendar").fill("Les dates jalons a minima : le choix du prestataire et la mise en ligne.");
   await page.getByTestId("remark-submit-calendar").click();

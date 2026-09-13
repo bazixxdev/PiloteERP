@@ -13,4 +13,6 @@ export type TabCtx = {
   conventions: (Convention & { lines: { id: string; amountGranted: number | null; amountRequested: number | null; editionId: string }[] })[];
   isPilot: boolean;
   isTeam: boolean;
+  // Mode relecture : les boutons « Remarque » s'affichent sous les rubriques (sinon, seules les remarques existantes).
+  feedback?: boolean;
 };

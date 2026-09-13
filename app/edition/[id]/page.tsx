@@ -25,9 +25,9 @@ import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 
-export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> }) {
+export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string }> }) {
   const { id } = await params;
-  const { onglet } = await searchParams;
+  const { onglet, relecture } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
@@ -38,7 +38,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const alerts = computeAlerts(e, settings);
   const canStatus = me.role === "director" || me.role === "raf";
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
-  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam };
+  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1" };
 
   const counts = {
     actions: e.actions.length,

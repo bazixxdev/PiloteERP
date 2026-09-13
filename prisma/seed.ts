@@ -52,6 +52,10 @@ function storePdf(title: string): { storedName: string; size: number } {
 }
 
 async function reset() {
+  await prisma.fieldRemark.deleteMany();
+  await prisma.workSlot.deleteMany();
+  await prisma.task.deleteMany();
+  await prisma.funderContact.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.decision.deleteMany();
