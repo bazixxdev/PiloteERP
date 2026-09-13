@@ -83,10 +83,32 @@ model Mission {
 }
 
 model Funder {
-  id          String        @id @default(cuid())
-  name        String        @unique
+  id          String          @id @default(cuid())
+  name        String          @unique
+  notes       String? // périmètre, habitudes, calendrier d'appels à projets…
   lines       FundingLine[]
   conventions Convention[]
+  contacts    FunderContact[]
+}
+
+// Interlocuteurs d'un financeur (instructeur, gestionnaire, élu référent…). Données personnelles de tiers : le minimum utile,
+// tenu par la RAF ; le contact principal sert par défaut, une ligne ou une convention peut désigner son propre contact du dossier.
+model FunderContact {
+  id        String        @id @default(cuid())
+  funderId  String
+  funder    Funder        @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  firstName String?
+  lastName  String
+  role      String? // fonction
+  email     String?
+  phone     String?
+  notes     String?
+  primary   Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  lines     FundingLine[]
+  conventions Convention[]
+
+  @@index([funderId])
 }
 
 // Convention : objet unique par financeur et dispositif, pouvant couvrir plusieurs années et plusieurs projets (EF-C3).
@@ -107,6 +129,8 @@ model Convention {
   notifiedAt      DateTime?
   signedAt        DateTime?
   notes           String?
+  contactId       String? // contact du dossier ; sinon le contact principal du financeur
+  contact         FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
   createdAt       DateTime      @default(now())
 
@@ -285,6 +309,8 @@ model FundingLine {
   allocationKeyRef String?
   multiYear        Boolean       @default(false)
   notes            String?
+  contactId        String? // contact du dossier ; sinon le contact principal du financeur
+  contact          FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deliverables     Deliverable[]
   actions          Action[]
   attachments      Attachment[]

@@ -34,7 +34,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const own = a.ownerId === personId;
     return canEditActions(role, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
-  if (model === "fundingLine" || model === "deliverable" || model === "convention") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements.";
+  if (model === "fundingLine" || model === "deliverable" || model === "convention" || model === "funder" || model === "funderContact") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
   if (model === "expense") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });

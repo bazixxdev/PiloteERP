@@ -16,6 +16,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/seminaire/, "Collectif", "Séminaire"],
   [/^\/rappels/, "Collectif", "Rappels"],
   [/^\/conventions/, "Pilotage", "Conventions"],
+  [/^\/financeurs/, "Pilotage", "Financeurs"],
   [/^\/admin/, "Réglages", "Admin"],
   [/^\/compte/, "Réglages", "Mon compte"],
 ];
@@ -39,6 +40,8 @@ export function Breadcrumb({ editions }: { editions: { id: string; label: string
     parts.push(EDITION_TABS[sp.get("onglet") ?? "fiche"] ?? "Fiche");
   } else if (/^\/conventions\/./.test(pathname)) {
     parts.push(page, "Convention");
+  } else if (/^\/financeurs\/./.test(pathname)) {
+    parts.push(page, "Financeur");
   } else if (pathname.startsWith("/cloture")) {
     parts.push(page, "Clôture mensuelle");
   } else if (pathname.startsWith("/temps")) {

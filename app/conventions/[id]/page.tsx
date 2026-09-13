@@ -13,13 +13,14 @@ import { allocationOf } from "@/lib/conventions";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AttachEditionForm, DetachButton } from "./allocations";
+import { ContactLine } from "@/components/funders/contacts";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, refs, c] = await Promise.all([
     getCurrentPerson(), getRefs(),
-    prisma.convention.findUnique({ where: { id }, include: { funder: true, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } } }, orderBy: { edition: { year: "asc" } } } } }),
+    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } } }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
   const rw = canEditFunding(me.role);
@@ -40,7 +41,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
   const Field = ({ label, field, type, options, suffix, placeholder, refresh, testId }: { label: string; field: string; type: "text" | "number" | "date" | "select" | "textarea"; options?: { value: string; label: string }[]; suffix?: string; placeholder?: string; refresh?: boolean; testId?: string }) => (
     <div className="grid gap-1">
       <label htmlFor={fid(field)} className="text-[10px] text-muted-foreground">{label}</label>
-      <AutoField model="convention" id={c.id} field={field} type={type} value={(c as unknown as Record<string, string | number | Date | null>)[field]} readOnly={!rw} options={options} suffix={suffix} placeholder={placeholder ?? "—"} inputId={fid(field)} refreshOnSave={refresh} testId={testId} allowEmpty={type !== "select"} />
+      <AutoField model="convention" id={c.id} field={field} type={type} value={(c as unknown as Record<string, string | number | Date | null>)[field]} readOnly={!rw} options={options} suffix={suffix} placeholder={placeholder ?? "—"} inputId={fid(field)} refreshOnSave={refresh} testId={testId} allowEmpty={type !== "select" || field === "contactId"} />
     </div>
   );
 
@@ -54,6 +55,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
             <StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} />
             {a.over && <StatusBadge label={`Affectations au-delà du notifié · ${fmtEuro(-a.remaining!)}`} color="danger" dot={false} />}
           </div>
+          <p className="mt-1.5 text-xs" data-testid="convention-contact"><ContactLine c={c.contact ?? c.funder.contacts.find((x) => x.primary) ?? null} label={c.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${c.funderId}`} className="text-primary hover:underline">fiche {c.funder.name}</Link></p>
           <p className="mt-1.5 text-xs text-muted-foreground">{c.scheme ? `${c.scheme} · ` : ""}{c.startYear === c.endYear ? `Année ${c.startYear}` : `${c.startYear} → ${c.endYear}`} · {c.lines.length} édition{c.lines.length > 1 ? "s" : ""} rattachée{c.lines.length > 1 ? "s" : ""}{rw ? "" : " · lecture seule : tenue par la RAF"}</p>
         </div>
         <Button asChild variant="outline"><Link href="/conventions">Retour à la liste</Link></Button>
@@ -113,6 +115,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               <Field label="Date de dépôt" field="submittedAt" type="date" />
               <Field label="Date de notification" field="notifiedAt" type="date" />
               <Field label="Date de signature" field="signedAt" type="date" />
+              <Field label="Contact du dossier" field="contactId" type="select" options={c.funder.contacts.map((x) => ({ value: x.id, label: `${[x.firstName, x.lastName].filter(Boolean).join(" ")}${x.role ? ` · ${x.role}` : ""}` }))} placeholder="— contact principal —" refresh />
             </div>
             <div className="mt-3"><Field label="Notes" field="notes" type="textarea" placeholder="Conditions, avenants, clés de répartition (référence à l'Excel RAF)…" /></div>
           </Section>

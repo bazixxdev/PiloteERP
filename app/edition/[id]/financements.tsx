@@ -13,6 +13,7 @@ import Link from "next/link";
 import { DeliverableDone } from "./deliverable-done";
 import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
+import { ContactLine } from "@/components/funders/contacts";
 
 export function FinancementsTab({ e, me, refs, funders, conventions, settings, isPilot }: TabCtx) {
   const covering = conventions.filter((c) => conventionCovers(c, e.year));
@@ -43,7 +44,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
           ) : (
             <div className="grid gap-4">
               {e.fundingLines.map((f, i) => (
-                <div key={f.id} className="rounded-xl border p-3" data-testid={`funding-line-${i}`}>
+                <div key={f.id} className="rounded-xl border p-3" data-testid={`funding-line-${i}`} data-funder={f.funder.name}>
                   <div className="grid gap-2 md:grid-cols-[1.2fr_1.5fr_1fr_1fr_1fr]">
                     <Field label="Financeur"><AutoField model="fundingLine" id={f.id} field="funderId" type="select" value={f.funderId} options={funderOpts} readOnly={!rw} allowEmpty={false} inputClassName="font-semibold" label={`Financeur, ligne ${i + 1}`} /></Field>
                     <Field label="Dispositif"><AutoField model="fundingLine" id={f.id} field="scheme" type="text" value={f.scheme} readOnly={!rw} placeholder="Convention, appel à projets…" /></Field>
@@ -54,11 +55,14 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                     <Field label="Obtenu"><AutoField model="fundingLine" id={f.id} field="amountGranted" type="number" value={f.amountGranted} readOnly={!rw} suffix="€" label={`Montant obtenu, ${f.funder.name}`} placeholder="—" /></Field>
                   </div>
                   {/* Premier niveau : financeur, montants, statut, livrables. Le détail de gestion (dates, codes, convention, pièces) se replie. */}
-                  {(() => { const next = f.deliverables.filter((d) => !d.done).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]; return (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {next ? <>Prochain livrable : <b className="text-foreground">{next.label}</b> · {fmtDate(next.dueDate)} · {daysFromNow(next.dueDate) < 0 ? <span className="text-danger">{-daysFromNow(next.dueDate)} j de retard</span> : `dans ${daysFromNow(next.dueDate)} j`}</> : "Aucun livrable en attente."}
-                      {f.convention && <> · Convention {f.convention.reference} ({f.convention.startYear}-{f.convention.endYear})</>}
-                    </p>
+                  {(() => { const next = f.deliverables.filter((d) => !d.done).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]; const contact = f.contact ?? f.convention?.contact ?? f.funder.contacts.find((c) => c.primary) ?? null; return (
+                    <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
+                      <p>
+                        {next ? <>Prochain livrable : <b className="text-foreground">{next.label}</b> · {fmtDate(next.dueDate)} · {daysFromNow(next.dueDate) < 0 ? <span className="text-danger">{-daysFromNow(next.dueDate)} j de retard</span> : `dans ${daysFromNow(next.dueDate)} j`}</> : "Aucun livrable en attente."}
+                        {f.convention && <> · Convention <Link href={`/conventions/${f.convention.id}`} className="text-primary hover:underline">{f.convention.reference}</Link> ({f.convention.startYear}-{f.convention.endYear})</>}
+                      </p>
+                      <p data-testid={`funding-contact-${i}`}><ContactLine c={contact} label={f.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${f.funderId}`} className="text-primary hover:underline">fiche {f.funder.name}</Link></p>
+                    </div>
                   ); })()}
                   <details className="group mt-2 rounded-lg border border-dashed px-2 py-1.5" open={rw}>
                   <summary className="cursor-pointer list-none text-[11px] font-semibold text-muted-foreground">Détail de gestion <span className="font-normal">· dépôt, réponse, convention, code analytique, clé de répartition, pièces · <span className="text-primary group-open:hidden">afficher</span><span className="hidden text-primary group-open:inline">replier</span></span></summary>
@@ -69,6 +73,9 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                     <Field label="Code analytique"><AutoField model="fundingLine" id={f.id} field="analyticCode" type="text" value={f.analyticCode} readOnly={!rw} /></Field>
                     <Field label="Clé de répartition (référence)"><AutoField model="fundingLine" id={f.id} field="allocationKeyRef" type="text" value={f.allocationKeyRef} readOnly={!rw} placeholder="Onglet de l'Excel RAF" /></Field>
                     <Field label="Pluriannuel"><div className="py-1"><AutoField model="fundingLine" id={f.id} field="multiYear" type="bool" value={f.multiYear} readOnly={!rw} placeholder="oui" /></div></Field>
+                  </div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-[1fr_2fr]">
+                    <Field label="Contact du dossier (sinon le contact principal du financeur)"><AutoField model="fundingLine" id={f.id} field="contactId" type="select" value={f.contactId} readOnly={!rw} placeholder="— contact principal —" options={f.funder.contacts.map((c) => ({ value: c.id, label: `${[c.firstName, c.lastName].filter(Boolean).join(" ")}${c.role ? ` · ${c.role}` : ""}` }))} label={`Contact du dossier, ${f.funder.name}`} /></Field>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-2 py-1.5 text-xs" data-testid={`convention-of-${i}`}>
                     <span className="font-semibold text-primary">Convention</span>

@@ -110,6 +110,20 @@ async function main() {
   const funderNames = ["Région", "État", "FSE", "ADEME", "Banque des Territoires", "DREETS", "Cap'Asso", "ESS France", "Cotisations"];
   const funders = await Promise.all(funderNames.map((name) => prisma.funder.create({ data: { name } })));
 
+  // Contacts des financeurs : personnes inventées, adresses en @exemple.fr ; le premier de chaque financeur est le contact principal.
+  const contactsSeed: Record<number, { firstName: string; lastName: string; role: string; email: string; phone?: string }[]> = {
+    0: [{ firstName: "Hélène", lastName: "Marchand", role: "Chargée de mission ESS", email: "h.marchand@exemple.fr", phone: "02 00 00 00 01" }, { firstName: "Karim", lastName: "Bensaïd", role: "Gestionnaire des conventions", email: "k.bensaid@exemple.fr" }],
+    1: [{ firstName: "Louise", lastName: "Renard", role: "Instructrice DDETS", email: "l.renard@exemple.fr", phone: "02 00 00 00 02" }],
+    2: [{ firstName: "Paul", lastName: "Ferreira", role: "Chargé de mission FSE+", email: "p.ferreira@exemple.fr" }, { firstName: "Anaïs", lastName: "Dupuis", role: "Contrôleuse de service fait", email: "a.dupuis@exemple.fr" }],
+    3: [{ firstName: "Sami", lastName: "Kaci", role: "Ingénieur transition", email: "s.kaci@exemple.fr" }],
+    4: [{ firstName: "Clémence", lastName: "Robert", role: "Directrice territoriale adjointe", email: "c.robert@exemple.fr" }],
+    5: [{ firstName: "Marc", lastName: "Lévy", role: "Chargé de développement", email: "m.levy@exemple.fr" }],
+    7: [{ firstName: "Nora", lastName: "Achour", role: "Responsable réseau", email: "n.achour@exemple.fr" }],
+  };
+  for (const [idx, list] of Object.entries(contactsSeed)) {
+    for (const [i, c] of list.entries()) await prisma.funderContact.create({ data: { funderId: funders[Number(idx)].id, ...c, primary: i === 0 } });
+  }
+
   // Conventions partagées : FSE 2026-2028 (DLA + sensibilisation) ; CPO Région 2025-2027 pour les projets Région pluriannuels.
   const fseConv = await prisma.convention.create({ data: { funderId: funders[2].id, reference: "FSE-2026-2028", scheme: "FSE+ 2021-2027 — axe inclusion", label: "Convention FSE+ inclusion 2026-2028", startYear: 2026, endYear: 2028, status: "contracted", amountRequested: 180000, amountNotified: 165000, submittedAt: dayjs("2025-10-15").toDate(), notifiedAt: dayjs("2026-02-20").toDate(), signedAt: dayjs("2026-03-28").toDate(), notes: "Trois ans, deux projets ; clés de répartition dans l'onglet FSE de l'Excel RAF." } });
   const cpoConv = await prisma.convention.create({ data: { funderId: funders[0].id, reference: "CPO-REGION-2025-2027", scheme: "Convention pluriannuelle d'objectifs", label: "CPO Région 2025-2027", startYear: 2025, endYear: 2027, status: "contracted", amountRequested: 240000, amountNotified: 225000, submittedAt: dayjs("2024-10-01").toDate(), notifiedAt: dayjs("2025-01-15").toDate(), signedAt: dayjs("2025-02-10").toDate() } });

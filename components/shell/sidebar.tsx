@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
@@ -31,6 +31,7 @@ function groupsFor(role: string): Group[] {
     { href: "/cafe", label: "Écran café", icon: Coffee },
     { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
     { href: "/conventions", label: "Conventions", icon: FileSignature },
+    { href: "/financeurs", label: "Financeurs", icon: Landmark },
     { href: "/rappels", label: "Rappels", icon: Bell },
   ];
   const direction: Item[] = codir ? [
