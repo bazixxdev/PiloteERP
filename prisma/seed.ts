@@ -231,7 +231,9 @@ async function main() {
       { year: 2025, status: "closed" },
       { year: 2026, status: "in_progress" },
     ];
-    if (pi % 2 === 0) years.push({ year: 2027, status: pi % 4 === 0 ? "proposed" : "rechallenged" });
+    // Un projet sur deux a déjà son édition 2027 : reconduite (proposée) ou à ajuster (re-challengée), en cohérence avec la décision consignée sur 2026.
+    const next2027 = pi % 2 === 0 ? (pi % 4 === 0 ? "proposed" : "rechallenged") : null;
+    if (next2027) years.push({ year: 2027, status: next2027 });
 
     for (const y of years) {
       const members = membersOf(pd.pole).filter((m) => m.id !== pilot.id);
@@ -264,7 +266,8 @@ async function main() {
           ownIndicators: isFuture ? null : "Nombre d'événements, taux de satisfaction, retombées presse.",
           timeNeed: isFuture ? null : `${between(30, 120)} jours toutes personnes confondues`,
           budgetNeed: isFuture ? null : `${pd.envelope} € de dépenses directes`,
-          codirDecision: isFuture ? null : "renew",
+          // Décision du séminaire consignée sur l'édition N : « ajuster » si la 2027 est re-challengée, « reconduire » sinon ; 2025 est reconduite.
+          codirDecision: isFuture ? null : y.year === 2026 && next2027 === "rechallenged" ? "adjust" : "renew",
           codirDate: isFuture ? null : dayjs(`${y.year - 1}-12-10`).toDate(),
           boardValidated: !isFuture,
           boardDate: isFuture ? null : dayjs(`${y.year - 1}-12-18`).toDate(),
