@@ -543,7 +543,7 @@ async function main() {
   }
 
   // Trois fiches projets 2026 remplies au format du gabarit CRESS (textes transposés des fiches réelles, sans personne réelle),
-  // avec, sur l'une, les remarques de la direction accrochées aux rubriques — comme les commentaires Word.
+  // avec, sur l'une, des remarques de direction inventées, accrochées aux rubriques — comme des commentaires Word.
   const fiche = async (code: string, data: Record<string, unknown>) => {
     const e = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: code } } });
     if (e) await prisma.edition.update({ where: { id: e.id }, data });
@@ -578,11 +578,11 @@ async function main() {
   if (aser) {
     const rq = (field: string, body: string, day: string) => ({ editionId: aser.id, field, body, authorId: director.id, createdAt: dayjs(day).toDate() });
     await prisma.fieldRemark.createMany({ data: [
-      rq("content", "À retirer la partie « identifier les filières » : voir faire une fiche filière, ou indiquer les enjeux de filières dans le contexte.", "2026-03-13"),
-      rq("calendar", "Non complété. Les dates jalons a minima : la semaine ASER, ceux posés aussi avec l'ADEME, les dates des entretiens, les GT, la sortie de l'offre.", "2026-03-13"),
-      rq("quantitativeObjectives", "Préciser le nombre d'acheteurs visés dans le réseau et l'échéance.", "2026-03-13"),
+      rq("content", "Le lien avec la cartographie mérite un paragraphe à part : qui la met à jour, à quel rythme, et ce qu'on en attend pour les acheteurs.", "2026-03-12"),
+      rq("calendar", "Le calendrier est à écrire : au minimum les dates du groupe d'action, des entretiens acheteurs et de la rencontre régionale, pour que le portefeuille les affiche.", "2026-03-12"),
+      rq("quantitativeObjectives", "Combien d'acheteurs dans le réseau à la fin de l'année, et combien de structures ESS accompagnées ? Il nous faut deux chiffres pour le bilan financeur.", "2026-03-12"),
     ] });
-    await prisma.notification.create({ data: { personId: (await prisma.project.findFirst({ where: { analyticCode: "COO-02" } }))!.pilotId, senderId: director.id, kind: "info", title: "Remarques sur la fiche PTCE et ESSOR · 2026", body: "3 remarques de la direction à traiter (contenu, calendrier, objectifs quantitatifs).", link: `/edition/${aser.id}?onglet=fiche`, createdAt: dayjs("2026-03-13").toDate() } });
+    await prisma.notification.create({ data: { personId: (await prisma.project.findFirst({ where: { analyticCode: "COO-02" } }))!.pilotId, senderId: director.id, kind: "info", title: "Remarques sur la fiche PTCE et ESSOR · 2026", body: "3 remarques de la direction à traiter (contenu, calendrier, objectifs quantitatifs).", link: `/edition/${aser.id}?onglet=fiche`, createdAt: dayjs("2026-03-12").toDate() } });
   }
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
