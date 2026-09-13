@@ -13,10 +13,12 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { IcsCard } from "@/components/common/ics-card";
+import { prisma } from "@/lib/db";
+import { Bell } from "lucide-react";
 
 export default async function MaSemainePage() {
   const [me, settings, refs] = await Promise.all([getCurrentPerson(), getSettings(), getRefs()]);
-  const [agenda, portfolio] = await Promise.all([loadAgenda(settings.horizonDays), loadPortfolio(settings, { statuses: ["in_progress", "validated"] })]);
+  const [agenda, portfolio, unread] = await Promise.all([loadAgenda(settings.horizonDays), loadPortfolio(settings, { statuses: ["in_progress", "validated"] }), prisma.notification.findMany({ where: { personId: me.id, readAt: null }, include: { sender: true }, orderBy: { createdAt: "desc" } })]);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
   const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id && a.daysLeft <= 14);
@@ -32,6 +34,17 @@ export default async function MaSemainePage() {
   return (
     <div className="p-6">
       <PageHeader title="Ma semaine" subtitle={`${me.name} · semaine ${dayjs().isoWeek()} · tous projets confondus. Le café du lundi projette la même chose pour toute l'équipe.`} actions={<Button asChild variant="outline"><Link href="/cafe">Écran café</Link></Button>} />
+
+      {unread.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-coral/40 bg-coral/5 p-4" data-testid="unread-notifications">
+          <div className="mb-1 flex items-center gap-2 font-semibold"><Bell className="size-4 text-coral" />{unread.length} notification{unread.length > 1 ? "s" : ""} à lire</div>
+          <ul className="text-sm">
+            {unread.map((n) => (
+              <li key={n.id} className="py-0.5"><Link href={n.link ?? "#"} className="font-medium text-primary hover:underline">{n.title}</Link>{n.body && <span className="text-muted-foreground"> — {n.body}</span>} <span className="text-xs text-muted-foreground">· {fmtDate(n.createdAt, "D MMM à HH:mm")}{n.sender ? ` · ${n.sender.name}` : ""}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Mes actions à échéance" description={`Actions dont je suis responsable, jalon dans les ${settings.horizonDays} jours ou dépassé.`}>

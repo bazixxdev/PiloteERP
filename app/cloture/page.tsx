@@ -10,6 +10,7 @@ import { canLockMonths } from "@/lib/rights";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
+import { TimeNav } from "@/components/common/time-nav";
 
 export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
   const { mois } = await searchParams;
@@ -34,6 +35,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
     prisma.person.findMany({ include: { rhythmPeriods: { include: { rhythm: true } } } }),
     prisma.weekDeclaration.findMany(),
   ]);
+  const reminders = await prisma.notification.findMany({ where: { kind: "time_reminder", title: { contains: monthLabel(month).toLowerCase() } }, include: { sender: true }, orderBy: { createdAt: "desc" } });
   const weeksOfMonth = [...new Set(workingDaysOfMonth(month).map((d) => weekKey(d)))];
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);
@@ -53,6 +55,8 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
         declaredWeeks: declared, weeks: weeksOfMonth.length,
         status: lock ? "locked" : declared === weeksOfMonth.length && weeksOfMonth.length > 0 ? "declared" : ratio >= 0.9 ? "complete" : ratio > 0 ? "partial" : "missing",
         lockedBy: lock ? `${lock.lockedBy.name} · ${dayjs(lock.lockedAt).format("D MMM")}` : null,
+        remindedAt: (() => { const r = reminders.find((n) => n.personId === p.id); return r ? `${dayjs(r.createdAt).format("D MMM")} par ${r.sender?.name ?? "—"}` : null; })(),
+        detailHref: `/temps?personne=${p.id}&semaine=${weekKey(start)}`,
       } as ClotureRow;
     });
   const summary = { complete: rows.filter((r) => r.status === "complete" || r.status === "declared").length, partial: rows.filter((r) => r.status === "partial").length, missing: rows.filter((r) => r.status === "missing").length, locked: rows.filter((r) => r.status === "locked").length };
@@ -61,6 +65,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="p-6">
+      <TimeNav current="cloture" showTeam showCloture />
       <PageHeader
         title="Clôture mensuelle"
         subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés écoulés · ${weeksOfMonth.length} semaines · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}, ${summary.partial} partiel${summary.partial > 1 ? "s" : ""}, ${summary.missing} manquant${summary.missing > 1 ? "s" : ""}.`}
@@ -77,7 +82,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
       />
       <ClotureTable month={month} rows={rows} />
       <Section title="Total du mois" className="mt-4">
-        <p className="text-sm text-muted-foreground">{fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes. Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction.</p>
+        <p className="text-sm text-muted-foreground">{fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes. Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction. « Relancer » envoie une notification dans l'outil à la personne (cloche en haut à droite, et dans « Ma semaine ») et laisse une trace ici ; en V1, un mail part aussi. « Détail » ouvre la grille de la personne, semaine par semaine.</p>
       </Section>
     </div>
   );

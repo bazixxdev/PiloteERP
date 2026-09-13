@@ -53,6 +53,7 @@ function storePdf(title: string): { storedName: string; size: number } {
 
 async function reset() {
   await prisma.attachment.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.decision.deleteMany();
   await prisma.expense.deleteMany();
   await prisma.weekDeclaration.deleteMany();
@@ -499,6 +500,11 @@ async function main() {
     await prisma.expense.create({ data: { editionId: e.id, label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], committed: [900, 1500, 600][i], spent: [900, 0, 600][i], status: i === 1 ? "open" : "closed", validationId: v.id, reference: i === 1 ? null : `FAC-2026-${300 + i}` } });
     const pdf = storePdf(`${["Devis location de salle", "Devis graphiste", "Devis intervenant"][i]}`);
     await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], fileName: `devis-2026-${200 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: v.createdAt, ...pdf } });
+  }
+
+  // Relances de temps déjà envoyées par la RAF aux deux retardataires (notification dans l'outil)
+  for (const id of lateOnes) {
+    await prisma.notification.create({ data: { personId: id, senderId: raf.id, kind: "time_reminder", title: "Temps de septembre 2026 à compléter", body: `${raf.name} vous demande de compléter et déclarer vos semaines de septembre 2026 avant la clôture.`, link: "/temps", createdAt: d(-1) } });
   }
 
   // Décisions d'instance récentes

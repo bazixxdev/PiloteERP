@@ -2,6 +2,7 @@ import { Section } from "@/components/common/section";
 import { Gauge } from "@/components/common/gauge";
 import { canEditFunding, canSeeTimeOf } from "@/lib/rights";
 import { AutoField } from "@/components/inline/auto-field";
+import Link from "next/link";
 import { fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
@@ -77,7 +78,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
               const pct = avail ? Math.round((d.plannedDays / avail) * 100) : null;
               return (
                 <tr key={d.id}>
-                  <td className="py-1">{d.person.name}</td>
+                  <td className="py-1">{seeReal && d.personId !== me.id ? <Link href={`/temps?personne=${d.personId}`} className="hover:underline" title="Voir la grille de cette personne">{d.person.name}</Link> : d.person.name}</td>
                   <td className="w-24 py-1"><AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} readOnly={!canPlan} suffix="j" refreshOnSave /></td>
                   <td className="w-24 py-1"><AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} readOnly={!canSold} suffix="j" refreshOnSave /></td>
                   <td className="w-24 py-1 text-right tabular text-muted-foreground">{seeReal ? `${fmtNumber(h / hpd, 1)} j` : "·"}</td>

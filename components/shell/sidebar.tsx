@@ -3,19 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Lock, Bell, Presentation, Gavel } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Bell, Presentation, Gavel } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
   { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
-  { href: "/temps", label: "Mes temps", icon: Clock },
+  { href: "/temps", label: "Temps", icon: Clock },
   { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
   { href: "/validations", label: "Validations", icon: CheckSquare },
   { href: "/cafe", label: "Écran café", icon: Coffee },
   { href: "/codir", label: "Écran CODIR", icon: Gavel },
   { href: "/seminaire", label: "Séminaire", icon: Presentation },
-  { href: "/cloture", label: "Clôture", icon: Lock },
   { href: "/rappels", label: "Rappels", icon: Bell },
   { href: "/admin", label: "Admin", icon: Settings },
 ];
@@ -31,7 +30,7 @@ export function Sidebar({ pendingCount, remindersCount }: { pendingCount: number
       <div className="hidden px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60 lg:block">Pilote · prototype</div>
       <nav className="flex flex-1 flex-col gap-0.5 px-2">
         {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition"));
+          const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture"));
           const badge = item.href === "/validations" ? pendingCount : item.href === "/rappels" ? remindersCount : 0;
           return (
             <Link

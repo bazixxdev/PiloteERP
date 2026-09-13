@@ -10,11 +10,16 @@ import { dayjs, fmtNumber, monthKey } from "@/lib/format";
 import { expectedHoursOn, loadRhythms, parseWeek, rhythmAt, weekDays, weekKey } from "@/lib/time";
 import { TimeGrid, type GridRow } from "./grid";
 import { PersonSelect } from "./person-select";
+import { TimeNav } from "@/components/common/time-nav";
+import { canLockMonths } from "@/lib/rights";
 
-export default async function TempsPage({ searchParams }: { searchParams: Promise<{ semaine?: string; personne?: string }> }) {
+export default async function TempsPage({ searchParams }: { searchParams: Promise<{ semaine?: string; personne?: string; equipe?: string }> }) {
   const sp = await searchParams;
   const [me, settings, people] = await Promise.all([getCurrentPerson(), getSettings(), getPeople()]);
-  const target = (sp.personne && people.find((p) => p.id === sp.personne)) || me;
+  const visibleAll = people.filter((p) => canSeeTimeOf(me, p, settings.timeVisibility));
+  const teamMode = Boolean(sp.equipe) || (Boolean(sp.personne) && sp.personne !== me.id);
+  const firstOther = visibleAll.find((p) => p.id !== me.id);
+  const target = (sp.personne && people.find((p) => p.id === sp.personne)) || (sp.equipe && firstOther) || me;
   const canSee = canSeeTimeOf(me, target, settings.timeVisibility);
   const person = canSee ? target : me;
   const readOnly = person.id !== me.id;
@@ -70,16 +75,18 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const prevKey = weekKey(start.subtract(1, "week"));
   const nextKey = weekKey(start.add(1, "week"));
   const qs = (w: string) => `/temps?semaine=${w}${readOnly ? `&personne=${person.id}` : ""}`;
-  const visible = people.filter((p) => canSeeTimeOf(me, p, settings.timeVisibility));
+  void teamMode;
+  const visible = visibleAll;
 
   return (
     <div className="p-6">
+      <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me.role)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
       <PageHeader
-        title={readOnly ? `Temps de ${person.name}` : "Mes temps"}
-        subtitle={`Semaine ${start.isoWeek()} · du ${start.format("D MMM")} au ${days[4].format("D MMM YYYY")} · saisie à l'heure, par projet ou action, sans sous-catégorie.`}
+        title={readOnly ? `Temps de ${person.name}` : "Ma saisie"}
+        subtitle={readOnly ? `Lecture seule · semaine ${start.isoWeek()} · du ${start.format("D MMM")} au ${days[4].format("D MMM YYYY")} · vous voyez cette personne selon la visibilité réglée dans l'admin.` : `Semaine ${start.isoWeek()} · du ${start.format("D MMM")} au ${days[4].format("D MMM YYYY")} · saisie à l'heure, par projet ou action, sans sous-catégorie.`}
         actions={
           <div className="flex items-center gap-2">
-            {visible.length > 1 && <PersonSelect people={visible.map((p) => ({ id: p.id, name: p.name }))} current={person.id} week={weekKey(start)} />}
+            {readOnly && visible.length > 1 && <PersonSelect people={visible.filter((p) => p.id !== me.id).map((p) => ({ id: p.id, name: p.name }))} current={person.id} week={weekKey(start)} />}
             <Button asChild variant="outline" size="icon" aria-label="Semaine précédente"><Link href={qs(prevKey)}><ChevronLeft /></Link></Button>
             <Button asChild variant="outline" size="sm"><Link href={qs(weekKey(dayjs()))}>Cette semaine</Link></Button>
             <Button asChild variant="outline" size="icon" aria-label="Semaine suivante"><Link href={qs(nextKey)}><ChevronRight /></Link></Button>

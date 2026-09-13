@@ -50,6 +50,8 @@ model Person {
   uploads            Attachment[]
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
+  notifications      Notification[]     @relation("NotificationRecipient")
+  notificationsSent  Notification[]     @relation("NotificationSender")
 }
 
 model TimeCode {
@@ -456,4 +458,21 @@ model Decision {
   followUp      Person?   @relation("DecisionFollowUp", fields: [followUpId], references: [id])
   dueDate       DateTime?
   decidedAt     DateTime  @default(now())
+}
+
+// Notification dans l'outil (cloche) : relance de temps, information. Dans le prototype, pas de mail : tout passe par ici.
+model Notification {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation("NotificationRecipient", fields: [personId], references: [id], onDelete: Cascade)
+  senderId  String?
+  sender    Person?   @relation("NotificationSender", fields: [senderId], references: [id])
+  kind      String // time_reminder | info
+  title     String
+  body      String?
+  link      String?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([personId, readAt])
 }
