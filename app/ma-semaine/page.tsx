@@ -8,6 +8,7 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { loadAgenda } from "@/lib/agenda";
 import { loadPortfolio } from "@/lib/queries";
 import { canDecideValidation } from "@/lib/rights";
+import { byRelevance } from "@/lib/scope";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate, fmtNumber, slotLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,8 @@ export default async function MaSemainePage() {
   const todayTasks = tasks.filter((t) => !t.done && t.dueDate && dayjs(t.dueDate).isSame(dayjs(), "day"));
   const todaySlots = tasks.flatMap((t) => t.slots.filter((sl) => dayjs(sl.startAt).isSame(dayjs(), "day")).map((sl) => ({ sl, t }))).sort((a, b) => a.sl.startAt.localeCompare(b.sl.startAt));
   const openTasks = tasks.filter((t) => !t.done).length;
+  const editionOpts = byRelevance(me, portfolio, (e) => ({ project: e.project, teamIds: e.team.map((t) => t.personId), ownerIds: e.actions.map((a) => a.ownerId ?? "") }), (a, b) => a.project.name.localeCompare(b.project.name, "fr") || a.year - b.year)
+    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter((a) => a.state !== "done").map((a) => ({ id: a.id, name: a.name })) }));
 
   const overdueValidation = toDecide.filter((v) => v.age > v.targetDelayDays).sort((a, b) => b.age - a.age)[0];
   const attention = late[0]
@@ -155,7 +158,7 @@ export default async function MaSemainePage() {
             {thisWeek.length === 0 ? <Note>✓ Aucune échéance d'ici dimanche.</Note> : thisWeek.map((it) => <ItemRow key={it.id} it={it} />)}
           </Panel>
           <Panel title="Mes tâches" aside={<span className="text-[11px] text-muted-foreground">{openTasks ? `${openTasks} en cours` : "Rien en cours"} · privées</span>} testId="my-tasks" className="order-3 scroll-mt-4" id="mes-taches">
-            <TaskList tasks={tasks} />
+            <TaskList tasks={tasks} editions={editionOpts} />
           </Panel>
           <details className="group order-6 overflow-hidden rounded-md border bg-card" data-testid="later">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5">

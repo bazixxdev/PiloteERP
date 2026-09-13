@@ -26,15 +26,26 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
   return { ok: true, data: { id: t.id } };
 }
 
-export async function updateTask(id: string, patch: { label?: string; dueDate?: string | null; done?: boolean }): Promise<Result> {
+export async function updateTask(id: string, patch: { label?: string; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null }): Promise<Result> {
   const t = await mine(id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
+  if (patch.editionId) {
+    const e = await prisma.edition.findUnique({ where: { id: patch.editionId } });
+    if (!e) return { ok: false, error: "Édition introuvable." };
+  }
+  if (patch.actionId) {
+    const a = await prisma.action.findUnique({ where: { id: patch.actionId } });
+    const editionId = patch.editionId !== undefined ? patch.editionId : t.editionId;
+    if (!a || a.editionId !== editionId) return { ok: false, error: "Cette action n'appartient pas à l'édition choisie." };
+  }
   await prisma.task.update({
     where: { id },
     data: {
       ...(patch.label !== undefined ? { label: patch.label.trim() || t.label } : {}),
       ...(patch.dueDate !== undefined ? { dueDate: day(patch.dueDate) } : {}),
       ...(patch.done !== undefined ? { done: patch.done, doneAt: patch.done ? new Date() : null } : {}),
+      // Changer d'édition détache l'action : elle appartenait à l'ancienne.
+      ...(patch.editionId !== undefined ? { editionId: patch.editionId || null, actionId: patch.actionId !== undefined ? patch.actionId || null : null } : patch.actionId !== undefined ? { actionId: patch.actionId || null } : {}),
     },
   });
   revalidatePath("/", "layout");

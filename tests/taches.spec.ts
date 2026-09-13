@@ -61,6 +61,28 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   const linked = page.getByTestId("my-tasks").locator("li", { hasText: "Relancer le financeur" });
   await expect(linked).toContainText("Mois de l'ESS et Prix ESS · 2026");
 
+  // « @ » pendant la saisie : les éditions se proposent, Entrée rattache et retire le « @… » du libellé.
+  await page.getByTestId("task-input").fill("Relire le dossier @refonte");
+  await expect(page.getByTestId("task-suggestions")).toContainText("Refonte du site internet");
+  await page.getByTestId("task-input").press("Enter");
+  await expect(page.getByTestId("task-linked")).toContainText("Refonte du site internet");
+  await expect(page.getByTestId("task-input")).toHaveValue("Relire le dossier");
+  await page.getByTestId("task-input").press("Enter");
+  const relire = page.getByTestId("my-tasks").locator("li", { hasText: "Relire le dossier" });
+  await expect(relire).toContainText("Refonte du site internet · 2026");
+
+  // Après coup : on change l'édition, on choisit une action, on détache.
+  await relire.locator("[data-testid^=task-edition-]").click();
+  await page.getByTestId("task-edition-search").fill("Mois de l'ESS");
+  await page.getByRole("option", { name: /Mois de l'ESS et Prix ESS/ }).first().click();
+  await expect(relire).toContainText("Mois de l'ESS et Prix ESS · 2026");
+  await relire.locator("[data-testid^=task-edition-]").click();
+  await page.locator("[id^=task-action-]").selectOption({ label: "Communication" });
+  await expect(relire).toContainText("· Communication");
+  await relire.locator("[data-testid^=task-edition-]").click();
+  await page.getByRole("button", { name: "Détacher" }).click();
+  await expect(relire).not.toContainText("Mois de l'ESS");
+
   // Une autre personne ne voit pas ces tâches.
   await iAm(page, "Lucas Perrin");
   await expect(page.getByTestId("my-tasks")).not.toContainText("Relancer le financeur");
