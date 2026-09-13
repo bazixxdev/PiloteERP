@@ -10,6 +10,7 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, locale: "fr-FR" });
   const iAm = async (name: string) => {
+    await page.waitForLoadState("networkidle");
     await page.getByTestId("person-switcher").click();
     await page.getByRole("menuitem", { name: new RegExp(name) }).click();
     await page.waitForTimeout(800);
