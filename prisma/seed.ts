@@ -53,6 +53,7 @@ function storePdf(title: string): { storedName: string; size: number } {
 
 async function reset() {
   await prisma.attachment.deleteMany();
+  await prisma.decision.deleteMany();
   await prisma.expense.deleteMany();
   await prisma.weekDeclaration.deleteMany();
   await prisma.personRhythmPeriod.deleteMany();
@@ -327,7 +328,7 @@ async function main() {
         } else {
           const offset = -120 + ai * 40 + (pi % 5) * 7; // jalons répartis de -120 à +200 jours
           milestone = d(offset);
-          state = offset < -10 ? (rnd() < 0.85 ? "done" : "doing") : offset < 20 ? "doing" : "todo";
+          state = offset < -10 ? (rnd() < 0.92 ? "done" : "doing") : offset < 20 ? "doing" : "todo";
         }
         const publicNames = ["Petit-déjeuner ORESS", "Conférence 1", "Conférence 2", "Conférence 3", "Soirée de remise", "Jour J", "Journée du lab", "Rencontre régionale", "Rencontre annuelle", "Restitution publique"];
         const a = await prisma.action.create({
@@ -498,6 +499,18 @@ async function main() {
     await prisma.expense.create({ data: { editionId: e.id, label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], committed: [900, 1500, 600][i], spent: [900, 0, 600][i], status: i === 1 ? "open" : "closed", validationId: v.id, reference: i === 1 ? null : `FAC-2026-${300 + i}` } });
     const pdf = storePdf(`${["Devis location de salle", "Devis graphiste", "Devis intervenant"][i]}`);
     await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], fileName: `devis-2026-${200 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: v.createdAt, ...pdf } });
+  }
+
+  // Décisions d'instance récentes
+  const dec = [
+    { i: 0, instance: "codir", body: "Report du petit-déjeuner ORESS à novembre ; le pilote confirme la date au prochain CODIR.", follow: 1, due: 20 },
+    { i: 3, instance: "codir", body: "Enveloppe maintenue ; pas de nouvelle dépense sans validation direction jusqu'au bilan.", follow: null, due: null },
+    { i: 5, instance: "pole", body: "Le bilan qualitatif ADEME est relu par le responsable de pôle avant envoi.", follow: 0, due: 10 },
+    { i: 8, instance: "quarterly", body: "Indicateurs de fréquentation en retrait : cible 2027 à revoir au séminaire.", follow: null, due: null },
+  ];
+  for (const x of dec) {
+    const e = editions2026[x.i];
+    await prisma.decision.create({ data: { editionId: e.id, instance: x.instance, body: x.body, authorId: x.instance === "pole" ? leadB.id : director.id, followUpId: x.follow === null ? null : x.follow === 0 ? e.pilotId : e.teamIds[1] ?? e.pilotId, dueDate: x.due ? d(x.due) : null, decidedAt: d(-between(2, 25)) } });
   }
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);

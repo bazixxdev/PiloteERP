@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const GO: Record<string, string> = { p: "/portefeuille", s: "/ma-semaine", t: "/temps", a: "/annuel", v: "/validations", c: "/cafe", m: "/seminaire", l: "/cloture", r: "/rappels", d: "/admin" };
+const GO: Record<string, string> = { p: "/portefeuille", s: "/ma-semaine", t: "/temps", a: "/annuel", v: "/validations", c: "/cafe", o: "/codir", m: "/seminaire", l: "/cloture", r: "/rappels", d: "/admin" };
 const LIST: [string, string][] = [
   ["⌘K", "Trouver une édition"], ["g puis p", "Portefeuille"], ["g puis s", "Ma semaine"], ["g puis t", "Mes temps"], ["g puis a", "Vue annuelle"],
-  ["g puis v", "Validations"], ["g puis c", "Écran café"], ["g puis m", "Séminaire"], ["g puis l", "Clôture"], ["g puis d", "Admin"], ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"],
+  ["g puis v", "Validations"], ["g puis c", "Écran café"], ["g puis o", "Écran CODIR"], ["g puis m", "Séminaire"], ["g puis l", "Clôture"], ["g puis d", "Admin"], ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"],
 ];
 
 // Raccourcis clavier façon Linear : « g » puis une lettre.

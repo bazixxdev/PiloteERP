@@ -213,3 +213,17 @@ export async function addExpense(editionId: string, label: string, spent: number
   revalidatePath(path(editionId));
   return { ok: true };
 }
+
+// Décision d'instance consignée sur l'édition, datée, avec suite éventuelle (EF-F4, EF-H2, EF-H3).
+export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null }): Promise<Result> {
+  const c = await ctx(input.editionId);
+  const allowed = ["director", "raf"].includes(c.me.role) || (c.me.role === "pole_lead" && (input.instance !== "codir" ? c.samePole : true));
+  if (!allowed) return { ok: false, error: "Les décisions d'instance sont consignées par le CODIR." };
+  if (!input.body.trim()) return { ok: false, error: "Décision vide." };
+  await prisma.decision.create({
+    data: { editionId: input.editionId, instance: input.instance, body: input.body.trim(), authorId: c.me.id, followUpId: input.followUpId || null, dueDate: input.dueDate ? new Date(input.dueDate) : null },
+  });
+  await prisma.changeLog.create({ data: { editionId: input.editionId, field: "décision", before: null, after: `${input.instance} : ${input.body.trim().slice(0, 200)}`, authorId: c.me.id } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

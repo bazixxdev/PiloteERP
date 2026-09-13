@@ -48,6 +48,8 @@ model Person {
   comments           Comment[]
   changes            ChangeLog[]
   uploads            Attachment[]
+  decisionsTaken     Decision[]         @relation("DecisionAuthor")
+  decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
 }
 
 model TimeCode {
@@ -177,6 +179,7 @@ model Edition {
   indicators   Indicator[]
   attachments  Attachment[]
   expenses     Expense[]
+  decisions    Decision[]
 
   @@unique([projectId, year])
 }
@@ -438,4 +441,19 @@ model Expense {
   validation   ValidationRequest? @relation(fields: [validationId], references: [id])
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+}
+
+// Décision d'instance (CODIR, réunion de pôle, revue trimestrielle, CA) consignée sur l'édition, datée (EF-F4, EF-H2, EF-H3).
+model Decision {
+  id            String    @id @default(cuid())
+  editionId     String
+  edition       Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  instance      String // codir | pole | quarterly | board
+  body          String
+  authorId      String
+  author        Person    @relation("DecisionAuthor", fields: [authorId], references: [id])
+  followUpId    String?
+  followUp      Person?   @relation("DecisionFollowUp", fields: [followUpId], references: [id])
+  dueDate       DateTime?
+  decidedAt     DateTime  @default(now())
 }

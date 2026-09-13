@@ -11,7 +11,8 @@ export type RefFamily =
   | "role"
   | "work_rhythm"
   | "time_visibility"
-  | "attachment_kind";
+  | "attachment_kind"
+  | "decision_instance";
 
 export type RefDef = { code: string; label: string; color?: string };
 
@@ -75,6 +76,12 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "minutes", label: "Compte rendu (COPIL, GT)" },
     { code: "other", label: "Autre pièce" },
   ],
+  decision_instance: [
+    { code: "codir", label: "CODIR" },
+    { code: "pole", label: "Réunion de pôle" },
+    { code: "quarterly", label: "Revue trimestrielle" },
+    { code: "board", label: "Bureau / CA" },
+  ],
   time_visibility: [
     { code: "self", label: "La personne seule" },
     { code: "self_pole_lead_raf", label: "La personne, son responsable de pôle, la RAF et la direction" },
@@ -94,6 +101,7 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   work_rhythm: "Rythmes de travail",
   time_visibility: "Visibilité du temps",
   attachment_kind: "Natures de pièces jointes",
+  decision_instance: "Instances de décision",
 };
 
 export type RefMap = Record<string, Record<string, RefDef>>;

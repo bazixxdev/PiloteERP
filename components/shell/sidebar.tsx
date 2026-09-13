@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Lock, Bell, Presentation } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Lock, Bell, Presentation, Gavel } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
   { href: "/validations", label: "Validations", icon: CheckSquare },
   { href: "/cafe", label: "Écran café", icon: Coffee },
+  { href: "/codir", label: "Écran CODIR", icon: Gavel },
   { href: "/seminaire", label: "Séminaire", icon: Presentation },
   { href: "/cloture", label: "Clôture", icon: Lock },
   { href: "/rappels", label: "Rappels", icon: Bell },

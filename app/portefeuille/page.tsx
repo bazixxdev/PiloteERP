@@ -58,7 +58,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           ) : (
             <>
               <Button asChild variant="outline"><Link href="/validations">Validations en attente</Link></Button>
-              <Button asChild className="bg-coral text-white hover:bg-coral/90" data-testid="codir-mode"><Link href="/portefeuille?mode=codir"><Maximize2 />Mode CODIR</Link></Button>
+              <Button asChild className="bg-coral text-white hover:bg-coral/90" data-testid="codir-mode"><Link href="/codir"><Maximize2 />Écran CODIR</Link></Button>
             </>
           )
         }
