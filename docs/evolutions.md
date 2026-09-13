@@ -19,6 +19,13 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | 13/09/2026 | RH par édition : jours prévus / conventionnés / réalisés par personne, % et ETP affichés, coefficient heures→jours réglable | Question de Gaël sur la granularité RH ; EF-B3, EF-E4 |
 | 12/09/2026 | Connexions « gratuites » : adresse de l'édition pour un onglet Teams ; jeton d'API et adresses prêtes pour Excel (*Données → À partir du web*) ; flux iCal public des actions cochées « Public » pour le site | Canaux Teams par projet (S8.36) ; l'Excel de la RAF reste la référence (EF-C5, EF-E4) ; refonte du site en 2026 |
 
+| 13/09/2026 | Revue UI/UX du 13/09 traitée (12 points : objectifs lisibles, pourcentage budgétaire non plafonné, clôture sans tolérance cachée, validation CA en clair, Ma semaine en retard / cette semaine / plus tard, alertes du portefeuille sous le nom, ordre du jour CODIR, navigation par profil, fiche en lecture, saisie mobile compacte, pièce avant envoi d'une validation, accessibilité) | `CRESS/audit-ux/changements-recommandes.md` ; détail dans `RETOURS-A-CHAUD.md` §F |
+| 13/09/2026 | Menu utilisateur : Mon compte (`/compte`), Admin selon les droits, changement d'utilisateur en modale (proto), déconnexion ; barre latérale sans pied ni liste des pôles ; « Mode CODIR » réservé aux rôles CODIR | Demande de Gaël, menu « habituel » |
+| 13/09/2026 | « Projets et financements » : une entrée, trois onglets — Projets et éditions (`/projets`, sorti de l'admin), Conventions (liste + page, rattacher / détacher une édition), Financeurs (liste + page, contacts avec principal et contact du dossier) | Demande de Gaël : comparer et lire, contacts des financeurs, plus de doublon admin |
+| 13/09/2026 | To-do personnelle : tâches privées, échéance (pour quand) distincte des créneaux de travail (quand je m'y mets : journée ou plage horaire, posés dans l'agenda iCal comme occupés), `@` pour rattacher une édition, bloc « Aujourd'hui » dans Ma semaine, « Me créer une tâche » depuis une édition | Demande de Gaël |
+| 13/09/2026 | Fiche projet alignée sur le gabarit Word CRESS (objectifs qualitatifs / quantitatifs, SNESS, contenu et valeur ajoutée, public, sponsor, date de rendu), export Word au format du gabarit, **remarques par rubrique** (droit CODIR, mode relecture, traitées par le pilote, notification et Ma semaine), trois fiches réelles transposées en démo | Constat de Gaël : l'outil ne reproduisait ni les rubriques ni les commentaires de la direction |
+| 13/09/2026 | **Plan de charge** (`/plan-de-charge`) : personnes × mois face à la capacité, éditions en cours et à venir, vue par projet, réalisé sur les mois passés, ventilation mensuelle depuis l'édition ou directement depuis la grille (`PlannedLoad`) | Rien ne répartissait la charge dans le temps entre le séminaire et la saisie |
+
 ## V1 (janvier 2027) — retenu, à chiffrer
 
 | Évolution | Condition | Réf. |
@@ -28,6 +35,10 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Export `.xlsx` formaté pour la RAF ; import budget engagé/réalisé par CSV | Format de l'Excel de la RAF | ENF-8, EF-E1b |
 | Base HT/TTC unique par édition, rectification datée d'un réalisé confirmé | Arbitrage A06 | EF-E1 (CDC GPT §12) |
 | « Préparer un départ » (réaffectation des responsabilités), désactivation sans effacer l'historique | — | EF-K3 (CDC GPT §20) |
+| Règle de complétude de la clôture (jour attendu sans saisie = à compléter, sans tolérance) | À confirmer avec la RAF | EF-D5 |
+| Contacts des financeurs : synchronisation Outlook / carnet Microsoft, conservation RGPD (données de tiers) | Question 4 (Microsoft) | — |
+| Plan de charge : congés et absences individuelles (SIRH) dans la capacité mensuelle | Source SIRH | EF-B3b |
+| Zoom 200 % et lecteur d'écran : vérification sur poste réel | Poste CRESS | ENF-4 |
 | Notifications avec clé de dédoublonnage et reprise après panne | Va avec les mails de rappel | EF-C2 (CDC GPT §19) |
 | « Non renseigné / À arbitrer / Sans objet » distincts de zéro sur les moyens | — | EF-B2 (CDC GPT §8) |
 | Bilan financeur pré-rempli par ligne de financement (.docx : texte, indicateurs imposés, jours, dépenses) | Modèles attendus par chaque financeur | EF-B4, EF-I3 |

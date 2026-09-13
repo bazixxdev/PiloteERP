@@ -50,6 +50,23 @@
 
 Tests : 12 existants verts + `tests/revue-ux.spec.ts` (2 scénarios). Seuls les tests qui vérifiaient l'attribut `readonly` d'un champ passent par `data-readonly` (le champ en lecture est désormais du texte).
 
+### G. Retours de Gaël en direct (13/09, soirée)
+
+**Traités le 13/09** — chacun dans un commit dédié (`git log c901a63..HEAD`).
+- Menu utilisateur « habituel » (compte, admin, changer d'utilisateur, déconnexion) → fait ; Admin retiré de la barre latérale.
+- Pied de barre latérale et liste des pôles « ne servent à rien » → retirés.
+- « Pourquoi un alternant a le mode CODIR ? » → bouton réservé aux rôles CODIR (le sidebar l'était déjà) ; aide clavier `?` limitée au profil.
+- Conventions : « un tableau + une page serait plus approprié » → liste avec filtres et page par convention ; rattacher / détacher une édition depuis la convention aussi.
+- « C'est quoi la date dans le tableau des personnes ? » → c'est le début de validité du rythme ; colonne renommée « Rythme · en vigueur depuis », formulaire « à partir du ».
+- Écran café en doublon dans Ma semaine → retiré. Vue journée et to-do → go, faits (tâches privées, échéance vs créneaux, `@` édition, chip modifiable, créneau suivant proposé).
+- Erreur « slotLabel from the server » → fonction déplacée dans `lib/format.ts`.
+- Financeurs : « un champ, c'est limité » → contacts (option complète), liste et page Financeur, contact du dossier.
+- « Conventions et financeurs dans un même onglet avec sous-menu, et Projets et éditions avec » → entrée « Projets et financements », trois onglets ; doublon Financeurs de l'admin retiré.
+- « Décocher Actif fait tout planter » → cause : dernière direction désactivée + cookie périmé après reseed ; garde-fous et personne courante robuste.
+- Fiches projets Word : « en quoi l'outil reproduit ça, où sont les commentaires de la directrice ? » → rubriques du gabarit, export Word, remarques par rubrique. Puis « pas les commentaires de Dumas, d'autres » → remarques inventées ; puis « mode feedback, ça parasite, et c'est un droit du CODIR » → mode relecture, droit CODIR entier.
+- « Un plan de charge ? » → go, fait ; puis « aller dans chaque édition n'est pas pratique » → modifiable depuis la grille.
+- Démo en ligne redéployée avec `--seed` sur demande (HEAD `bab1264` à ce moment-là ; le plan de charge n'est **pas** encore en ligne).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
