@@ -42,7 +42,7 @@ function placeholderPdf(title: string): Buffer {
   return Buffer.from(out, "latin1");
 }
 
-const UPLOADS = path.join(process.cwd(), "uploads");
+const UPLOADS = process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 function storePdf(title: string): { storedName: string; size: number } {
   mkdirSync(UPLOADS, { recursive: true });
   const storedName = `${randomBytes(12).toString("hex")}.pdf`;

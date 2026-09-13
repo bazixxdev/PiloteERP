@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { withBase } from "@/lib/base-path";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Section } from "@/components/common/section";
@@ -228,9 +229,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Export" description="Réversibilité : toutes les données, à tout moment (ENF-5).">
             <div className="flex flex-wrap gap-2">
               {["personnes", "projets", "editions", "actions", "financements", "livrables", "temps", "depenses", "validations"].map((t) => (
-                <Button key={t} asChild size="sm" variant="outline"><a href={`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />{t}.csv</a></Button>
+                <Button key={t} asChild size="sm" variant="outline"><a href={withBase(`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />{t}.csv</a></Button>
               ))}
-              <Button asChild size="sm"><a href={`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`}><Download />Tout (JSON)</a></Button>
+              <Button asChild size="sm"><a href={withBase(`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />Tout (JSON)</a></Button>
             </div>
           </Section>
           <Section title="Connexions externes" description="Jeton d'API : il protège les exports ouverts depuis Excel ou un autre outil (dans l'outil, aucun jeton n'est nécessaire).">

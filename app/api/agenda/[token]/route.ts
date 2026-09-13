@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { BASE_PATH } from "@/lib/base-path";
 import { prisma } from "@/lib/db";
 import { buildIcs, personEvents, publicEvents, teamEvents } from "@/lib/ics";
 
@@ -6,7 +7,7 @@ import { buildIcs, personEvents, publicEvents, teamEvents } from "@/lib/ics";
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token: raw } = await params;
   const token = raw.replace(/\.ics$/i, "");
-  const base = new URL(req.url).origin;
+  const base = new URL(req.url).origin + BASE_PATH;
   const settings = await prisma.settings.findUnique({ where: { id: 1 } });
   let feed: { name: string; events: Awaited<ReturnType<typeof teamEvents>>["events"] } | null = null;
   if (token === "public") feed = await publicEvents();

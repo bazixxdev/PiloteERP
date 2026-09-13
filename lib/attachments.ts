@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+export const UPLOAD_DIR = process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // pièces légères : 5 Mo
 export const ALLOWED_MIME = ["application/pdf", "image/png", "image/jpeg", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/msword", "application/vnd.ms-excel", "text/plain", "text/csv"];
 

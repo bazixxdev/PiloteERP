@@ -1,4 +1,5 @@
 import { FileText, Paperclip } from "lucide-react";
+import { withBase } from "@/lib/base-path";
 import type { RefMap } from "@/lib/refs";
 import { refLabel } from "@/lib/refs";
 import { fmtDate } from "@/lib/format";
@@ -15,7 +16,7 @@ export function AttachmentList({ items, refs, compact, emptyText = "Aucune pièc
         <li key={a.id} className="flex items-center gap-2 py-1">
           {compact ? <Paperclip className="size-3 shrink-0 text-primary" /> : <FileText className="size-4 shrink-0 text-primary" />}
           <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refLabel(refs, "attachment_kind", a.kind)}</span>
-          <a href={`/api/pieces/${a.id}`} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-medium hover:underline" title={a.fileName}>{a.label}</a>
+          <a href={withBase(`/api/pieces/${a.id}`)} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-medium hover:underline" title={a.fileName}>{a.label}</a>
           <span className="shrink-0 text-muted-foreground">{fmtSize(a.size)} · {a.uploadedBy.name} · {fmtDate(a.createdAt)}</span>
         </li>
       ))}

@@ -1,4 +1,5 @@
 import { FileDown } from "lucide-react";
+import { withBase } from "@/lib/base-path";
 import { Section } from "@/components/common/section";
 import { AutoField } from "@/components/inline/auto-field";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,8 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
         description="Texte réutilisé tel quel pour le rapport d'activité et les bilans financeurs ; visé par le responsable de pôle."
         actions={
           <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline"><a href={`/edition/${e.id}/export?format=md`} data-testid="export-md"><FileDown />Exporter .md</a></Button>
-            <Button asChild size="sm" variant="outline"><a href={`/edition/${e.id}/export?format=docx`} data-testid="export-docx"><FileDown />Exporter .docx</a></Button>
+            <Button asChild size="sm" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=md`)} data-testid="export-md"><FileDown />Exporter .md</a></Button>
+            <Button asChild size="sm" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)} data-testid="export-docx"><FileDown />Exporter .docx</a></Button>
           </div>
         }
       >

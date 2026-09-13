@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { withBase } from "@/lib/base-path";
 import { CalendarPlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/common/copy-button";
@@ -14,7 +15,7 @@ export function IcsCard({ kind, canRegenerate = true, personId }: { kind: "me" |
     setToken(null);
     (kind === "me" ? ensureMyIcsToken() : ensureTeamIcsToken()).then(setToken);
   }, [kind, personId]);
-  const url = token && typeof window !== "undefined" ? `${window.location.origin}/api/agenda/${token}.ics` : null;
+  const url = token && typeof window !== "undefined" ? `${window.location.origin}${withBase(`/api/agenda/${token}.ics`)}` : null;
   return (
     <div className="rounded-2xl border bg-card p-5" data-testid={`ics-${kind}`}>
       <div className="mb-1 flex items-center gap-2 text-base font-semibold"><CalendarPlus className="size-4 text-primary" />{kind === "me" ? "Mes échéances dans mon agenda" : "Les échéances de l'équipe dans un agenda"}</div>

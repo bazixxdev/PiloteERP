@@ -4,10 +4,10 @@ import { PersonSwitcher } from "./person-switcher";
 import { QuickSearch } from "./quick-search";
 import { Suspense } from "react";
 import { Breadcrumb } from "./breadcrumb";
-import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { NotificationsBell } from "./notifications-bell";
 import { byRelevance } from "@/lib/scope";
+import { withBase } from "@/lib/base-path";
 import { fmtDate } from "@/lib/format";
 
 export async function Topbar() {
@@ -27,7 +27,8 @@ export async function Topbar() {
         <Suspense fallback={<span className="text-[11px] text-muted-foreground">Pilote</span>}>
           <Breadcrumb editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} / ${e.year}` }))} />
         </Suspense>
-        <span className="md:hidden"><Image src="/logo-cress-mark.png" alt="CRESS" width={190} height={177} className="h-auto w-6" /></span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <span className="md:hidden"><img src={withBase("/logo-cress-mark.png")} alt="CRESS" width={190} height={177} className="h-auto w-6" /></span>
         <QuickSearch editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` }))} />
       </div>
       <div className="flex items-center gap-2">

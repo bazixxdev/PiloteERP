@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withBase } from "@/lib/base-path";
 
 // Barre latérale V2 : fond clair, logo CRESS sur fond transparent, trois sections, la liste des pôles en repère.
 const GROUPS = [
@@ -36,8 +36,10 @@ export function Sidebar({ pendingCount, remindersCount, poles, peopleCount }: { 
   return (
     <aside className="hidden h-screen w-14 md:flex shrink-0 flex-col gap-5 border-r bg-sidebar px-2 py-4 text-sidebar-foreground transition-[width] lg:w-[194px] lg:px-3 lg:py-5 print:hidden">
       <Link href="/portefeuille" className="flex items-center justify-center px-1 lg:justify-start lg:px-2" aria-label="CRESS Centre-Val de Loire · Portefeuille">
-        <Image src="/logo-cress.png" alt="CRESS Centre-Val de Loire" width={465} height={187} priority className="hidden h-auto w-[150px] lg:block" />
-        <Image src="/logo-cress-mark.png" alt="" width={190} height={177} priority className="h-auto w-7 lg:hidden" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- PNG statique servi tel quel : l'optimiseur d'images ne gère pas le basePath */}
+        <img src={withBase("/logo-cress.png")} alt="CRESS Centre-Val de Loire" width={465} height={187} className="hidden h-auto w-[150px] lg:block" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={withBase("/logo-cress-mark.png")} alt="" width={190} height={177} className="h-auto w-7 lg:hidden" />
       </Link>
       <div className="hidden px-2 text-[10px] leading-snug text-muted-foreground lg:block">Piloter ensemble<br /><span className="font-semibold uppercase tracking-[.8px]">Prototype</span></div>
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto">

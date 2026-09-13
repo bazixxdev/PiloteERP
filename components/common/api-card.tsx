@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { withBase } from "@/lib/base-path";
 import { FileSpreadsheet, Globe } from "lucide-react";
 import { CopyButton } from "@/components/common/copy-button";
 
@@ -9,7 +10,7 @@ export function ApiCard({ apiToken }: { apiToken: string | null }) {
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
   const row = (label: string, path: string, testId?: string) => {
-    const url = origin ? `${origin}${path}` : "";
+    const url = origin ? `${origin}${withBase(path)}` : "";
     return (
       <li className="grid grid-cols-[10rem_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
         <span className="text-sm">{label}</span>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { withBase } from "@/lib/base-path";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Section } from "@/components/common/section";
@@ -75,8 +76,8 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
             <span className="min-w-32 text-center text-sm font-medium">{monthLabel(month)}</span>
             <Button asChild variant="outline" size="icon" aria-label="Mois suivant"><Link href={`/cloture?mois=${next}`}><ChevronRight /></Link></Button>
             <span className="mx-1 h-5 w-px bg-border" />
-            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=projet${jeton}`}><Download />CSV par projet</a></Button>
-            <Button asChild variant="outline" size="sm"><a href={`/cloture/export?mois=${month}&par=personne${jeton}`}><Download />CSV par personne</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={withBase(`/cloture/export?mois=${month}&par=projet${jeton}`)}><Download />CSV par projet</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={withBase(`/cloture/export?mois=${month}&par=personne${jeton}`)}><Download />CSV par personne</a></Button>
           </div>
         }
       />

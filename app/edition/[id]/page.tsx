@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shell/person-switcher";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -9,7 +8,6 @@ import { getCurrentPerson, getRefs, getSettings, getPeople } from "@/lib/session
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { computeAlerts } from "@/lib/alerts";
 import { isCodir } from "@/lib/rights";
-import { cn } from "@/lib/utils";
 import { TabsNav, type TabKey } from "./tabs-nav";
 import { EditionPicker } from "./edition-picker";
 import { RenewDialog } from "./renew-dialog";

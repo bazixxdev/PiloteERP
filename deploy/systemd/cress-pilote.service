@@ -1,0 +1,22 @@
+[Unit]
+Description=Pilote — prototype CRESS Centre-Val de Loire (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/cress-pilote
+EnvironmentFile=/var/www/cress-pilote/.env
+Environment=NODE_ENV=production
+Environment=PORT=3002
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=3
+# Pas de journal verbeux : les accès sont dans nginx.
+StandardOutput=append:/var/log/cress-pilote.log
+StandardError=append:/var/log/cress-pilote.log
+
+[Install]
+WantedBy=multi-user.target

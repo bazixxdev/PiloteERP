@@ -45,7 +45,7 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Navigation dans le dossier SharePoint depuis l'édition | Bascule des fichiers du NAS vers SharePoint | EF-J1 |
 | Accès invité partenaire par projet | Question 8 | EF-K5 |
 | Mes actions dans Microsoft To Do / Planner | Question 4 ; double saisie de l'état | EF-G2 |
-| Formulaire d'entrée des demandes internes | — | EF-J3 |
+| **Demandes internes type « ticket »** (besoins de communication, mise à jour du site, demande à l'assistante…) : formulaire d'entrée, file par destinataire (pôle com, direction), état à faire / en cours / fait, rattachement facultatif à une édition — remplace le canal Teams « modifications du site » et les sollicitations « par mail, par LinkedIn, par l'oral » (S8.37) | Noté par Gaël le 13/09 ; à préciser avec la responsable com (qui reçoit quoi, délai attendu) ; peut s'appuyer sur l'objet Validation existant (nature « envoi ») ou être un objet à part | EF-J3 |
 | Indicateurs consolidés CRESS pour la revue trimestrielle, revue photographiée | Usage de six mois | EF-G7 (CDC GPT §16) |
 | Cycle de vie complet d'édition (9 statuts, suspension, réouverture), 7 états de livrable avec relecture, circuits de validation configurables avec délégations, relevés d'indicateurs (somme / cumul / ratio), constructeur de champs, corbeille relationnelle | Trop lourd pour une V1 « simple à prendre en main » (7/12, S8.43) ; à ouvrir selon l'usage | CDC GPT §7, §10, §13, §17, §20 |
 
