@@ -111,8 +111,9 @@ export function RhythmPeriodForm({ personId, rhythms }: { personId: string; rhyt
       <select className="h-7 max-w-[160px] rounded-lg border bg-card px-1 text-xs" value={rhythmId} onChange={(e) => setRhythmId(e.target.value)} aria-label="Rythme">
         {rhythms.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
       </select>
-      <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 w-32 text-xs" aria-label="À partir du" />
-      <Button type="submit" size="xs" variant="outline" disabled={pending || !from}><Plus /></Button>
+      <span className="text-[10px] text-muted-foreground">à partir du</span>
+      <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 w-32 text-xs" aria-label="Nouveau rythme à partir du" title="Date à laquelle ce rythme commence ; le précédent s'arrête la veille" />
+      <Button type="submit" size="xs" variant="outline" disabled={pending || !from} title="Ajouter ce rythme à partir de cette date"><Plus /></Button>
     </form>
   );
 }

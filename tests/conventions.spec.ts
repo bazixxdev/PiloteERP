@@ -33,6 +33,14 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   // La création ouvre la page de la convention ; la liste la montre ensuite sans édition rattachée.
   await expect(page.getByRole("heading", { level: 1 })).toContainText("ADEME-TEST-2026-2027");
   await expect(page.getByTestId("convention-lines")).toContainText(/aucune édition rattachée/i);
+  // Depuis la convention : rattacher une édition couverte par la période, puis la détacher (ligne vide → supprimée).
+  await page.getByTestId("attach-edition-select").selectOption({ label: "Observatoire régional (ORESS) · 2026" });
+  await page.getByTestId("attach-edition-submit").click();
+  await expect(page.getByTestId("convention-lines-table")).toContainText("Observatoire régional (ORESS) · 2026");
+  page.once("dialog", (d) => d.accept());
+  await page.getByTestId("convention-lines").getByRole("button", { name: "Détacher" }).click();
+  await expect(page.getByText(/Ligne vide supprimée|Édition détachée/)).toBeVisible();
+  await expect(page.getByTestId("convention-lines-table")).toHaveCount(0);
   await page.goto("/conventions");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");
   await openEditionByName(page, "Chroniquer la TESS");

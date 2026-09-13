@@ -262,6 +262,20 @@ export async function createConvention(input: { funderId: string; reference: str
   return { ok: true, data: { id: c.id } };
 }
 
+// Détacher une affectation depuis la convention : la ligne redevient un financement annuel propre à l'édition ;
+// si elle est vide (ni montant, ni livrable, ni pièce), elle est supprimée.
+export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
+  const me = await getCurrentPerson();
+  if (!canEditFunding(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) modifie les affectations." };
+  const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true } });
+  if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
+  const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0;
+  if (empty) await prisma.fundingLine.delete({ where: { id: lineId } });
+  else await prisma.fundingLine.update({ where: { id: lineId }, data: { conventionId: null } });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { deleted: empty } };
+}
+
 export async function addFundingLineFromConvention(editionId: string, conventionId: string): Promise<Result> {
   const c = await ctx(editionId);
   if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };

@@ -12,6 +12,7 @@ import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AttachEditionForm, DetachButton } from "./allocations";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +23,8 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
   ]);
   if (!c) notFound();
   const rw = canEditFunding(me.role);
+  // Éditions couvertes par la période et pas encore rattachées : proposées au rattachement depuis la convention.
+  const attachable = rw ? (await prisma.edition.findMany({ where: { year: { gte: c.startYear, lte: c.endYear }, status: { not: "closed" }, id: { notIn: c.lines.map((l) => l.editionId) } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] })).map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` })) : [];
   const a = allocationOf(c);
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
   const pct = a.ceiling ? Math.round((a.granted / a.ceiling) * 100) : null;
@@ -65,14 +68,14 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="grid content-start gap-4">
-          <Section title="Affectations aux éditions" description="Une ligne de financement par édition rattachée ; le montant obtenu se saisit sur l'édition (onglet Financements)." testId="convention-lines">
+          <Section title="Affectations aux éditions" description="Une ligne de financement par édition rattachée ; le montant obtenu se saisit sur l'édition (onglet Financements). Le rattachement se fait ici ou depuis l'édition." testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
             {c.lines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune édition rattachée — depuis l'onglet Financements d'une édition couverte par la période, « Rattacher une convention ».</p>
+              <p className="text-sm text-muted-foreground">Aucune édition rattachée{rw ? " — choisissez-en une ci-dessus, ou depuis l'onglet Financements d'une édition couverte par la période." : "."}</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm" data-testid="convention-lines-table">
                   <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                    <tr><th className="py-1.5 pr-2">Édition</th><th className="py-1.5 pr-2">Pilote</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5 pr-2">Livrables</th></tr>
+                    <tr><th className="py-1.5 pr-2">Édition</th><th className="py-1.5 pr-2">Pilote</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5 pr-2">Livrables</th>{rw && <th className="py-1.5" />}</tr>
                   </thead>
                   <tbody className="divide-y">
                     {c.lines.map((l) => {
@@ -85,12 +88,13 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                           <td className="py-2 pr-2 text-right tabular">{fmtEuro(l.amountRequested)}</td>
                           <td className="py-2 pr-2 text-right font-medium tabular">{fmtEuro(l.amountGranted)}</td>
                           <td className="py-2 pr-2 text-xs text-muted-foreground">{l.deliverables.length === 0 ? "—" : `${l.deliverables.length - open} remis · ${open} à remettre`}</td>
+                          {rw && <td className="py-2 text-right"><DetachButton lineId={l.id} editionLabel={`${l.edition.project.name} · ${l.edition.year}`} /></td>}
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t font-semibold"><td className="py-2 pr-2" colSpan={3}>Total</td><td className="py-2 pr-2 text-right tabular">{fmtEuro(a.requested)}</td><td className={cn("py-2 pr-2 text-right tabular", a.over && "text-danger")}>{fmtEuro(a.granted)}</td><td /></tr>
+                    <tr className="border-t font-semibold"><td className="py-2 pr-2" colSpan={3}>Total</td><td className="py-2 pr-2 text-right tabular">{fmtEuro(a.requested)}</td><td className={cn("py-2 pr-2 text-right tabular", a.over && "text-danger")}>{fmtEuro(a.granted)}</td><td colSpan={rw ? 2 : 1} /></tr>
                   </tfoot>
                 </table>
               </div>

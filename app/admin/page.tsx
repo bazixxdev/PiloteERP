@@ -56,7 +56,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Personnes" description="Rôle, pôle, rythme de travail et jours disponibles dans l'année." actions={rw ? <AddSimpleForm kind="person" placeholder="Prénom Nom" /> : undefined}>
             <table className="w-full text-sm" data-testid="people-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5">Nom</th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
+                <tr><th className="py-1.5">Nom</th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme · en vigueur depuis</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
               </thead>
               <tbody className="divide-y">
                 {people.map((p) => (
