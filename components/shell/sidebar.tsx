@@ -6,33 +6,53 @@ import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settin
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
-// Barre latérale V2 : fond clair, logo CRESS sur fond transparent, trois sections, la liste des pôles en repère.
-const GROUPS = [
-  { caption: "Espace de travail", items: [
-    { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
-    { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
-    { href: "/temps", label: "Temps", icon: Clock },
-    { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
-    { href: "/validations", label: "Validations", icon: CheckSquare },
-    { href: "/conventions", label: "Conventions", icon: FileSignature },
-  ] },
-  { caption: "Collectif", items: [
+// Barre latérale V2 : fond clair, logo CRESS sur fond transparent, la liste des pôles en repère.
+// Les groupes suivent le profil : un salarié commence par Ma semaine, Temps et ses projets ; les accès collectifs ou
+// occasionnels viennent ensuite, et les écrans CODIR, Séminaire et Admin n'apparaissent qu'à ceux qui y ont un rôle.
+type Item = { href: string; label: string; icon: typeof Briefcase };
+type Group = { caption: string; items: Item[] };
+
+function groupsFor(role: string): Group[] {
+  const codir = ["director", "raf", "pole_lead"].includes(role);
+  const admin = role === "director" || role === "raf";
+  const work: Item[] = codir
+    ? [
+        { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
+        { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        { href: "/temps", label: "Temps", icon: Clock },
+        { href: "/validations", label: "Validations", icon: CheckSquare },
+      ]
+    : [
+        { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        { href: "/temps", label: "Temps", icon: Clock },
+        { href: "/portefeuille", label: "Mes projets", icon: Briefcase },
+        { href: "/validations", label: "Validations", icon: CheckSquare },
+      ];
+  const collective: Item[] = [
     { href: "/cafe", label: "Écran café", icon: Coffee },
+    { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
+    { href: "/conventions", label: "Conventions", icon: FileSignature },
+    { href: "/rappels", label: "Rappels", icon: Bell },
+  ];
+  const direction: Item[] = codir ? [
     { href: "/codir", label: "Écran CODIR", icon: Gavel },
     { href: "/seminaire", label: "Séminaire", icon: Presentation },
-    { href: "/rappels", label: "Rappels", icon: Bell },
-  ] },
-  { caption: "Réglages", items: [
-    { href: "/admin", label: "Admin", icon: Settings },
-  ] },
-];
+  ] : [];
+  return [
+    { caption: codir ? "Espace de travail" : "Mon travail", items: work },
+    { caption: "Toute la CRESS", items: collective },
+    ...(direction.length ? [{ caption: "Direction", items: direction }] : []),
+    ...(admin ? [{ caption: "Réglages", items: [{ href: "/admin", label: "Admin", icon: Settings }] }] : []),
+  ];
+}
 
 export const POLE_DOTS = ["#7c9277", "#8f9eaa", "#b49b7d", "#5e9bb8"];
 
 export type SidebarPole = { id: string; name: string };
 
-export function Sidebar({ pendingCount, remindersCount, poles, peopleCount }: { pendingCount: number; remindersCount: number; poles: SidebarPole[]; peopleCount: number }) {
+export function Sidebar({ pendingCount, remindersCount, poles, peopleCount, role }: { pendingCount: number; remindersCount: number; poles: SidebarPole[]; peopleCount: number; role: string }) {
   const pathname = usePathname();
+  const GROUPS = groupsFor(role);
   return (
     <aside className="hidden h-screen w-14 md:flex shrink-0 flex-col gap-5 border-r bg-sidebar px-2 py-4 text-sidebar-foreground transition-[width] lg:w-[194px] lg:px-3 lg:py-5 print:hidden">
       <Link href="/portefeuille" className="flex items-center justify-center px-1 lg:justify-start lg:px-2" aria-label="CRESS Centre-Val de Loire · Portefeuille">
@@ -63,7 +83,7 @@ export function Sidebar({ pendingCount, remindersCount, poles, peopleCount }: { 
                   >
                     <item.icon className="size-4 shrink-0" />
                     <span className="hidden flex-1 lg:inline">{item.label}</span>
-                    {badge > 0 && <span className="hidden rounded-sm bg-warning-soft px-1.5 text-[10px] font-semibold text-warning-foreground lg:inline">{badge}</span>}
+                    {badge > 0 && <span className="hidden rounded-sm bg-warning-soft px-1.5 text-[10px] font-semibold text-warning-foreground lg:inline" title="À traiter par moi" aria-label={`${badge} à traiter par moi`}>{badge}</span>}
                   </Link>
                 );
               })}

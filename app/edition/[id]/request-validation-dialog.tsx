@@ -1,89 +1,130 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { Paperclip, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { computeRequiredLevel, requestValidation } from "@/app/actions/edition";
+import { explainRequiredLevel, requestValidation } from "@/app/actions/edition";
+import { uploadAttachment } from "@/app/actions/attachments";
 
 const LEVELS = ["1 · pilote", "2 · responsable de pôle", "3 · direction"];
 
-export function RequestValidationDialog({ editionId, actions, kinds }: { editionId: string; actions: { id: string; name: string }[]; kinds: { value: string; label: string }[] }) {
+// Qui reçoit la demande à chaque niveau : le circuit de validation, en noms.
+export type Recipients = { 1: string | null; 2: string | null; 3: string | null };
+const LEVEL_ROLE: Record<number, string> = { 1: "pilote de l'édition", 2: "responsable de pôle", 3: "direction" };
+
+export function RequestValidationDialog({ editionId, actions, kinds, recipients, canOverride }: { editionId: string; actions: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients: Recipients; canOverride?: boolean }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("quote");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [actionId, setActionId] = useState("");
   const [url, setUrl] = useState("");
+  const [fileName, setFileName] = useState("");
   const [level, setLevel] = useState(1);
-  const [computed, setComputed] = useState(1);
+  const [computed, setComputed] = useState<{ level: number; reason: string }>({ level: 1, reason: "" });
   const [delay, setDelay] = useState("5");
   const [pending, start] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (!open) return;
     const n = amount === "" ? null : Number(amount.replace(",", "."));
-    computeRequiredLevel(editionId, n).then((l) => { setComputed(l); setLevel(l); });
+    explainRequiredLevel(editionId, n).then((r) => { setComputed(r); setLevel(r.level); });
   }, [amount, editionId, open]);
 
   const sel = "h-8 w-full rounded-lg border bg-card px-2 text-sm";
+  const recipient = recipients[level as 1 | 2 | 3];
+  const kindLabel = kinds.find((k) => k.value === kind)?.label ?? kind;
+  const amountNumber = amount === "" ? null : Number(amount.replace(",", "."));
+  const reset = () => { setLabel(""); setAmount(""); setUrl(""); setFileName(""); if (fileRef.current) fileRef.current.value = ""; };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button data-testid="request-validation-open"><ShieldCheck />Demander une validation</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Demander une validation</DialogTitle>
-          <DialogDescription>Le niveau requis est calculé depuis le montant, les seuils et l'enveloppe restante ; vous pouvez l'ajuster.</DialogDescription>
+          <DialogDescription>Dites ce que vous demandez, joignez la pièce ; la demande part au bon valideur selon le montant.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
+          <div className="grid gap-1">
+            <Label htmlFor="rv-label">Objet de la demande</Label>
+            <Input id="rv-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Devis traiteur pour la soirée…" data-testid="rv-label" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1">
-              <Label>Nature</Label>
-              <select className={sel} value={kind} onChange={(e) => setKind(e.target.value)} data-testid="rv-kind">
+              <Label htmlFor="rv-kind">Nature</Label>
+              <select id="rv-kind" className={sel} value={kind} onChange={(e) => setKind(e.target.value)} data-testid="rv-kind">
                 {kinds.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
               </select>
             </div>
             <div className="grid gap-1">
-              <Label>Montant (€)</Label>
-              <Input type="number" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" data-testid="rv-amount" />
+              <Label htmlFor="rv-amount">Montant (€)</Label>
+              <Input id="rv-amount" type="number" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" data-testid="rv-amount" />
             </div>
           </div>
           <div className="grid gap-1">
-            <Label>Objet</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Devis traiteur pour la soirée…" data-testid="rv-label" />
+            <Label htmlFor="rv-action">Action concernée</Label>
+            <select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
+              <option value="">— l'édition entière —</option>
+              {actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1">
-              <Label>Action concernée</Label>
-              <select className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
-                <option value="">— l'édition entière —</option>
-                {actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+
+          {/* La pièce se joint avant l'envoi ; le lien vers le serveur ou Teams reste possible en alternative. */}
+          <div className="grid gap-1 rounded-lg border bg-muted/40 p-2.5">
+            <Label className="text-xs">Pièce à faire valider (devis, justificatif)</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border bg-card px-2.5 text-sm">
+                <Paperclip className="size-3.5" />{fileName || "Joindre le fichier"}
+                <input ref={fileRef} type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.doc,.xls,.txt,.csv" onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")} data-testid="rv-file" aria-label="Joindre le fichier" />
+              </label>
+              <span className="text-xs text-muted-foreground">ou</span>
+              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="lien Teams, OneNote ou chemin serveur" aria-label="Lien vers la pièce" className="h-8 min-w-0 flex-1" />
             </div>
-            <div className="grid gap-1">
-              <Label>Pièce (chemin ou lien) <span className="text-xs text-muted-foreground">— ou déposez le fichier après envoi</span></Label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="\\cress\Partage\…\devis.pdf" />
+            <p className="text-[11px] text-muted-foreground">Facultatif, mais le valideur décide plus vite avec la pièce sous les yeux. 5 Mo au plus.</p>
+          </div>
+
+          {/* Le destinataire réel et la raison, avant tout réglage technique. */}
+          <div className="rounded-lg bg-info-soft px-3 py-2.5 text-sm" data-testid="rv-recipient">
+            <div><span className="text-muted-foreground">Sera transmis à</span> <b>{recipient ?? LEVEL_ROLE[level]}</b> <span className="text-muted-foreground">· {LEVEL_ROLE[level]}</span></div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {level === computed.level ? <>Niveau {level} : {computed.reason || "calculé depuis le montant, les seuils et l'enveloppe restante"}.</> : <>Niveau {level} choisi à la main (calculé : {computed.level}, {computed.reason}).</>}
+              {" "}Réponse attendue sous {Number(delay) || 5} jours.
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1">
-              <Label>Niveau requis <span className="text-xs text-muted-foreground">(calculé : {computed})</span></Label>
-              <select className={sel} value={level} onChange={(e) => setLevel(Number(e.target.value))} data-testid="rv-level">
-                {LEVELS.map((l, i) => <option key={i} value={i + 1}>{l}</option>)}
-              </select>
-            </div>
-            <div className="grid gap-1">
-              <Label>Délai cible (jours)</Label>
-              <Input type="number" value={delay} onChange={(e) => setDelay(e.target.value)} />
-            </div>
-          </div>
+
+          {(canOverride ?? true) && (
+            <details className="rounded-lg border px-2.5 py-1.5 text-sm">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Paramètres du circuit · niveau et délai</summary>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="rv-level">Niveau requis <span className="text-xs text-muted-foreground">(calculé : {computed.level})</span></Label>
+                  <select id="rv-level" className={sel} value={level} onChange={(e) => setLevel(Number(e.target.value))} data-testid="rv-level">
+                    {LEVELS.map((l, i) => <option key={i} value={i + 1}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="rv-delay">Délai cible (jours)</Label>
+                  <Input id="rv-delay" type="number" value={delay} onChange={(e) => setDelay(e.target.value)} />
+                </div>
+              </div>
+            </details>
+          )}
+
+          {label.trim() && (
+            <p className="rounded-lg border border-dashed px-3 py-2 text-xs" data-testid="rv-summary">
+              <b>Récapitulatif :</b> {kindLabel.toLowerCase()} « {label.trim()} »{amountNumber ? ` de ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amountNumber)}` : ""}{actionId ? ` pour l'action « ${actions.find((a) => a.id === actionId)?.name ?? ""} »` : ""}, {fileName ? `avec la pièce « ${fileName} »` : url ? "avec un lien vers la pièce" : "sans pièce jointe"}, transmis à {recipient ?? LEVEL_ROLE[level]}.
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
@@ -92,10 +133,17 @@ export function RequestValidationDialog({ editionId, actions, kinds }: { edition
             disabled={pending || !label.trim()}
             onClick={() =>
               start(async () => {
-                const res = await requestValidation({ editionId, actionId, kind, label, amount: amount === "" ? null : Number(amount.replace(",", ".")), attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5 });
+                const res = await requestValidation({ editionId, actionId, kind, label, amount: amountNumber, attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5 });
                 if (!res.ok) { toast.error(res.error); return; }
-                toast.success(`Demande envoyée (niveau ${res.data!.requiredLevel})`);
-                setOpen(false); setLabel(""); setAmount(""); setUrl("");
+                const file = fileRef.current?.files?.[0];
+                if (file) {
+                  const form = new FormData();
+                  form.set("editionId", editionId); form.set("kind", kind === "quote" ? "quote" : kind === "expense" ? "receipt" : "other"); form.set("label", file.name); form.set("file", file); form.set("validationId", res.data!.id);
+                  const up = await uploadAttachment(form);
+                  if (!up.ok) toast.error(`Demande envoyée, mais la pièce n'a pas été déposée : ${up.error}`);
+                }
+                toast.success(`Demande transmise à ${recipient ?? LEVEL_ROLE[res.data!.requiredLevel]}${file ? ", pièce jointe" : ""}`);
+                setOpen(false); reset();
                 router.push(`/edition/${editionId}?onglet=validations`);
                 router.refresh();
               })

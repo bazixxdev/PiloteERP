@@ -24,14 +24,14 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
           <EmptyState title="Aucune action" hint="Ajoutez la première action de cette édition : un nom, un responsable, un jalon." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="actions-table">
+            <table className="w-full min-w-[940px] text-sm" data-testid="actions-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
                 <tr>
                   <th className="w-8 py-1.5 pr-2">#</th>
                   <th className="py-1.5 pr-2">Action</th>
                   <th className="py-1.5 pr-2">Responsable</th>
                   <th className="py-1.5 pr-2">Jalon</th>
-                  <th className="py-1.5 pr-2 text-right">Objectif (h)</th>
+                  <th className="min-w-[120px] py-1.5 pr-2 text-right">Objectif (h)</th>
                   <th className="py-1.5 pr-2 text-right">Consommé</th>
                   <th className="py-1.5 pr-2">État</th>
                   <th className="py-1.5 pr-2">Ligne de financement</th>
@@ -48,21 +48,22 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   return (
                     <tr key={a.id} className="group" data-testid={`action-row-${i}`}>
                       <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
-                      <td className="min-w-[220px] py-1 pr-2"><AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" /></td>
-                      <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" /></td>
-                      <td className="min-w-[140px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} /></td>
-                      <td className="w-28 py-1 pr-2"><AutoField model="action" id={a.id} field="timeTarget" type="number" value={a.timeTarget} readOnly={!rw} suffix="h" /></td>
+                      <td className="min-w-[220px] py-1 pr-2"><AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" label={`Nom de l'action ${i + 1}`} /></td>
+                      <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
+                      <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} label={`Jalon, ${a.name}`} placeholder="—" /></td>
+                      {/* Largeur réservée aux chiffres : 7 h, 77 h, 105 h et 1 050 h se lisent en entier, sans cliquer dans le champ. */}
+                      <td className="min-w-[120px] py-1 pr-2"><AutoField model="action" id={a.id} field="timeTarget" type="number" value={a.timeTarget} readOnly={!rw} suffix="h" label={`Objectif en heures, ${a.name}`} placeholder="—" /></td>
                       <td className={cn("w-24 py-1 pr-2 text-right tabular", over && "font-semibold text-danger")}>{fmtNumber(c, 0)} h</td>
                       <td className="min-w-[130px] py-1 pr-2">
                         {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`action-late-${i}`}>en retard</span>}
                         {rw ? (
-                          <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`action-state-${i}`} />
+                          <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`action-state-${i}`} label={`État, ${a.name}`} />
                         ) : (
                           <StatusBadge label={refLabel(refs, "action_state", a.state)} color={refColor(refs, "action_state", a.state)} />
                         )}
                       </td>
-                      <td className="min-w-[160px] py-1 pr-2"><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— projet —" /></td>
-                      <td className="py-1 pr-2 text-center"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} /></td>
+                      <td className="min-w-[160px] py-1 pr-2"><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— projet —" label={`Ligne de financement, ${a.name}`} /></td>
+                      <td className="py-1 pr-2 text-center"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} label={`Événement public, ${a.name}`} /></td>
                     </tr>
                   );
                 })}
@@ -72,7 +73,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
         )}
       </Section>
 
-      <Section title="Timeline" description={`Jalons datés de l'année ${e.year}, sans dépendances.`}>
+      <Section title="Frise chronologique" description={`Jalons datés de l'année ${e.year}, sans dépendances.`}>
         <Timeline year={e.year} actions={e.actions} refs={refs} />
       </Section>
     </div>

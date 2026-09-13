@@ -64,11 +64,26 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
         <Link href={`/edition/${e.id}`} className="font-medium text-primary hover:underline">{e.project.name}</Link> <span className="text-xs text-muted-foreground">· {e.project.pilot.name} · {e.project.pole.name}</span>
         <div className={cn(big ? "text-lg" : "text-sm")}>{children}</div>
       </div>
-      <DecisionForm editionId={e.id} label={decisionLabel} {...decisionProps} />
+      {!big && <DecisionForm editionId={e.id} label={decisionLabel} {...decisionProps} />}
     </li>
   );
 
   const inAlert = editions.filter((e) => e.alerts.length > 0).length;
+
+  // Ordre du jour : les alertes d'une même édition regroupées, notées, les 5 sujets les plus lourds en tête.
+  // Chaque sujet dit le problème, la décision attendue, le responsable et l'échéance la plus proche.
+  type Topic = { e: (typeof editions)[number]; score: number; problems: string[]; decisions: string[]; due: Date | null; overdueDays: number };
+  const topics = new Map<string, Topic>();
+  const topic = (e: (typeof editions)[number]) => { let t = topics.get(e.id); if (!t) { t = { e, score: 0, problems: [], decisions: [], due: null, overdueDays: 0 }; topics.set(e.id, t); } return t; };
+  const nearer = (t: Topic, d: Date) => { if (!t.due || dayjs(d).isBefore(t.due)) t.due = d; };
+  for (const v of pending) { const t = topic(editions.find((e) => e.id === v.editionId)!); t.score += 2 + (v.amount ? 1 : 0); t.problems.push(`Demande « ${v.label} »${v.amount ? ` · ${fmtEuro(v.amount)}` : ""} en attente depuis ${dayjs().diff(dayjs(v.createdAt), "day")} j`); t.decisions.push("Approuver ou refuser la demande"); }
+  for (const { e, a, days } of lateMilestones) { const t = topic(e); t.score += 3 + Math.min(3, Math.floor(days / 30)); t.problems.push(`Jalon « ${a.name} » dépassé de ${days} j`); t.decisions.push("Replanifier le jalon, ou l'abandonner"); t.overdueDays = Math.max(t.overdueDays, days); nearer(t, a.milestoneDate!); }
+  for (const { e, f, d, days } of deliverables) { const t = topic(e); t.score += days < 0 ? 3 : 2; t.problems.push(`Livrable « ${d.label} » pour ${f.funder.name} ${days < 0 ? `en retard de ${-days} j` : `dû dans ${days} j`}`); t.decisions.push(days < 0 ? "Fixer la date de remise et prévenir le financeur" : "Confirmer que la remise est tenue"); nearer(t, d.dueDate); }
+  for (const e of envelopes) { const t = topic(e); const over = e.used - e.budgetEnvelope!; t.score += over > 0 ? 3 : 1; t.problems.push(over > 0 ? `Enveloppe dépassée de ${fmtEuro(over)} (${Math.round((e.used / e.budgetEnvelope!) * 100)} %)` : `Enveloppe consommée à ${Math.round((e.used / e.budgetEnvelope!) * 100) } %`); t.decisions.push(over > 0 ? "Couvrir le dépassement ou réduire les engagements" : "Geler ou autoriser les dépenses restantes"); }
+  for (const { e, a, consumed } of timeOver) { const t = topic(e); t.score += 1; t.problems.push(`Temps « ${a.name} » : ${fmtNumber(consumed, 0)} h sur ${a.timeTarget} h`); t.decisions.push("Revoir l'objectif de temps ou le périmètre de l'action"); }
+  const agenda = [...topics.values()].sort((x, y) => y.score - x.score || (x.due && y.due ? dayjs(x.due).diff(y.due) : 0)).slice(0, 5);
+  const uniq = (xs: string[]) => [...new Set(xs)];
+
   return (
     <div className={cn("p-4 md:p-6", big && "text-lg")}>
       <Presentation on={big} exitHref={qs({ plein: "" })} />
@@ -91,6 +106,40 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
         {poles.map(([id, name]) => <Button key={id} asChild size="sm" variant={sp.pole === id ? "default" : "outline"}><Link href={qs({ pole: id })}>{name.split(" ")[0]}</Link></Button>)}
       </div>
 
+      {/* Ordre du jour : 3 à 5 sujets à arbitrer en 20 minutes ; le reste des alertes reste accessible plus bas. */}
+      <section className="mb-4 rounded-md border bg-card p-5" data-testid="codir-agenda">
+        <h2 className={cn("mb-1 font-bold", big ? "text-2xl" : "text-[15px]")}>Ordre du jour · {agenda.length} sujet{agenda.length > 1 ? "s" : ""} à arbitrer</h2>
+        <p className={cn("mb-3 text-muted-foreground", big ? "text-base" : "text-xs")}>{topics.size} édition{topics.size > 1 ? "s" : ""} appellent une décision ; les {agenda.length} plus lourdes d'abord, alertes regroupées par édition. Environ {agenda.length ? Math.round(20 / agenda.length) : 0} minutes par sujet.</p>
+        {agenda.length === 0 ? <p className="text-sm text-muted-foreground">Rien à arbitrer : la réunion peut être courte.</p> : (
+          <ol className="grid gap-3">
+            {agenda.map((t, i) => (
+              <li key={t.e.id} className={cn("grid gap-2 rounded-md border border-l-4 p-4 md:grid-cols-[1fr_auto]", t.overdueDays > 0 || t.problems.some((p) => p.includes("dépassée")) ? "border-l-danger" : "border-l-warning")} data-testid={`agenda-${i}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
+                    <Link href={`/edition/${t.e.id}`} className={cn("font-bold text-primary hover:underline", big ? "text-xl" : "text-sm")}>{t.e.project.name} · {t.e.year}</Link>
+                    <span className={cn("text-muted-foreground", big ? "text-base" : "text-xs")}>{t.e.project.pole.name}</span>
+                  </div>
+                  <dl className={cn("mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[auto_1fr]", big ? "text-lg" : "text-sm")}>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Problème</dt>
+                    <dd><ul className="list-disc pl-4">{t.problems.map((x, j) => <li key={j}>{x}</li>)}</ul></dd>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Décision attendue</dt>
+                    <dd>{uniq(t.decisions).join(" · ")}</dd>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Responsable</dt>
+                    <dd>{t.e.project.pilot.name} <span className="text-muted-foreground">· pilote</span>{t.e.project.guarantor ? <span className="text-muted-foreground"> · garant {t.e.project.guarantor.name}</span> : null}</dd>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Échéance</dt>
+                    <dd>{t.due ? <span className={cn(daysFromNow(t.due) < 0 && "font-semibold text-danger")}>{fmtDate(t.due)}{daysFromNow(t.due) < 0 ? ` · dépassée de ${-daysFromNow(t.due)} j` : ` · dans ${daysFromNow(t.due)} j`}</span> : "Pas de date : à fixer en séance"}</dd>
+                  </dl>
+                </div>
+                <div className="flex items-start"><DecisionForm editionId={t.e.id} label={`Sujet ${i + 1}`} {...decisionProps} /></div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <details className="group mb-4" open={!big} data-testid="codir-all">
+        <summary className={cn("mb-3 cursor-pointer list-none font-bold", big ? "text-xl" : "text-[15px]")}>Toutes les alertes · {total} point{total > 1 ? "s" : ""} <span className="text-xs font-normal text-primary"><span className="group-open:hidden">afficher</span><span className="hidden group-open:inline">replier</span></span></summary>
       <div className="grid gap-4 xl:grid-cols-[1fr_1.3fr]">
         <Block icon={CheckSquare} title="Validations en attente" count={pending.length} tone="coral">
           <div className="grid gap-2">{pending.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={canDecideValidation(me, v)} showEdition index={i} attachments={v.attachments} />)}</div>
@@ -111,6 +160,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
           </Block>
         </div>
       </div>
+      </details>
 
       <section className="mt-4 rounded-md border bg-card p-5">
         <h2 className={cn("mb-2 flex items-center gap-2 font-semibold", big ? "text-2xl" : "text-base")}><Users className="size-5 text-primary" />Décisions consignées ces 30 jours</h2>
@@ -119,7 +169,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
             {recent.map((d) => (
               <li key={d.id} className="py-1.5">
                 <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refs.decision_instance?.[d.instance]?.label ?? d.instance}</span> <Link href={`/edition/${d.editionId}?onglet=validations`} className="font-medium hover:underline">{d.edition.project.name} · {d.edition.year}</Link> — {d.body}
-                <span className="text-xs text-muted-foreground"> · {fmtDate(d.decidedAt)} · {d.author.name}{d.followUp ? ` · suite : ${d.followUp.name}${d.dueDate ? ` pour le ${fmtDate(d.dueDate)}` : ""}` : ""}</span>
+                {!big && <span className="text-xs text-muted-foreground"> · {fmtDate(d.decidedAt)} · {d.author.name}{d.followUp ? ` · suite : ${d.followUp.name}${d.dueDate ? ` pour le ${fmtDate(d.dueDate)}` : ""}` : ""}</span>}
               </li>
             ))}
           </ul>

@@ -30,7 +30,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   // 2. La RAF pose le cadre de moyens, une ligne de financement avec un livrable à J+10, et l'enveloppe.
   await iAm(page, "Nadia Ferrand");
   await page.goto(editionUrl);
-  await expect(page.getByTestId("field-stakes")).toHaveAttribute("readonly", "");
+  await expect(page.getByTestId("field-stakes")).toHaveAttribute("data-readonly", "true");
   await page.getByTestId("field-directExpenseEnvelope").fill("8000");
   await page.getByTestId("field-directExpenseEnvelope").blur();
   await page.getByRole("tab", { name: "Financements" }).click();
@@ -53,7 +53,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   // 3. Le pilote écrit sa proposition, compose l'équipe, crée une action pour l'alternant et lance la discussion.
   await iAm(page, "Hugo Lemaire");
   await page.goto(editionUrl);
-  await expect(page.getByTestId("field-directExpenseEnvelope")).toHaveAttribute("readonly", "");
+  await expect(page.getByTestId("field-directExpenseEnvelope")).toHaveAttribute("data-readonly", "true");
   await page.getByTestId("field-operationalObjectives").fill("Deux rencontres et une note de plaidoyer.");
   await page.getByTestId("field-operationalObjectives").blur();
   await page.getByRole("button", { name: "Lucas Perrin" }).click();
@@ -73,6 +73,8 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   // 4. Le contributeur retrouve son action dans « Ma semaine », saisit 3 h dessus, répond, mais ne peut pas écrire la couche 3.
   await iAm(page, "Lucas Perrin");
   await page.goto("/ma-semaine");
+  // Le jalon est à J+5 : selon le jour, il tombe dans « Cette semaine » ou dans « Plus tard » (replié par défaut).
+  await page.getByTestId("later").locator("summary").click();
   await expect(page.getByRole("link", { name: "Cartographie des élus" })).toBeVisible();
   await page.goto(`/temps?semaine=${thisWeek}`);
   const myRow = page.locator('[data-testid^="time-row-"]', { hasText: "Cartographie des élus" });
@@ -83,7 +85,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await cell.blur();
   await expect(myRow).toContainText("3 h");
   await page.goto(editionUrl);
-  await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("readonly", "");
+  await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");
   await page.getByRole("tab", { name: "Temps" }).click();
   await expect(page.getByTestId("time-by-action")).toContainText("3 h");
   await page.getByRole("tab", { name: "Documents" }).click();

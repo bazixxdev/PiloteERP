@@ -3,7 +3,7 @@ import { Maximize2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Gauge } from "@/components/common/gauge";
-import { AlertChips } from "@/components/common/alert-chips";
+import { AlertChips, AlertSummary } from "@/components/common/alert-chips";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -103,25 +103,24 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <EmptyState icon="○" title={codir ? "Rien à signaler" : "Aucune édition pour ces filtres"} hint={codir ? "Aucune alerte ni validation en attente : la revue CODIR peut être courte." : "Changez le filtre pour retrouver les projets."} />
       ) : (
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${rows.length} éditions, défilement horizontal et vertical`}>
-          <table className="w-full text-xs" style={{ minWidth: 1040 }} data-testid="portfolio-table">
+          {/* Les alertes se lisent sous le nom du projet, sans défilement horizontal ; le corps est en 13 px. */}
+          <table className="w-full text-[13px]" style={{ minWidth: 900 }} data-testid="portfolio-table">
             <thead className="sticky top-0 z-[2] bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
-                <th className="px-3 py-2.5 whitespace-nowrap">Projet / édition</th>
+                <th className="px-3 py-2.5 whitespace-nowrap">Projet / édition · alertes</th>
                 <th className="px-3 py-2.5 whitespace-nowrap">Pôle · pilote</th>
-                <th className="px-3 py-2.5">Statut</th>
                 <th className="px-3 py-2.5 whitespace-nowrap">Prochain jalon</th>
                 <th className="px-3 py-2.5 whitespace-nowrap">Livrable financeur</th>
                 <th className="px-3 py-2.5">Enveloppe</th>
                 <th className="px-3 py-2.5">Temps</th>
                 <th className="px-3 py-2.5">Validations</th>
-                <th className="px-3 py-2.5">Alertes</th>
               </tr>
             </thead>
             <tbody>
               {groups.flatMap((g) => [
                 ...(showGroups ? [(
                   <tr key={`g-${g.tier}`} className="bg-muted/40" data-testid={`group-${g.tier}`}>
-                    <td colSpan={9} className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{TIER_LABEL[g.tier]} · {g.rows.length}</td>
+                    <td colSpan={7} className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{TIER_LABEL[g.tier]} · {g.rows.length}</td>
                   </tr>
                 )] : []),
                 ...g.rows.map((r) => {
@@ -132,19 +131,21 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                 const timeOver = Boolean(r.timeTarget && r.timeConsumed > r.timeTarget);
                 return (
                   <tr key={r.id} className="border-t border-[#e3e9eb] align-middle hover:bg-[#f8f9f3]" data-alert={r.hasDanger ? "danger" : r.alerts.length ? "warning" : "none"}>
-                    <td className={cn("min-w-[170px] px-3 py-3", r.hasDanger ? "border-l-[3px] border-l-danger" : r.alerts.length > 0 ? "border-l-[3px] border-l-warning" : "border-l-[3px] border-l-transparent")}>
+                    <td className={cn("min-w-[220px] max-w-[280px] px-3 py-3", r.hasDanger ? "border-l-[3px] border-l-danger" : r.alerts.length > 0 ? "border-l-[3px] border-l-warning" : "border-l-[3px] border-l-transparent")}>
                       <Link href={`/edition/${r.id}`} className="font-semibold text-primary hover:underline">{r.project.name}</Link>
-                      <small className="mt-1 block text-[10px] text-muted-foreground">Édition {r.year} · {r.project.analyticCode}{r.project.recurring ? " · Récurrent" : ""}</small>
+                      <small className="mt-1 block text-[10px] text-muted-foreground">Édition {r.year} · {r.project.analyticCode}</small>
+                      {r.alerts.length > 0 ? <div className="mt-1.5">{codir ? <AlertChips alerts={r.alerts} max={4} /> : <AlertSummary alerts={r.alerts} />}</div> : null}
                     </td>
                     <td className="px-3 py-3">
                       <span title={r.project.pole.name}>{r.project.pole.name.split(/\s+(?:&|et)\s+/)[0]}</span>
                       <small className="mt-1 block text-[10px] text-muted-foreground">{r.project.pilot.name}</small>
+                      {/* « En cours » ne se répète pas ligne à ligne : seul un statut différent s'écrit. */}
+                      {r.status !== "in_progress" && <div className="mt-1"><StatusBadge label={refLabel(refs, "edition_status", r.status)} color={refColor(refs, "edition_status", r.status)} /></div>}
                     </td>
-                    <td className="px-3 py-3"><StatusBadge label={refLabel(refs, "edition_status", r.status)} color={refColor(refs, "edition_status", r.status)} /></td>
                     <td className="px-3 py-3">
                       {ms ? (
                         <>
-                          <span className="block max-w-[180px] truncate" title={ms.name}>{ms.name}</span>
+                          <span className="block max-w-[150px] truncate" title={ms.name}>{ms.name}</span>
                           <small className={cn("mt-1 block text-[10px]", msDays !== null && msDays < 0 ? "font-semibold text-danger" : "text-muted-foreground")}>{fmtDate(ms.date, "D MMM")}{msDays !== null && msDays < 0 ? ` · dépassé de ${-msDays} j` : ""}</small>
                         </>
                       ) : <span className="text-muted-foreground">—</span>}
@@ -152,7 +153,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-3">
                       {dl ? (
                         <>
-                          <span className="block max-w-[180px] truncate" title={dl.label}>{dl.label}</span>
+                          <span className="block max-w-[150px] truncate" title={dl.label}>{dl.label}</span>
                           <small className={cn("mt-1 block text-[10px]", dlDays !== null && dlDays < 0 ? "font-semibold text-danger" : dlDays !== null && dlDays <= settings.deliverableAlertDays ? "font-semibold text-warning-foreground" : "text-muted-foreground")}>{dl.funder} · {fmtDate(dl.dueDate, "D MMM")}{dlDays !== null && dlDays >= 0 && dlDays <= settings.deliverableAlertDays ? ` · J−${dlDays}` : ""}</small>
                         </>
                       ) : <span className="text-muted-foreground">—</span>}
@@ -160,12 +161,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-3"><Gauge value={r.used} max={r.budgetEnvelope} alertPercent={settings.envelopeAlertPercent} compact amount={r.budgetEnvelope ? fmtEuro(r.budgetEnvelope) : undefined} /></td>
                     <td className="px-3 py-3 whitespace-nowrap tabular">
                       <span className={cn(timeOver && "font-semibold text-danger")}>{fmtNumber(r.timeConsumed, 0)} / {r.timeTarget ? fmtNumber(r.timeTarget, 0) : "—"} h</span>
-                      <small className={cn("mt-1 block text-[10px]", timeOver ? "text-danger" : "text-muted-foreground")}>{timeOver ? "! Objectif dépassé" : r.timeTarget ? "Dans l'objectif" : "Sans objectif"}</small>
+                      {(timeOver || !r.timeTarget) && <small className={cn("mt-1 block text-[10px]", timeOver ? "text-danger" : "text-muted-foreground")}>{timeOver ? "! Objectif dépassé" : "Sans objectif"}</small>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.pendingValidations > 0 ? <Link href={`/edition/${r.id}?onglet=validations`}><StatusBadge label={`${r.pendingValidations} en attente`} color="warning" dot={false} /></Link> : <span className="text-[11px] text-muted-foreground">À jour</span>}
+                      {r.pendingValidations > 0 ? <Link href={`/edition/${r.id}?onglet=validations`}><StatusBadge label={`${r.pendingValidations} en attente`} color="warning" dot={false} /></Link> : <span className="text-[11px] text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-3 py-3"><AlertChips alerts={r.alerts} max={codir ? 4 : 2} /></td>
                   </tr>
                 );
                 }),
@@ -176,7 +176,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
       )}
       <div className="mt-2.5 flex flex-wrap justify-between gap-4 text-[10px] text-muted-foreground">
         <span data-testid="portfolio-count">{rows.length} édition{rows.length > 1 ? "s" : ""} affichée{rows.length > 1 ? "s" : ""} sur {all.length} · les alertes apparaissent en premier</span>
-        <span>Seuils : enveloppe à {settings.envelopeAlertPercent} % · livrable à J−{settings.deliverableAlertDays}</span>
+        <span>Toutes les éditions listées sont en cours, sauf mention · seuils : enveloppe à {settings.envelopeAlertPercent} % · livrable à J−{settings.deliverableAlertDays}</span>
       </div>
       {lastTime._max.date && <p className="py-3 text-xs text-muted-foreground">✓ Temps consolidés jusqu'au {fmtDate(lastTime._max.date, "D MMMM")}.</p>}
     </div>

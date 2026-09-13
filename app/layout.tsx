@@ -6,8 +6,9 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
-import { getSettings } from "@/lib/session";
+import { getCurrentPerson, getSettings } from "@/lib/session";
 import { computeReminders } from "@/lib/alerts";
+import { canDecideValidation } from "@/lib/rights";
 
 export const metadata: Metadata = {
   title: "Pilote · CRESS Centre-Val de Loire",
@@ -16,10 +17,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+// Compteurs de la barre latérale : seulement ce qui appelle une action de la personne courante (validations qu'elle peut décider,
+// rappels qui la concernent), jamais un total collectif qu'un contributeur prendrait pour sa liste de tâches.
 async function counters() {
-  const settings = await getSettings();
+  const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
   const [pending, editions, raf, poles, peopleCount] = await Promise.all([
-    prisma.validationRequest.count({ where: { status: "pending" } }),
+    prisma.validationRequest.findMany({ where: { status: "pending" }, select: { requesterId: true, requiredLevel: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } } } } } }),
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
       include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true },
@@ -29,7 +32,11 @@ async function counters() {
     prisma.person.count({ where: { active: true } }),
   ]);
   const reminders = computeReminders(editions, raf?.name ?? null, settings.reminderDaysBefore.split(",").map(Number), settings.horizonDays);
-  return { pending, reminders: reminders.length, poles, peopleCount };
+  return {
+    pending: pending.filter((v) => canDecideValidation(me, v)).length,
+    reminders: reminders.filter((r) => r.who.includes(me.name)).length,
+    poles, peopleCount, role: me.role,
+  };
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -38,7 +45,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="fr">
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
-          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} poles={c.poles} peopleCount={c.peopleCount} />
+          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} poles={c.poles} peopleCount={c.peopleCount} role={c.role} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>

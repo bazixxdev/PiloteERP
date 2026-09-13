@@ -6,6 +6,7 @@ import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveField } from "@/app/actions/fields";
 import type { Model, FieldType } from "@/lib/fields";
+import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type Option = { value: string; label: string };
@@ -27,6 +28,10 @@ type Props = {
   refreshOnSave?: boolean;
   allowEmpty?: boolean;
   testId?: string;
+  // Nom accessible du contrôle (« Objectif en heures, Atelier de lancement ») ; sinon le champ compte sur un <label htmlFor>.
+  label?: string;
+  // Identifiant DOM, pour associer un <label htmlFor>.
+  inputId?: string;
   onSaved?: (value: unknown) => void;
 };
 
@@ -42,7 +47,21 @@ function toInput(type: FieldType, v: Props["value"]): string {
   return String(v);
 }
 
+// Valeur lisible au repos : nombre avec son unité, date en clair, libellé de la liste, texte tel quel.
+export function readableValue(p: Pick<Props, "type" | "value" | "options" | "suffix">): string {
+  const v = p.value;
+  if (v === null || v === undefined || v === "") return "";
+  switch (p.type) {
+    case "number": return `${fmtNumber(Number(v), 2)}${p.suffix ? ` ${p.suffix}` : ""}`;
+    case "date": return dayjs(v instanceof Date ? v : String(v)).format("D MMMM YYYY");
+    case "select": return p.options?.find((o) => o.value === String(v))?.label ?? String(v);
+    case "bool": return v ? "Oui" : "Non";
+    default: return String(v);
+  }
+}
+
 // Champ à sauvegarde automatique : enregistre au blur (texte, nombre) ou au changement (liste, date, case).
+// En lecture seule, il s'affiche en texte compact plutôt qu'en champ grisé.
 export function AutoField(p: Props) {
   const [val, setVal] = useState(toInput(p.type, p.value));
   const [checked, setChecked] = useState(p.type === "bool" ? Boolean(p.value) : false);
@@ -79,9 +98,30 @@ export function AutoField(p: Props) {
     });
   };
 
+  if (p.readOnly && p.type !== "bool") {
+    const text = readableValue(p);
+    const empty = text === "";
+    return (
+      <div
+        data-testid={p.testId}
+        data-readonly="true"
+        id={p.inputId}
+        aria-label={p.label}
+        className={cn(
+          "min-h-7 whitespace-pre-line rounded-lg px-2 py-1 text-sm leading-relaxed",
+          p.type === "number" && "tabular text-right",
+          empty ? "text-muted-foreground italic" : "text-foreground",
+          p.className,
+          p.inputClassName,
+        )}
+      >
+        {empty ? (p.placeholder ?? "Non renseigné") : text}
+      </div>
+    );
+  }
+
   const base = cn(
     "w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:border-border focus:border-ring focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/20",
-    p.readOnly && "cursor-default hover:border-transparent",
     p.inputClassName,
   );
 
@@ -96,7 +136,10 @@ export function AutoField(p: Props) {
       <label className={cn("inline-flex items-center gap-2 text-sm", p.className)}>
         <input
           type="checkbox"
+          id={p.inputId}
           data-testid={p.testId}
+          data-readonly={p.readOnly ? "true" : undefined}
+          aria-label={p.label}
           className="size-4 rounded border-border accent-primary"
           checked={checked}
           disabled={p.readOnly}
@@ -112,10 +155,11 @@ export function AutoField(p: Props) {
     return (
       <div className={cn("relative", p.className)}>
         <select
+          id={p.inputId}
           data-testid={p.testId}
+          aria-label={p.label}
           className={cn(base, "appearance-none pr-6")}
           value={val}
-          disabled={p.readOnly}
           onChange={(e) => { setVal(e.target.value); send(e.target.value); }}
         >
           {(p.allowEmpty ?? true) && <option value="">{p.placeholder ?? "—"}</option>}
@@ -132,11 +176,12 @@ export function AutoField(p: Props) {
     return (
       <div className={cn("relative", p.className)}>
         <textarea
+          id={p.inputId}
           data-testid={p.testId}
+          aria-label={p.label}
           className={cn(base, "min-h-[2.25rem] resize-y leading-relaxed")}
           rows={p.rows ?? 3}
           value={val}
-          readOnly={p.readOnly}
           placeholder={p.placeholder}
           onChange={(e) => setVal(e.target.value)}
           onBlur={() => send(val)}
@@ -149,12 +194,13 @@ export function AutoField(p: Props) {
   return (
     <div className={cn("relative", p.className)}>
       <input
+        id={p.inputId}
         data-testid={p.testId}
+        aria-label={p.label}
         type={p.type === "number" ? "number" : p.type === "date" ? "date" : "text"}
         step={p.type === "number" ? "any" : undefined}
-        className={cn(base, p.type === "number" && "tabular text-right", p.suffix && "pr-8")}
+        className={cn(base, p.type === "number" && "tabular min-w-[6.5rem] text-right", p.suffix && "pr-8")}
         value={val}
-        readOnly={p.readOnly}
         placeholder={p.placeholder}
         onChange={(e) => { setVal(e.target.value); if (p.type === "date") send(e.target.value); }}
         onBlur={() => send(val)}

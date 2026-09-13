@@ -45,14 +45,23 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
               {e.fundingLines.map((f, i) => (
                 <div key={f.id} className="rounded-xl border p-3" data-testid={`funding-line-${i}`}>
                   <div className="grid gap-2 md:grid-cols-[1.2fr_1.5fr_1fr_1fr_1fr]">
-                    <Field label="Financeur"><AutoField model="fundingLine" id={f.id} field="funderId" type="select" value={f.funderId} options={funderOpts} readOnly={!rw} allowEmpty={false} inputClassName="font-semibold" /></Field>
+                    <Field label="Financeur"><AutoField model="fundingLine" id={f.id} field="funderId" type="select" value={f.funderId} options={funderOpts} readOnly={!rw} allowEmpty={false} inputClassName="font-semibold" label={`Financeur, ligne ${i + 1}`} /></Field>
                     <Field label="Dispositif"><AutoField model="fundingLine" id={f.id} field="scheme" type="text" value={f.scheme} readOnly={!rw} placeholder="Convention, appel à projets…" /></Field>
                     <Field label="Statut">
                       {rw ? <AutoField model="fundingLine" id={f.id} field="status" type="select" value={f.status} options={statusOpts} allowEmpty={false} testId={`funding-status-${i}`} /> : <div className="py-1"><StatusBadge label={refLabel(refs, "funding_status", f.status)} color={refColor(refs, "funding_status", f.status)} /></div>}
                     </Field>
-                    <Field label="Demandé"><AutoField model="fundingLine" id={f.id} field="amountRequested" type="number" value={f.amountRequested} readOnly={!rw} suffix="€" /></Field>
-                    <Field label="Obtenu"><AutoField model="fundingLine" id={f.id} field="amountGranted" type="number" value={f.amountGranted} readOnly={!rw} suffix="€" /></Field>
+                    <Field label="Demandé"><AutoField model="fundingLine" id={f.id} field="amountRequested" type="number" value={f.amountRequested} readOnly={!rw} suffix="€" label={`Montant demandé, ${f.funder.name}`} placeholder="—" /></Field>
+                    <Field label="Obtenu"><AutoField model="fundingLine" id={f.id} field="amountGranted" type="number" value={f.amountGranted} readOnly={!rw} suffix="€" label={`Montant obtenu, ${f.funder.name}`} placeholder="—" /></Field>
                   </div>
+                  {/* Premier niveau : financeur, montants, statut, livrables. Le détail de gestion (dates, codes, convention, pièces) se replie. */}
+                  {(() => { const next = f.deliverables.filter((d) => !d.done).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]; return (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {next ? <>Prochain livrable : <b className="text-foreground">{next.label}</b> · {fmtDate(next.dueDate)} · {daysFromNow(next.dueDate) < 0 ? <span className="text-danger">{-daysFromNow(next.dueDate)} j de retard</span> : `dans ${daysFromNow(next.dueDate)} j`}</> : "Aucun livrable en attente."}
+                      {f.convention && <> · Convention {f.convention.reference} ({f.convention.startYear}-{f.convention.endYear})</>}
+                    </p>
+                  ); })()}
+                  <details className="group mt-2 rounded-lg border border-dashed px-2 py-1.5" open={rw}>
+                  <summary className="cursor-pointer list-none text-[11px] font-semibold text-muted-foreground">Détail de gestion <span className="font-normal">· dépôt, réponse, convention, code analytique, clé de répartition, pièces · <span className="text-primary group-open:hidden">afficher</span><span className="hidden text-primary group-open:inline">replier</span></span></summary>
                   <div className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]">
                     <Field label="Dépôt"><AutoField model="fundingLine" id={f.id} field="submittedAt" type="date" value={f.submittedAt} readOnly={!rw} /></Field>
                     <Field label="Réponse"><AutoField model="fundingLine" id={f.id} field="answeredAt" type="date" value={f.answeredAt} readOnly={!rw} /></Field>
@@ -82,6 +91,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                     </div>
                     <AttachmentList items={e.attachments.filter((a) => a.fundingLineId === f.id)} refs={refs} compact />
                   </div>
+                  </details>
 
                   <div className="mt-3 rounded-lg bg-muted/50 p-2">
                     <div className="mb-1 flex items-center justify-between">
@@ -97,8 +107,8 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                           return (
                             <li key={d.id} className="flex items-center gap-2 py-1 text-sm">
                               <DeliverableDone id={d.id} done={d.done} readOnly={!rw && !isPilot} />
-                              <div className="flex-1"><AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} inputClassName={cn(d.done && "line-through text-muted-foreground")} /></div>
-                              <div className="w-36"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} readOnly={!rw} /></div>
+                              <div className="flex-1"><AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} inputClassName={cn(d.done && "line-through text-muted-foreground")} label={`Livrable, ${f.funder.name}`} /></div>
+                              <div className="w-36"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} readOnly={!rw} label={`Échéance du livrable ${d.label}`} /></div>
                               <span className={cn("w-28 text-right text-xs", d.done ? "text-mint" : n < 0 ? "text-danger" : n <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>
                                 {d.done ? `remis ${fmtDate(d.doneAt)}` : n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}
                               </span>

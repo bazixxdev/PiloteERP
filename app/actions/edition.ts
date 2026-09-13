@@ -108,10 +108,24 @@ export async function requestValidation(input: { editionId: string; actionId?: s
 }
 
 export async function computeRequiredLevel(editionId: string, amount: number | null): Promise<number> {
+  return (await explainRequiredLevel(editionId, amount)).level;
+}
+
+// Niveau requis et sa raison, en clair, pour que le demandeur sache à qui part sa demande et pourquoi.
+export async function explainRequiredLevel(editionId: string, amount: number | null): Promise<{ level: number; reason: string }> {
   const settings = await getSettings();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { expenses: true } });
   const remaining = e ? budgetOf(e).available : null;
-  return requiredLevelFor(amount, settings, remaining);
+  const level = requiredLevelFor(amount, settings, remaining);
+  const euro = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+  const a = amount ?? 0;
+  const reason =
+    remaining !== null && remaining < 0 ? `enveloppe déjà dépassée de ${euro(-remaining)} : toute dépense passe par la direction`
+    : remaining !== null && a > remaining ? `montant supérieur au reste de l'enveloppe (${euro(remaining)})`
+    : a > settings.validationThresholdLevel2 ? `montant supérieur au seuil de niveau 3 (${euro(settings.validationThresholdLevel2)})`
+    : a > settings.validationThresholdLevel1 ? `montant supérieur au seuil de niveau 2 (${euro(settings.validationThresholdLevel1)})`
+    : a > 0 ? `montant sous le seuil de niveau 2 (${euro(settings.validationThresholdLevel1)})` : "sans montant : validation du pilote";
+  return { level, reason };
 }
 
 // Décision : le devis approuvé remonte dans l'engagé de l'édition (EF-E2).

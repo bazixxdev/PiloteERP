@@ -26,7 +26,7 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   // Une édition hors de son pôle : consultable, avec le bandeau.
   await table.getByRole("link", { name: "Chroniquer la TESS" }).click();
   await expect(page.getByTestId("outside-scope")).toContainText("hors de votre pôle");
-  await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("readonly", "");
+  await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");
 
   // Le responsable du pôle secondaire a ses droits de garant sur le projet commun.
   await iAm(page, "Julien Barbot");

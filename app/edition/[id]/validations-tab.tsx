@@ -18,7 +18,7 @@ export function ValidationsTab({ e, me, refs, isPilot, people }: TabCtx) {
   const done = e.validations.filter((v) => v.status !== "pending");
   return (
     <div className="grid gap-4">
-      <Section title="Décisions des instances" description="CODIR, réunion de pôle, revue trimestrielle, CA : consignées ici, datées, avec la suite à donner (EF-F4)." actions={isCodir(me.role) ? <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} /> : undefined} testId="instance-decisions">
+      <Section title="Décisions des instances" description="CODIR, réunion de pôle, revue trimestrielle, CA : consignées ici, datées, avec la suite à donner." actions={isCodir(me.role) ? <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} /> : undefined} testId="instance-decisions">
         {e.decisions.length === 0 ? <p className="text-sm text-muted-foreground">Aucune décision consignée.</p> : (
           <ul className="divide-y text-sm">
             {e.decisions.map((d) => (
@@ -39,7 +39,7 @@ export function ValidationsTab({ e, me, refs, isPilot, people }: TabCtx) {
         )}
       </Section>
       {done.length > 0 && (
-        <Section title="Décisions" description="Consignées sur l'édition, datées (EF-F4).">
+        <Section title="Décisions" description="Consignées sur l'édition, datées.">
           <div className="grid gap-2">{done.map((v) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={false} attachments={pieces(v.id)} />)}</div>
         </Section>
       )}

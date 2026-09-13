@@ -21,30 +21,32 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
       {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
     </div>
   );
-  const pctSpent = e.budgetEnvelope ? Math.min(100, Math.round((b.realized / e.budgetEnvelope) * 100)) : 0;
-  const pctCommitted = e.budgetEnvelope ? Math.min(100 - pctSpent, Math.round((b.remainingCommitments / e.budgetEnvelope) * 100)) : 0;
-  const pct = pctSpent + pctCommitted;
+  // Le pourcentage écrit ne se plafonne jamais (101 % reste 101 %) ; seule la longueur de la jauge s'arrête à 100 %.
+  const pct = e.budgetEnvelope ? Math.round((b.used / e.budgetEnvelope) * 100) : 0;
+  const barSpent = e.budgetEnvelope ? Math.min(100, (b.realized / e.budgetEnvelope) * 100) : 0;
+  const barCommitted = e.budgetEnvelope ? Math.min(100 - barSpent, (b.remainingCommitments / e.budgetEnvelope) * 100) : 0;
+  const overrun = b.available !== null && b.available < 0 ? -b.available : 0;
   return (
     <div className="grid gap-4">
-      <Section title="Enveloppe de dépenses directes" description={rw ? "Enveloppe et réalisé hors devis saisis par la RAF ; le reste est calculé. Base HT/TTC unique par édition (à arbitrer, A06)." : "Lecture seule : montants tenus par la RAF."}>
+      <Section title="Enveloppe de dépenses directes" description={rw ? "Enveloppe et réalisé hors devis saisis par la RAF ; le reste est calculé. Base HT ou TTC unique par édition, à arbitrer avec la RAF." : "Lecture seule : montants tenus par la RAF."}>
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-md border bg-card px-3 py-4">
             <small className="text-xs text-muted-foreground">Enveloppe validée</small>
-            <AutoField model="edition" id={e.id} field="budgetEnvelope" type="number" value={e.budgetEnvelope} readOnly={!rw} suffix="€" inputClassName="mt-1 text-[25px] font-semibold tracking-[-0.7px]" refreshOnSave testId="budget-budgetEnvelope" placeholder={rw ? "À renseigner" : "Enveloppe à renseigner"} />
+            <AutoField model="edition" id={e.id} field="budgetEnvelope" type="number" value={e.budgetEnvelope} readOnly={!rw} suffix="€" inputClassName="mt-1 text-[25px] font-semibold tracking-[-0.7px] text-left" refreshOnSave testId="budget-budgetEnvelope" placeholder={rw ? "À renseigner" : "Enveloppe à renseigner"} label="Enveloppe validée en euros" />
           </div>
           {card("Réalisé", fmtEuro(b.realized), `dont ${fmtEuro(b.realizedLinked)} rattachés à un devis`, undefined, "budget-realized")}
           {card("Engagements restant à réaliser", fmtEuro(b.remainingCommitments), "devis approuvés non encore facturés", undefined, "budget-committed")}
-          {card("Reste", b.available === null ? "—" : fmtEuro(b.available), b.available !== null && b.available < 0 ? "dépassement, à faire remonter" : "enveloppe − réalisé − engagements", b.available !== null && b.available < 0 ? "border-danger bg-danger-soft/50" : pct >= settings.envelopeAlertPercent ? "[&>b]:text-warning-foreground" : undefined, "budget-remaining")}
+          {card("Reste", b.available === null ? "—" : fmtEuro(b.available), b.available !== null && b.available < 0 ? `enveloppe dépassée de ${fmtEuro(-b.available)}` : "enveloppe − réalisé − engagements restants", b.available !== null && b.available < 0 ? "border-danger bg-danger-soft/50" : pct >= settings.envelopeAlertPercent ? "[&>b]:text-warning-foreground" : undefined, "budget-remaining")}
         </div>
         {e.budgetEnvelope ? (
           <>
-            <div className="mt-4 flex items-baseline justify-between text-xs"><span>Consommation · réalisé et engagé</span><b className={cn("tabular", pct >= 100 ? "text-danger" : pct >= settings.envelopeAlertPercent ? "text-warning-foreground" : "")}>{pct} %</b></div>
-            <div className="mt-1.5 flex h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]" title="Réalisé, puis engagé restant">
-              <i className={cn("block h-full", pct >= 100 ? "bg-danger" : pct >= settings.envelopeAlertPercent ? "bg-warning" : "bg-mint")} style={{ width: `${pctSpent}%` }} />
-              <i className="block h-full bg-[#abc1af]" style={{ width: `${pctCommitted}%` }} />
+            <div className="mt-4 flex items-baseline justify-between text-xs"><span>Consommation · réalisé + engagements restant à réaliser</span><b className={cn("tabular", pct >= 100 ? "text-danger" : pct >= settings.envelopeAlertPercent ? "text-warning-foreground" : "")} data-testid="budget-pct">{pct} %{overrun > 0 && <span className="ml-2 font-semibold">· Enveloppe dépassée de {fmtEuro(overrun)}</span>}</b></div>
+            <div className="mt-1.5 flex h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]" title="Réalisé, puis engagé restant ; la barre s'arrête à 100 %, le pourcentage écrit ne se plafonne pas" role="presentation">
+              <i className={cn("block h-full", pct >= 100 ? "bg-danger" : pct >= settings.envelopeAlertPercent ? "bg-warning" : "bg-mint")} style={{ width: `${barSpent}%` }} />
+              <i className="block h-full bg-[#abc1af]" style={{ width: `${barCommitted}%` }} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Réalisé : {fmtEuro(b.realized)} · engagé restant à facturer : {fmtEuro(b.remainingCommitments)} · reste : {b.available === null ? "—" : fmtEuro(b.available)}. {lastUpdate ? `Dernière actualisation ${fmtDate(lastUpdate)}.` : "Aucune dépense."}</p>
-            {pct >= settings.envelopeAlertPercent && <div className={cn("mt-3 flex items-start gap-2.5 rounded-md px-3 py-3 text-xs", pct >= 100 ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning-foreground")}><span>!</span><span>Enveloppe consommée à {pct} %. Le seuil de vigilance est de {settings.envelopeAlertPercent} %.</span></div>}
+            <p className="mt-3 text-xs text-muted-foreground">Compris dans le calcul : réalisé {fmtEuro(b.realized)} (factures, y compris celles rattachées à un devis) + engagements restant à réaliser {fmtEuro(b.remainingCommitments)} (devis approuvés non encore facturés) = {fmtEuro(b.used)} sur {fmtEuro(e.budgetEnvelope)} · reste : {b.available === null ? "—" : fmtEuro(b.available)}. Le même calcul sert au portefeuille, à l'en-tête de l'édition et à l'écran CODIR. {lastUpdate ? `Dernière actualisation ${fmtDate(lastUpdate)}.` : "Aucune dépense."}</p>
+            {pct >= settings.envelopeAlertPercent && <div className={cn("mt-3 flex items-start gap-2.5 rounded-md px-3 py-3 text-xs", pct >= 100 ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning-foreground")}><span>!</span><span>{overrun > 0 ? <>Enveloppe dépassée de <b>{fmtEuro(overrun)}</b> ({pct} %) : à faire remonter au CODIR.</> : <>Enveloppe consommée à {pct} %. Le seuil de vigilance est de {settings.envelopeAlertPercent} %.</>}</span></div>}
           </>
         ) : (
           <p className="mt-4 text-xs text-warning-foreground">Enveloppe à renseigner{b.used > 0 ? ` · ${fmtEuro(b.used)} déjà consommés` : ""}.</p>

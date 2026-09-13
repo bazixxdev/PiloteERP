@@ -131,6 +131,13 @@
     font-family: var(--font-titles);
     letter-spacing: -0.02em;
   }
+  /* Focus visible partout au clavier (liens, résumés de <details>, cellules), sans gêner la souris. */
+  a:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  summary::-webkit-details-marker { display: none; }
 }
 
 /* Petites classes maison */

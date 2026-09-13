@@ -66,7 +66,13 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
-          <RequestValidationDialog editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} />
+          <RequestValidationDialog
+            editionId={e.id}
+            actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}
+            kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))}
+            // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.
+            recipients={(() => { const lead = owners.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null; const dir = people.find((p) => p.role === "director")?.name ?? null; return { 1: isPilot ? (lead ?? dir) : owners.pilot.name, 2: lead ?? dir, 3: dir }; })()}
+          />
         </div>
       </div>
       <div className="mb-4 flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[11px]">

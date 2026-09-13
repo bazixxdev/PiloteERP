@@ -26,3 +26,21 @@ export function AlertChips({ alerts, max = 3, size = "sm" }: { alerts: Alert[]; 
     </div>
   );
 }
+
+// Synthèse courte pour une ligne de tableau : la plus grave écrite en toutes lettres, le reste compté ; le détail complet au survol.
+export function AlertSummary({ alerts }: { alerts: Alert[] }) {
+  if (alerts.length === 0) return null;
+  const sorted = [...alerts].sort((a, b) => Number(b.level === "danger") - Number(a.level === "danger"));
+  const first = sorted[0];
+  const rest = sorted.length - 1;
+  const dangers = sorted.filter((a) => a.level === "danger").length;
+  return (
+    <div className="flex flex-wrap items-center gap-1" title={sorted.map((a) => a.label).join("\n")} data-testid="alert-summary">
+      <span className={cn("inline-flex max-w-[230px] items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", first.level === "danger" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning-foreground")}>
+        <span aria-hidden>{first.level === "danger" ? "!" : "◷"}</span>
+        <span className="truncate">{first.label}</span>
+      </span>
+      {rest > 0 && <span className="text-[10px] text-muted-foreground">+{rest} autre{rest > 1 ? "s" : ""}{dangers > 1 ? ` · ${dangers} retards` : ""}</span>}
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import { daysFromNow, dayjs } from "./format";
+import { daysFromNow, dayjs, fmtEuro } from "./format";
 import { budgetOf, type ExpenseLike } from "./budget";
 
 export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "envelope" | "time_over" | "validation_pending";
@@ -40,8 +40,10 @@ export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[
 
   const env = e.budgetEnvelope ?? 0;
   if (env > 0) {
-    const used = (budgetOf(e).used / env) * 100;
-    if (used >= 100) alerts.push({ kind: "envelope", level: "danger", label: `Enveloppe dépassée (${Math.round(used)} %)` });
+    const b = budgetOf(e);
+    const used = (b.used / env) * 100;
+    // Le pourcentage n'est jamais plafonné : même calcul (réalisé + engagements restants) que Budget, portefeuille et CODIR.
+    if (used >= 100) alerts.push({ kind: "envelope", level: "danger", label: b.used > env ? `Enveloppe dépassée de ${fmtEuro(b.used - env)} (${Math.round(used)} %)` : `Enveloppe consommée à 100 %` });
     else if (used >= s.envelopeAlertPercent) alerts.push({ kind: "envelope", level: "warning", label: `Enveloppe à ${Math.round(used)} %` });
   }
 

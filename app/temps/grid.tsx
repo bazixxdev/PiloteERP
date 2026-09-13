@@ -70,25 +70,25 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   const status = expectedWeek !== null && Math.abs(weekTotal - expectedWeek) < 0.01
     ? { label: "✓ Total attendu atteint", color: "mint" }
     : pastEmptyDays.length > 0
-      ? { label: `○ ${dayjs(pastEmptyDays[0]).format("dddd")} à compléter`, color: "warning" }
+      ? { label: `○ Premier jour incomplet : ${dayjs(pastEmptyDays[0]).format("dddd")}`, color: "warning" }
       : weekTotal === 0 ? { label: "○ Semaine à saisir", color: "muted" } : { label: "○ Semaine en cours", color: "info" };
   const STATUS: Record<string, string> = { mint: "bg-mint-soft text-mint", warning: "bg-warning-soft text-warning-foreground", muted: "bg-muted text-muted-foreground", info: "bg-info-soft text-primary" };
 
   return (
     <div data-testid="time-grid">
-      {/* Bannière de la semaine : total saisi face au total attendu, informatif seulement. */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-5 rounded-md border bg-card px-[18px] py-4">
-        <div className="min-w-[200px]">
-          <span className="text-xs text-muted-foreground">{p.readOnly ? "Sa semaine" : "Votre semaine"}</span>
-          <b className="mt-0.5 block text-[25px] leading-tight tracking-[-0.7px] tabular" data-testid="week-total">{fmtNumber(weekTotal, 2)} h <small className="text-[13px] font-normal tracking-normal text-muted-foreground">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h attendues` : "· référence non configurée"}</small></b>
-          {expectedWeek !== null && <div className="mt-1.5 h-[5px] w-[180px] overflow-hidden rounded-[3px] bg-[#e8e9e1]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expectedWeek) * 100)}%` }} /></div>}
+      {/* Bannière de la semaine : total saisi face au total attendu, informatif seulement. Compacte sur mobile : une ligne, la jauge, l'état. */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-3 py-2.5 md:mb-5 md:gap-5 md:px-[18px] md:py-4">
+        <div className="min-w-[160px] md:min-w-[200px]">
+          <span className="hidden text-xs text-muted-foreground md:block">{p.readOnly ? "Sa semaine" : "Votre semaine"}</span>
+          <b className="block text-[19px] leading-tight tracking-[-0.5px] tabular md:mt-0.5 md:text-[25px] md:tracking-[-0.7px]" data-testid="week-total">{fmtNumber(weekTotal, 2)} h <small className="text-[12px] font-normal tracking-normal text-muted-foreground md:text-[13px]">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h attendues` : "· référence non configurée"}</small></b>
+          {expectedWeek !== null && <div className="mt-1.5 h-[5px] w-[140px] overflow-hidden rounded-[3px] bg-[#e8e9e1] md:w-[180px]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expectedWeek) * 100)}%` }} /></div>}
         </div>
         <div>
           <span className={cn("inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", STATUS[status.color])} data-testid="week-status">{status.label}</span>
-          <p className="mt-1.5 text-xs text-muted-foreground">Le total attendu dépend de votre rythme de travail.</p>
+          <p className="mt-1.5 hidden text-xs text-muted-foreground md:block">Le total attendu dépend de votre rythme de travail.</p>
         </div>
         {p.canCopyPrevious ? (
-          <Button size="sm" variant="outline" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
+          <Button size="sm" variant="outline" className="h-11 md:h-8" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
             <History />Reprendre la semaine précédente
           </Button>
         ) : <span />}
@@ -96,9 +96,9 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
 
       {/* Mobile : les colonnes deviennent des journées ; une journée à la fois, la semaine reste visible dans la bannière. */}
       <div className="md:hidden" data-testid="time-mobile">
-        <div className="mb-4 grid grid-cols-5 gap-1.5" aria-label="Choisir le jour de la semaine">
+        <div className="mb-3 grid grid-cols-5 gap-1.5" role="group" aria-label="Choisir le jour de la semaine">
           {p.days.map((d, i) => (
-            <button key={d} type="button" onClick={() => setMobileDayIdx(i)} aria-pressed={i === mobileDayIdx} className={cn("min-h-[58px] rounded-md border bg-transparent px-1 py-2 text-center text-[10px]", i === mobileDayIdx ? "border-primary bg-primary text-white" : "hover:bg-muted")}>
+            <button key={d} type="button" onClick={() => setMobileDayIdx(i)} aria-pressed={i === mobileDayIdx} aria-label={dayjs(d).format("dddd D MMMM")} className={cn("min-h-[58px] rounded-md border bg-transparent px-1 py-2 text-center text-[10px]", i === mobileDayIdx ? "border-primary bg-primary text-white" : "hover:bg-muted")}>
               {dayjs(d).format("ddd")}<b className="mt-[3px] block text-[17px] font-semibold">{dayjs(d).format("D")}</b>
               {dayTotals[i] > 0 && <span className={cn("block text-[9px]", i === mobileDayIdx ? "text-white/80" : "text-muted-foreground")}>{fmtNumber(dayTotals[i], 1)} h</span>}
             </button>
@@ -107,8 +107,9 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
         <div className="flex items-center justify-between">
           <strong className="text-xs">{dayjs(mobileDay).format("dddd D MMMM").replace(/^./, (c) => c.toUpperCase())}</strong>
           {locked(mobileDay) ? <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground"><Lock className="size-3" />Verrouillé</span>
-            : dayTotals[mobileDayIdx] > 0 && p.expectedByDay[mobileDayIdx] !== null && dayTotals[mobileDayIdx] >= (p.expectedByDay[mobileDayIdx] ?? 0) ? <span className="rounded-sm bg-mint-soft px-1.5 py-0.5 text-[11px] font-semibold text-mint">✓ Complété</span>
-            : <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">○ À compléter</span>}
+            : dayTotals[mobileDayIdx] > 0 && p.expectedByDay[mobileDayIdx] !== null && dayTotals[mobileDayIdx] >= (p.expectedByDay[mobileDayIdx] ?? 0) ? <span className="rounded-sm bg-mint-soft px-1.5 py-0.5 text-[11px] font-semibold text-mint">✓ Ce jour est complet</span>
+            : isFuture(mobileDay) ? <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">À venir</span>
+            : <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">○ Ce jour est à compléter</span>}
         </div>
         <div className="mt-1">
           {p.rows.map((r) => {

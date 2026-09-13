@@ -15,10 +15,14 @@ import { IcsCard } from "@/components/common/ics-card";
 import { prisma } from "@/lib/db";
 import { expectedHoursOn, loadRhythms, rhythmAt, weekDays } from "@/lib/time";
 
-// Ma semaine (EF-G2) : quatre rubriques — mes actions, mes jalons, mes validations, mes temps — et un point d'attention en tête.
+// Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
+// les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
+type Item = { id: string; kind: "action" | "deliverable" | "milestone"; title: string; sub: string; href: string; date: Date; daysLeft: number; owner?: string | null };
+
 export default async function MaSemainePage() {
   const [me, settings, refs] = await Promise.all([getCurrentPerson(), getSettings(), getRefs()]);
   const weekStart = dayjs().startOf("isoWeek");
+  const weekEnd = weekStart.add(6, "day");
   const days = weekDays(weekStart, 5);
   const [agenda, portfolio, unread, personFull, rhythms, weekEntries] = await Promise.all([
     loadAgenda(settings.horizonDays),
@@ -30,7 +34,7 @@ export default async function MaSemainePage() {
   ]);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
-  const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id && a.daysLeft <= 14);
+  const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id);
   const myDeliverables = agenda.deliverables.filter((d) => d.fundingLine.edition.project.pilotId === me.id || me.role === "raf");
   const toDecide = agenda.validations.filter((v) => canDecideValidation(me, v));
   const myRequests = agenda.validations.filter((v) => v.requesterId === me.id);
@@ -42,27 +46,46 @@ export default async function MaSemainePage() {
   const weekTotal = weekEntries.reduce((s, t) => s + t.hours, 0);
   const missingThisWeek = days.filter((d, i) => !d.isAfter(dayjs(), "day") && (expectedByDay[i] ?? 0) > 0 && !weekEntries.some((t) => dayjs(t.date).isSame(d, "day")));
 
-  const late = myActions.filter((a) => a.daysLeft < 0).sort((a, b) => a.daysLeft - b.daysLeft);
-  const lateDeliverable = myDeliverables.filter((d) => d.daysLeft < 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+  // Une seule liste d'échéances, découpée en trois horizons.
+  const items: Item[] = [
+    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · Édition ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
+    ...myDeliverables.map((d): Item => ({ id: `d-${d.id}`, kind: "deliverable", title: d.label, sub: `${d.fundingLine.edition.project.name} · Livrable pour ${d.fundingLine.funder.name}`, href: `/edition/${d.fundingLine.editionId}?onglet=financements`, date: d.dueDate, daysLeft: d.daysLeft })),
+    ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
+  ].sort((a, b) => a.daysLeft - b.daysLeft);
+  const late = items.filter((i) => i.daysLeft < 0);
+  const thisWeek = items.filter((i) => i.daysLeft >= 0 && !dayjs(i.date).isAfter(weekEnd, "day"));
+  const later = items.filter((i) => i.daysLeft >= 0 && dayjs(i.date).isAfter(weekEnd, "day"));
+
   const overdueValidation = toDecide.filter((v) => v.age > v.targetDelayDays).sort((a, b) => b.age - a.age)[0];
   const attention = late[0]
-    ? { text: <><b>Un point d'attention :</b> le jalon « {late[0].name} » ({late[0].edition.project.name}) est dépassé de {-late[0].daysLeft} jour{-late[0].daysLeft > 1 ? "s" : ""}.</>, badge: "À reprendre", href: `/edition/${late[0].editionId}?onglet=actions` }
-    : lateDeliverable
-      ? { text: <><b>Un point d'attention :</b> le livrable « {lateDeliverable.label} » pour {lateDeliverable.fundingLine.funder.name} est en retard de {-lateDeliverable.daysLeft} j.</>, badge: "À remettre", href: `/edition/${lateDeliverable.fundingLine.editionId}?onglet=financements` }
-      : overdueValidation
-        ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/validations" }
-        : null;
+    ? { text: <><b>Un point d'attention :</b> {late[0].kind === "deliverable" ? "le livrable" : "le jalon"} « {late[0].title} » est dépassé de {-late[0].daysLeft} jour{-late[0].daysLeft > 1 ? "s" : ""}.</>, badge: late[0].kind === "deliverable" ? "À remettre" : "À reprendre", href: late[0].href }
+    : overdueValidation
+      ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/validations" }
+      : null;
+  const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0;
 
   const dayLabel = (n: number) => (n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} j`);
   const badgeColor = (n: number) => (n < 0 ? "danger" : n <= 7 ? "warning" : "muted");
   const firstName = me.name.split(/\s+/)[0];
+  const kindLabel = { action: "Action", deliverable: "Livrable", milestone: "Jalon d'équipe" };
+
+  const ItemRow = ({ it }: { it: Item }) => (
+    <Row late={it.daysLeft < 0}>
+      <DateBox date={it.date} />
+      <div className="min-w-0 flex-1">
+        <h4 className="text-xs font-semibold"><Link href={it.href} className="hover:underline">{it.title}</Link></h4>
+        <p className="mt-1 text-[10px] text-muted-foreground">{kindLabel[it.kind]} · {it.sub}</p>
+      </div>
+      <StatusBadge label={it.daysLeft < 0 ? `! ${dayLabel(it.daysLeft)}` : dayLabel(it.daysLeft)} color={badgeColor(it.daysLeft)} dot={false} />
+    </Row>
+  );
 
   return (
     <div className="p-4 md:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-5">
         <div>
           <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">Bonjour {firstName}.</h1>
-          <p className="mt-1 text-xs text-muted-foreground">Du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · Voici les sujets de votre semaine.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Semaine du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · ce qui vous attend, dans l'ordre.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline"><Link href="/cafe">Écran café</Link></Button>
@@ -75,8 +98,10 @@ export default async function MaSemainePage() {
           <span>{attention.text}</span>
           <StatusBadge label={attention.badge} color="warning" dot={false} />
         </Link>
+      ) : nothingToDo ? (
+        <div className="mb-4 rounded-md bg-mint-soft px-3.5 py-3 text-xs text-mint" data-testid="nothing-to-do"><b>✓ Rien à faire cette semaine.</b> Aucun retard, aucune échéance d'ici dimanche, aucune décision en attente, vos temps sont à jour.{later.length > 0 ? ` Les ${later.length} échéances suivantes sont repliées plus bas.` : ""}</div>
       ) : (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-md bg-mint-soft px-3.5 py-[11px] text-xs text-mint"><span><b>✓ Rien d'urgent.</b> Aucun jalon ni livrable en retard, aucune décision en attente au-delà du délai.</span></div>
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md bg-mint-soft px-3.5 py-[11px] text-xs text-mint"><span><b>✓ Rien d'urgent.</b> Aucun retard, aucune décision en attente au-delà du délai.</span></div>
       )}
 
       {unread.length > 0 && (
@@ -90,52 +115,26 @@ export default async function MaSemainePage() {
         </div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="grid content-start gap-4">
-          <Panel title="Mes actions" aside={<StatusBadge label={`${myActions.length} à échéance`} dot={false} />} testId="my-actions">
-            {myActions.length === 0 ? <Note>✓ Aucune action à échéance dans les {settings.horizonDays} jours.</Note> : myActions.map((a) => (
-              <Row key={a.id} late={a.daysLeft < 0}>
-                <span className="mt-[3px] size-[15px] shrink-0 rounded-[3px] border border-[#aeb9a8]" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-semibold"><Link href={`/edition/${a.editionId}?onglet=actions`} className="hover:underline">{a.name}</Link></h4>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{a.edition.project.name} · Édition {a.edition.year} · {refLabel(refs, "action_state", a.state)}</p>
-                </div>
-                <StatusBadge label={`${a.daysLeft < 0 ? "! " : ""}${fmtDate(a.milestoneDate, "D MMM")}`} color={badgeColor(a.daysLeft)} dot={false} />
-              </Row>
-            ))}
-            {myActions.length > 0 && <Note>✓ Les autres actions suivent leur cours.</Note>}
+      {/* Sur mobile, une seule colonne dans l'ordre : retard, semaine, validations, temps, plus tard. Sur grand écran, deux colonnes. */}
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="contents lg:grid lg:content-start lg:gap-4">
+          <Panel title="En retard" aside={late.length ? <StatusBadge label={`${late.length} à reprendre`} color="danger" dot={false} /> : <span className="text-[11px] text-muted-foreground">Aucun retard</span>} testId="late" className="order-1">
+            {late.length === 0 ? <Note>✓ Rien de dépassé.</Note> : late.map((it) => <ItemRow key={it.id} it={it} />)}
           </Panel>
-
-          <Panel title="Mes jalons et livrables" aside={<span className="text-[11px] text-muted-foreground">À venir</span>} testId="my-milestones">
-            {myPilotMilestones.length + myDeliverables.length === 0 ? <Note>Rien à signaler dans l'horizon.</Note> : (
-              <>
-                {myDeliverables.map((d) => (
-                  <Row key={d.id}>
-                    <DateBox date={d.dueDate} />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold"><Link href={`/edition/${d.fundingLine.editionId}?onglet=financements`} className="hover:underline">{d.label}</Link></h4>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{d.fundingLine.edition.project.name} · Ligne de financement {d.fundingLine.funder.name}</p>
-                    </div>
-                    <StatusBadge label={d.daysLeft < 0 ? `! ${dayLabel(d.daysLeft)}` : d.daysLeft <= settings.deliverableAlertDays ? `J−${d.daysLeft}` : dayLabel(d.daysLeft)} color={badgeColor(d.daysLeft)} dot={false} />
-                  </Row>
-                ))}
-                {myPilotMilestones.map((a) => (
-                  <Row key={a.id}>
-                    <DateBox date={a.milestoneDate!} />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold"><Link href={`/edition/${a.editionId}?onglet=actions`} className="hover:underline">{a.name}</Link></h4>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{a.edition.project.name} · Avec {a.owner?.name ?? "sans responsable"}</p>
-                    </div>
-                    <StatusBadge label="Interne" className="border bg-transparent" dot={false} />
-                  </Row>
-                ))}
-              </>
-            )}
+          <Panel title="Cette semaine" aside={<span className="text-[11px] text-muted-foreground">Jusqu'au {weekEnd.format("D MMMM")}</span>} testId="this-week" className="order-2">
+            {thisWeek.length === 0 ? <Note>✓ Aucune échéance d'ici dimanche.</Note> : thisWeek.map((it) => <ItemRow key={it.id} it={it} />)}
           </Panel>
+          <details className="group order-5 overflow-hidden rounded-md border bg-card" data-testid="later">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5">
+              <h4 className="text-[13px] font-bold">Plus tard</h4>
+              <span className="text-[11px] text-primary"><span className="group-open:hidden">Voir les échéances à {settings.horizonDays} jours ({later.length})</span><span className="hidden group-open:inline">Replier</span></span>
+            </summary>
+            {later.length === 0 ? <Note>Rien d'autre dans les {settings.horizonDays} jours.</Note> : later.map((it) => <ItemRow key={it.id} it={it} />)}
+          </details>
         </div>
 
-        <div className="grid content-start gap-4">
-          <Panel title="Mes validations" aside={toDecide.length ? <StatusBadge label={`${toDecide.length} à traiter`} color="warning" dot={false} /> : <span className="text-[11px] text-muted-foreground">Rien à décider</span>} testId="my-validations">
+        <div className="contents lg:grid lg:content-start lg:gap-4">
+          <Panel title="Mes validations" aside={toDecide.length ? <StatusBadge label={`${toDecide.length} à traiter`} color="warning" dot={false} /> : <span className="text-[11px] text-muted-foreground">Rien à décider</span>} testId="my-validations" className="order-3">
             {toDecide.length + myRequests.length === 0 ? <Note>Aucune demande en attente.</Note> : (
               <>
                 {toDecide.map((v) => (
@@ -143,7 +142,7 @@ export default async function MaSemainePage() {
                     <div className="min-w-0 flex-1">
                       <h4 className="text-xs font-semibold"><Link href="/validations" className="hover:underline">{v.label}</Link>{v.amount ? ` · ${fmtNumber(v.amount, 0)} €` : ""}</h4>
                       <p className="mt-1 text-[10px] text-muted-foreground">{v.edition.project.name} · Demandé par {v.requester.name}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground"><span className={cn(v.age > v.targetDelayDays ? "text-danger" : v.age > 0 ? "text-warning-foreground" : "")}>Depuis {v.age} jour{v.age > 1 ? "s" : ""}</span> · Délai cible : {v.targetDelayDays} jours · Niveau {v.requiredLevel}</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground"><span className={cn(v.age > v.targetDelayDays ? "text-danger" : v.age > 0 ? "text-warning-foreground" : "")}>Depuis {v.age} jour{v.age > 1 ? "s" : ""}</span> · Délai cible : {v.targetDelayDays} jours</p>
                     </div>
                     <Button asChild size="sm" variant="outline"><Link href="/validations">Examiner</Link></Button>
                   </Row>
@@ -152,7 +151,7 @@ export default async function MaSemainePage() {
                   <Row key={v.id}>
                     <div className="min-w-0 flex-1 text-muted-foreground">
                       <h4 className="text-xs font-semibold">{v.label}</h4>
-                      <p className="mt-1 text-[10px]">Ma demande · en attente du niveau {v.requiredLevel} depuis {v.age} j</p>
+                      <p className="mt-1 text-[10px]">Ma demande · en attente depuis {v.age} j</p>
                     </div>
                   </Row>
                 ))}
@@ -160,7 +159,7 @@ export default async function MaSemainePage() {
             )}
           </Panel>
 
-          <div className="rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
+          <div className="order-4 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
             <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mes temps à saisir</h4><span aria-hidden>◷</span></div>
             <p className="mt-2 mb-4 text-xs text-muted-foreground">
               {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est saisie jusqu'ici.<br /></> : null}
@@ -177,8 +176,6 @@ export default async function MaSemainePage() {
             )}
             <Button asChild className="mt-4"><Link href="/temps">Compléter ma semaine →</Link></Button>
           </div>
-
-          <div className="flex items-start gap-2.5 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground"><span>↗</span><span>Besoin de contexte ? Retrouvez les objectifs, les moyens et les décisions dans la fiche de l'édition.</span></div>
         </div>
       </div>
 
@@ -204,9 +201,9 @@ export default async function MaSemainePage() {
   );
 }
 
-function Panel({ title, aside, children, testId }: { title: string; aside?: React.ReactNode; children: React.ReactNode; testId?: string }) {
+function Panel({ title, aside, children, testId, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; testId?: string; className?: string }) {
   return (
-    <div className="overflow-hidden rounded-md border bg-card" data-testid={testId}>
+    <div className={cn("overflow-hidden rounded-md border bg-card", className)} data-testid={testId}>
       <div className="flex items-center justify-between border-b px-4 py-3.5"><h4 className="text-[13px] font-bold">{title}</h4>{aside}</div>
       {children}
     </div>

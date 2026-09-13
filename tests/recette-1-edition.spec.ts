@@ -24,7 +24,7 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
 
   // Un pilote ne peut pas écrire la couche 1.
   await iAm(page, "Inès Cabral");
-  await expect(page.getByTestId("field-stakes")).toHaveAttribute("readonly", "");
+  await expect(page.getByTestId("field-stakes")).toHaveAttribute("data-readonly", "true");
 
   // 2. Le pilote complète la couche 3 et ajoute une action avec un jalon dépassé.
   await page.getByTestId("field-operationalObjectives").fill("Trois ateliers et un bilan.");
