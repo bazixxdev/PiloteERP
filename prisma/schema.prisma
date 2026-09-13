@@ -82,9 +82,34 @@ model Mission {
 }
 
 model Funder {
-  id    String        @id @default(cuid())
-  name  String        @unique
-  lines FundingLine[]
+  id          String        @id @default(cuid())
+  name        String        @unique
+  lines       FundingLine[]
+  conventions Convention[]
+}
+
+// Convention : objet unique par financeur et dispositif, pouvant couvrir plusieurs années et plusieurs projets (EF-C3).
+// Les lignes de financement des éditions sont ses affectations ; leur somme ne doit pas dépasser le montant notifié.
+model Convention {
+  id              String        @id @default(cuid())
+  funderId        String
+  funder          Funder        @relation(fields: [funderId], references: [id])
+  reference       String // référence interne unique, ex. FSE-2026-2028
+  scheme          String?
+  label           String?
+  startYear       Int
+  endYear         Int
+  status          String        @default("to_submit") // to_submit | submitted | notified | contracted | justified
+  amountRequested Float?
+  amountNotified  Float?
+  submittedAt     DateTime?
+  notifiedAt      DateTime?
+  signedAt        DateTime?
+  notes           String?
+  lines           FundingLine[]
+  createdAt       DateTime      @default(now())
+
+  @@unique([reference])
 }
 
 // Listes de valeurs modifiables (statuts, états, rôles, rythmes, natures de validation…)
@@ -244,6 +269,8 @@ model FundingLine {
   edition          Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
   funderId         String
   funder           Funder        @relation(fields: [funderId], references: [id])
+  conventionId     String? // affectation d'une convention partagée ; sinon financement annuel propre à l'édition
+  convention       Convention?   @relation(fields: [conventionId], references: [id])
   scheme           String?
   status           String        @default("to_submit") // to_submit | submitted | notified | contracted | justified
   amountRequested  Float?

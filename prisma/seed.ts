@@ -71,6 +71,7 @@ async function reset() {
   await prisma.action.deleteMany();
   await prisma.fundingLine.deleteMany();
   await prisma.editionPersonDays.deleteMany();
+  await prisma.convention.deleteMany();
   await prisma.editionTeam.deleteMany();
   await prisma.edition.deleteMany();
   await prisma.project.deleteMany();
@@ -108,6 +109,10 @@ async function main() {
 
   const funderNames = ["Région", "État", "FSE", "ADEME", "Banque des Territoires", "DREETS", "Cap'Asso", "ESS France", "Cotisations"];
   const funders = await Promise.all(funderNames.map((name) => prisma.funder.create({ data: { name } })));
+
+  // Conventions partagées : FSE 2026-2028 (DLA + sensibilisation) ; CPO Région 2025-2027 pour les projets Région pluriannuels.
+  const fseConv = await prisma.convention.create({ data: { funderId: funders[2].id, reference: "FSE-2026-2028", scheme: "FSE+ 2021-2027 — axe inclusion", label: "Convention FSE+ inclusion 2026-2028", startYear: 2026, endYear: 2028, status: "contracted", amountRequested: 180000, amountNotified: 165000, submittedAt: dayjs("2025-10-15").toDate(), notifiedAt: dayjs("2026-02-20").toDate(), signedAt: dayjs("2026-03-28").toDate(), notes: "Trois ans, deux projets ; clés de répartition dans l'onglet FSE de l'Excel RAF." } });
+  const cpoConv = await prisma.convention.create({ data: { funderId: funders[0].id, reference: "CPO-REGION-2025-2027", scheme: "Convention pluriannuelle d'objectifs", label: "CPO Région 2025-2027", startYear: 2025, endYear: 2027, status: "contracted", amountRequested: 240000, amountNotified: 225000, submittedAt: dayjs("2024-10-01").toDate(), notifiedAt: dayjs("2025-01-15").toDate(), signedAt: dayjs("2025-02-10").toDate() } });
 
   const missions = await Promise.all(
     [
@@ -363,6 +368,7 @@ async function main() {
             allocationKeyRef: `Clé ${y.year} — onglet ${pd.code}`,
             multiYear: f.name === "FSE" || (f.name === "Région" && pi % 3 === 0),
             notes: fi === 0 ? "Financeur principal." : null,
+            conventionId: f.name === "FSE" && y.year >= 2026 ? fseConv.id : f.name === "Région" && pi % 3 === 0 && y.year >= 2025 && y.year <= 2027 ? cpoConv.id : null,
           },
         });
         fundingIds.push(line.id);

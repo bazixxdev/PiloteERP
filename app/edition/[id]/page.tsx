@@ -31,7 +31,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const { onglet } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
-  const funders = await prisma.funder.findMany({ orderBy: { name: "asc" } });
+  const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
 
   const tab = (["fiche", "actions", "financements", "temps", "budget", "validations", "documents", "bilan"].includes(onglet ?? "") ? onglet : "fiche") as TabKey;
   const isPilot = e.project.pilotId === me.id;
@@ -39,7 +39,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const alerts = computeAlerts(e, settings);
   const canStatus = me.role === "director" || me.role === "raf";
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
-  const ctx = { e, me, refs, settings, people, funders, isPilot, isTeam };
+  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam };
 
   const counts = {
     actions: e.actions.length,

@@ -55,7 +55,7 @@ export async function loadPortfolio(settings: { envelopeAlertPercent: number; de
 export const editionFullInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } }, editions: { select: { id: true, year: true, status: true }, orderBy: { year: "asc" as const } } } },
   actions: { include: { timeEntries: { select: { hours: true, personId: true } }, owner: true, fundingLine: { include: { funder: true } } }, orderBy: { order: "asc" as const } },
-  fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } } }, orderBy: { id: "asc" as const } },
+  fundingLines: { include: { funder: true, convention: { include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } } }, deliverables: { orderBy: { dueDate: "asc" as const } } }, orderBy: { id: "asc" as const } },
   validations: { include: { requester: true, decider: true, action: true }, orderBy: { createdAt: "desc" as const } },
   team: { include: { person: true } },
   personDays: { include: { person: true } },

@@ -7,12 +7,15 @@ import { canEditFunding } from "@/lib/rights";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
-import { AddDeliverableForm, AddFundingLineForm } from "./add-forms";
+import { AddDeliverableForm, AddFundingLineForm, AttachConventionForm } from "./add-forms";
+import { allocationOf, conventionCovers } from "@/lib/conventions";
+import Link from "next/link";
 import { DeliverableDone } from "./deliverable-done";
 import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
 
-export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: TabCtx) {
+export function FinancementsTab({ e, me, refs, funders, conventions, settings, isPilot }: TabCtx) {
+  const covering = conventions.filter((c) => conventionCovers(c, e.year));
   const rw = canEditFunding(me.role);
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
   const funderOpts = funders.map((f) => ({ value: f.id, label: f.name }));
@@ -33,7 +36,7 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
         <Section
           title="Lignes de financement"
           description={<span>Remplies par la RAF · {fmtEuro(totalGranted)} obtenus sur {fmtEuro(totalRequested)} demandés{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}</span>}
-          actions={rw ? <AddFundingLineForm editionId={e.id} funders={funders} /> : undefined}
+          actions={rw ? <div className="flex flex-wrap gap-2"><AttachConventionForm editionId={e.id} conventions={covering.filter((c) => !c.lines.some((l) => l.editionId === e.id)).map((c) => ({ id: c.id, label: `${funders.find((f) => f.id === c.funderId)?.name ?? ""} · ${c.reference} (${c.startYear}-${c.endYear})` }))} /><AddFundingLineForm editionId={e.id} funders={funders} /></div> : undefined}
         >
           {e.fundingLines.length === 0 ? (
             <EmptyState title="Aucune ligne de financement" hint="La RAF ajoute ici chaque financeur avec son dispositif, ses montants et ses livrables dus." />
@@ -57,6 +60,18 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
                     <Field label="Code analytique"><AutoField model="fundingLine" id={f.id} field="analyticCode" type="text" value={f.analyticCode} readOnly={!rw} /></Field>
                     <Field label="Clé de répartition (référence)"><AutoField model="fundingLine" id={f.id} field="allocationKeyRef" type="text" value={f.allocationKeyRef} readOnly={!rw} placeholder="Onglet de l'Excel RAF" /></Field>
                     <Field label="Pluriannuel"><div className="py-1"><AutoField model="fundingLine" id={f.id} field="multiYear" type="bool" value={f.multiYear} readOnly={!rw} placeholder="oui" /></div></Field>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-2 py-1.5 text-xs" data-testid={`convention-of-${i}`}>
+                    <span className="font-semibold text-primary">Convention</span>
+                    <div className="w-64"><AutoField model="fundingLine" id={f.id} field="conventionId" type="select" value={f.conventionId} readOnly={!rw} placeholder="— financement annuel propre à l'édition —" refreshOnSave
+                      options={conventions.filter((c) => c.funderId === f.funderId && conventionCovers(c, e.year)).map((c) => ({ value: c.id, label: `${c.reference} (${c.startYear}-${c.endYear})` }))} /></div>
+                    {f.convention && (() => { const a = allocationOf(f.convention); return (
+                      <span className="text-muted-foreground">
+                        {f.convention.startYear}-{f.convention.endYear} · notifié {fmtEuro(f.convention.amountNotified)} · affecté {fmtEuro(a.granted)} sur {f.convention.lines.length} édition{f.convention.lines.length > 1 ? "s" : ""}
+                        {a.remaining !== null && <> · <span className={cn(a.remaining < 0 ? "text-danger font-medium" : "text-mint")}>{a.remaining < 0 ? `dépassement ${fmtEuro(-a.remaining)}` : `reste à affecter ${fmtEuro(a.remaining)}`}</span></>}
+                        {" · "}<Link href="/conventions" className="text-primary hover:underline">toutes les conventions</Link>
+                      </span>
+                    ); })()}
                   </div>
                   <div className="mt-2"><AutoField model="fundingLine" id={f.id} field="notes" type="textarea" rows={1} value={f.notes} readOnly={!rw} placeholder="Notes, justificatifs à conserver, lieu de stockage…" /></div>
 

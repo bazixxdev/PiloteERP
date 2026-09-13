@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Bell, Presentation, Gavel } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Settings, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Barre latérale V2 : fond clair, logo CRESS sur fond transparent, trois sections, la liste des pôles en repère.
@@ -14,6 +14,7 @@ const GROUPS = [
     { href: "/temps", label: "Temps", icon: Clock },
     { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
     { href: "/validations", label: "Validations", icon: CheckSquare },
+    { href: "/conventions", label: "Conventions", icon: FileSignature },
   ] },
   { caption: "Collectif", items: [
     { href: "/cafe", label: "Écran café", icon: Coffee },

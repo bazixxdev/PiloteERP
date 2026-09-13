@@ -6,6 +6,7 @@ import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce, type Model } from "@/lib/fields";
 import { canAdmin, canEditActions, canEditFunding, canWriteLayer } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
+import { allocationCheck } from "@/lib/conventions";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
@@ -33,7 +34,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const own = a.ownerId === personId;
     return canEditActions(role, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
-  if (model === "fundingLine" || model === "deliverable") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements.";
+  if (model === "fundingLine" || model === "deliverable" || model === "convention") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements.";
   if (model === "expense") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
@@ -77,6 +78,20 @@ export async function saveField(model: Model, id: string, field: string, raw: un
           data: { editionId: id, field, before: prev == null ? null : String(prev instanceof Date ? prev.toISOString() : prev).slice(0, 500), after: value == null ? null : String(value instanceof Date ? value.toISOString() : value).slice(0, 500), authorId: me.id },
         });
       }
+    } else if (model === "fundingLine" && (field === "amountGranted" || field === "conventionId")) {
+      // Affectation d'une convention partagée : la somme des montants obtenus ne dépasse pas le notifié.
+      const line = await prisma.fundingLine.findUnique({ where: { id } });
+      if (!line) return { ok: false, error: "Ligne introuvable" };
+      const conventionId = field === "conventionId" ? (value as string | null) : line.conventionId;
+      if (conventionId) {
+        const conv = await prisma.convention.findUnique({ where: { id: conventionId }, include: { lines: true } });
+        if (!conv) return { ok: false, error: "Convention introuvable" };
+        if (conv.funderId !== line.funderId) return { ok: false, error: "Cette convention est celle d'un autre financeur." };
+        const granted = field === "amountGranted" ? (value as number | null) : line.amountGranted;
+        const check = allocationCheck(conv, id, granted);
+        if (!check.ok) return check;
+      }
+      await prisma.fundingLine.update({ where: { id }, data: { [field]: value } });
     } else if (model === "deliverable" && field === "done") {
       await prisma.deliverable.update({ where: { id }, data: { done: value as boolean, doneAt: value ? new Date() : null } });
     } else if (model === "settings") {

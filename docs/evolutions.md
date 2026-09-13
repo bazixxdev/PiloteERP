@@ -10,6 +10,7 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | 12/09/2026 | Flux agenda iCal personnel et équipe (`/api/agenda/{jeton}.ics`), abonnement depuis Outlook | L'agenda Outlook est l'outil d'organisation n°1, il ne donne pas la vue projet (S8.17-18, S8.28, S8.40) ; format standard sans dépendance Microsoft |
 | 12/09/2026 | Simulation collective à six personas en test automatisé | Les interactions entre rôles méritent un test à part |
 | 12/09/2026 | Pièces jointes typées (devis, convention, notification, justificatif, bilan remis, compte rendu) sur l'édition, la ligne de financement, le livrable, la validation ; 5 Mo ; téléchargement réservé aux connectés | NAS aux droits ouverts, suppressions vécues (S4.38-39) ; le valideur ouvre le devis en un clic |
+| 13/09/2026 | Convention partagée : objet unique, affectations par édition plafonnées au notifié, page Conventions, reconduction qui rattache | EF-C3, CDC GPT §10 |
 | 13/09/2026 | Périmètre par pôle par défaut (bascule « Toute la CRESS »), bandeau hors pôle, projets à pôle principal + pôles associés | Demande de Gaël : le quotidien d'une personne, c'est son pôle |
 | 13/09/2026 | Notifications dans l'outil (cloche, Ma semaine) : relances de temps tracées ; navigation Temps unifiée (ma saisie / équipe / clôture) ; « Détail » des heures pour la RAF | Retours à chaud A, B, C |
 | 13/09/2026 | Écran CODIR dédié : points à décider par nature, décision consignée sur l'édition (instance, suite, échéance), projection, repère 20 min | EF-H2, EF-F4 ; retour « le mode CODIR ne fait rien de spécial » |
@@ -25,7 +26,6 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Connexion par compte Microsoft (Entra ID), MFA, journal des connexions | Question 4 (Microsoft) | ENF-10, EF-K4 |
 | Mails de rappel (J-30/J-7) et relances de temps | Cron + envoi (Graph ou SMTP) | EF-C2, EF-D5 |
 | Export `.xlsx` formaté pour la RAF ; import budget engagé/réalisé par CSV | Format de l'Excel de la RAF | ENF-8, EF-E1b |
-| **Convention partagée** : objet unique par convention (FSE 2026-2028, CPO DLA) avec affectations par édition et contrôle « affectations ≤ montant notifié » | Remplace la ligne de financement par édition + drapeau pluriannuel | EF-C3 (CDC GPT §10) |
 | Base HT/TTC unique par édition, rectification datée d'un réalisé confirmé | Arbitrage A06 | EF-E1 (CDC GPT §12) |
 | « Préparer un départ » (réaffectation des responsabilités), désactivation sans effacer l'historique | — | EF-K3 (CDC GPT §20) |
 | Notifications avec clé de dédoublonnage et reprise après panne | Va avec les mails de rappel | EF-C2 (CDC GPT §19) |

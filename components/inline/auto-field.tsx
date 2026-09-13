@@ -34,7 +34,10 @@ function toInput(type: FieldType, v: Props["value"]): string {
   if (v === null || v === undefined) return "";
   if (type === "date") {
     const d = v instanceof Date ? v : new Date(String(v));
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    if (Number.isNaN(d.getTime())) return "";
+    // Date locale, pas UTC : un 15/10 à minuit (Paris) resterait un 15/10.
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   return String(v);
 }

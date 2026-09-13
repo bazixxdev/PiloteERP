@@ -137,7 +137,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
 export async function renewEdition(editionId: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
   if (!["director", "raf", "pole_lead"].includes(c.me.role) && !c.isPilot) return { ok: false, error: "Seuls le pilote, le responsable de pôle, la RAF et la direction reconduisent une édition." };
-  const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: true, team: true, personDays: true, indicators: true, docLinks: true } });
+  const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
   if (!src) return { ok: false, error: "Édition introuvable" };
   const year = src.year + 1;
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
@@ -163,9 +163,15 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
         })),
       },
       fundingLines: {
-        create: src.fundingLines.map((f) => ({
-          funderId: f.funderId, scheme: f.scheme, status: "to_submit", analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
-        })),
+        // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
+        create: src.fundingLines.map((f) => {
+          const keeps = f.convention && f.convention.startYear <= year && year <= f.convention.endYear;
+          return {
+            funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
+            conventionId: keeps ? f.conventionId : null,
+            status: keeps && ["notified", "contracted", "justified"].includes(f.convention!.status) ? "contracted" : "to_submit",
+          };
+        }),
       },
     },
   });
@@ -226,5 +232,30 @@ export async function recordDecision(input: { editionId: string; instance: strin
   });
   await prisma.changeLog.create({ data: { editionId: input.editionId, field: "décision", before: null, after: `${input.instance} : ${input.body.trim().slice(0, 200)}`, authorId: c.me.id } });
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.
+export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null }): Promise<Result<{ id: string }>> {
+  const me = await getCurrentPerson();
+  if (!canEditFunding(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention." };
+  const reference = input.reference.trim();
+  if (!reference) return { ok: false, error: "Référence obligatoire (ex. FSE-2026-2028)." };
+  if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez la convention existante.` };
+  if (input.endYear < input.startYear) return { ok: false, error: "La fin précède le début." };
+  const c = await prisma.convention.create({ data: { funderId: input.funderId, reference, scheme: input.scheme?.trim() || null, startYear: input.startYear, endYear: input.endYear, amountNotified: input.amountNotified ?? null, status: input.amountNotified ? "notified" : "to_submit" } });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { id: c.id } };
+}
+
+export async function addFundingLineFromConvention(editionId: string, conventionId: string): Promise<Result> {
+  const c = await ctx(editionId);
+  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
+  const conv = await prisma.convention.findUnique({ where: { id: conventionId } });
+  if (!conv) return { ok: false, error: "Convention introuvable" };
+  if (c.e.year < conv.startYear || c.e.year > conv.endYear) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };
+  if (await prisma.fundingLine.findFirst({ where: { editionId, conventionId } })) return { ok: false, error: "Cette édition est déjà rattachée à cette convention." };
+  await prisma.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status: ["notified", "contracted", "justified"].includes(conv.status) ? "contracted" : conv.status, multiYear: conv.endYear > conv.startYear } });
+  revalidatePath(path(editionId));
   return { ok: true };
 }

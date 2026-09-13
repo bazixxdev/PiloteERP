@@ -43,10 +43,11 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     name: { type: "text" }, ownerId: { type: "select" }, milestoneDate: { type: "date" }, timeTarget: { type: "number" }, state: { type: "select" }, fundingLineId: { type: "select" }, isPublic: { type: "bool" },
   },
   fundingLine: {
-    funderId: { type: "select" }, scheme: { type: "text" }, status: { type: "select" }, amountRequested: { type: "number" }, amountGranted: { type: "number" },
+    funderId: { type: "select" }, conventionId: { type: "select" }, scheme: { type: "text" }, status: { type: "select" }, amountRequested: { type: "number" }, amountGranted: { type: "number" },
     submittedAt: { type: "date" }, answeredAt: { type: "date" }, contractedAt: { type: "date" }, analyticCode: { type: "text" }, allocationKeyRef: { type: "text" }, multiYear: { type: "bool" }, notes: { type: "textarea" },
   },
   deliverable: { label: { type: "text" }, dueDate: { type: "date" }, done: { type: "bool" } },
+  convention: { reference: { type: "text" }, scheme: { type: "text" }, label: { type: "text" }, startYear: { type: "number" }, endYear: { type: "number" }, status: { type: "select" }, amountRequested: { type: "number" }, amountNotified: { type: "number" }, submittedAt: { type: "date" }, notifiedAt: { type: "date" }, signedAt: { type: "date" }, notes: { type: "textarea" } },
   indicator: { label: { type: "text" }, target: { type: "text" }, actual: { type: "text" }, imposed: { type: "bool" } },
   person: { name: { type: "text" }, role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" } },
   project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" } },

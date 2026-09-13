@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense } from "@/app/actions/edition";
+import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -111,5 +111,22 @@ export function AddExpenseForm({ editionId }: { editionId: string }) {
       <Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence (obligatoire)" className="h-8 w-44" />
       <Button type="submit" size="sm" variant="outline" disabled={pending || !label.trim() || !ref.trim()}><Plus />Enregistrer</Button>
     </form>
+  );
+}
+
+
+// Rattacher une convention existante (FSE 2026-2028, CPO…) : crée l'affectation de cette édition.
+export function AttachConventionForm({ editionId, conventions }: { editionId: string; conventions: { id: string; label: string }[] }) {
+  const [id, setId] = useState("");
+  const { pending, run } = useRun();
+  if (conventions.length === 0) return null;
+  return (
+    <div className="flex gap-2">
+      <select className="h-8 max-w-[280px] rounded-lg border bg-card px-2 text-sm" value={id} onChange={(e) => setId(e.target.value)} data-testid="attach-convention-select">
+        <option value="">Rattacher une convention existante…</option>
+        {conventions.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+      <Button size="sm" variant="outline" disabled={pending || !id} onClick={() => run(() => addFundingLineFromConvention(editionId, id), () => setId(""))} data-testid="attach-convention-submit"><Plus />Rattacher</Button>
+    </div>
   );
 }
