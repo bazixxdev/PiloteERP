@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addSlot, addTask, deleteSlot, deleteTask, updateTask } from "@/app/actions/tasks";
-import { dayjs } from "@/lib/format";
+import { dayjs, slotLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type TaskView = {
@@ -18,8 +18,6 @@ export type TaskView = {
   slots: { id: string; startAt: string; endAt: string; allDay: boolean }[];
 };
 
-export const slotLabel = (s: { startAt: string; endAt: string; allDay: boolean }) =>
-  s.allDay ? `${dayjs(s.startAt).format("ddd D MMM")} · journée` : `${dayjs(s.startAt).format("ddd D MMM")} · ${dayjs(s.startAt).format("H[h]mm").replace("h00", "h")}–${dayjs(s.endAt).format("H[h]mm").replace("h00", "h")}`;
 
 // Liste des tâches personnelles : ajout en une ligne, échéance (pour quand) et créneaux (quand je m'y mets), lien vers l'édition.
 export function TaskList({ tasks, editionId, actionId, compact }: { tasks: TaskView[]; editionId?: string; actionId?: string; compact?: boolean }) {
@@ -121,15 +119,25 @@ function SlotPicker({ t, pending, run }: { t: TaskView; pending: boolean; run: (
   const [allDay, setAllDay] = useState(false);
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("11:00");
+  const [added, setAdded] = useState(0);
+  // Après un créneau, on en propose un autre à la suite : même jour, juste après (ou le lendemain pour une journée entière). Vide, il ne se pose pas.
+  const proposeNext = () => {
+    setAdded((n) => n + 1);
+    if (allDay) { setDate(dayjs(date).add(1, "day").format("YYYY-MM-DD")); return; }
+    const e = dayjs(`${date} ${end}`, "YYYY-MM-DD HH:mm");
+    const dur = Math.max(1, e.diff(dayjs(`${date} ${start}`, "YYYY-MM-DD HH:mm"), "hour", true));
+    const ns = e.hour() >= 17 ? dayjs(`${date} 09:00`, "YYYY-MM-DD HH:mm").add(1, "day") : e.hour() < 12 && e.add(dur, "hour").hour() > 12 ? dayjs(`${date} 14:00`, "YYYY-MM-DD HH:mm") : e;
+    setDate(ns.format("YYYY-MM-DD")); setStart(ns.format("HH:mm")); setEnd(ns.add(dur, "hour").format("HH:mm"));
+  };
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setAdded(0); }}>
       <PopoverTrigger asChild>
         <button type="button" className="inline-flex items-center gap-1 rounded-sm border border-dashed px-1.5 py-px hover:bg-muted" data-testid={`task-plan-${t.id}`}><CalendarClock className="size-3" aria-hidden />Planifier</button>
       </PopoverTrigger>
       <PopoverContent className="w-72" align="start">
-        <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); run(() => addSlot(t.id, { date, start: allDay ? null : start, end: allDay ? null : end, allDay }), () => setOpen(false)); }}>
-          <div className="text-xs font-semibold">Quand je m'y mets</div>
-          <p className="text-[11px] text-muted-foreground">Distinct de l'échéance : ce créneau va dans votre agenda, comme « occupé ».</p>
+        <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); run(() => addSlot(t.id, { date, start: allDay ? null : start, end: allDay ? null : end, allDay }), () => { toast.success("Créneau posé dans votre agenda"); proposeNext(); }); }}>
+          <div className="text-xs font-semibold">{added ? `Un autre créneau ? (${added} posé${added > 1 ? "s" : ""})` : "Quand je m'y mets"}</div>
+          <p className="text-[11px] text-muted-foreground">{added ? "Proposé à la suite ; laissez-le tel quel et fermez si ça suffit." : "Distinct de l'échéance : ce créneau va dans votre agenda, comme « occupé »."}</p>
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Jour du créneau" className="h-8" required data-testid="slot-date" />
           <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} className="size-4 rounded border-border accent-primary" data-testid="slot-allday" />Journée entière</label>
           {!allDay && (
@@ -140,8 +148,8 @@ function SlotPicker({ t, pending, run }: { t: TaskView; pending: boolean; run: (
             </div>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button type="submit" size="sm" disabled={pending} data-testid="slot-submit">Poser le créneau</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setOpen(false); setAdded(0); }} data-testid="slot-close">{added ? "Terminer" : "Annuler"}</Button>
+            <Button type="submit" size="sm" disabled={pending} data-testid="slot-submit">{added ? "Poser aussi celui-ci" : "Poser le créneau"}</Button>
           </div>
         </form>
       </PopoverContent>

@@ -25,6 +25,19 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await page.getByTestId("slot-end").fill("11:00");
   await page.getByTestId("slot-submit").click();
   await expect(task).toContainText("mer. 23 sept. · 9h–11h");
+  // Un autre créneau est proposé à la suite (11h–13h → l'après-midi) ; on le pose aussi, puis on ferme.
+  await expect(page.getByTestId("slot-start")).toHaveValue("14:00");
+  await page.getByTestId("slot-submit").click();
+  await expect(task).toContainText("mer. 23 sept. · 14h–16h");
+  await page.getByTestId("slot-close").click();
+  // Un créneau posé aujourd'hui s'affiche dans « Aujourd'hui », avec son heure.
+  await task.locator("[data-testid^=task-plan-]").click();
+  await page.getByTestId("slot-date").fill(new Date().toISOString().slice(0, 10));
+  await page.getByTestId("slot-start").fill("15:00");
+  await page.getByTestId("slot-end").fill("16:00");
+  await page.getByTestId("slot-submit").click();
+  await page.getByTestId("slot-close").click();
+  await expect(page.getByTestId("today")).toContainText("15h–16h");
 
   // Flux agenda : le créneau est une plage horaire occupée, l'échéance une journée.
   const url = await page.getByTestId("ics-url-me").innerText();

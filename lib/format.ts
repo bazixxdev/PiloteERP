@@ -58,3 +58,9 @@ export function pct(part: number, total: number): number {
   if (!total) return 0;
   return Math.round((part / total) * 100);
 }
+
+// Libellé d'un créneau de travail : « mer. 23 sept. · journée » ou « mer. 23 sept. · 9h–11h ».
+export function slotLabel(s: { startAt: string | Date; endAt: string | Date; allDay: boolean }): string {
+  const h = (d: string | Date) => dayjs(d).format("H[h]mm").replace("h00", "h");
+  return s.allDay ? `${dayjs(s.startAt).format("ddd D MMM")} · journée` : `${dayjs(s.startAt).format("ddd D MMM")} · ${h(s.startAt)}–${h(s.endAt)}`;
+}

@@ -9,13 +9,13 @@ import { loadAgenda } from "@/lib/agenda";
 import { loadPortfolio } from "@/lib/queries";
 import { canDecideValidation } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
-import { dayjs, fmtDate, fmtNumber } from "@/lib/format";
+import { dayjs, fmtDate, fmtNumber, slotLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { IcsCard } from "@/components/common/ics-card";
 import { prisma } from "@/lib/db";
 import { expectedHoursOn, loadRhythms, rhythmAt, weekDays } from "@/lib/time";
 import { loadMyTasks } from "@/lib/tasks";
-import { TaskList, slotLabel } from "@/components/tasks/task-list";
+import { TaskList } from "@/components/tasks/task-list";
 
 // Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
 // les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
