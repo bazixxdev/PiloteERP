@@ -158,3 +158,15 @@ export async function addRhythmPeriod(personId: string, rhythmId: string, from: 
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// Pôle secondaire d'un projet commun (le principal reste celui du pilote).
+export async function toggleProjectPole(projectId: string, poleId: string, on: boolean): Promise<Result> {
+  const d = await guard(); if (d) return { ok: false, error: d };
+  const p = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!p) return { ok: false, error: "Projet introuvable" };
+  if (p.poleId === poleId) return { ok: false, error: "C'est déjà le pôle principal du projet." };
+  if (on) await prisma.projectPole.upsert({ where: { projectId_poleId: { projectId, poleId } }, create: { projectId, poleId }, update: {} });
+  else await prisma.projectPole.deleteMany({ where: { projectId, poleId } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

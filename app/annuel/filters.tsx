@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function AnnuelFilters({ year, poles, pole }: { year: number; poles: { value: string; label: string }[]; pole: string }) {
+export function AnnuelFilters({ year, poles, pole, allValue = "" }: { year: number; poles: { value: string; label: string }[]; pole: string; allValue?: string }) {
   const router = useRouter();
   const url = (y: number, p: string) => `/annuel?annee=${y}${p ? `&pole=${p}` : ""}`;
   return (
@@ -15,7 +15,7 @@ export function AnnuelFilters({ year, poles, pole }: { year: number; poles: { va
       <Button asChild variant="outline" size="icon" aria-label="Année suivante"><Link href={url(year + 1, pole)}><ChevronRight /></Link></Button>
       <span className="mx-1 h-5 w-px bg-border" />
       <select className="h-8 rounded-full border bg-card px-3 text-sm" value={pole} onChange={(e) => router.push(url(year, e.target.value))} aria-label="Pôle" data-testid="annuel-pole">
-        <option value="">Toute l'équipe</option>
+        <option value={allValue}>Toute la CRESS</option>
         {poles.map((p) => <option key={p.value} value={p.value}>Réunion de pôle · {p.label}</option>)}
       </select>
     </div>

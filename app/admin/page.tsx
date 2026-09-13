@@ -9,7 +9,7 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib/refs";
 import { canAdmin } from "@/lib/rights";
 import { cn } from "@/lib/utils";
-import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./forms";
+import { AddSimpleForm, CreateProjectForm, TimeCodeToggle, ImportForm, RhythmPeriodForm, ProjectPolesPicker } from "./forms";
 import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 
@@ -31,7 +31,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const [people, poles, projects, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
-    prisma.project.findMany({ include: { pole: true, pilot: true, mission: true, editions: { orderBy: { year: "asc" } } }, orderBy: { name: "asc" } }),
+    prisma.project.findMany({ include: { pole: true, pilot: true, mission: true, secondaryPoles: true, editions: { orderBy: { year: "asc" } } }, orderBy: { name: "asc" } }),
     prisma.funder.findMany({ orderBy: { name: "asc" } }),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
     prisma.timeCode.findMany({ orderBy: { order: "asc" } }),
@@ -129,17 +129,20 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       )}
 
       {current === "projets" && (
-        <Section title="Projets" description="Objets permanents ; chaque année une édition. Créer un projet crée aussi sa première édition." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
+        <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
           <table className="w-full text-sm" data-testid="projects-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-              <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5">Pôle</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>
+              <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5" title="Pôle principal, puis pôles associés pour un projet commun">Pôles</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>
             </thead>
             <tbody className="divide-y">
               {projects.map((p) => (
                 <tr key={p.id}>
                   <td className="min-w-[200px] py-0.5"><AutoField model="project" id={p.id} field="name" type="text" value={p.name} readOnly={!rw} inputClassName="font-medium" /></td>
                   <td className="w-24 py-0.5"><AutoField model="project" id={p.id} field="analyticCode" type="text" value={p.analyticCode} readOnly={!rw} inputClassName="tabular" /></td>
-                  <td className="min-w-[160px] py-0.5"><AutoField model="project" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} allowEmpty={false} readOnly={!rw} /></td>
+                  <td className="min-w-[220px] py-0.5">
+                    <AutoField model="project" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} allowEmpty={false} readOnly={!rw} refreshOnSave />
+                    <div className="mt-0.5 pl-2"><ProjectPolesPicker projectId={p.id} mainPoleId={p.poleId} poles={opt(poles)} selected={p.secondaryPoles.map((x) => x.poleId)} readOnly={!rw} /></div>
+                  </td>
                   <td className="min-w-[150px] py-0.5"><AutoField model="project" id={p.id} field="pilotId" type="select" value={p.pilotId} options={opt(people)} allowEmpty={false} readOnly={!rw} /></td>
                   <td className="min-w-[150px] py-0.5"><AutoField model="project" id={p.id} field="guarantorId" type="select" value={p.guarantorId} options={opt(people)} readOnly={!rw} /></td>
                   <td className="min-w-[180px] py-0.5"><AutoField model="project" id={p.id} field="missionId" type="select" value={p.missionId} options={opt(missions)} allowEmpty={false} readOnly={!rw} /></td>

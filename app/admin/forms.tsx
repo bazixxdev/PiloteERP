@@ -6,7 +6,7 @@ import { Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod } from "@/app/actions/admin";
+import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod, toggleProjectPole } from "@/app/actions/admin";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -114,5 +114,26 @@ export function RhythmPeriodForm({ personId, rhythms }: { personId: string; rhyt
       <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 w-32 text-xs" aria-label="À partir du" />
       <Button type="submit" size="xs" variant="outline" disabled={pending || !from}><Plus /></Button>
     </form>
+  );
+}
+
+
+// Pôles secondaires d'un projet : puces à cocher (le pôle principal est grisé).
+export function ProjectPolesPicker({ projectId, mainPoleId, poles, selected, readOnly }: { projectId: string; mainPoleId: string; poles: Opt[]; selected: string[]; readOnly: boolean }) {
+  const { pending, run } = useRun();
+  return (
+    <div className="flex flex-wrap gap-1">
+      {poles.map((p) => {
+        const main = p.value === mainPoleId;
+        const on = selected.includes(p.value);
+        return (
+          <button key={p.value} type="button" disabled={readOnly || main || pending} title={main ? "Pôle principal (celui du pilote)" : on ? "Retirer ce pôle" : "Associer ce pôle"} data-testid={`project-pole-${p.value}`}
+            className={"rounded-full border px-2 py-0.5 text-[11px] " + (main ? "border-primary bg-primary text-white" : on ? "border-primary bg-secondary text-primary" : "bg-card text-muted-foreground hover:bg-muted")}
+            onClick={() => run(() => toggleProjectPole(projectId, p.value, !on))}>
+            {p.label.split(" ")[0]}{main ? " · principal" : ""}
+          </button>
+        );
+      })}
+    </div>
   );
 }

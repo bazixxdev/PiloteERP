@@ -4,7 +4,8 @@ import { Section } from "@/components/common/section";
 import { AlertChips } from "@/components/common/alert-chips";
 import { StatusBadge } from "@/components/common/status-badge";
 import { prisma } from "@/lib/db";
-import { getRefs, getSettings } from "@/lib/session";
+import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
+import { isTransversal } from "@/lib/scope";
 import { loadPortfolio } from "@/lib/queries";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
@@ -16,7 +17,10 @@ const STATE_DOT: Record<string, string> = { done: "bg-mint", doing: "bg-primary"
 
 // Vue annuelle par personne (EF-G3, EF-B3) et vue par pôle (EF-G6).
 export default async function AnnuelPage({ searchParams }: { searchParams: Promise<{ annee?: string; pole?: string }> }) {
-  const sp = await searchParams;
+  const raw = await searchParams;
+  const me = await getCurrentPerson();
+  // Par défaut, une personne de pôle voit son pôle ; « pole=tous » élargit.
+  const sp = { ...raw, pole: raw.pole === "tous" ? "" : raw.pole ?? (isTransversal(me) ? "" : me.poleId ?? "") };
   const year = Number(sp.annee) || dayjs().year();
   const [refs, settings, poles] = await Promise.all([getRefs(), getSettings(), prisma.pole.findMany({ orderBy: { name: "asc" } })]);
   const people = await prisma.person.findMany({
@@ -30,7 +34,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
   return (
     <div className="p-4 md:p-6">
       <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et éditions de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} />
-      <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} />
+      <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} allValue={isTransversal(me) ? "" : "tous"} />
 
       {sp.pole && (
         <Section title="Éditions du pôle" description="Pour la réunion de pôle : statut et alertes de chaque édition." className="mb-4">

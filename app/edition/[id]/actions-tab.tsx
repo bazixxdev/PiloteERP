@@ -7,10 +7,11 @@ import { canEditActions } from "@/lib/rights";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
+import { inMyPole } from "@/lib/scope";
 import { AddActionForm } from "./add-forms";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
-  const writable = canEditActions(me.role, isPilot, isTeam, e.project.poleId === me.poleId);
+  const writable = canEditActions(me.role, isPilot, isTeam, inMyPole(me, e.project));
   const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
   const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));

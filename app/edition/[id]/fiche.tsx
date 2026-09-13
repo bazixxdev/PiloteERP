@@ -7,6 +7,7 @@ import { REF_DEFAULTS, refLabel } from "@/lib/refs";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
+import { inMyPole } from "@/lib/scope";
 import { TeamPicker } from "./team-picker";
 
 // Les quatre couches de la fiche (numérotées comme dans la maquette V2), plus le suivi au fil de l'année.
@@ -32,7 +33,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people }: TabCtx) {
           <div className="flex items-start gap-2.5 rounded-md bg-warning-soft px-3 py-3 text-xs text-warning-foreground"><span>○</span><span><b>{filledLayers} couche{filledLayers > 1 ? "s" : ""} sur 4 renseignée{filledLayers > 1 ? "s" : ""}.</b>{nextEmpty ? ` La couche ${nextEmpty.no} (${nextEmpty.title.toLowerCase()}) est ${LAYER_OWNER_LABEL[nextEmpty.key]}.` : ""}</span></div>
         )}
         {LAYERS.map((layer) => {
-          const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam, e.project.poleId === me.poleId);
+          const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam, inMyPole(me, e.project));
           const filled = layer.fields.filter((f) => { const v = row[f]; return v !== null && v !== undefined && v !== "" && v !== false; }).length;
           const empty = filled === 0;
           return (

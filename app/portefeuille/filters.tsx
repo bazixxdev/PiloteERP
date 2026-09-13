@@ -9,7 +9,7 @@ const Filter = ({ label, children }: { label: string; children: React.ReactNode 
 );
 
 // Barre de filtres V2 : des sélecteurs discrets à gauche, l'année à droite.
-export function PortfolioFilters({ poles, statuses, current, thisQuarter, year }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string }; thisQuarter: string; year: number }) {
+export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, showPole = true }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string; perimetre?: string }; thisQuarter: string; year: number; showPole?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const set = (key: string, value: string) => {
@@ -21,12 +21,14 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year }
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3" data-testid="portfolio-filters">
       <div className="flex flex-wrap items-center gap-2">
-        <Filter label="Pôle">
-          <select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
-            <option value="">Tous les pôles</option>
-            {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-        </Filter>
+        {showPole && (
+          <Filter label="Pôle">
+            <select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
+              <option value="">Tous les pôles</option>
+              {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </Filter>
+        )}
         <Filter label="Statut">
           <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
             <option value="">Tous les statuts</option>

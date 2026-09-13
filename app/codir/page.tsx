@@ -18,8 +18,10 @@ import { SessionTimer } from "./session-timer";
 // Écran CODIR (EF-H2) : seulement ce qui appelle une décision — validations, jalons dépassés, livrables proches,
 // enveloppes et temps en écart — et la décision se consigne sur l'édition sans quitter l'écran (EF-F4).
 export default async function CodirPage({ searchParams }: { searchParams: Promise<{ pole?: string; plein?: string }> }) {
-  const sp = await searchParams;
+  const raw = await searchParams;
   const [me, settings, refs, people] = await Promise.all([getCurrentPerson(), getSettings(), getRefs(), getPeople()]);
+  // Un responsable de pôle ouvre l'écran sur son pôle ; « pole=tous » donne la vue CODIR complète.
+  const sp = { ...raw, pole: raw.pole === "tous" ? "" : raw.pole ?? (me.role === "pole_lead" ? me.poleId ?? "" : "") };
   if (!isCodir(me.role)) {
     return (
       <div className="p-4 md:p-6">
@@ -30,12 +32,12 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   }
   const [rows, validations, recent] = await Promise.all([
     loadPortfolio(settings, { statuses: ["in_progress", "validated"] }),
-    prisma.validationRequest.findMany({ where: { status: "pending" }, include: { requester: true, decider: true, action: true, edition: { include: { project: { include: { pole: true } } } }, attachments: { include: attachmentInclude } }, orderBy: { createdAt: "asc" } }),
+    prisma.validationRequest.findMany({ where: { status: "pending" }, include: { requester: true, decider: true, action: true, edition: { include: { project: { include: { pole: true, secondaryPoles: true } } } }, attachments: { include: attachmentInclude } }, orderBy: { createdAt: "asc" } }),
     prisma.decision.findMany({ where: { decidedAt: { gte: dayjs().subtract(30, "day").toDate() } }, include: { edition: { include: { project: true } }, author: true, followUp: true }, orderBy: { decidedAt: "desc" }, take: 8 }),
   ]);
-  const inPole = (poleId: string) => !sp.pole || poleId === sp.pole;
-  const editions = rows.filter((r) => inPole(r.project.poleId));
-  const pending = validations.filter((v) => inPole(v.edition.project.poleId));
+  const inPole = (p: { poleId: string; secondaryPoles?: { poleId: string }[] }) => !sp.pole || [p.poleId, ...(p.secondaryPoles ?? []).map((x) => x.poleId)].includes(sp.pole);
+  const editions = rows.filter((r) => inPole(r.project));
+  const pending = validations.filter((v) => inPole(v.edition.project));
   const lateMilestones = editions.flatMap((e) => e.actions.filter((a) => a.milestoneDate && a.state !== "done" && daysFromNow(a.milestoneDate) < 0).map((a) => ({ e, a, days: -daysFromNow(a.milestoneDate!) }))).sort((x, y) => y.days - x.days);
   const deliverables = editions.flatMap((e) => e.fundingLines.flatMap((f) => f.deliverables.filter((d) => !d.done && daysFromNow(d.dueDate) <= settings.deliverableAlertDays).map((d) => ({ e, f, d, days: daysFromNow(d.dueDate) })))).sort((x, y) => x.days - y.days);
   const envelopes = editions.filter((e) => e.budgetEnvelope && (e.used / e.budgetEnvelope) * 100 >= settings.envelopeAlertPercent).sort((x, y) => y.used / y.budgetEnvelope! - x.used / x.budgetEnvelope!);
@@ -85,7 +87,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
       {/* Filtre par pôle, sous l'en-tête ; le bouton Projeter reste en haut à droite. */}
       <div className="mb-4 flex flex-wrap items-center gap-1" data-testid="codir-poles">
         <span className="mr-1 text-[11px] text-muted-foreground">Pôle</span>
-        <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "" })}>Tous les pôles</Link></Button>
+        <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "tous" })}>Tous les pôles</Link></Button>
         {poles.map(([id, name]) => <Button key={id} asChild size="sm" variant={sp.pole === id ? "default" : "outline"}><Link href={qs({ pole: id })}>{name.split(" ")[0]}</Link></Button>)}
       </div>
 

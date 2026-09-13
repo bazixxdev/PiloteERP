@@ -7,20 +7,24 @@ import { AlertChips } from "@/components/common/alert-chips";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
-import { getRefs, getSettings } from "@/lib/session";
+import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
+import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { PerimeterChips } from "@/components/common/perimeter";
 import { loadPortfolio } from "@/lib/queries";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PortfolioFilters } from "./filters";
 
-type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string };
+type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string };
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
-  const [settings, refs, poles] = await Promise.all([getSettings(), getRefs(), prisma.pole.findMany({ orderBy: { name: "asc" } })]);
+  const [settings, refs, poles, me] = await Promise.all([getSettings(), getRefs(), prisma.pole.findMany({ orderBy: { name: "asc" } }), getCurrentPerson()]);
   const codir = sp.mode === "codir";
-  const all = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
+  const everything = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
+  const perimeter = perimeterFrom(me, sp.perimetre);
+  const all = perimeter === "pole" ? everything.filter((r) => inMyScope(me, r.project, r.team.map((t) => t.personId))) : everything;
 
   let rows = all;
   if (sp.pole) rows = rows.filter((r) => r.project.poleId === sp.pole);
@@ -77,11 +81,15 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
+      {!codir && !isTransversal(me) && (
+        <div className="mb-3"><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/portefeuille?perimetre=${p}`} /></div>
+      )}
       {!codir && (
         <PortfolioFilters
           poles={poles.map((p) => ({ value: p.id, label: p.name }))}
           statuses={["in_progress", "validated"].map((s) => ({ value: s, label: refLabel(refs, "edition_status", s) }))}
-          current={{ pole: sp.pole ?? "", statut: sp.statut ?? "", alerte: sp.alerte ?? "", trimestre: sp.trimestre ?? "" }}
+          current={{ pole: sp.pole ?? "", statut: sp.statut ?? "", alerte: sp.alerte ?? "", trimestre: sp.trimestre ?? "", perimetre: sp.perimetre ?? "" }}
+          showPole={isTransversal(me) || perimeter === "cress"}
           thisQuarter={thisQuarter}
           year={year}
         />

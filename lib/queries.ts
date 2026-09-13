@@ -4,7 +4,7 @@ import { dayjs } from "./format";
 import { budgetOf } from "./budget";
 
 export const editionListInclude = {
-  project: { include: { pole: true, pilot: true, guarantor: true, mission: true } },
+  project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } } } },
   actions: { include: { timeEntries: { select: { hours: true } }, owner: true }, orderBy: { order: "asc" as const } },
   fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } } } },
   validations: true,
@@ -53,7 +53,7 @@ export async function loadPortfolio(settings: { envelopeAlertPercent: number; de
 }
 
 export const editionFullInclude = {
-  project: { include: { pole: true, pilot: true, guarantor: true, mission: true, editions: { select: { id: true, year: true, status: true }, orderBy: { year: "asc" as const } } } },
+  project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } }, editions: { select: { id: true, year: true, status: true }, orderBy: { year: "asc" as const } } } },
   actions: { include: { timeEntries: { select: { hours: true, personId: true } }, owner: true, fundingLine: { include: { funder: true } } }, orderBy: { order: "asc" as const } },
   fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } } }, orderBy: { id: "asc" as const } },
   validations: { include: { requester: true, decider: true, action: true }, orderBy: { createdAt: "desc" as const } },

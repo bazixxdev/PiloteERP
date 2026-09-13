@@ -6,6 +6,7 @@ import { canWriteLayer, isCodir } from "@/lib/rights";
 import { isWebLink, serverPath } from "@/lib/docs";
 import { fmtDate } from "@/lib/format";
 import type { TabCtx } from "./types";
+import { inMyPole } from "@/lib/scope";
 import { AddCommentForm, AddDocLinkForm } from "./add-forms";
 import { EditionUrl } from "./edition-url";
 import { AttachmentList } from "@/components/attachments/attachment-list";
@@ -16,7 +17,7 @@ import { canEditFunding } from "@/lib/rights";
 export function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const codir = isCodir(me.role);
-  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId);
+  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
   const visible = e.docLinks.filter((d) => !d.codirOnly || codir);
   const paths = visible.filter((d) => !isWebLink(d.url));
   const links = visible.filter((d) => isWebLink(d.url));

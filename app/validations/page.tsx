@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { canDecideValidation, validationLevelOf } from "@/lib/rights";
 import { attachmentInclude } from "@/lib/attachments";
+import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { PerimeterChips } from "@/components/common/perimeter";
 import { fmtEuro } from "@/lib/format";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -17,16 +19,18 @@ const LEVELS = [
 ];
 
 // File des validations par valideur, âge et délai cible (EF-F1, EF-F3).
-export default async function ValidationsPage({ searchParams }: { searchParams: Promise<{ niveau?: string }> }) {
-  const { niveau } = await searchParams;
+export default async function ValidationsPage({ searchParams }: { searchParams: Promise<{ niveau?: string; perimetre?: string }> }) {
+  const { niveau, perimetre } = await searchParams;
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
   const myLevel = validationLevelOf(me.role);
   const all = await prisma.validationRequest.findMany({
-    include: { requester: true, decider: true, action: true, edition: { include: { project: { include: { pole: true } } } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } } },
+    include: { requester: true, decider: true, action: true, edition: { include: { project: { include: { pole: true, secondaryPoles: true } }, team: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } } },
     orderBy: [{ status: "desc" }, { createdAt: "asc" }],
   });
-  const pending = all.filter((v) => v.status === "pending");
-  const decided = all.filter((v) => v.status !== "pending").slice(0, 12);
+  const perimeter = perimeterFrom(me, perimetre);
+  const scoped = perimeter === "pole" ? all.filter((v) => inMyScope(me, v.edition.project, v.edition.team.map((t) => t.personId))) : all;
+  const pending = scoped.filter((v) => v.status === "pending");
+  const decided = scoped.filter((v) => v.status !== "pending").slice(0, 12);
   const forMe = pending.filter((v) => canDecideValidation(me, v));
   const levelFilter = niveau ? Number(niveau) : null;
   const byLevel = levelFilter ? pending.filter((v) => v.requiredLevel === levelFilter) : pending;
@@ -44,10 +48,11 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
         )}
       </Section>
 
-      <div className="mb-3 flex flex-wrap gap-1">
-        <Link href="/validations" className={cn("rounded-full border px-3 py-1 text-sm", !levelFilter ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>Toute la file ({pending.length})</Link>
+      <div className="mb-3 flex flex-wrap items-center gap-1">
+        {!isTransversal(me) && <><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/validations?perimetre=${p}`} /><span className="mx-1 h-5 w-px bg-border" /></>}
+        <Link href={`/validations?perimetre=${perimeter}`} className={cn("rounded-full border px-3 py-1 text-sm", !levelFilter ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>Toute la file ({pending.length})</Link>
         {LEVELS.map((l) => (
-          <Link key={l.level} href={`/validations?niveau=${l.level}`} className={cn("rounded-full border px-3 py-1 text-sm", levelFilter === l.level ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
+          <Link key={l.level} href={`/validations?niveau=${l.level}&perimetre=${perimeter}`} className={cn("rounded-full border px-3 py-1 text-sm", levelFilter === l.level ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
             {l.label} ({pending.filter((v) => v.requiredLevel === l.level).length})
           </Link>
         ))}

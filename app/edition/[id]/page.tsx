@@ -23,6 +23,8 @@ import { ValidationsTab } from "./validations-tab";
 import { DocumentsTab } from "./documents";
 import { BilanTab } from "./bilan";
 import { prisma } from "@/lib/db";
+import { inMyScope, isTransversal } from "@/lib/scope";
+import { Eye } from "lucide-react";
 
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> }) {
   const { id } = await params;
@@ -62,7 +64,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             )}
             {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">Projet commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
@@ -76,6 +78,11 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         <AlertChips alerts={alerts} max={5} />
       </div>
 
+      {!isTransversal(me) && !inMyScope(me, e.project, e.team.map((t) => t.personId)) && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
+          <Eye className="size-4 text-muted-foreground" />Édition du pôle <strong>{e.project.pole.name}</strong>, hors de votre pôle : vous la consultez, vous n'y intervenez pas.
+        </div>
+      )}
       <TabsNav editionId={e.id} current={tab} counts={counts} />
 
       {tab === "fiche" && <FicheTab {...ctx} />}

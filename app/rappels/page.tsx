@@ -3,23 +3,29 @@ import { Bell } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { prisma } from "@/lib/db";
-import { getSettings } from "@/lib/session";
+import { getCurrentPerson, getSettings } from "@/lib/session";
+import { inMyScope, isTransversal, perimeterFrom } from "@/lib/scope";
+import { PerimeterChips } from "@/components/common/perimeter";
 import { computeReminders } from "@/lib/alerts";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Journal des rappels (EF-C2) : pas de mail dans le prototype, tout s'affiche ici.
-export default async function RappelsPage() {
-  const settings = await getSettings();
+export default async function RappelsPage({ searchParams }: { searchParams: Promise<{ perimetre?: string }> }) {
+  const { perimetre } = await searchParams;
+  const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
+  const perimeter = perimeterFrom(me, perimetre);
   const [editions, raf] = await Promise.all([
-    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true } }),
+    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true } }),
     prisma.person.findFirst({ where: { role: "raf" } }),
   ]);
   const days = settings.reminderDaysBefore.split(",").map(Number);
-  const reminders = computeReminders(editions, raf?.name ?? null, days, settings.horizonDays);
+  const scoped = perimeter === "pole" ? editions.filter((e) => inMyScope(me, e.project, e.team.map((t) => t.personId))) : editions;
+  const reminders = computeReminders(scoped, raf?.name ?? null, days, settings.horizonDays);
   return (
     <div className="p-4 md:p-6">
       <PageHeader title="Rappels" subtitle={`Rappels automatiques J-${days.join(" et J-")} avant chaque livrable financeur et chaque jalon interne, horizon ${settings.horizonDays} jours. Dans le prototype, ils s'affichent ici au lieu d'un mail.`} />
+      {!isTransversal(me) && <div className="mb-3"><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/rappels?perimetre=${p}`} /></div>}
       {reminders.length === 0 ? <EmptyState title="Aucun rappel" hint="Rien n'arrive à échéance dans l'horizon." icon={<Bell className="size-5" />} /> : (
         <div className="overflow-hidden rounded-2xl border bg-card">
           <table className="w-full text-sm" data-testid="reminders">

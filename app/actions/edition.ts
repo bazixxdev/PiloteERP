@@ -6,14 +6,15 @@ import { getCurrentPerson, getSettings } from "@/lib/session";
 import { canDecideValidation, canEditActions, canEditFunding, canWriteLayer, requiredLevelFor } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
+import { inMyPole } from "@/lib/scope";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function ctx(editionId: string) {
   const me = await getCurrentPerson();
-  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true, expenses: true } });
+  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true, expenses: true } });
   if (!e) throw new Error("Édition introuvable");
-  return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: e.project.poleId === me.poleId };
+  return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: inMyPole(me, e.project) };
 }
 
 const path = (id: string) => `/edition/${id}`;
@@ -116,7 +117,7 @@ export async function computeRequiredLevel(editionId: string, amount: number | n
 // Décision : le devis approuvé remonte dans l'engagé de l'édition (EF-E2).
 export async function decideValidation(id: string, decision: "approved" | "refused", comment: string): Promise<Result> {
   const me = await getCurrentPerson();
-  const v = await prisma.validationRequest.findUnique({ where: { id }, include: { edition: { include: { project: true } } } });
+  const v = await prisma.validationRequest.findUnique({ where: { id }, include: { edition: { include: { project: { include: { secondaryPoles: true } } } } } });
   if (!v) return { ok: false, error: "Demande introuvable" };
   if (v.status !== "pending") return { ok: false, error: "Cette demande est déjà traitée." };
   if (!canDecideValidation(me, v)) return { ok: false, error: `Cette demande requiert le niveau ${v.requiredLevel} sur ce projet : vous ne pouvez pas la décider.` };

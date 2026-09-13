@@ -75,6 +75,7 @@ async function reset() {
   await prisma.edition.deleteMany();
   await prisma.project.deleteMany();
   await prisma.personTimeCode.deleteMany();
+  await prisma.projectPole.deleteMany();
   await prisma.pole.updateMany({ data: { leadId: null } });
   await prisma.person.deleteMany();
   await prisma.pole.deleteMany();
@@ -186,7 +187,7 @@ async function main() {
   const pilotsOf = (poleIdx: number) => people.filter((p, i) => peopleDefs[i].pole === poleIdx && (p.role === "pilot"));
   const membersOf = (poleIdx: number) => people.filter((p, i) => peopleDefs[i].pole === poleIdx);
 
-  type PD = { name: string; code: string; pole: number; mission: number; actions: string[]; funders: number[]; envelope: number };
+  type PD = { name: string; code: string; pole: number; mission: number; actions: string[]; funders: number[]; envelope: number; secondary?: number[] };
   const projectDefs: PD[] = [
     { name: "Vœux et assemblée générale", code: "REP-01", pole: 0, mission: 0, actions: ["Préparer les vœux", "Convoquer l'AG", "Rapport d'activité", "Logistique de l'AG", "Bilan de l'AG"], funders: [8, 0], envelope: 9000 },
     { name: "AIESSE et campagnes électorales", code: "REP-02", pole: 0, mission: 0, actions: ["Note de positionnement", "Rencontres candidats", "Lettre AIESSE n°1", "Lettre AIESSE n°2", "Plaidoyer régional"], funders: [0, 8, 7], envelope: 6000 },
@@ -203,11 +204,11 @@ async function main() {
     { name: "Dispositif local d'accompagnement (DLA)", code: "DLA-01", pole: 1, mission: 2, actions: ["Diagnostics", "Ingénieries collectives", "Comité d'appui", "Reporting national", "Bilan qualitatif", "Bilan financier"], funders: [1, 2, 4, 0], envelope: 45000 },
     { name: "Structures en difficulté", code: "COO-03", pole: 1, mission: 2, actions: ["Référencement", "Orientation AIO", "Ingénieries"], funders: [5, 0], envelope: 9000 },
     { name: "Mois de l'ESS et Prix ESS", code: "SEN-01", pole: 2, mission: 3, actions: ["Appel à événements", "Programme régional", "Jury du Prix", "Soirée de remise", "Communication", "Bilan"], funders: [0, 7, 8], envelope: 16000 },
-    { name: "Sensibilisation des jeunes", code: "SEN-02", pole: 2, mission: 3, actions: ["Interventions hors scolaire", "Relations universités", "Forums et salons", "Kit pédagogique"], funders: [0, 1, 2], envelope: 11000 },
+    { name: "Sensibilisation des jeunes", code: "SEN-02", pole: 2, mission: 3, secondary: [0], actions: ["Interventions hors scolaire", "Relations universités", "Forums et salons", "Kit pédagogique"], funders: [0, 1, 2], envelope: 11000 },
     { name: "Newsletter et lettre aux adhérents", code: "COM-01", pole: 2, mission: 3, actions: ["Newsletter mensuelle", "Lettre aux adhérents", "Base de contacts"], funders: [8, 0], envelope: 3000 },
     { name: "Refonte du site internet", code: "COM-02", pole: 2, mission: 3, actions: ["Cahier des charges", "Choix du prestataire", "Recette", "Mise en ligne", "Formation de l'équipe"], funders: [0, 4, 8], envelope: 25000 },
-    { name: "Forum régional de l'ESS", code: "SEN-03", pole: 2, mission: 3, actions: ["Lieu et date", "Programme", "Partenaires", "Inscriptions", "Jour J", "Bilan"], funders: [0, 1, 7], envelope: 30000 },
-    { name: "Communauté des financeurs", code: "COO-04", pole: 1, mission: 0, actions: ["Cartographie des financeurs", "Rencontre annuelle", "Fiches dispositifs"], funders: [4, 0, 5], envelope: 6000 },
+    { name: "Forum régional de l'ESS", code: "SEN-03", pole: 2, mission: 3, secondary: [1], actions: ["Lieu et date", "Programme", "Partenaires", "Inscriptions", "Jour J", "Bilan"], funders: [0, 1, 7], envelope: 30000 },
+    { name: "Communauté des financeurs", code: "COO-04", pole: 1, mission: 0, secondary: [0], actions: ["Cartographie des financeurs", "Rencontre annuelle", "Fiches dispositifs"], funders: [4, 0, 5], envelope: 6000 },
   ];
 
   const deliverableLabels = ["Bilan qualitatif", "Bilan financier", "Justificatifs de dépenses", "Rapport intermédiaire", "Mentions du financeur"];
@@ -226,7 +227,8 @@ async function main() {
     const pilot = pilots[pi % pilots.length];
     const guarantor = pd.pole === 0 ? leadA : pd.pole === 1 ? leadB : director;
     const project = await prisma.project.create({
-      data: { name: pd.name, analyticCode: pd.code, poleId: poles[pd.pole].id, pilotId: pilot.id, guarantorId: guarantor.id, missionId: missions[pd.mission].id, recurring: true, createdAt: dayjs("2024-01-15").toDate() },
+      data: { name: pd.name, analyticCode: pd.code, poleId: poles[pd.pole].id, pilotId: pilot.id, guarantorId: guarantor.id, missionId: missions[pd.mission].id, recurring: true, createdAt: dayjs("2024-01-15").toDate(),
+        secondaryPoles: { create: (pd.secondary ?? []).map((sp) => ({ poleId: poles[sp].id })) } },
     });
 
     const years: { year: number; status: string }[] = [
@@ -239,7 +241,8 @@ async function main() {
 
     for (const y of years) {
       const members = membersOf(pd.pole).filter((m) => m.id !== pilot.id);
-      const team = [pilot, ...members.slice(0, between(1, 3)), ...(pi % 5 === 0 ? [director] : []), ...(pi % 7 === 0 ? [raf] : [])];
+      const fromSecondary = (pd.secondary ?? []).flatMap((sp) => pilotsOf(sp).slice(0, 1));
+      const team = [pilot, ...members.slice(0, between(1, 3)), ...fromSecondary, ...(pi % 5 === 0 ? [director] : []), ...(pi % 7 === 0 ? [raf] : [])];
       const isPast = y.year === 2025;
       const isFuture = y.year === 2027;
       const filledByDirection = !isFuture || pi % 4 === 0;

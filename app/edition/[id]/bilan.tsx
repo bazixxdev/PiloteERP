@@ -4,10 +4,11 @@ import { AutoField } from "@/components/inline/auto-field";
 import { Button } from "@/components/ui/button";
 import { canWriteLayer } from "@/lib/rights";
 import type { TabCtx } from "./types";
+import { inMyPole } from "@/lib/scope";
 import { AddIndicatorForm } from "./add-forms";
 
 export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
-  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId);
+  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
       <Section

@@ -65,11 +65,11 @@ export function validationLevelOf(role: string): number {
 // Peut-on décider cette demande ? Le pilote seulement sur son édition, le responsable de pôle seulement sur son pôle, jamais sa propre demande.
 export function canDecideValidation(
   me: { id: string; role: string; poleId: string | null },
-  v: { requiredLevel: number; requesterId: string; edition: { project: { pilotId: string; poleId: string } } },
+  v: { requiredLevel: number; requesterId: string; edition: { project: { pilotId: string; poleId: string; secondaryPoles?: { poleId: string }[] } } },
 ): boolean {
   if (v.requesterId === me.id) return false;
   if (validationLevelOf(me.role) < v.requiredLevel) return false;
-  if (me.role === "pole_lead") return v.edition.project.poleId === me.poleId;
+  if (me.role === "pole_lead") return me.poleId !== null && [v.edition.project.poleId, ...(v.edition.project.secondaryPoles ?? []).map((x) => x.poleId)].includes(me.poleId);
   if (me.role === "pilot") return v.edition.project.pilotId === me.id;
   return true;
 }

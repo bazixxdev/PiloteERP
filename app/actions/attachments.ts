@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canEditFunding, canWriteLayer } from "@/lib/rights";
 import { ALLOWED_MIME, MAX_ATTACHMENT_BYTES, UPLOAD_DIR } from "@/lib/attachments";
+import { inMyPole } from "@/lib/scope";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -22,13 +23,13 @@ export async function uploadAttachment(form: FormData): Promise<Result> {
     const mime = file.type || "application/octet-stream";
     if (!ALLOWED_MIME.includes(mime)) return { ok: false, error: "Format non accepté : PDF, image, Word, Excel ou texte." };
 
-    const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, team: true } });
+    const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
     if (!e) return { ok: false, error: "Édition introuvable" };
     const isPilot = e.project.pilotId === me.id;
     const isTeam = e.team.some((t) => t.personId === me.id);
     const validationId = String(form.get("validationId") ?? "") || null;
     const requester = validationId ? await prisma.validationRequest.findUnique({ where: { id: validationId } }) : null;
-    const allowed = canWriteLayer(me.role, "year", isPilot, isTeam, e.project.poleId === me.poleId) || canEditFunding(me.role) || requester?.requesterId === me.id;
+    const allowed = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project)) || canEditFunding(me.role) || requester?.requesterId === me.id;
     if (!allowed) return { ok: false, error: "Vous ne pouvez pas déposer de pièce sur cette édition." };
 
     const ext = path.extname(file.name).toLowerCase().slice(0, 8);
