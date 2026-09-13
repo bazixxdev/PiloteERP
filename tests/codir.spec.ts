@@ -5,7 +5,7 @@ import { iAm } from "./helpers";
 test("le CODIR voit les points à traiter, consigne une décision, qui apparaît sur l'édition", async ({ page }) => {
   await page.goto("/codir");
   await iAm(page, "Claire Vasseur");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Écran CODIR");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Les sujets à décider");
   await expect(page.getByTestId("codir-validations-en-attente")).toBeVisible();
   await expect(page.getByTestId("codir-jalons-d-pass-s")).toBeVisible();
 

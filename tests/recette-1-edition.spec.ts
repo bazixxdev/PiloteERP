@@ -11,7 +11,8 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await page.getByTestId("cp-code").fill("REC-01");
   await page.getByTestId("cp-pilot").selectOption({ label: "Inès Cabral" });
   await page.getByTestId("cp-submit").click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet recette Alpha · ");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet recette Alpha", { timeout: 30_000 });
+  await expect(page.getByTestId("edition-years")).toContainText(`Édition ${new Date().getFullYear()}`);
 
   // Couche 1 (direction) et statut « en cours ».
   await expect(page.getByTestId("layer-strategic")).toContainText("Manquant");

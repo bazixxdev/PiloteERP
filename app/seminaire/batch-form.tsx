@@ -30,7 +30,7 @@ export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; c
     <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm" data-testid="seminar-table">
-          <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr><th className="py-1.5">Projet</th><th className="py-1.5">Pôle · pilote</th><th className="py-1.5">Édition {year - 1}</th><th className="py-1.5">Décision</th><th className="py-1.5">Édition {year}</th></tr>
           </thead>
           <tbody className="divide-y">

@@ -32,7 +32,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
   const byLevel = levelFilter ? pending.filter((v) => v.requiredLevel === levelFilter) : pending;
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader
         title="Validations"
         subtitle={`${pending.length} en attente · seuils : ${fmtEuro(settings.validationThresholdLevel1)} (niveau 2) et ${fmtEuro(settings.validationThresholdLevel2)} (niveau 3) ; au-delà de l'enveloppe restante, niveau 3.`}

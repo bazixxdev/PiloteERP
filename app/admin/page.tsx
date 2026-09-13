@@ -42,7 +42,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const refOpt = (fam: RefFamily) => REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) }));
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="Admin" subtitle={rw ? "Référentiels, seuils, personnes : paramétrable par le référent CRESS sans prestataire." : "Lecture seule : l'administration est réservée à la direction et à la RAF."} />
       <nav className="mb-5 flex flex-wrap gap-1 border-b" data-testid="admin-tabs">
         {SECTIONS.map((s) => (
@@ -54,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div className="grid gap-4">
           <Section title="Personnes" description="Rôle, pôle, rythme de travail et jours disponibles dans l'année." actions={rw ? <AddSimpleForm kind="person" placeholder="Prénom Nom" /> : undefined}>
             <table className="w-full text-sm" data-testid="people-table">
-              <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <thead className="text-left text-[10px] font-semibold text-muted-foreground">
                 <tr><th className="py-1.5">Nom</th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
               </thead>
               <tbody className="divide-y">
@@ -131,7 +131,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {current === "projets" && (
         <Section title="Projets" description="Objets permanents ; chaque année une édition. Créer un projet crée aussi sa première édition." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
           <table className="w-full text-sm" data-testid="projects-table">
-            <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5">Pôle</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>
             </thead>
             <tbody className="divide-y">
@@ -146,7 +146,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <td className="py-0.5"><AutoField model="project" id={p.id} field="recurring" type="bool" value={p.recurring} readOnly={!rw} /></td>
                   <td className="py-0.5">
                     <div className="flex flex-wrap gap-1">
-                      {p.editions.map((e) => <Link key={e.id} href={`/edition/${e.id}`} className="rounded-full bg-muted px-2 py-0.5 text-xs hover:bg-secondary">{e.year}</Link>)}
+                      {p.editions.map((e) => <Link key={e.id} href={`/edition/${e.id}`} className="rounded-sm bg-muted px-2 py-0.5 text-xs hover:bg-secondary">{e.year}</Link>)}
                       {rw && <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact />}
                     </div>
                   </td>

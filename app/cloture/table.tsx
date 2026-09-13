@@ -24,7 +24,7 @@ export function ClotureTable({ month, rows }: { month: string; rows: ClotureRow[
   return (
     <div className="overflow-x-auto rounded-2xl border bg-card">
       <table className="w-full text-sm" data-testid="cloture-table">
-        <thead className="bg-muted/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
           <tr>
             <th className="px-4 py-2.5">Personne</th><th className="px-3 py-2.5">Pôle</th><th className="px-3 py-2.5 text-right">Jours saisis</th><th className="px-3 py-2.5 text-right">Heures</th><th className="px-3 py-2.5 text-right" title="Semaines déclarées complètes par la personne">Déclarées</th><th className="px-3 py-2.5">État</th>
             <th className="px-3 py-2.5 text-right">

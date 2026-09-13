@@ -10,7 +10,7 @@ test("les heures attendues suivent le rythme réel de la personne et de la semai
   await expect(page.getByTestId("week-total")).toContainText("41,25 h");
   await page.goto("/temps?semaine=2026-W37"); // semaine impaire : vendredi non travaillé
   await expect(page.getByTestId("week-total")).toContainText("33 h");
-  await expect(page.locator("thead").getByText("non travaillé")).toBeVisible();
+  await expect(page.locator("tfoot").getByText("non travaillé")).toBeVisible();
   await page.goto("/temps?semaine=2026-W24"); // juin : encore option A
   await expect(page.getByTestId("week-total")).toContainText("36,5 h");
 

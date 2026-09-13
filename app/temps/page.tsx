@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Section } from "@/components/common/section";
+import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
@@ -79,13 +80,14 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const visible = visibleAll;
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me.role)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
       <PageHeader
-        title={readOnly ? `Temps de ${person.name}` : "Ma saisie"}
-        subtitle={readOnly ? `Lecture seule · semaine ${start.isoWeek()} · du ${start.format("D MMM")} au ${days[4].format("D MMM YYYY")} · vous voyez cette personne selon la visibilité réglée dans l'admin.` : `Semaine ${start.isoWeek()} · du ${start.format("D MMM")} au ${days[4].format("D MMM YYYY")} · saisie à l'heure, par projet ou action, sans sous-catégorie.`}
+        title={readOnly ? `Temps de ${person.name}` : "Mes temps"}
+        subtitle={`Semaine ${start.isoWeek()} · du ${start.format("D")} au ${days[4].format("D MMMM YYYY")} · ${readOnly ? "lecture seule, selon la visibilité réglée dans l'admin" : "codes utiles à votre poste"} · rythme : ${rhythmLabel}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {weekLocked ? <StatusBadge label={`${start.format("MMMM")} verrouillé par la RAF`} color="muted" dot={false} className="mr-2" /> : <StatusBadge label={`${start.format("MMMM").replace(/^./, (c) => c.toUpperCase())} ouvert à la saisie`} color="mint" className="mr-2" />}
             {readOnly && visible.length > 1 && <PersonSelect people={visible.filter((p) => p.id !== me.id).map((p) => ({ id: p.id, name: p.name }))} current={person.id} week={weekKey(start)} />}
             <Button asChild variant="outline" size="icon" aria-label="Semaine précédente"><Link href={qs(prevKey)}><ChevronLeft /></Link></Button>
             <Button asChild variant="outline" size="sm"><Link href={qs(weekKey(dayjs()))}>Cette semaine</Link></Button>
@@ -95,7 +97,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
       />
 
       {weekLocked && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-warning/50 bg-warning-soft px-3 py-2 text-sm"><Lock className="size-4" />Mois verrouillé par la RAF : lecture seule. Pour corriger, demandez un déverrouillage.</div>
+        <div className="mb-4 flex items-start gap-2.5 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground"><Lock className="mt-0.5 size-3.5" /><span><b>{start.format("MMMM YYYY").replace(/^./, (c) => c.toUpperCase())} verrouillé par la RAF.</b><br />Pour corriger une valeur, contactez la RAF.</span></div>
       )}
 
       <TimeGrid
@@ -112,15 +114,14 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
         canCopyPrevious={!readOnly && prevWeekCount > 0 && entries.length === 0 && !weekLocked}
       />
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_360px]">
         <Section title="Règles de saisie" description="Fixées par la direction ; affichées ici pour que tout le monde saisisse pareil (EF-D8).">
-          <p className="whitespace-pre-line text-sm">{settings.timeRules || "Aucune règle renseignée dans l'admin."}</p>
+          <p className="whitespace-pre-line text-xs">{settings.timeRules || "Aucune règle renseignée dans l'admin."}</p>
         </Section>
         <Section title="Repères">
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            <li>Total de la semaine : <strong className="text-foreground tabular">{fmtNumber(total, 1)} h</strong>{expected !== null ? ` pour ${fmtNumber(expected, 2)} h attendues` : " · référence hebdomadaire non configurée"} · rythme : {rhythmLabel} (semaine {start.isoWeek() % 2 === 0 ? "paire" : "impaire"}). Informatif seulement : aucun solde, aucune récupération.</li>
-            <li>Une fois la semaine saisie, déclarez-la complète : la RAF le voit dans la clôture. Une correction ultérieure annule la déclaration.</li>
-            <li>Tab et flèches pour circuler ; Entrée valide la cellule ; heures avec décimales (7,5 · 8,25 · 6,5). Sauvegarde automatique.</li>
+          <ul className="space-y-1.5 text-xs text-muted-foreground">
+            <li>Total de la semaine : <strong className="text-foreground tabular">{fmtNumber(total, 1)} h</strong>{expected !== null ? ` pour ${fmtNumber(expected, 2)} h attendues` : ""} (semaine {start.isoWeek() % 2 === 0 ? "paire" : "impaire"}). Informatif seulement : aucun solde, aucune récupération.</li>
+            <li>Pas de sous-catégorie obligatoire. L'objectif du projet reste une aide à la saisie ; il ne devient pas un objectif d'heures personnel.</li>
             <li>Une fois le mois verrouillé par la RAF, les saisies passent en lecture seule.</li>
           </ul>
         </Section>

@@ -1,16 +1,21 @@
 import { cn } from "@/lib/utils";
+import { fmtNumber } from "@/lib/format";
 
-// Jauge horizontale : vert sous le seuil d'alerte, ambre entre, rouge au-delà de 100 %.
-export function Gauge({ value, max, alertPercent = 80, label, className, compact }: { value: number; max: number | null; alertPercent?: number; label?: string; className?: string; compact?: boolean }) {
+// Jauge fine V2 (5 px) : vert sous le seuil d'alerte, ocre entre, terre au-delà de 100 %. Le pourcentage s'écrit, la couleur confirme.
+export function Gauge({ value, max, alertPercent = 80, label, className, compact, amount }: { value: number; max: number | null; alertPercent?: number; label?: string; className?: string; compact?: boolean; amount?: string }) {
   if (!max) return <span className="text-xs text-muted-foreground">—</span>;
   const p = Math.round((value / max) * 100);
   const color = p >= 100 ? "bg-danger" : p >= alertPercent ? "bg-warning" : "bg-mint";
+  const text = p >= 100 ? "text-danger" : p >= alertPercent ? "text-warning-foreground" : "text-foreground";
   return (
-    <div className={cn("flex items-center gap-2 whitespace-nowrap", className)} title={label}>
-      <div className={cn("h-2 overflow-hidden rounded-full bg-muted", compact ? "w-12" : "w-28")}>
-        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${Math.min(100, p)}%` }} />
+    <div className={cn("min-w-[72px]", compact ? "w-24" : "w-40", className)} title={label}>
+      <div className="flex items-baseline justify-between gap-2 text-xs tabular">
+        {amount ? <span>{amount}</span> : <span className="text-muted-foreground">{fmtNumber(value, 0)}</span>}
+        <b className={cn("font-semibold", text)}>{p} %</b>
       </div>
-      <span className="tabular text-xs text-muted-foreground">{p} %</span>
+      <div className="mt-1 h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]">
+        <div className={cn("h-full rounded-[3px] transition-all", color)} style={{ width: `${Math.min(100, p)}%` }} />
+      </div>
     </div>
   );
 }

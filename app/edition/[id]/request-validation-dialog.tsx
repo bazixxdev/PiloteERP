@@ -35,7 +35,7 @@ export function RequestValidationDialog({ editionId, actions, kinds }: { edition
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-coral text-white hover:bg-coral/90" data-testid="request-validation-open"><ShieldCheck />Demander une validation</Button>
+        <Button data-testid="request-validation-open"><ShieldCheck />Demander une validation</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

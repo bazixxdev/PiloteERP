@@ -18,7 +18,7 @@ export function NotificationsBell({ items }: { items: NotificationRow[] }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative rounded-full" aria-label={`Notifications (${unread} non lues)`} data-testid="bell">
+        <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications (${unread} non lues)`} data-testid="bell">
           <Bell className="size-4" />
           {unread > 0 && <span className="absolute -top-1 -right-1 rounded-full bg-coral px-1.5 text-[10px] font-semibold text-white" data-testid="bell-count">{unread}</span>}
         </Button>

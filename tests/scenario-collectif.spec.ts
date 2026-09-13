@@ -18,7 +18,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("cp-code").fill("COL-01");
   await page.getByTestId("cp-pilot").selectOption({ label: "Hugo Lemaire" });
   await page.getByTestId("cp-submit").click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet collectif Bêta");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet collectif Bêta", { timeout: 30_000 }); // première compilation de la vue édition
   const editionUrl = page.url().split("?")[0];
   await page.getByTestId("field-stakes").fill("Rendre visible l'ESS auprès des nouveaux élus.");
   await page.getByTestId("field-stakes").blur();
@@ -65,7 +65,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await row.locator('input[type="date"]').fill(soon);
   await row.locator('input[type="number"]').fill("21");
   await row.locator('input[type="number"]').blur();
-  await page.getByRole("tab", { name: "Documents et discussion" }).click();
+  await page.getByRole("tab", { name: "Documents" }).click();
   await page.getByTestId("comment-input").fill("Lucas, peux-tu démarrer la cartographie cette semaine ?");
   await page.getByTestId("comment-submit").click();
   await expect(page.getByTestId("comments")).toContainText("démarrer la cartographie");
@@ -86,7 +86,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("readonly", "");
   await page.getByRole("tab", { name: "Temps" }).click();
   await expect(page.getByTestId("time-by-action")).toContainText("3 h");
-  await page.getByRole("tab", { name: "Documents et discussion" }).click();
+  await page.getByRole("tab", { name: "Documents" }).click();
   await page.getByTestId("comment-input").fill("Oui, c'est lancé : 3 h aujourd'hui.");
   await page.getByTestId("comment-submit").click();
   await expect(page.getByTestId("comments")).toContainText("c'est lancé");
@@ -149,6 +149,6 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(lucas).toContainText("Verrouillé", { timeout: 10_000 });
   await iAm(page, "Lucas Perrin");
   await page.goto(`/temps?semaine=${thisWeek}`);
-  await expect(page.getByText("Mois verrouillé par la RAF : lecture seule")).toBeVisible();
+  await expect(page.getByText(/verrouillé par la RAF/).first()).toBeVisible();
   await expect(myRow.locator('input[type="number"]').nth(dayIndex)).toHaveAttribute("readonly", "");
 });

@@ -17,7 +17,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const me = await getCurrentPerson();
   if (!canLockMonths(me.role)) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader title="Clôture mensuelle" />
         <EmptyState title="Réservé à la RAF et à la direction" hint="Choisissez « Nadia Ferrand (RAF) » dans le sélecteur en haut à droite pour voir cet écran." />
       </div>
@@ -64,7 +64,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const next = start.add(1, "month").format("YYYY-MM");
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <TimeNav current="cloture" showTeam showCloture />
       <PageHeader
         title="Clôture mensuelle"

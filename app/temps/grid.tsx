@@ -23,6 +23,8 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   });
   const [pending, start] = useTransition();
   const router = useRouter();
+  // Mobile : jour affiché (aujourd'hui, sinon le dernier jour passé de la semaine).
+  const [mobileDayIdx, setMobileDayIdx] = useState(() => { const i = p.days.findIndex((d) => dayjs(d).isSame(dayjs(), "day")); if (i >= 0) return i; const past = p.days.filter((d) => !dayjs(d).isAfter(dayjs(), "day")); return Math.max(0, past.length - 1); });
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Une sauvegarde en cours ne doit pas être perdue en quittant la page.
@@ -58,138 +60,212 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   };
 
   if (p.rows.length === 0) {
-    return <div className="rounded-2xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">Aucun projet ni code de temps pour cette personne cette semaine. Le pilote ajoute les membres de l'équipe depuis la fiche de l'édition ; l'admin règle les codes de temps par poste.</div>;
+    return <div className="rounded-md border border-dashed border-[#d3dfe3] p-10 text-center text-xs text-muted-foreground">Aucun projet ni code de temps pour cette personne cette semaine. Le pilote ajoute les membres de l'équipe depuis la fiche de l'édition ; l'admin règle les codes de temps par poste.</div>;
   }
 
+  const todayIdx = p.days.findIndex((d) => dayjs(d).isSame(dayjs(), "day"));
+  const mobileDay = p.days[mobileDayIdx] ?? p.days[0];
+  const mobileRo = p.readOnly || locked(mobileDay) || isFuture(mobileDay);
+  const pastEmptyDays = p.days.filter((d, i) => !isFuture(d) && dayTotals[i] === 0 && (p.expectedByDay[i] ?? 0) > 0);
+  const status = expectedWeek !== null && Math.abs(weekTotal - expectedWeek) < 0.01
+    ? { label: "✓ Total attendu atteint", color: "mint" }
+    : pastEmptyDays.length > 0
+      ? { label: `○ ${dayjs(pastEmptyDays[0]).format("dddd")} à compléter`, color: "warning" }
+      : weekTotal === 0 ? { label: "○ Semaine à saisir", color: "muted" } : { label: "○ Semaine en cours", color: "info" };
+  const STATUS: Record<string, string> = { mint: "bg-mint-soft text-mint", warning: "bg-warning-soft text-warning-foreground", muted: "bg-muted text-muted-foreground", info: "bg-info-soft text-primary" };
+
   return (
-    <div className="overflow-x-auto rounded-2xl border bg-card" data-testid="time-grid">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-muted/60 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <th className="w-[320px] px-4 py-2 text-left">Projet / action / code</th>
-            {p.days.map((d, i) => {
-              const dj = dayjs(d);
-              const today = dj.isSame(dayjs(), "day");
-              return (
-                <th key={d} className={cn("w-24 px-2 py-2 text-center", today && "text-primary")}>
-                  <div>{dj.format("ddd")}</div>
-                  <div className={cn("text-[11px] font-normal normal-case", today && "font-semibold")}>{dj.format("D MMM")}{locked(d) && <Lock className="ml-1 inline size-3" />}</div>
-                  <div className="text-[10px] font-normal normal-case text-muted-foreground/80" title="Heures attendues selon votre rythme (informatif)">{p.expectedByDay[i] === null ? "—" : p.expectedByDay[i] === 0 ? "non travaillé" : `${fmtNumber(p.expectedByDay[i]!, 2)} h`}</div>
-                </th>
-              );
-            })}
-            <th className="w-24 px-2 py-2 text-right">Semaine</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {p.rows.map((r, ri) => {
-            const rowTotal = p.days.reduce((s, d) => s + (cells[`${rowKey(r)}@${d}`]?.hours ?? 0), 0);
+    <div data-testid="time-grid">
+      {/* Bannière de la semaine : total saisi face au total attendu, informatif seulement. */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-5 rounded-md border bg-card px-[18px] py-4">
+        <div className="min-w-[200px]">
+          <span className="text-xs text-muted-foreground">{p.readOnly ? "Sa semaine" : "Votre semaine"}</span>
+          <b className="mt-0.5 block text-[25px] leading-tight tracking-[-0.7px] tabular" data-testid="week-total">{fmtNumber(weekTotal, 2)} h <small className="text-[13px] font-normal tracking-normal text-muted-foreground">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h attendues` : "· référence non configurée"}</small></b>
+          {expectedWeek !== null && <div className="mt-1.5 h-[5px] w-[180px] overflow-hidden rounded-[3px] bg-[#e8e9e1]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expectedWeek) * 100)}%` }} /></div>}
+        </div>
+        <div>
+          <span className={cn("inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", STATUS[status.color])} data-testid="week-status">{status.label}</span>
+          <p className="mt-1.5 text-xs text-muted-foreground">Le total attendu dépend de votre rythme de travail.</p>
+        </div>
+        {p.canCopyPrevious ? (
+          <Button size="sm" variant="outline" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
+            <History />Reprendre la semaine précédente
+          </Button>
+        ) : <span />}
+      </div>
+
+      {/* Mobile : les colonnes deviennent des journées ; une journée à la fois, la semaine reste visible dans la bannière. */}
+      <div className="md:hidden" data-testid="time-mobile">
+        <div className="mb-4 grid grid-cols-5 gap-1.5" aria-label="Choisir le jour de la semaine">
+          {p.days.map((d, i) => (
+            <button key={d} type="button" onClick={() => setMobileDayIdx(i)} aria-pressed={i === mobileDayIdx} className={cn("min-h-[58px] rounded-md border bg-transparent px-1 py-2 text-center text-[10px]", i === mobileDayIdx ? "border-primary bg-primary text-white" : "hover:bg-muted")}>
+              {dayjs(d).format("ddd")}<b className="mt-[3px] block text-[17px] font-semibold">{dayjs(d).format("D")}</b>
+              {dayTotals[i] > 0 && <span className={cn("block text-[9px]", i === mobileDayIdx ? "text-white/80" : "text-muted-foreground")}>{fmtNumber(dayTotals[i], 1)} h</span>}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <strong className="text-xs">{dayjs(mobileDay).format("dddd D MMMM").replace(/^./, (c) => c.toUpperCase())}</strong>
+          {locked(mobileDay) ? <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground"><Lock className="size-3" />Verrouillé</span>
+            : dayTotals[mobileDayIdx] > 0 && p.expectedByDay[mobileDayIdx] !== null && dayTotals[mobileDayIdx] >= (p.expectedByDay[mobileDayIdx] ?? 0) ? <span className="rounded-sm bg-mint-soft px-1.5 py-0.5 text-[11px] font-semibold text-mint">✓ Complété</span>
+            : <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">○ À compléter</span>}
+        </div>
+        <div className="mt-1">
+          {p.rows.map((r) => {
+            const k = `${rowKey(r)}@${mobileDay}`;
+            const cell = cells[k];
             return (
-              <tr key={rowKey(r)} className={cn("hover:bg-muted/30", r.kind === "action" && "bg-muted/10")} data-testid={`time-row-${ri}`}>
-                <td className={cn("px-4 py-1", r.kind === "action" && "pl-8")} title={r.sub}>
-                  <div className={cn("truncate", r.kind === "project" && "font-medium", r.kind === "code" && "text-muted-foreground")}>{r.label}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{r.sub}</div>
-                </td>
-                {p.days.map((d, di) => {
-                  const k = `${rowKey(r)}@${d}`;
-                  const cell = cells[k];
-                  const ro = p.readOnly || locked(d) || isFuture(d);
-                  return (
-                    <td key={d} className="px-1 py-1">
-                      <div className="relative">
-                        <input
-                          ref={(el) => { inputs.current[`${ri}:${di}`] = el; }}
-                          data-testid={`cell-${ri}-${di}`}
-                          type="number"
-                          step="0.25"
-                          min="0"
-                          max="24"
-                          inputMode="decimal"
-                          readOnly={ro}
-                          defaultValue={cell?.hours ? String(cell.hours) : ""}
-                          key={`${k}:${cell?.hours ?? 0}`}
-                          placeholder=""
-                          title={r.sub}
-                          className={cn(
-                            "h-8 w-full rounded-lg border border-transparent bg-transparent text-center tabular transition-colors focus:border-ring focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/20",
-                            !ro && "hover:border-border",
-                            ro && "cursor-not-allowed text-muted-foreground",
-                            cell?.hours && "font-medium",
-                          )}
-                          onFocus={(e) => e.target.select()}
-                          onBlur={(e) => { if (ro) return; const v = Number(e.target.value.replace(",", ".")); save(r, d, Number.isFinite(v) ? v : 0); }}
-                          onKeyDown={(e) => {
-                            if (e.key === "ArrowRight") { e.preventDefault(); move(ri, di, 0, 1); }
-                            else if (e.key === "ArrowLeft") { e.preventDefault(); move(ri, di, 0, -1); }
-                            else if (e.key === "ArrowDown") { e.preventDefault(); move(ri, di, 1, 0); }
-                            else if (e.key === "ArrowUp") { e.preventDefault(); move(ri, di, -1, 0); }
-                            else if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); move(ri, di, 1, 0); }
-                          }}
-                        />
-                        {cell?.hours ? (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button type="button" className={cn("absolute top-1/2 right-0.5 -translate-y-1/2 rounded p-0.5 text-muted-foreground/40 hover:text-primary", cell.comment && "text-coral")} title={cell.comment ?? "Ajouter un commentaire"} tabIndex={-1}>
-                                <MessageSquare className="size-3" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2" align="end">
-                              <textarea
-                                className="w-full rounded-lg border p-2 text-sm"
-                                rows={3}
-                                defaultValue={cell.comment ?? ""}
-                                placeholder="Commentaire optionnel"
-                                readOnly={ro}
-                                onBlur={(e) => { if (!ro) save(r, d, cell.hours, e.target.value.trim() || null); }}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        ) : null}
-                      </div>
-                    </td>
-                  );
-                })}
-                <td className="px-2 py-1 text-right tabular font-medium">{rowTotal ? `${fmtNumber(rowTotal, 1)} h` : ""}</td>
-              </tr>
+              <div key={k} className="flex items-center justify-between gap-2.5 border-b py-3.5">
+                <div className="min-w-0">
+                  <strong className={cn("block text-xs", r.kind === "code" && "font-normal text-muted-foreground")}>{r.kind === "action" ? "↳ " : ""}{r.label}</strong>
+                  <small className="mt-[3px] block truncate text-[10px] text-muted-foreground">{r.sub}</small>
+                </div>
+                <input
+                  type="number" step="0.25" min="0" max="24" inputMode="decimal" readOnly={mobileRo}
+                  defaultValue={cell?.hours ? String(cell.hours) : ""} key={`${k}:${cell?.hours ?? 0}`} placeholder="—"
+                  aria-label={`${r.label}, ${dayjs(mobileDay).format("dddd D MMMM")}, heures`}
+                  className={cn("min-h-11 w-[72px] shrink-0 rounded-md border border-[#b8c5b1] bg-[#f5f7ef] px-2 text-center text-xs tabular focus:border-mint focus:outline-none focus:ring-2 focus:ring-mint", mobileRo && "cursor-not-allowed text-muted-foreground", cell?.hours && "font-semibold")}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => { if (mobileRo) return; const v = Number(e.target.value.replace(",", ".")); save(r, mobileDay, Number.isFinite(v) ? v : 0); }}
+                />
+              </div>
             );
           })}
-        </tbody>
-        <tfoot>
-          <tr className="bg-muted/40 text-sm font-semibold">
-            <td className="px-4 py-2">
-              <div className="flex items-center gap-2">
-                Total
-                {p.canCopyPrevious && (
-                  <Button size="xs" variant="outline" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
-                    <History />Reprendre la semaine précédente
-                  </Button>
-                )}
-              </div>
-            </td>
-            {dayTotals.map((t, i) => {
-              const exp = p.expectedByDay[i];
-              return <td key={i} className={cn("px-2 py-2 text-center tabular", exp !== null && t > exp + 0.5 && "text-warning", exp !== null && t > 0 && t < exp - 0.5 && "text-muted-foreground")}>{t ? `${fmtNumber(t, 2)} h` : "—"}</td>;
-            })}
-            <td className="px-2 py-2 text-right tabular" data-testid="week-total">
-              {fmtNumber(weekTotal, 2)} h <span className="font-normal text-muted-foreground">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h` : "· référence non configurée"}</span>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-      {!p.readOnly && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-4 py-2 text-sm" data-testid="week-declaration">
-          {p.declaredAt ? (
-            <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Semaine déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
-          ) : (
-            <span className="text-muted-foreground">Quand tout est saisi, déclarez la semaine complète : la RAF le voit dans la clôture.</span>
-          )}
-          {!p.declaredAt && (
-            <Button size="sm" variant="outline" disabled={pending || weekTotal === 0} data-testid="declare-week" onClick={() => start(async () => { const r = await declareWeek(p.weekKey); if (!r.ok) toast.error(r.error); else { toast.success("Semaine déclarée complète"); router.refresh(); } })}>
-              <CheckCircle2 />Cette semaine est complète
-            </Button>
-          )}
         </div>
-      )}
+        <div className="mt-4 flex items-center justify-between text-xs"><span>Total du jour</span><b className="text-[21px] tabular">{fmtNumber(dayTotals[mobileDayIdx], 1)} <small className="text-xs font-normal text-muted-foreground">/ {p.expectedByDay[mobileDayIdx] === null ? "—" : `${fmtNumber(p.expectedByDay[mobileDayIdx]!, 1)} h`}</small></b></div>
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-md border bg-card md:block" tabIndex={0} aria-label="Grille de saisie de la semaine">
+        <table className="w-full min-w-[740px] table-fixed text-xs">
+          <thead>
+            <tr className="bg-[#f1f5f6] text-[10px] font-semibold text-muted-foreground">
+              <th className="w-[32%] px-3 py-[11px] text-left">Projet / action <small className="font-normal">· en heures</small></th>
+              {p.days.map((d, i) => {
+                const dj = dayjs(d);
+                return (
+                  <th key={d} className={cn("px-2 py-[11px] text-center whitespace-nowrap", i === todayIdx && "bg-[#f5f1e4] text-foreground")}>
+                    {dj.format("ddd D")}{locked(d) && <Lock className="ml-1 inline size-3" aria-label="Mois verrouillé" />}
+                  </th>
+                );
+              })}
+              <th className="px-2 py-[11px] text-center">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {p.rows.map((r, ri) => {
+              const rowTotal = p.days.reduce((s, d) => s + (cells[`${rowKey(r)}@${d}`]?.hours ?? 0), 0);
+              return (
+                <tr key={rowKey(r)} className="border-t border-[#e3e9eb] hover:bg-[#f8f9f3]" data-testid={`time-row-${ri}`}>
+                  <td className={cn("px-3 py-[9px]", r.kind === "action" && "pl-7")}>
+                    <span className="group relative inline-flex cursor-help items-center gap-1.5" tabIndex={0} aria-label={`${r.label}. ${r.sub}`}>
+                      <strong className={cn("truncate font-semibold", r.kind === "code" && "font-normal text-muted-foreground")}>{r.kind === "action" ? "↳ " : ""}{r.label}</strong>
+                      {r.sub && <span className="inline-grid size-[14px] shrink-0 place-items-center rounded-full border border-[#94a28e] text-[9px] text-muted-foreground" aria-hidden>i</span>}
+                      {r.sub && <span className="absolute top-full left-0 z-20 mt-2 hidden w-60 rounded-md bg-foreground p-3 text-[11px] font-normal text-white shadow-lg group-hover:block group-focus:block">{r.sub}</span>}
+                    </span>
+                    <small className="mt-1 block truncate text-[10px] text-muted-foreground">{r.sub}</small>
+                  </td>
+                  {p.days.map((d, di) => {
+                    const k = `${rowKey(r)}@${d}`;
+                    const cell = cells[k];
+                    const ro = p.readOnly || locked(d) || isFuture(d);
+                    return (
+                      <td key={d} className={cn("px-2 py-[9px] text-center", di === todayIdx && "bg-[#f5f1e4]")}>
+                        <div className="relative inline-block w-full max-w-[62px]">
+                          <input
+                            ref={(el) => { inputs.current[`${ri}:${di}`] = el; }}
+                            data-testid={`cell-${ri}-${di}`}
+                            type="number"
+                            step="0.25"
+                            min="0"
+                            max="24"
+                            inputMode="decimal"
+                            readOnly={ro}
+                            defaultValue={cell?.hours ? String(cell.hours) : ""}
+                            key={`${k}:${cell?.hours ?? 0}`}
+                            placeholder={ro ? "" : "—"}
+                            aria-label={`${r.label}, ${dayjs(d).format("dddd D MMMM")}, heures`}
+                            className={cn(
+                              "h-9 w-full rounded-sm border border-transparent bg-transparent text-center tabular transition-colors placeholder:text-[#92998d] focus:border-mint focus:bg-card focus:outline-none focus:ring-2 focus:ring-mint",
+                              !ro && "hover:border-[#bdc7b7] hover:bg-card",
+                              ro && "cursor-not-allowed text-muted-foreground",
+                              cell?.hours && "font-semibold",
+                            )}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={(e) => { if (ro) return; const v = Number(e.target.value.replace(",", ".")); save(r, d, Number.isFinite(v) ? v : 0); }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowRight") { e.preventDefault(); move(ri, di, 0, 1); }
+                              else if (e.key === "ArrowLeft") { e.preventDefault(); move(ri, di, 0, -1); }
+                              else if (e.key === "ArrowDown") { e.preventDefault(); move(ri, di, 1, 0); }
+                              else if (e.key === "ArrowUp") { e.preventDefault(); move(ri, di, -1, 0); }
+                              else if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); move(ri, di, 1, 0); }
+                            }}
+                          />
+                          {cell?.hours ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button type="button" className={cn("absolute top-1/2 -right-3 -translate-y-1/2 rounded p-0.5 text-muted-foreground/40 hover:text-primary", cell.comment && "text-coral")} title={cell.comment ?? "Ajouter un commentaire"} tabIndex={-1}>
+                                  <MessageSquare className="size-3" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-2" align="end">
+                                <textarea
+                                  className="w-full rounded-md border p-2 text-sm"
+                                  rows={3}
+                                  defaultValue={cell.comment ?? ""}
+                                  placeholder="Commentaire optionnel"
+                                  readOnly={ro}
+                                  onBlur={(e) => { if (!ro) save(r, d, cell.hours, e.target.value.trim() || null); }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          ) : null}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="px-2 py-[9px] text-center font-semibold tabular">{rowTotal ? `${fmtNumber(rowTotal, 1)} h` : ""}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-[#e3e9eb] bg-[#eef1e8] font-bold">
+              <td className="px-3 py-4">Total du jour</td>
+              {dayTotals.map((t, i) => {
+                const exp = p.expectedByDay[i];
+                return <td key={i} className={cn("px-2 py-4 text-center tabular", exp !== null && t > exp + 0.5 && "text-warning-foreground")} data-day-total={i}>{fmtNumber(t, 2)} h</td>;
+              })}
+              <td className="px-2 py-4 text-center tabular" data-testid="week-total-cell">{fmtNumber(weekTotal, 2)} h</td>
+            </tr>
+            <tr className="bg-[#f7f8f2] text-[10px] text-muted-foreground">
+              <td className="px-3 py-[9px]">Rythme attendu · indicatif</td>
+              {p.expectedByDay.map((x, i) => <td key={i} className="px-2 py-[9px] text-center tabular">{x === null ? "—" : x === 0 ? "non travaillé" : `${fmtNumber(x, 2)} h`}</td>)}
+              <td className="px-2 py-[9px] text-center tabular">{expectedWeek === null ? "—" : `${fmtNumber(expectedWeek, 2)} h`}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-4 text-xs text-muted-foreground">
+        <div className="max-w-[420px]">
+          <p><b>Tab</b> pour avancer · heures décimales acceptées, par exemple 1,5 · Entrée valide la cellule.</p>
+          <p className="mt-1.5">Survolez le nom d'une action, ou placez-y le focus, pour retrouver son objectif. Les codes de temps accueillent le travail transverse.</p>
+        </div>
+        {!p.readOnly && (
+          <div className="flex flex-wrap items-center gap-3" data-testid="week-declaration">
+            {p.declaredAt ? (
+              <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Semaine déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
+            ) : (
+              <>
+                <span>Quand tout est saisi, déclarez la semaine complète : la RAF le voit dans la clôture.</span>
+                <Button size="sm" variant="outline" disabled={pending || weekTotal === 0} data-testid="declare-week" onClick={() => start(async () => { const r = await declareWeek(p.weekKey); if (!r.ok) toast.error(r.error); else { toast.success("Semaine déclarée complète"); router.refresh(); } })}>
+                  <CheckCircle2 />Cette semaine est complète
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

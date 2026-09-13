@@ -35,7 +35,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
   const canDays = ["raf", "director", "pole_lead"].includes(me.role);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title={`Séminaire · éditions ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur édition ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
 
       <Section title="1 · Décisions par projet" description="Reconduire copie l'édition précédente (couches 1 à 3, actions, financements, équipe). Ajuster fait pareil et marque l'édition « re-challengée ». Arrêter ne crée rien." className="mb-4">
@@ -54,7 +54,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
       <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes éditions) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."}`} testId="load-control">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <table className="w-full text-sm" data-testid="load-table">
-            <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr><th className="py-1.5">Personne</th><th className="py-1.5 text-right">Prévus</th><th className="py-1.5 text-right" title="Référence financeur">Conv.</th><th className="py-1.5 text-right">Dispo.</th><th className="py-1.5 pl-3">Charge</th></tr>
             </thead>
             <tbody className="divide-y">
@@ -80,7 +80,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
           </table>
 
           <div>
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Détail par édition · prévus / conventionnés {canDays ? "(modifiable)" : "(saisi par la RAF et les responsables de pôle)"}</div>
+            <div className="mb-2 text-[10px] font-semibold text-muted-foreground">Détail par édition · prévus / conventionnés {canDays ? "(modifiable)" : "(saisi par la RAF et les responsables de pôle)"}</div>
             <div className="max-h-[520px] overflow-y-auto rounded-xl border">
               <table className="w-full text-sm">
                 <tbody className="divide-y">

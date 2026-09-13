@@ -28,7 +28,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
   const poleEditions = sp.pole ? editions.filter((e) => e.project.poleId === sp.pole) : [];
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et éditions de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} />
       <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} />
 
@@ -54,7 +54,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
       <div className="overflow-x-auto rounded-2xl border bg-card">
         <table className="w-full table-fixed text-xs" style={{ minWidth: 1100 }} data-testid="annual-table">
           <colgroup><col style={{ width: 170 }} />{MONTHS.map((m) => <col key={m} />)}<col style={{ width: 120 }} /></colgroup>
-          <thead className="bg-muted/60 text-left font-semibold uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
               <th className="sticky left-0 z-10 bg-muted/60 px-3 py-2">Personne</th>
               {MONTHS.map((m, i) => <th key={m} className={cn("px-1.5 py-2 text-center", dayjs().year() === year && dayjs().month() === i && "text-primary")}>{m}</th>)}

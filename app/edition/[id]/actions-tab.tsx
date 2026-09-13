@@ -24,7 +24,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="actions-table">
-              <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <thead className="text-left text-[10px] font-semibold text-muted-foreground">
                 <tr>
                   <th className="w-8 py-1.5 pr-2">#</th>
                   <th className="py-1.5 pr-2">Action</th>
@@ -53,7 +53,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                       <td className="w-28 py-1 pr-2"><AutoField model="action" id={a.id} field="timeTarget" type="number" value={a.timeTarget} readOnly={!rw} suffix="h" /></td>
                       <td className={cn("w-24 py-1 pr-2 text-right tabular", over && "font-semibold text-danger")}>{fmtNumber(c, 0)} h</td>
                       <td className="min-w-[130px] py-1 pr-2">
-                        {lateMilestone && <span className="mb-0.5 inline-block rounded-full bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`action-late-${i}`}>en retard</span>}
+                        {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`action-late-${i}`}>en retard</span>}
                         {rw ? (
                           <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`action-state-${i}`} />
                         ) : (
@@ -103,7 +103,7 @@ function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"][
                 <div className={cn("size-3 rounded-full ring-2 ring-card", a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") ? "bg-danger" : colorOf(a.state))} />
               </div>
               <div className="absolute top-1/2 -translate-y-1/2 truncate text-xs" style={{ left: pct > 70 ? undefined : `calc(${pct}% + 10px)`, right: pct > 70 ? `calc(${100 - pct}% + 10px)` : undefined, maxWidth: "40%" }}>
-                {a.name} <span className="text-muted-foreground">· {dayjs(a.milestoneDate!).format("D MMM")} · {refLabel(refs, "action_state", a.state)}</span>{a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") && <span className="ml-1 rounded-full bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
+                {a.name} <span className="text-muted-foreground">· {dayjs(a.milestoneDate!).format("D MMM")} · {refLabel(refs, "action_state", a.state)}</span>{a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") && <span className="ml-1 rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
               </div>
             </div>
           );

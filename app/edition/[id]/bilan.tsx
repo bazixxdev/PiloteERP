@@ -34,7 +34,7 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
 
       <Section title="Indicateurs" description="Cible et réalisé, imposés par les financeurs ou propres au projet.">
         <table className="mb-3 w-full text-sm" data-testid="indicators">
-          <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr><th className="py-1">Indicateur</th><th className="w-20 py-1">Cible</th><th className="w-20 py-1">Réalisé</th><th className="w-10 py-1" title="Imposé par un financeur">Imp.</th></tr>
           </thead>
           <tbody className="divide-y">

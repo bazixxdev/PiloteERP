@@ -10,7 +10,10 @@
   --color-mint: var(--mint);
   --color-mint-soft: var(--mint-soft);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-warning-soft: var(--warning-soft);
+  --color-mint-pale: var(--mint-pale);
+  --color-sand: var(--sand);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-info-soft: var(--info-soft);
@@ -18,7 +21,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-titles);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,59 +51,66 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 9px;
+  --radius-4xl: 12px;
 }
 
 :root {
-  /* Charte : bleu profond (navigation, actions), corail (accents), crème (fonds), menthe (touches) */
-  --background: #fbf8f2;
-  --foreground: #1b2a41;
+  /* Charte V2 (maquette du 13/09/2026, inspirée du site CRESS Pays de la Loire) :
+     bleu profond #004D6D (actions, titres), corail #EA5427 (accents), menthe #85C8B5 (touches),
+     crème #F8E9C6 (accueil), encre #243D49 (texte), papier #F7F7F3 (fond des écrans).
+     Alertes : ocre #8C601B et terre #A24533 ; confirmation : vert #226552. */
+  --background: #f7f7f3;
+  --foreground: #243d49;
   --card: #ffffff;
-  --card-foreground: #1b2a41;
+  --card-foreground: #243d49;
   --popover: #ffffff;
-  --popover-foreground: #1b2a41;
-  --primary: #1b4f8a;
+  --popover-foreground: #243d49;
+  --primary: #004d6d;
   --primary-foreground: #ffffff;
-  --secondary: #e7eef7;
-  --secondary-foreground: #1b4f8a;
-  --muted: #f3f0e8;
-  --muted-foreground: #6b7280;
-  --accent: #dcf3ea;
-  --accent-foreground: #146c55;
-  --destructive: #d64541;
-  --border: #e6e1d6;
-  --input: #e6e1d6;
-  --ring: #1b4f8a;
-  --coral: #f0705e;
+  --secondary: #e6f0f5;
+  --secondary-foreground: #004d6d;
+  --muted: #efefea;
+  --muted-foreground: #5e6c72;
+  --accent: #e5f1eb;
+  --accent-foreground: #226552;
+  --destructive: #a24533;
+  --border: #dce3e5;
+  --input: #b8c1b4;
+  --ring: #004d6d;
+  --coral: #ea5427;
   --coral-foreground: #ffffff;
-  --mint: #2e9e6b;
-  --mint-soft: #dcf3ea;
-  --warning: #e9a23b;
-  --warning-soft: #fdf1dc;
-  --danger: #d64541;
-  --danger-soft: #fbe3e2;
-  --info-soft: #e7eef7;
-  --chart-1: #1b4f8a;
-  --chart-2: #f0705e;
-  --chart-3: #2e9e6b;
-  --chart-4: #e9a23b;
-  --chart-5: #6fb1e3;
-  --radius: 0.75rem;
-  --sidebar: #173f6f;
-  --sidebar-foreground: #e8eef7;
-  --sidebar-primary: #f0705e;
+  --mint: #226552;
+  --mint-soft: #e5f1eb;
+  --mint-pale: #85c8b5;
+  --sand: #f8e9c6;
+  --warning: #8c601b;
+  --warning-foreground: #8c601b;
+  --warning-soft: #faf0d8;
+  --danger: #a24533;
+  --danger-soft: #fae9e2;
+  --info-soft: #e6f0f5;
+  --chart-1: #004d6d;
+  --chart-2: #ea5427;
+  --chart-3: #85c8b5;
+  --chart-4: #8c601b;
+  --chart-5: #5e9bb8;
+  --radius: 0.375rem;
+  --sidebar: #eef4f6;
+  --sidebar-foreground: #5e6c72;
+  --sidebar-primary: #004d6d;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f5590;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2a6099;
-  --sidebar-ring: #f0705e;
-  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --sidebar-accent: #d9e9ef;
+  --sidebar-accent-foreground: #004d6d;
+  --sidebar-border: #dce3e5;
+  --sidebar-ring: #004d6d;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-titles: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
   --font-geist-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -116,6 +126,10 @@
   }
   html {
     @apply font-sans;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-titles);
+    letter-spacing: -0.02em;
   }
 }
 

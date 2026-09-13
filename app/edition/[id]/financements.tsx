@@ -62,7 +62,7 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
 
                   <div className="mt-3 rounded-lg bg-muted/50 p-2">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pièces (convention, notification, bilan remis)</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground">Pièces (convention, notification, bilan remis)</span>
                       {(rw || isPilot) && <UploadForm editionId={e.id} kinds={kinds} defaultKind="contract" fundingLineId={f.id} compact />}
                     </div>
                     <AttachmentList items={e.attachments.filter((a) => a.fundingLineId === f.id)} refs={refs} compact />
@@ -70,7 +70,7 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
 
                   <div className="mt-3 rounded-lg bg-muted/50 p-2">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Livrables dus</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground">Livrables dus</span>
                       {rw && <AddDeliverableForm fundingLineId={f.id} />}
                     </div>
                     {f.deliverables.length === 0 ? (
@@ -84,7 +84,7 @@ export function FinancementsTab({ e, me, refs, funders, settings, isPilot }: Tab
                               <DeliverableDone id={d.id} done={d.done} readOnly={!rw && !isPilot} />
                               <div className="flex-1"><AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} inputClassName={cn(d.done && "line-through text-muted-foreground")} /></div>
                               <div className="w-36"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} readOnly={!rw} /></div>
-                              <span className={cn("w-28 text-right text-xs", d.done ? "text-mint" : n < 0 ? "text-danger" : n <= settings.deliverableAlertDays ? "text-[#8a5a00]" : "text-muted-foreground")}>
+                              <span className={cn("w-28 text-right text-xs", d.done ? "text-mint" : n < 0 ? "text-danger" : n <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>
                                 {d.done ? `remis ${fmtDate(d.doneAt)}` : n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}
                               </span>
                             </li>

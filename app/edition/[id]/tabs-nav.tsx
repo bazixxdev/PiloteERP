@@ -10,15 +10,16 @@ export const TABS = [
   { key: "temps", label: "Temps" },
   { key: "budget", label: "Budget" },
   { key: "validations", label: "Validations" },
-  { key: "documents", label: "Documents et discussion" },
+  { key: "documents", label: "Documents" },
   { key: "bilan", label: "Bilan" },
 ] as const;
 
 export type TabKey = (typeof TABS)[number]["key"];
 
+// Onglets V2 : soulignement corail, compteur discret, défilement horizontal si l'écran est étroit.
 export function TabsNav({ editionId, current, counts }: { editionId: string; current: TabKey; counts: Partial<Record<TabKey, number>> }) {
   return (
-    <nav className="mb-5 flex flex-wrap gap-1 border-b" role="tablist" data-testid="edition-tabs">
+    <nav className="-mx-6 mb-5 flex overflow-x-auto border-b px-[14px]" role="tablist" aria-label="Contenu de l'édition" data-testid="edition-tabs">
       {TABS.map((t) => (
         <Link
           key={t.key}
@@ -26,12 +27,12 @@ export function TabsNav({ editionId, current, counts }: { editionId: string; cur
           aria-selected={t.key === current}
           href={`/edition/${editionId}?onglet=${t.key}`}
           className={cn(
-            "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-            t.key === current ? "border-coral text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+            "-mb-px flex items-center gap-1.5 border-b-2 px-[13px] py-3 text-xs whitespace-nowrap transition-colors",
+            t.key === current ? "border-coral font-bold text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
           {t.label}
-          {counts[t.key] ? <span className="rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground">{counts[t.key]}</span> : null}
+          {counts[t.key] ? <small className="text-[10px] font-normal text-muted-foreground">{counts[t.key]}</small> : null}
         </Link>
       ))}
     </nav>

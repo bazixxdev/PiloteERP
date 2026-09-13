@@ -33,7 +33,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
           <Gauge value={total} max={target || null} alertPercent={90} />
         </div>
         <table className="w-full text-sm" data-testid="time-by-action">
-          <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr><th className="py-1.5">Action</th><th className="py-1.5 text-right">Consommé</th><th className="py-1.5 text-right">Objectif</th><th className="py-1.5 pl-4">Avancement</th></tr>
           </thead>
           <tbody className="divide-y">
@@ -60,7 +60,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
 
       <Section title="Ressources humaines de l'édition" description={`Charge en jours, pas en pourcentage ni en euros : les rythmes changent, les % se recalculent. Réalisé = heures saisies ÷ ${hpd} h (coefficient réglable dans l'admin).`}>
         <table className="w-full text-sm" data-testid="hr-table">
-          <thead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
               <th className="py-1.5">Personne</th>
               <th className="py-1.5 text-right" title="Charge de travail prévue sur l'édition (proposée par le pilote)">Prévus</th>

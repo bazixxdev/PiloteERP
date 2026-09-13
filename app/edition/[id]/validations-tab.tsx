@@ -23,7 +23,7 @@ export function ValidationsTab({ e, me, refs, isPilot, people }: TabCtx) {
           <ul className="divide-y text-sm">
             {e.decisions.map((d) => (
               <li key={d.id} className="py-1.5">
-                <span className="rounded-full bg-secondary px-1.5 text-[11px] font-medium text-primary">{refLabel(refs, "decision_instance", d.instance)}</span> {d.body}
+                <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refLabel(refs, "decision_instance", d.instance)}</span> {d.body}
                 <span className="text-xs text-muted-foreground"> · {fmtDate(d.decidedAt)} · {d.author.name}{d.followUp ? ` · suite : ${d.followUp.name}${d.dueDate ? ` pour le ${fmtDate(d.dueDate)}` : ""}` : ""}</span>
               </li>
             ))}

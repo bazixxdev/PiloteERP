@@ -24,7 +24,7 @@ export function QuickSearch({ editions }: { editions: { id: string; label: strin
   const results = q.length >= 2 ? editions.filter((e) => norm(e.label).includes(norm(q))).slice(0, 8) : [];
 
   return (
-    <div className="relative w-full max-w-96">
+    <div className="relative hidden w-full max-w-72 md:block">
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={ref}
@@ -34,7 +34,7 @@ export function QuickSearch({ editions }: { editions: { id: string; label: strin
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={(e) => { if (e.key === "Enter" && results[0]) { router.push(`/edition/${results[0].id}`); setQ(""); setOpen(false); } }}
         placeholder="Trouver une édition…  ⌘K"
-        className="h-8 rounded-full bg-card pl-8 text-sm"
+        className="h-8 rounded-md bg-card pl-8 text-xs"
         aria-label="Recherche"
       />
       {open && results.length > 0 && (

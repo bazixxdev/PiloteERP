@@ -1,29 +1,22 @@
 import { cn } from "@/lib/utils";
 
+// Badges V2 : rectangle 4 px, symbole écrit avant le libellé, jamais la couleur seule.
 const COLORS: Record<string, string> = {
-  primary: "bg-primary/10 text-primary ring-primary/20",
-  info: "bg-info-soft text-primary ring-primary/15",
-  mint: "bg-mint-soft text-accent-foreground ring-mint/30",
-  warning: "bg-warning-soft text-[#8a5a00] ring-warning/40",
-  danger: "bg-danger-soft text-danger ring-danger/30",
-  coral: "bg-coral/10 text-coral ring-coral/30",
-  muted: "bg-muted text-muted-foreground ring-border",
+  primary: "bg-info-soft text-primary",
+  info: "bg-info-soft text-primary",
+  mint: "bg-mint-soft text-mint",
+  warning: "bg-warning-soft text-warning-foreground",
+  danger: "bg-danger-soft text-danger",
+  coral: "bg-coral/10 text-coral",
+  muted: "bg-muted text-muted-foreground",
 };
 
-const DOTS: Record<string, string> = {
-  primary: "bg-primary",
-  info: "bg-chart-5",
-  mint: "bg-mint",
-  warning: "bg-warning",
-  danger: "bg-danger",
-  coral: "bg-coral",
-  muted: "bg-muted-foreground/50",
-};
+const SYMBOLS: Record<string, string> = { primary: "◐", info: "◐", mint: "✓", warning: "!", danger: "!", coral: "↻", muted: "○" };
 
 export function StatusBadge({ label, color = "muted", className, dot = true }: { label: string; color?: string; className?: string; dot?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset", COLORS[color] ?? COLORS.muted, className)}>
-      {dot && <span className={cn("size-1.5 rounded-full", DOTS[color] ?? DOTS.muted)} />}
+    <span className={cn("inline-flex items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-[11px] leading-[1.6] font-semibold whitespace-nowrap", COLORS[color] ?? COLORS.muted, className)}>
+      {dot && <span aria-hidden className="text-[10px]">{SYMBOLS[color] ?? SYMBOLS.muted}</span>}
       {label}
     </span>
   );

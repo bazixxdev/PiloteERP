@@ -27,8 +27,8 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
   const big = plein === "1";
 
   return (
-    <div className={cn("p-6", big && "text-lg")}>
-      <Presentation on={big} />
+    <div className={cn("p-4 md:p-6", big && "text-lg")}>
+      <Presentation on={big} exitHref="/cafe" />
       <PageHeader
         title="Café du lundi"
         subtitle={`Quinzaine du ${fmtDate(dayjs())} au ${fmtDate(dayjs().add(14, "day"))} · ${soon.length} jalons, ${agenda.deliverables.filter((d) => d.daysLeft >= 0).length} livrables financeurs, ${agenda.validations.length} validations en attente.`}
@@ -55,7 +55,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
                     ))}
                     {deliverables.map((x) => (
                       <li key={x.id} className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="rounded-full bg-secondary px-2 text-xs font-semibold text-primary">financeur</span>
+                        <span className="rounded-sm bg-secondary px-2 text-xs font-semibold text-primary">financeur</span>
                         <span className="font-medium">{x.label}</span>
                         <span className="text-muted-foreground">{x.fundingLine.funder.name} · {x.fundingLine.edition.project.name} · {x.fundingLine.edition.project.pilot.name}</span>
                       </li>
@@ -84,7 +84,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
           </div>
 
           <div className="rounded-2xl border border-warning/40 bg-warning-soft/50 p-5">
-            <h2 className={cn("mb-2 font-semibold text-[#8a5a00]", big ? "text-2xl" : "text-base")}>Qui attend quoi de qui</h2>
+            <h2 className={cn("mb-2 font-semibold text-warning-foreground", big ? "text-2xl" : "text-base")}>Qui attend quoi de qui</h2>
             {agenda.validations.length === 0 ? <p className="text-muted-foreground">Aucune validation en attente.</p> : (
               <ul className="grid gap-1.5">
                 {agenda.validations.map((v) => (

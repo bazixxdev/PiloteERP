@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/common/page-header";
+import { Avatar } from "@/components/shell/person-switcher";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AlertChips } from "@/components/common/alert-chips";
 import { AutoField } from "@/components/inline/auto-field";
@@ -45,43 +45,39 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
     documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.comments.length + e.attachments.length,
   };
 
+  const owners = { pilot: e.project.pilot, guarantor: e.project.guarantor };
   return (
-    <div className="p-6">
-      <div className="mb-1 text-xs text-muted-foreground">
-        <Link href="/portefeuille" className="hover:underline">Portefeuille</Link> · {e.project.pole.name} · {e.project.mission.name}
-      </div>
-      <PageHeader
-        title={`${e.project.name} · ${e.year}`}
-        actions={
-          <>
-            <RequestValidationDialog editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} />
-            <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
-          </>
-        }
-      >
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <span className="flex items-center gap-2">
-            <span className="text-muted-foreground">Statut</span>
+    <div className="p-4 md:p-6">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{e.project.name}</h1>
+            <span className="inline-flex items-center gap-1 rounded-[5px] border bg-card px-2 py-1 text-[11px]" data-testid="edition-years">
+              {e.project.editions.map((x) => (
+                <Link key={x.id} href={`/edition/${x.id}`} aria-current={x.id === e.id ? "page" : undefined} className={cn("rounded-sm px-1.5 py-0.5", x.id === e.id ? "bg-primary font-semibold text-white" : "text-muted-foreground hover:bg-muted")}>Édition {x.year}</Link>
+              ))}
+            </span>
             {canStatus ? (
               <AutoField model="edition" id={e.id} field="status" type="select" value={e.status} allowEmpty={false} refreshOnSave testId="edition-status"
                 options={REF_DEFAULTS.edition_status.map((s) => ({ value: s.code, label: refLabel(refs, "edition_status", s.code) }))} className="w-40" />
             ) : (
               <StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} />
             )}
-          </span>
-          <span><span className="text-muted-foreground">Pilote</span> <strong>{e.project.pilot.name}</strong></span>
-          <span><span className="text-muted-foreground">Garant</span> <strong>{e.project.guarantor?.name ?? "—"}</strong></span>
-          <span><span className="text-muted-foreground">Code</span> <span className="tabular">{e.project.analyticCode}</span></span>
-          {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
-          <span className="flex items-center gap-1 text-muted-foreground">
-            Éditions :
-            {e.project.editions.map((x) => (
-              <Link key={x.id} href={`/edition/${x.id}`} className={cn("rounded-full px-2 py-0.5 text-xs", x.id === e.id ? "bg-primary text-white" : "bg-muted hover:bg-secondary")}>{x.year}</Link>
-            ))}
-          </span>
+            {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
         </div>
-        <div className="mt-2"><AlertChips alerts={alerts} max={5} /></div>
-      </PageHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
+          <RequestValidationDialog editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} />
+        </div>
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[11px]">
+        <span className="inline-flex items-center gap-1.5"><Avatar name={owners.pilot.name} role={owners.pilot.role} /> Pilote <b className="font-semibold">{owners.pilot.name}</b></span>
+        <span className="inline-flex items-center gap-1.5">{owners.guarantor && <Avatar name={owners.guarantor.name} role={owners.guarantor.role} />} Responsable de pôle garant <b className="font-semibold">{owners.guarantor?.name ?? "—"}</b></span>
+        <span className="text-muted-foreground">{e.fundingLines.length} ligne{e.fundingLines.length > 1 ? "s" : ""} de financement</span>
+        <AlertChips alerts={alerts} max={5} />
+      </div>
 
       <TabsNav editionId={e.id} current={tab} counts={counts} />
 

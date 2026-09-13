@@ -18,12 +18,12 @@ export default async function RappelsPage() {
   const days = settings.reminderDaysBefore.split(",").map(Number);
   const reminders = computeReminders(editions, raf?.name ?? null, days, settings.horizonDays);
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="Rappels" subtitle={`Rappels automatiques J-${days.join(" et J-")} avant chaque livrable financeur et chaque jalon interne, horizon ${settings.horizonDays} jours. Dans le prototype, ils s'affichent ici au lieu d'un mail.`} />
       {reminders.length === 0 ? <EmptyState title="Aucun rappel" hint="Rien n'arrive à échéance dans l'horizon." icon={<Bell className="size-5" />} /> : (
         <div className="overflow-hidden rounded-2xl border bg-card">
           <table className="w-full text-sm" data-testid="reminders">
-            <thead className="bg-muted/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
               <tr><th className="px-4 py-2.5">Échéance</th><th className="px-3 py-2.5">Type</th><th className="px-3 py-2.5">Objet</th><th className="px-3 py-2.5">Projet</th><th className="px-3 py-2.5">Destinataires</th></tr>
             </thead>
             <tbody className="divide-y">

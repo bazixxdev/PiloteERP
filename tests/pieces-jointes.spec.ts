@@ -6,7 +6,7 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   await page.goto("/portefeuille");
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
-  await page.getByRole("tab", { name: "Documents et discussion" }).click();
+  await page.getByRole("tab", { name: "Documents" }).click();
 
   await expect(page.getByTestId("pieces")).toBeVisible();
   await expect(page.getByTestId("upload-form")).toBeVisible();

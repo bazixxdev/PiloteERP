@@ -46,6 +46,6 @@ test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un
   // Une fois verrouillé, la personne ne peut plus saisir.
   await iAm(page, "Maxime Roussel");
   await page.goto("/temps?semaine=2026-W33");
-  await expect(page.getByText("Mois verrouillé par la RAF : lecture seule")).toBeVisible();
+  await expect(page.getByText(/verrouillé par la RAF/).first()).toBeVisible();
   await expect(page.getByTestId("cell-0-0")).toHaveAttribute("readonly", "");
 });

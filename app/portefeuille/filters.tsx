@@ -1,11 +1,15 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 type Opt = { value: string; label: string };
 
-export function PortfolioFilters({ poles, statuses, current, thisQuarter }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string }; thisQuarter: string }) {
+const Filter = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <label className="inline-flex items-center gap-1.5 rounded-[5px] border bg-card px-2 py-1 text-[11px]">{label}{children}</label>
+);
+
+// Barre de filtres V2 : des sélecteurs discrets à gauche, l'année à droite.
+export function PortfolioFilters({ poles, statuses, current, thisQuarter, year }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string }; thisQuarter: string; year: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const set = (key: string, value: string) => {
@@ -13,24 +17,38 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter }: { po
     const qs = Object.entries(next).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
-  const sel = "h-8 rounded-full border bg-card px-3 text-sm";
-  const chip = (active: boolean) => cn("h-8 rounded-full border px-3 text-sm transition-colors", active ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted");
+  const sel = "max-w-[175px] border-0 bg-transparent text-[11px] focus:outline-none";
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2" data-testid="portfolio-filters">
-      <select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Pôle">
-        <option value="">Tous les pôles</option>
-        {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-      </select>
-      <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Statut">
-        <option value="">Tous les statuts</option>
-        {statuses.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-      </select>
-      <span className="mx-1 h-5 w-px bg-border" />
-      <button type="button" className={chip(current.alerte === "")} onClick={() => set("alerte", "")}>Tout</button>
-      <button type="button" className={chip(current.alerte === "oui")} onClick={() => set("alerte", "oui")}>En alerte</button>
-      <button type="button" className={chip(current.alerte === "danger")} onClick={() => set("alerte", "danger")}>Alerte forte</button>
-      <span className="mx-1 h-5 w-px bg-border" />
-      <button type="button" className={chip(current.trimestre === thisQuarter)} onClick={() => set("trimestre", current.trimestre === thisQuarter ? "" : thisQuarter)}>Ce trimestre ({thisQuarter.replace("-", " ")})</button>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3" data-testid="portfolio-filters">
+      <div className="flex flex-wrap items-center gap-2">
+        <Filter label="Pôle">
+          <select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
+            <option value="">Tous les pôles</option>
+            {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        </Filter>
+        <Filter label="Statut">
+          <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
+            <option value="">Tous les statuts</option>
+            {statuses.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        </Filter>
+        <Filter label="Afficher">
+          <select className={sel} value={current.alerte} onChange={(e) => set("alerte", e.target.value)} aria-label="Filtrer le portefeuille par alerte">
+            <option value="">Toutes les éditions</option>
+            <option value="oui">Avec une alerte</option>
+            <option value="danger">Avec une alerte forte</option>
+            <option value="calme">Sans alerte</option>
+          </select>
+        </Filter>
+        <Filter label="Période">
+          <select className={sel} value={current.trimestre} onChange={(e) => set("trimestre", e.target.value)} aria-label="Filtrer par trimestre">
+            <option value="">Toute l'année</option>
+            <option value={thisQuarter}>Ce trimestre ({thisQuarter.replace("-", " ")})</option>
+          </select>
+        </Filter>
+      </div>
+      <span className="text-[11px] text-muted-foreground">Vue tableau · Année {year}</span>
     </div>
   );
 }
