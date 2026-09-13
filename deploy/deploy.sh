@@ -44,6 +44,11 @@ cd "$NEW"
 echo "→ dépendances"; npm ci --no-audit --no-fund >/dev/null
 echo "→ sauvegarde de la base"; [ -f "$DATA/prototype.db" ] && cp "$DATA/prototype.db" "/var/backups/cress/prototype-$STAMP.db" || true
 echo "→ migrations"; npx prisma migrate deploy
+# Base vide (première mise en ligne) ou --seed : données de démo AVANT le démarrage, sinon l'app répond 500.
+PERSONNES=$(sqlite3 "$DATA/prototype.db" "select count(*) from Person" 2>/dev/null || echo 0)
+if [ "$SEED" = "--seed" ] || [ "$PERSONNES" = "0" ]; then
+  echo "→ seed"; rm -f "$MEDIAS"/*.pdf; env UPLOAD_DIR="$MEDIAS" npx prisma db seed >/dev/null
+fi
 echo "→ build"; npm run build >/dev/null
 # Bascule : maintenance, arrêt, échange des dossiers, démarrage.
 touch /var/www/maintenance/ACTIF-cress
@@ -54,7 +59,6 @@ systemctl start cress-pilote
 for i in $(seq 1 30); do
   if curl -fsS -o /dev/null "$HEALTH"; then
     rm -f /var/www/maintenance/ACTIF-cress
-    if [ "$SEED" = "--seed" ]; then echo "→ seed"; cd "$DIR" && sudo -u www-data npx prisma db seed >/dev/null; fi
     echo "✔ en ligne : https://cress.bazixx.fr/outilcli/cress/pilote"; exit 0
   fi
   sleep 2
