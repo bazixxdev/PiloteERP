@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { setPlannedLoadMonth } from "@/app/actions/load";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PersonLoad } from "@/lib/load";
 
 type Row = PersonLoad;
+export type EditionOpt = { id: string; label: string; year: number; editable: boolean };
 
 const tone = (planned: number, capacity: number) => {
   if (!capacity) return "bg-muted text-muted-foreground";
@@ -19,8 +26,16 @@ const tone = (planned: number, capacity: number) => {
 };
 
 // Grille personnes × mois : jours prévus colorés face à la capacité ; clic sur une cellule → détail par édition et réalisé.
-export function LoadGrid({ rows, months, today, groupByPole }: { rows: Row[]; months: string[]; today: string; groupByPole: boolean }) {
+export function LoadGrid({ rows, months, today, groupByPole, editions }: { rows: Row[]; months: string[]; today: string; groupByPole: boolean; editions: EditionOpt[] }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const editable = new Map(editions.map((e) => [e.id, e.editable]));
+  const save = (editionId: string, personId: string, month: string, days: number, after?: () => void) => start(async () => {
+    const r = await setPlannedLoadMonth(editionId, personId, month, days);
+    if (!r.ok) { toast.error(r.error); return; }
+    after?.(); router.refresh();
+  });
   const groups = groupByPole ? [...new Map(rows.map((r) => [r.person.poleId ?? "—", r.person.poleName ?? "Transversal"])).entries()] : [["all", ""] as [string, string]];
   const totals = (list: Row[]) => months.map((m) => ({ planned: Math.round(list.reduce((s, r) => s + r.months[m].planned, 0) * 10) / 10, capacity: Math.round(list.reduce((s, r) => s + r.months[m].capacity, 0) * 10) / 10 }));
   return (
@@ -64,12 +79,20 @@ export function LoadGrid({ rows, months, today, groupByPole }: { rows: Row[]; mo
                                 <ul className="mt-2 divide-y text-xs">
                                   {[...c.cells].sort((a, b) => b.days - a.days).map((x) => (
                                     <li key={x.editionId} className="flex items-center justify-between gap-2 py-1">
-                                      <Link href={`/edition/${x.editionId}?onglet=temps`} className="min-w-0 truncate text-primary hover:underline">{x.project} · {x.year}</Link>
-                                      <span className="shrink-0 tabular">{fmtNumber(x.days, 1)} j{!x.ventilated && <span className="ml-1 text-[10px] text-muted-foreground" title="Total annuel lissé sur 12 mois : ventilez depuis l'onglet Temps de l'édition">lissé</span>}{x.status !== "in_progress" && <span className="ml-1 text-[10px] text-muted-foreground">à venir</span>}</span>
+                                      <Link href={`/edition/${x.editionId}?onglet=temps`} className="min-w-0 truncate text-primary hover:underline">{x.project} · {x.year}{x.status !== "in_progress" && <span className="ml-1 text-[10px] text-muted-foreground">à venir</span>}</Link>
+                                      {editable.get(x.editionId) ? (
+                                        <span className="flex shrink-0 items-center gap-1">
+                                          <DaysInput key={`${x.editionId}:${x.days}`} value={x.days} disabled={pending} onCommit={(d) => { if (d !== x.days) save(x.editionId, r.person.id, m, d); }} label={`Jours sur ${x.project} en ${dayjs(m + "-01").format("MMMM")}`} testId={`load-edit-${r.person.id}-${m}-${x.editionId}`} />
+                                          <span className="text-[10px] text-muted-foreground">j{!x.ventilated && <span title="Total annuel lissé sur 12 mois ; modifier ce mois pose la ventilation"> · lissé</span>}</span>
+                                        </span>
+                                      ) : (
+                                        <span className="shrink-0 tabular">{fmtNumber(x.days, 1)} j{!x.ventilated && <span className="ml-1 text-[10px] text-muted-foreground" title="Total annuel lissé sur 12 mois">lissé</span>}</span>
+                                      )}
                                     </li>
                                   ))}
                                 </ul>
                               )}
+                              <AddLoad editions={editions.filter((e) => e.editable && e.year === Number(m.slice(0, 4)) && !c.cells.some((x) => x.editionId === e.id))} pending={pending} onAdd={(editionId, days) => save(editionId, r.person.id, m, days)} />
                             </PopoverContent>
                           </Popover>
                         </td>
@@ -89,5 +112,29 @@ export function LoadGrid({ rows, months, today, groupByPole }: { rows: Row[]; mo
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Champ de jours : enregistre à la sortie du champ ou avec Entrée.
+function DaysInput({ value, disabled, onCommit, label, testId }: { value: number; disabled: boolean; onCommit: (d: number) => void; label: string; testId: string }) {
+  const [v, setV] = useState(String(value));
+  const commit = () => { const d = Number(v.replace(",", ".")); if (Number.isFinite(d) && d >= 0) onCommit(Math.round(d * 10) / 10); else setV(String(value)); };
+  return <Input value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }} disabled={disabled} inputMode="decimal" aria-label={label} className="h-7 w-14 px-1 text-right text-xs tabular" data-testid={testId} />;
+}
+
+// Ajouter une édition à ce mois : la personne y est rattachée si elle n'y était pas.
+function AddLoad({ editions, pending, onAdd }: { editions: EditionOpt[]; pending: boolean; onAdd: (editionId: string, days: number) => void }) {
+  const [id, setId] = useState("");
+  const [days, setDays] = useState("");
+  if (editions.length === 0) return null;
+  return (
+    <form className="mt-2 flex items-center gap-1 border-t pt-2" onSubmit={(e) => { e.preventDefault(); const d = Number(days.replace(",", ".")); if (!id || !Number.isFinite(d) || d <= 0) return; onAdd(id, d); setId(""); setDays(""); }}>
+      <select value={id} onChange={(e) => setId(e.target.value)} className="h-7 min-w-0 flex-1 rounded border bg-card px-1 text-xs" aria-label="Ajouter une édition" data-testid="load-add-edition">
+        <option value="">+ Ajouter une édition…</option>
+        {editions.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+      </select>
+      <Input value={days} onChange={(e) => setDays(e.target.value)} placeholder="j" inputMode="decimal" aria-label="Jours" className="h-7 w-14 px-1 text-right text-xs" data-testid="load-add-days" />
+      <Button type="submit" size="xs" variant="outline" disabled={pending || !id || !days} data-testid="load-add-submit"><Plus /></Button>
+    </form>
   );
 }

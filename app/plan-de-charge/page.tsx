@@ -23,6 +23,11 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
   // Éditions en cours et validées par défaut ; « à venir » ajoute les proposées et re-challengées ; « à venir seulement » les isole.
   const future = sp.avenir === "seul" ? ["proposed", "rechallenged", "validated"] : sp.avenir === "non" ? ["in_progress", "validated"] : ["in_progress", "validated", "proposed", "rechallenged"];
   const rows = await loadPlan(months, { statuses: future, hoursPerDay: settings.hoursPerDay || 7, poleId: sp.pole || null });
+  // Éditions proposables dans une cellule, avec le droit de la personne courante (pilote de l'édition, RAF, direction, responsable de pôle).
+  const years = [...new Set(months.map((m) => Number(m.slice(0, 4))))];
+  const allEditions = await prisma.edition.findMany({ where: { status: { in: future }, year: { in: years } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] });
+  const canEditAll = me.role === "director" || me.role === "raf" || me.role === "pole_lead";
+  const editionOpts = allEditions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}`, year: e.year, editable: canEditAll || e.project.pilotId === me.id }));
   const today = dayjs().format("YYYY-MM");
   const over = rows.filter((r) => months.some((m) => r.months[m].capacity > 0 && r.months[m].planned > r.months[m].capacity));
   const totalPlanned = rows.reduce((s, r) => s + months.reduce((x, m) => x + r.months[m].planned, 0), 0);
@@ -72,10 +77,10 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
           </table>
         </div>
       ) : (
-        <LoadGrid rows={rows} months={months} today={today} groupByPole={!sp.pole} />
+        <LoadGrid rows={rows} months={months} today={today} groupByPole={!sp.pole} editions={editionOpts} />
       )}
 
-      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne. « lissé » : total annuel non ventilé, étalé sur 12 mois — ventilez-le depuis l'onglet Temps de l'édition (Ressources humaines › Répartir par mois). Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ {settings.hoursPerDay || 7}.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne. Cliquez une cellule pour modifier les jours de chaque édition ou en ajouter une (droit : pilote de l'édition, RAF, direction, responsable de pôle). « lissé » : total annuel non ventilé, étalé sur 12 mois — modifier un mois pose la ventilation, aussi possible depuis l'onglet Temps de l'édition. Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ {settings.hoursPerDay || 7}.</p>
     </div>
   );
 }

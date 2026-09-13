@@ -34,9 +34,30 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   await expect(row).toContainText("par mois");
   await expect(row.locator('input[type="number"]').first()).toHaveValue("24");
 
-  // Le plan de charge reflète la ventilation (6 j en octobre sur cette édition).
+  // Le plan de charge reflète la ventilation (6 j en octobre) ; on modifie directement depuis la grille : 8 j, puis on ajoute une édition.
   await page.goto("/plan-de-charge?debut=2026-09&horizon=6&pole=tous");
   const romain = page.locator("[data-testid^=load-row-]", { hasText: "Romain Tessier" });
   await romain.locator('[data-testid$="-2026-10"]').click();
   await expect(page.getByRole("link", { name: /Refonte du site internet/ })).toBeVisible();
+  const field = page.locator('[data-testid^=load-edit-][data-testid*="-2026-10-"]').first();
+  await expect(field).toHaveValue("6");
+  await field.fill("8");
+  await field.press("Enter");
+  await expect(page.locator('[data-testid^=load-edit-][data-testid*="-2026-10-"]').first()).toHaveValue("8");
+  // Un pilote ne peut ajouter que ses propres éditions ; la direction peut affecter Romain à n'importe laquelle.
+  await page.keyboard.press("Escape");
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/plan-de-charge?debut=2026-09&horizon=6&pole=tous");
+  await romain.locator('[data-testid$="-2026-10"]').click();
+  const add = page.getByTestId("load-add-edition");
+  const optValue = await add.locator("option", { hasText: "Club des collectivités · 2026" }).getAttribute("value");
+  await add.selectOption(optValue as string);
+  await page.getByTestId("load-add-days").fill("3");
+  await page.getByTestId("load-add-submit").click();
+  await expect(page.getByRole("link", { name: /Club des collectivités/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Le total annuel de l'édition a suivi : 24 − 6 + 8 = 26 j.
+  await openEditionByName(page, "Refonte du site internet");
+  await page.getByRole("tab", { name: "Temps" }).click();
+  await expect(page.getByTestId("hr-table").locator("tr", { hasText: "Romain Tessier" }).locator('input[type="number"]').first()).toHaveValue("26");
 });
