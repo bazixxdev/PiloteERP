@@ -2,6 +2,7 @@ import { getCurrentPerson, getPeople, getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
 import { PersonSwitcher } from "./person-switcher";
 import { QuickSearch } from "./quick-search";
+import { Suspense } from "react";
 import { Breadcrumb } from "./breadcrumb";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
@@ -20,7 +21,10 @@ export async function Topbar() {
   return (
     <header className="flex h-[52px] shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:px-6 print:hidden">
       <div className="flex min-w-0 flex-1 items-center gap-4">
-        <Breadcrumb editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} / ${e.year}` }))} />
+        {/* useSearchParams exige une frontière Suspense dans un layout. */}
+        <Suspense fallback={<span className="text-[11px] text-muted-foreground">Pilote</span>}>
+          <Breadcrumb editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} / ${e.year}` }))} />
+        </Suspense>
         <span className="md:hidden"><Image src="/logo-cress-mark.png" alt="CRESS" width={190} height={177} className="h-auto w-6" /></span>
         <QuickSearch editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` }))} />
       </div>

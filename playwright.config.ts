@@ -16,5 +16,5 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: process.env.BASE_URL ? undefined : { command: "npm run dev -- -p 3100", url: "http://localhost:3100/portefeuille", reuseExistingServer: true, timeout: 120_000 },
+  webServer: process.env.BASE_URL ? undefined : { command: "NEXT_DIST_DIR=.next-test npm run dev -- -p 3100", url: "http://localhost:3100/portefeuille", reuseExistingServer: true, timeout: 120_000 },
 });
