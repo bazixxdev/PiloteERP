@@ -21,21 +21,19 @@ export const dynamic = "force-dynamic";
 // rappels qui la concernent), jamais un total collectif qu'un contributeur prendrait pour sa liste de tâches.
 async function counters() {
   const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
-  const [pending, editions, raf, poles, peopleCount] = await Promise.all([
+  const [pending, editions, raf] = await Promise.all([
     prisma.validationRequest.findMany({ where: { status: "pending" }, select: { requesterId: true, requiredLevel: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } } } } } }),
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
       include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true },
     }),
     prisma.person.findFirst({ where: { role: "raf" } }),
-    prisma.pole.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.person.count({ where: { active: true } }),
   ]);
   const reminders = computeReminders(editions, raf?.name ?? null, settings.reminderDaysBefore.split(",").map(Number), settings.horizonDays);
   return {
     pending: pending.filter((v) => canDecideValidation(me, v)).length,
     reminders: reminders.filter((r) => r.who.includes(me.name)).length,
-    poles, peopleCount, role: me.role,
+    role: me.role,
   };
 }
 
@@ -45,7 +43,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="fr">
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
-          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} poles={c.poles} peopleCount={c.peopleCount} role={c.role} />
+          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} role={c.role} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>

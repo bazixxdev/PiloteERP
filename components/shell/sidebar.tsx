@@ -6,7 +6,7 @@ import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, 
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
-// Barre latérale V2 : fond clair, logo CRESS sur fond transparent, la liste des pôles en repère.
+// Barre latérale V2 : fond clair, logo CRESS sur fond transparent.
 // Les groupes suivent le profil : un salarié commence par Ma semaine, Temps et ses projets ; les accès collectifs ou
 // occasionnels viennent ensuite, et les écrans CODIR et Séminaire n'apparaissent qu'aux rôles CODIR. L'admin est dans le menu utilisateur.
 type Item = { href: string; label: string; icon: typeof Briefcase };
@@ -44,11 +44,8 @@ function groupsFor(role: string): Group[] {
   ];
 }
 
-export const POLE_DOTS = ["#7c9277", "#8f9eaa", "#b49b7d", "#5e9bb8"];
-
-export type SidebarPole = { id: string; name: string };
-
-export function Sidebar({ pendingCount, remindersCount, poles, peopleCount, role }: { pendingCount: number; remindersCount: number; poles: SidebarPole[]; peopleCount: number; role: string }) {
+// Barre latérale sans pied ni liste des pôles : les pôles se filtrent depuis le portefeuille, l'aide « ? » reste au clavier.
+export function Sidebar({ pendingCount, remindersCount, role }: { pendingCount: number; remindersCount: number; role: string }) {
   const pathname = usePathname();
   const GROUPS = groupsFor(role);
   return (
@@ -88,21 +85,6 @@ export function Sidebar({ pendingCount, remindersCount, poles, peopleCount, role
             </nav>
           </div>
         ))}
-        {poles.length > 0 && (
-          <div className="hidden lg:block">
-            <div className="mb-1.5 px-2 text-[10px] font-semibold text-muted-foreground">Les pôles</div>
-            {poles.map((p, i) => (
-              <Link key={p.id} href={`/portefeuille?pole=${p.id}`} className="flex items-center gap-2 rounded-[5px] px-2 py-1.5 text-[11px] leading-snug text-muted-foreground hover:bg-[#e1edf1]">
-                <i className="size-[7px] shrink-0 rounded-full" style={{ background: POLE_DOTS[i % POLE_DOTS.length] }} />
-                {p.name}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="hidden border-t border-sidebar-border px-2 pt-3 text-[11px] leading-relaxed text-muted-foreground lg:block">
-        {peopleCount} personnes · {poles.length} pôles
-        <span className="mt-2 block">Démonstration fictive · <kbd className="rounded border border-sidebar-border px-1">?</kbd> raccourcis</span>
       </div>
     </aside>
   );
