@@ -53,6 +53,7 @@ function storePdf(title: string): { storedName: string; size: number } {
 
 async function reset() {
   await prisma.fieldRemark.deleteMany();
+  await prisma.plannedLoad.deleteMany();
   await prisma.workSlot.deleteMany();
   await prisma.task.deleteMany();
   await prisma.funderContact.deleteMany();
@@ -544,6 +545,26 @@ async function main() {
   for (const x of dec) {
     const e = editions2026[x.i];
     await prisma.decision.create({ data: { editionId: e.id, instance: x.instance, body: x.body, authorId: x.instance === "pole" ? leadB.id : director.id, followUpId: x.follow === null ? null : x.follow === 0 ? e.pilotId : e.teamIds[1] ?? e.pilotId, dueDate: x.due ? d(x.due) : null, decidedAt: d(-between(2, 25)) } });
+  }
+
+  // Plan de charge : deux tiers des affectations ventilées par mois (pic autour des jalons de l'édition), le reste lissé.
+  // Une personne est volontairement surchargée à l'automne pour que le dépassement se voie.
+  await prisma.plannedLoad.deleteMany();
+  const pdRows = await prisma.editionPersonDays.findMany({ where: { edition: { year: { in: [2026, 2027] } }, plannedDays: { gt: 0 } }, include: { edition: { include: { actions: true } } } });
+  let k = 0;
+  for (const pd of pdRows) {
+    if (k++ % 3 === 2) continue;
+    const y = pd.edition.year;
+    const peaks = pd.edition.actions.map((a) => a.milestoneDate).filter((d): d is Date => Boolean(d)).map((d) => dayjs(d).month());
+    const weights = Array.from({ length: 12 }, (_, i) => 1 + peaks.filter((m) => Math.abs(m - i) <= 1).length * 2 + (i === 7 ? -0.8 : 0));
+    const wsum = weights.reduce((a, b) => a + b, 0);
+    const data = weights.map((w, i) => ({ editionId: pd.editionId, personId: pd.personId, month: `${y}-${String(i + 1).padStart(2, "0")}`, days: Math.round((pd.plannedDays * w) / wsum * 10) / 10 })).filter((x) => x.days > 0);
+    await prisma.plannedLoad.createMany({ data });
+  }
+  const hugo = people.find((p) => p.name === "Hugo Lemaire");
+  if (hugo) {
+    const boost = await prisma.plannedLoad.findMany({ where: { personId: hugo.id, month: { in: ["2026-10", "2026-11"] } } });
+    for (const b of boost) await prisma.plannedLoad.update({ where: { id: b.id }, data: { days: Math.round(b.days * 2.6 * 10) / 10 } });
   }
 
   // Trois fiches projets 2026 remplies au format du gabarit CRESS (textes transposés des fiches réelles, sans personne réelle),

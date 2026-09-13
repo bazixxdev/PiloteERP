@@ -51,7 +51,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
         />
       </Section>
 
-      <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes éditions) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."}`} testId="load-control">
+      <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes éditions) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."} Le détail mois par mois est dans le plan de charge.`} testId="load-control">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <table className="w-full text-sm" data-testid="load-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">

@@ -59,6 +59,7 @@ export const editionFullInclude = {
   validations: { include: { requester: true, decider: true, action: true }, orderBy: { createdAt: "desc" as const } },
   team: { include: { person: true } },
   personDays: { include: { person: true } },
+  plannedLoads: true,
   docLinks: true,
   comments: { include: { author: true }, orderBy: { createdAt: "asc" as const } },
   changes: { include: { author: true }, orderBy: { createdAt: "desc" as const }, take: 30 },

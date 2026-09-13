@@ -52,6 +52,7 @@ model Person {
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
+  plannedLoads       PlannedLoad[]
   sponsoredEditions  Edition[]          @relation("EditionSponsor")
   remarksWritten     FieldRemark[]      @relation("RemarkAuthor")
   remarksResolved    FieldRemark[]      @relation("RemarkResolver")
@@ -251,6 +252,7 @@ model Edition {
   docLinks     DocLink[]
   comments     Comment[]
   remarks      FieldRemark[]
+  plannedLoads PlannedLoad[]
   changes      ChangeLog[]
   indicators   Indicator[]
   attachments  Attachment[]
@@ -268,6 +270,21 @@ model EditionTeam {
   person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@id([editionId, personId])
+}
+
+// Plan de charge : jours prévus d'une personne sur une édition, mois par mois. Sans ventilation, le total annuel
+// (EditionPersonDays.plannedDays) se lisse sur les mois de l'édition ; avec, la somme des mois fait foi.
+model PlannedLoad {
+  id        String  @id @default(cuid())
+  editionId String
+  personId  String
+  month     String // AAAA-MM
+  days      Float
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, personId, month])
+  @@index([personId, month])
 }
 
 model EditionPersonDays {

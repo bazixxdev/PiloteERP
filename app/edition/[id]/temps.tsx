@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
+import { LoadPlanner } from "./load-planner";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
@@ -63,7 +64,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
               <th className="py-1.5">Personne</th>
-              <th className="py-1.5 text-right" title="Charge de travail prévue sur l'édition (proposée par le pilote)">Prévus</th>
+              <th className="py-1.5 text-right" title="Charge de travail prévue sur l'édition (proposée par le pilote), à répartir par mois pour le plan de charge">Prévus · par mois</th>
               <th className="py-1.5 text-right" title="Jours mentionnés dans les conventions : référence financeur, pas une charge">Conventionnés</th>
               <th className="py-1.5 text-right">Réalisés</th>
               <th className="py-1.5 text-right" title="Prévus ÷ jours disponibles de la personne dans l'année">% dispo.</th>
@@ -79,7 +80,12 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
               return (
                 <tr key={d.id}>
                   <td className="py-1">{seeReal && d.personId !== me.id ? <Link href={`/temps?personne=${d.personId}`} className="hover:underline" title="Voir la grille de cette personne">{d.person.name}</Link> : d.person.name}</td>
-                  <td className="w-24 py-1"><AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} readOnly={!canPlan} suffix="j" refreshOnSave /></td>
+                  <td className="w-40 py-1">
+                    <div className="flex items-center gap-1">
+                      <div className="w-24"><AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} readOnly={!canPlan} suffix="j" refreshOnSave /></div>
+                      <LoadPlanner editionId={e.id} personId={d.personId} personName={d.person.name} year={e.year} plannedDays={d.plannedDays} loads={Object.fromEntries(e.plannedLoads.filter((l) => l.personId === d.personId).map((l) => [l.month, l.days]))} readOnly={!canPlan} />
+                    </div>
+                  </td>
                   <td className="w-24 py-1"><AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} readOnly={!canSold} suffix="j" refreshOnSave /></td>
                   <td className="w-24 py-1 text-right tabular text-muted-foreground">{seeReal ? `${fmtNumber(h / hpd, 1)} j` : "·"}</td>
                   <td className={cn("w-20 py-1 text-right tabular", pct !== null && pct > 100 && "text-danger font-medium")}>{pct === null ? "—" : `${pct} %`}</td>
@@ -98,7 +104,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
             </tr>
           </tfoot>
         </table>
-        <p className="mt-2 text-xs text-muted-foreground">La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel de la RAF : l'outil fournit les jours réalisés par personne et par édition, elle applique ses coûts. {hidden > 0 && `${hidden} réalisé${hidden > 1 ? "s" : ""} masqué${hidden > 1 ? "s" : ""} selon la visibilité du temps.`}</p>
+        <p className="mt-2 text-xs text-muted-foreground">« Répartir par mois » ventile les jours prévus dans le <Link href="/plan-de-charge" className="text-primary hover:underline">plan de charge</Link> ; sans ventilation, le total se lisse sur les 12 mois de l'année. La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel de la RAF : l'outil fournit les jours réalisés par personne et par édition, elle applique ses coûts. {hidden > 0 && `${hidden} réalisé${hidden > 1 ? "s" : ""} masqué${hidden > 1 ? "s" : ""} selon la visibilité du temps.`}</p>
       </Section>
     </div>
   );

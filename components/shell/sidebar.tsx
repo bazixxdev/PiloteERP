@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
@@ -30,6 +30,7 @@ function groupsFor(role: string): Group[] {
   const collective: Item[] = [
     { href: "/cafe", label: "Écran café", icon: Coffee },
     { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
+    { href: "/plan-de-charge", label: "Plan de charge", icon: BarChart3 },
     { href: "/projets", label: "Projets et financements", icon: FileSignature },
     { href: "/rappels", label: "Rappels", icon: Bell },
   ];

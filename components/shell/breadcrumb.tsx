@@ -10,6 +10,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/temps/, "Mon travail", "Temps"],
   [/^\/cloture/, "Mon travail", "Temps"],
   [/^\/annuel/, "Pilotage", "Vue annuelle"],
+  [/^\/plan-de-charge/, "Pilotage", "Plan de charge"],
   [/^\/validations/, "Pilotage", "Validations"],
   [/^\/cafe/, "Collectif", "Écran café"],
   [/^\/codir/, "Collectif", "Écran CODIR"],
