@@ -1,0 +1,21 @@
+{
+  "/edition/[id]/export/route": "app/edition/[id]/export/route.js",
+  "/api/agenda/[token]/route": "app/api/agenda/[token]/route.js",
+  "/admin/export/route": "app/admin/export/route.js",
+  "/api/pieces/[id]/route": "app/api/pieces/[id]/route.js",
+  "/cloture/export/route": "app/cloture/export/route.js",
+  "/portefeuille/page": "app/portefeuille/page.js",
+  "/edition/[id]/page": "app/edition/[id]/page.js",
+  "/ma-semaine/page": "app/ma-semaine/page.js",
+  "/cafe/page": "app/cafe/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/conventions/page": "app/conventions/page.js",
+  "/codir/page": "app/codir/page.js",
+  "/conventions/[id]/page": "app/conventions/[id]/page.js",
+  "/financeurs/page": "app/financeurs/page.js",
+  "/financeurs/[id]/page": "app/financeurs/[id]/page.js",
+  "/projets/page": "app/projets/page.js",
+  "/temps/page": "app/temps/page.js",
+  "/cloture/page": "app/cloture/page.js",
+  "/validations/page": "app/validations/page.js"
+}
