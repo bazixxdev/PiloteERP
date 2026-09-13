@@ -25,10 +25,15 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
 
   // Création d'une convention et rattachement d'une édition.
   await page.goto("/conventions");
+  await page.getByTestId("cc-open").click();
   await page.getByTestId("cc-funder").selectOption({ label: "ADEME" });
   await page.getByTestId("cc-reference").fill("ADEME-TEST-2026-2027");
   await page.getByTestId("cc-notified").fill("30000");
   await page.getByTestId("cc-submit").click();
+  // La création ouvre la page de la convention ; la liste la montre ensuite sans édition rattachée.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("ADEME-TEST-2026-2027");
+  await expect(page.getByTestId("convention-lines")).toContainText(/aucune édition rattachée/i);
+  await page.goto("/conventions");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");
   await openEditionByName(page, "Chroniquer la TESS");
   await page.getByRole("tab", { name: "Financements" }).click();

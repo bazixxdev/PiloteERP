@@ -1,75 +1,115 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
-import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
-import { AutoField } from "@/components/inline/auto-field";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
-import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
+import { refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { CreateConventionForm } from "./create-form";
+import { CreateConventionDialog } from "./create-form";
+import { ConventionFilters } from "./filters";
 
-// Conventions partagées (EF-C3) : une FSE 2026-2028 ou une CPO existe une fois ; les éditions y sont affectées.
-export default async function ConventionsPage() {
-  const [me, refs, funders, conventions] = await Promise.all([
+type Search = { financeur?: string; statut?: string; type?: string };
+
+// Conventions partagées (EF-C3) : une liste pour comparer (financeur, période, notifié, affecté, reste, prochaine obligation),
+// une page par convention pour lire et modifier (`/conventions/[id]`).
+export default async function ConventionsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const sp = await searchParams;
+  const [me, refs, funders, all] = await Promise.all([
     getCurrentPerson(), getRefs(), prisma.funder.findMany({ orderBy: { name: "asc" } }),
     prisma.convention.findMany({ include: { funder: true, lines: { include: { edition: { include: { project: true } }, deliverables: { where: { done: false }, orderBy: { dueDate: "asc" } } } } }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] }),
   ]);
   const rw = canEditFunding(me.role);
-  const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
-  const multi = conventions.filter((c) => c.endYear > c.startYear || c.lines.length > 1);
-  const annual = conventions.filter((c) => !multi.includes(c));
+  const isMulti = (c: (typeof all)[number]) => c.endYear > c.startYear || c.lines.length > 1;
+  let rows = all;
+  if (sp.financeur) rows = rows.filter((c) => c.funderId === sp.financeur);
+  if (sp.statut) rows = rows.filter((c) => c.status === sp.statut);
+  if (sp.type === "pluri") rows = rows.filter(isMulti);
+  if (sp.type === "annuelle") rows = rows.filter((c) => !isMulti(c));
 
-  const Card = ({ c }: { c: (typeof conventions)[number] }) => {
-    const a = allocationOf(c);
-    const next = c.lines.flatMap((l) => l.deliverables.map((d) => ({ d, l }))).sort((x, y) => x.d.dueDate.getTime() - y.d.dueDate.getTime())[0];
-    return (
-      <div className="rounded-xl border bg-card p-3" data-testid={`convention-${c.reference}`}>
-        <div className="grid gap-2 md:grid-cols-[1fr_1.2fr_1fr_1fr_1fr_1fr]">
-          <div><div className="text-[11px] text-muted-foreground">Financeur · référence</div><div className="font-semibold">{c.funder.name}</div><AutoField model="convention" id={c.id} field="reference" type="text" value={c.reference} readOnly={!rw} inputClassName="font-mono text-xs" /></div>
-          <div><div className="text-[11px] text-muted-foreground">Dispositif</div><AutoField model="convention" id={c.id} field="scheme" type="text" value={c.scheme} readOnly={!rw} placeholder="—" /></div>
-          <div><div className="text-[11px] text-muted-foreground">Période</div><div className="flex items-center gap-1"><AutoField model="convention" id={c.id} field="startYear" type="number" value={c.startYear} readOnly={!rw} refreshOnSave /><span>→</span><AutoField model="convention" id={c.id} field="endYear" type="number" value={c.endYear} readOnly={!rw} refreshOnSave /></div></div>
-          <div><div className="text-[11px] text-muted-foreground">Statut</div>{rw ? <AutoField model="convention" id={c.id} field="status" type="select" value={c.status} options={statusOpts} allowEmpty={false} /> : <div className="py-1"><StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} /></div>}</div>
-          <div><div className="text-[11px] text-muted-foreground">Demandé</div><AutoField model="convention" id={c.id} field="amountRequested" type="number" value={c.amountRequested} readOnly={!rw} suffix="€" /></div>
-          <div><div className="text-[11px] text-muted-foreground">Notifié</div><AutoField model="convention" id={c.id} field="amountNotified" type="number" value={c.amountNotified} readOnly={!rw} suffix="€" refreshOnSave testId={`notified-${c.reference}`} /></div>
-        </div>
-        <div className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_1fr_2fr]">
-          <div><div className="text-[11px] text-muted-foreground">Dépôt · notification · signature</div><div className="flex gap-1"><AutoField model="convention" id={c.id} field="submittedAt" type="date" value={c.submittedAt} readOnly={!rw} /><AutoField model="convention" id={c.id} field="notifiedAt" type="date" value={c.notifiedAt} readOnly={!rw} /><AutoField model="convention" id={c.id} field="signedAt" type="date" value={c.signedAt} readOnly={!rw} /></div></div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">Affecté aux éditions</div>
-            <div className={cn("py-1 text-sm tabular", a.over && "font-semibold text-danger")} data-testid={`allocated-${c.reference}`}>{fmtEuro(a.granted)}{a.ceiling !== null && <span className="text-muted-foreground"> / {fmtEuro(a.ceiling)}</span>}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">Reste à affecter</div>
-            <div className={cn("py-1 text-sm font-medium tabular", a.remaining !== null && a.remaining < 0 ? "text-danger" : "text-mint")}>{a.remaining === null ? "montant notifié inconnu" : a.remaining < 0 ? `dépassement ${fmtEuro(-a.remaining)}` : fmtEuro(a.remaining)}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">Éditions couvertes · prochaine obligation</div>
-            <div className="flex flex-wrap items-center gap-1 py-1 text-sm">
-              {c.lines.length === 0 && <span className="text-muted-foreground">aucune — rattachez-la depuis l'onglet Financements d'une édition</span>}
-              {c.lines.map((l) => <Link key={l.id} href={`/edition/${l.editionId}?onglet=financements`} className="rounded-full bg-secondary px-2 py-0.5 text-xs text-primary hover:underline" title={`${fmtEuro(l.amountGranted)} obtenus`}>{l.edition.project.name} · {l.edition.year}</Link>)}
-              {next && <span className={cn("ml-1 text-xs", daysFromNow(next.d.dueDate) < 0 ? "text-danger" : "text-[#8a5a00]")}>· {next.d.label} le {fmtDate(next.d.dueDate)} ({next.l.edition.project.name})</span>}
-            </div>
-          </div>
-        </div>
-        <div className="mt-2"><AutoField model="convention" id={c.id} field="notes" type="textarea" rows={1} value={c.notes} readOnly={!rw} placeholder="Notes : conditions, avenants, clés de répartition (référence à l'Excel RAF)…" /></div>
-      </div>
-    );
-  };
+  const totalNotified = all.reduce((s, c) => s + (c.amountNotified ?? 0), 0);
+  const totalGranted = all.reduce((s, c) => s + allocationOf(c).granted, 0);
+  const overCount = all.filter((c) => allocationOf(c).over).length;
+  const year = new Date().getFullYear();
 
   return (
-    <div className="p-6">
-      <PageHeader title="Conventions" subtitle="Une convention existe une fois, même sur plusieurs années et plusieurs projets ; les éditions y sont affectées et la somme des affectations ne dépasse pas le montant notifié. Les clés de répartition restent dans l'Excel de la RAF." actions={rw ? <CreateConventionForm funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined} />
-      <Section title="Pluriannuelles ou partagées" description="FSE, CPO, dispositifs couvrant plusieurs éditions." className="mb-4" testId="conventions-shared">
-        {multi.length === 0 ? <EmptyState title="Aucune convention partagée" hint="Créez-la ici (RAF), puis rattachez-y les éditions depuis leur onglet Financements." /> : <div className="grid gap-3">{multi.map((c) => <Card key={c.id} c={c} />)}</div>}
-      </Section>
-      <Section title="Annuelles" description="Une édition, une année.">
-        {annual.length === 0 ? <p className="text-sm text-muted-foreground">Aucune. Les financements annuels vivent sur les lignes de chaque édition ; on les élève en convention quand ils deviennent pluriannuels.</p> : <div className="grid gap-3">{annual.map((c) => <Card key={c.id} c={c} />)}</div>}
-      </Section>
+    <div className="p-4 md:p-6">
+      <PageHeader
+        title="Conventions"
+        subtitle={`${all.length} convention${all.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions${overCount ? ` · ${overCount} en dépassement` : ""}. Une convention existe une fois, même sur plusieurs années et plusieurs projets ; la somme des affectations ne dépasse pas le notifié.`}
+        actions={rw ? <CreateConventionDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined}
+      />
+
+      <ConventionFilters
+        funders={funders.map((f) => ({ value: f.id, label: f.name }))}
+        statuses={Object.values(refs.funding_status ?? {}).map((s) => ({ value: s.code, label: s.label }))}
+        current={{ financeur: sp.financeur ?? "", statut: sp.statut ?? "", type: sp.type ?? "" }}
+      />
+
+      {rows.length === 0 ? (
+        <EmptyState title={all.length === 0 ? "Aucune convention" : "Aucune convention pour ces filtres"} hint={all.length === 0 ? "Créez-la ici (RAF), puis rattachez-y les éditions depuis leur onglet Financements." : "Changez le filtre pour retrouver les conventions."} />
+      ) : (
+        <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${rows.length} conventions`}>
+          <table className="w-full text-[13px]" style={{ minWidth: 860 }} data-testid="conventions-table">
+            <thead className="sticky top-0 z-[2] bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2.5 whitespace-nowrap">Financeur · référence</th>
+                <th className="px-3 py-2.5">Période</th>
+                <th className="px-3 py-2.5">Statut</th>
+                <th className="px-3 py-2.5 text-right">Notifié</th>
+                <th className="px-3 py-2.5">Affecté · reste</th>
+                <th className="px-3 py-2.5">Éditions couvertes</th>
+                <th className="px-3 py-2.5">Prochaine obligation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => {
+                const a = allocationOf(c);
+                const next = c.lines.flatMap((l) => l.deliverables.map((d) => ({ d, l }))).sort((x, y) => x.d.dueDate.getTime() - y.d.dueDate.getTime())[0];
+                const nextDays = next ? daysFromNow(next.d.dueDate) : null;
+                const active = c.startYear <= year && year <= c.endYear;
+                const pct = a.ceiling ? Math.round((a.granted / a.ceiling) * 100) : null;
+                return (
+                  <tr key={c.id} className={cn("border-t border-[#e3e9eb] align-top hover:bg-[#f8f9f3]", !active && "text-muted-foreground")} data-testid={`convention-${c.reference}`}>
+                    <td className={cn("min-w-[160px] px-3 py-3", a.over ? "border-l-[3px] border-l-danger" : nextDays !== null && nextDays < 0 ? "border-l-[3px] border-l-warning" : "border-l-[3px] border-l-transparent")}>
+                      <Link href={`/conventions/${c.id}`} className="font-semibold text-primary hover:underline" data-testid={`open-convention-${c.reference}`}>{c.funder.name}</Link>
+                      <small className="mt-1 block font-mono text-[10px] text-muted-foreground">{c.reference}{c.scheme ? ` · ${c.scheme}` : ""}</small>
+                    </td>
+                    <td className="px-3 py-3 tabular"><span className="whitespace-nowrap">{c.startYear === c.endYear ? c.startYear : `${c.startYear} → ${c.endYear}`}</span><small className="mt-1 block text-[10px] text-muted-foreground">{isMulti(c) ? "partagée" : "annuelle"}{!active ? " · hors période" : ""}</small></td>
+                    <td className="px-3 py-3"><StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} /></td>
+                    <td className="px-3 py-3 text-right whitespace-nowrap tabular">{c.amountNotified === null ? <span className="text-muted-foreground">—</span> : fmtEuro(c.amountNotified)}{c.amountRequested !== null && <small className="mt-1 block text-[10px] text-muted-foreground">demandé {fmtEuro(c.amountRequested)}</small>}</td>
+                    <td className="px-3 py-3 whitespace-nowrap tabular">
+                      <span className={cn(a.over && "font-semibold text-danger")} data-testid={`allocated-${c.reference}`}>{fmtEuro(a.granted)}{pct !== null && <span className="text-muted-foreground"> · {pct} %</span>}</span>
+                      <small className={cn("mt-1 block text-[10px]", a.remaining !== null && a.remaining < 0 ? "font-semibold text-danger" : "text-mint")}>{a.remaining === null ? "notifié inconnu" : a.remaining < 0 ? `dépassement ${fmtEuro(-a.remaining)}` : `reste ${fmtEuro(a.remaining)}`}</small>
+                      {a.ceiling ? <div className="mt-1 h-[4px] w-24 overflow-hidden rounded-[2px] bg-[#e8e9e1]"><i className={cn("block h-full", a.over ? "bg-danger" : "bg-mint")} style={{ width: `${Math.min(100, pct ?? 0)}%` }} /></div> : null}
+                    </td>
+                    <td className="min-w-[170px] max-w-[210px] px-3 py-3">
+                      {c.lines.length === 0 ? <span className="text-xs text-muted-foreground">aucune — à rattacher depuis l'onglet Financements d'une édition</span> : (
+                        <div className="flex flex-wrap gap-1">
+                          {c.lines.slice(0, 3).map((l) => <Link key={l.id} href={`/edition/${l.editionId}?onglet=financements`} className="max-w-full truncate rounded-full bg-secondary px-2 py-0.5 text-[10px] text-primary hover:underline" title={`${l.edition.project.name} · ${l.edition.year} · ${fmtEuro(l.amountGranted)} obtenus`}>{l.edition.project.name} · {l.edition.year}</Link>)}
+                          {c.lines.length > 3 && <Link href={`/conventions/${c.id}`} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground hover:underline" title={c.lines.slice(3).map((l) => `${l.edition.project.name} · ${l.edition.year}`).join("\n")}>+{c.lines.length - 3} autres</Link>}
+                        </div>
+                      )}
+                    </td>
+                    <td className="min-w-[130px] px-3 py-3">
+                      {next ? (
+                        <>
+                          <span className="block max-w-[140px] truncate" title={next.d.label}>{next.d.label}</span>
+                          <small className={cn("mt-1 block text-[10px]", nextDays !== null && nextDays < 0 ? "font-semibold text-danger" : "text-muted-foreground")}>{fmtDate(next.d.dueDate)} · {next.l.edition.project.name}{nextDays !== null && nextDays < 0 ? ` · ${-nextDays} j de retard` : ""}</small>
+                        </>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} convention{rows.length > 1 ? "s" : ""} affichée{rows.length > 1 ? "s" : ""} sur {all.length} · les clés de répartition restent dans l'Excel de la RAF · cliquez sur le financeur pour ouvrir la convention.</p>
     </div>
   );
 }
