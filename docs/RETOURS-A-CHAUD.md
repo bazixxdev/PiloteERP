@@ -23,6 +23,15 @@
 
 **Traité le 13/09** — Par édition, onglet Temps, bloc « Ressources humaines de l'édition » : par personne, jours **prévus** (charge, proposée par le pilote), jours **conventionnés** (référence financeur, RAF), jours **réalisés** (heures ÷ coefficient réglable), **% du disponible** et **ETP** affichés, jamais saisis. Aucun salaire ni coût journalier dans l'outil : la valorisation reste dans l'Excel de la RAF. Côté dépenses directes : objet Dépense, devis → engagement, facture rattachée → réalisé, disponible calculé sans double comptage. Détail dans `docs/decisions.md` (13/09).
 
+### E. Retours sur le rhabillage V2 (13/09, à l'oral)
+- Le bouton « Projeter » de l'écran CODIR doit être en haut à droite.
+- « Mes temps » réapparu dans la barre latérale alors qu'on avait mis « Temps ».
+- Le fil d'Ariane ne suit pas les onglets (Temps, et ailleurs).
+- Comment s'affichent les éditions d'un projet au bout de 4, 5, 8 ans ?
+- Erreurs 500 aléatoires sur certains onglets (Ma semaine…).
+
+**Traité le 13/09** — (1) « Projeter » en haut à droite avec « Quitter le mode CODIR · Échap », filtre par pôle descendu sous l'en-tête. (2) « Temps » rétabli partout (barre latérale, fil d'Ariane, navigation mobile). (3) Fil d'Ariane lu dans l'URL : `Mon travail / Temps / Ma saisie · Temps de l'équipe · Clôture mensuelle`, `Projets / Projet / Année / Onglet`, `Réglages / Admin / Section`, `… / Projection` ; les écrans à simples filtres restent sur deux niveaux. (4) Choix de l'édition : puces jusqu'à trois éditions, sélecteur « N éditions · Édition 2028 · Proposée ▾ » au-delà ; le portefeuille ne montre que les éditions en cours ou validées. (5) Cause : deux serveurs Next (dev 3001 et tests Playwright 3100) écrivaient dans le même `.next` ; les tests tournent désormais sur `.next-test` (`NEXT_DIST_DIR`), et le fil d'Ariane est sous `Suspense` comme l'exige `useSearchParams`.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
