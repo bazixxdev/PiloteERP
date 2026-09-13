@@ -11,6 +11,7 @@ import { computeAlerts } from "@/lib/alerts";
 import { isCodir } from "@/lib/rights";
 import { cn } from "@/lib/utils";
 import { TabsNav, type TabKey } from "./tabs-nav";
+import { EditionPicker } from "./edition-picker";
 import { RenewDialog } from "./renew-dialog";
 import { RequestValidationDialog } from "./request-validation-dialog";
 import { FicheTab } from "./fiche";
@@ -52,11 +53,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{e.project.name}</h1>
-            <span className="inline-flex items-center gap-1 rounded-[5px] border bg-card px-2 py-1 text-[11px]" data-testid="edition-years">
-              {e.project.editions.map((x) => (
-                <Link key={x.id} href={`/edition/${x.id}`} aria-current={x.id === e.id ? "page" : undefined} className={cn("rounded-sm px-1.5 py-0.5", x.id === e.id ? "bg-primary font-semibold text-white" : "text-muted-foreground hover:bg-muted")}>Édition {x.year}</Link>
-              ))}
-            </span>
+            <EditionPicker currentId={e.id} editions={e.project.editions.map((x) => ({ id: x.id, year: x.year, statusLabel: refLabel(refs, "edition_status", x.status) }))} />
             {canStatus ? (
               <AutoField model="edition" id={e.id} field="status" type="select" value={e.status} allowEmpty={false} refreshOnSave testId="edition-status"
                 options={REF_DEFAULTS.edition_status.map((s) => ({ value: s.code, label: refLabel(refs, "edition_status", s.code) }))} className="w-40" />
