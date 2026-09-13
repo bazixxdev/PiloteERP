@@ -27,7 +27,7 @@ export default async function MaSemainePage() {
   const weekStart = dayjs().startOf("isoWeek");
   const weekEnd = weekStart.add(6, "day");
   const days = weekDays(weekStart, 5);
-  const [agenda, portfolio, unread, personFull, rhythms, weekEntries, tasks] = await Promise.all([
+  const [agenda, portfolio, unread, personFull, rhythms, weekEntries, tasks, openRemarks] = await Promise.all([
     loadAgenda(settings.horizonDays),
     loadPortfolio(settings, { statuses: ["in_progress", "validated"] }),
     prisma.notification.findMany({ where: { personId: me.id, readAt: null }, include: { sender: true }, orderBy: { createdAt: "desc" } }),
@@ -35,6 +35,8 @@ export default async function MaSemainePage() {
     loadRhythms(),
     prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: weekStart.toDate(), lt: weekStart.add(1, "week").toDate() } }, select: { hours: true, date: true } }),
     loadMyTasks(me.id),
+    // Remarques ouvertes de la direction (ou du garant) sur les fiches que je pilote ou où je contribue.
+    prisma.fieldRemark.findMany({ where: { resolvedAt: null, edition: { status: { not: "closed" }, OR: [{ project: { pilotId: me.id } }, { team: { some: { personId: me.id } } }] } }, include: { author: true, edition: { include: { project: true } } }, orderBy: { createdAt: "desc" } }),
   ]);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
@@ -79,7 +81,8 @@ export default async function MaSemainePage() {
     : overdueValidation
       ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/validations" }
       : null;
-  const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0 && openTasks === 0;
+  const remarksByEdition = [...new Map(openRemarks.map((r) => [r.editionId, { edition: r.edition, items: openRemarks.filter((x) => x.editionId === r.editionId) }])).values()];
+  const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0 && openTasks === 0 && openRemarks.length === 0;
 
   const dayLabel = (n: number) => (n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} j`);
   const badgeColor = (n: number) => (n < 0 ? "danger" : n <= 7 ? "warning" : "muted");
@@ -124,6 +127,17 @@ export default async function MaSemainePage() {
           <ul className="text-xs">
             {unread.map((n) => (
               <li key={n.id} className="py-0.5"><Link href={n.link ?? "#"} className="font-semibold text-primary hover:underline">{n.title}</Link>{n.body && <span className="text-muted-foreground"> — {n.body}</span>} <span className="text-muted-foreground">· {fmtDate(n.createdAt, "D MMM à HH:mm")}{n.sender ? ` · ${n.sender.name}` : ""}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {remarksByEdition.length > 0 && (
+        <div className="mb-4 rounded-md border border-l-4 border-l-warning bg-card px-4 py-3" data-testid="remarks-to-treat">
+          <div className="mb-1 text-sm font-semibold">{openRemarks.length} remarque{openRemarks.length > 1 ? "s" : ""} à traiter sur {remarksByEdition.length > 1 ? "vos fiches" : "votre fiche"}</div>
+          <ul className="grid gap-1 text-xs">
+            {remarksByEdition.map(({ edition, items }) => (
+              <li key={edition.id}><Link href={`/edition/${edition.id}?onglet=fiche`} className="font-semibold text-primary hover:underline">{edition.project.name} · {edition.year}</Link> <span className="text-muted-foreground">· {items.length} remarque{items.length > 1 ? "s" : ""} de {[...new Set(items.map((r) => r.author.name))].join(", ")} · « {items[0].body.slice(0, 90)}{items[0].body.length > 90 ? "…" : ""} »</span></li>
             ))}
           </ul>
         </div>

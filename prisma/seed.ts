@@ -542,6 +542,49 @@ async function main() {
     await prisma.decision.create({ data: { editionId: e.id, instance: x.instance, body: x.body, authorId: x.instance === "pole" ? leadB.id : director.id, followUpId: x.follow === null ? null : x.follow === 0 ? e.pilotId : e.teamIds[1] ?? e.pilotId, dueDate: x.due ? d(x.due) : null, decidedAt: d(-between(2, 25)) } });
   }
 
+  // Trois fiches projets 2026 remplies au format du gabarit CRESS (textes transposés des fiches réelles, sans personne réelle),
+  // avec, sur l'une, les remarques de la direction accrochées aux rubriques — comme les commentaires Word.
+  const fiche = async (code: string, data: Record<string, unknown>) => {
+    const e = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: code } } });
+    if (e) await prisma.edition.update({ where: { id: e.id }, data });
+    return e;
+  };
+  await fiche("COM-02", {
+    operationalObjectives: "Moderniser l'image de la CRESS avec un site clair, accessible et cohérent avec son identité.\nAméliorer la lisibilité de l'offre de services et des missions auprès des acteurs de l'ESS.\nFaciliter l'accès à l'information pour les différents publics (adhérents, partenaires, grand public).\nRenforcer la visibilité de l'ESS en région Centre-Val de Loire.",
+    quantitativeObjectives: "Un site livré et mis en ligne dans l'année ; indicateurs de fréquentation suivis (Matomo) ; conformité RGAA vérifiée.",
+    content: "Le site devra être conçu dans une logique d'UX design, centré sur les besoins des utilisateurs. Un temps de réflexion collective pourra être prévu.\nValeur ajoutée : un site plus ergonomique et intuitif ; une meilleure visibilité des actions et de l'impact de la CRESS ; un outil centralisé pour fédérer et informer l'écosystème ESS régional ; un gain de temps pour l'équipe grâce à une gestion de contenus simplifiée ; une image renforcée de professionnalisme auprès des partenaires institutionnels.\nLe site intégrera les indicateurs de suivi (Matomo), respectera le RGAA et des pratiques de communication digitale responsables, et répondra aux exigences minimales de cybersécurité.",
+    audience: "Structures de l'ESS ; adhérents et futurs adhérents ; collectivités territoriales et partenaires institutionnels ; porteurs de projets et entrepreneurs de l'ESS ; grand public intéressé par l'ESS.",
+    governance: "Sponsor : direction. Équipe projet : chargé·e de communication et consultation du reste de l'équipe. Sollicitation ponctuelle d'adhérents ou de membres du CA, et d'homologues communication d'autres CRESS si besoin.",
+    calendar: "Phase 1 – Diagnostic et cadrage : analyse de l'existant, recueil des besoins (mois 1).\nPhase 2 – Conception : arborescence, maquettes, choix du prestataire (mois 2 à 4).\nPhase 3 – Développement et recette (mois 5 à 8).\nPhase 4 – Mise en ligne, formation de l'équipe, communication (mois 9).",
+    deliveryDate: dayjs("2026-11-30").toDate(),
+    sponsorId: director.id,
+  });
+  await fiche("TES-03", {
+    operationalObjectives: "Réaliser une note d'opportunité 2026 sur une filière en lien avec la transition écologique, pour valoriser les filières ou ensembles d'initiatives stratégiques à développer à l'échelle régionale.\nPorter un plaidoyer économique qui alimente les acteurs de l'ESS comme les acteurs publics, voire privés.",
+    quantitativeObjectives: "Une note publiée dans l'année ; un questionnaire diffusé à la liste TE et aux adhérents pour choisir le thème.",
+    content: "Le thème 2026 se choisit avec une grille d'évaluation et un questionnaire (réemploi, textile, mobilité, BTP). Sujet validé en mars 2026 : réemploi.\nModèle éprouvé par ESS France et une autre CRESS : périmètre et poids économique de la filière, enjeux, état des lieux et rôle de l'ESS, opportunités et défis.\nLe chargé de mission transition écologique est pleinement associé ; le travail garde un lien avec le forum TESS 2026.",
+    audience: "Acteurs de l'ESS, acteurs publics, acteurs privés souhaitant rejoindre l'ESS.",
+    snessLink: "Axe transition écologique (à venir)",
+    sponsorId: director.id,
+  });
+  const aser = await fiche("COO-02", {
+    operationalObjectives: "Répondre à la demande publique et privée en achats socialement et écologiquement responsables : être identifié par les acheteurs, repérer les besoins et les mettre en lien avec les acteurs du territoire, déployer une offre de service CRESS sinon.\nPromouvoir et renforcer l'offre de biens et de services de l'ESS : visibiliser l'offre existante (cartographie, événements, mise en lien), identifier les besoins des organisations ESS pour mieux répondre à la commande publique et privée.",
+    quantitativeObjectives: "Constitution d'un réseau d'acheteurs ; 6 entretiens acheteurs avec préconisations d'action ; un groupe d'action animé toute l'année.",
+    content: "Webinaire de novembre (61 participants) et forum (environ 120 participants) : besoins identifiés — mieux connaître les besoins des acheteurs publics, renforcer les capacités de l'ESS à répondre à la commande publique, renforcer la visibilité de l'offre ESS, améliorer la mobilisation des acheteurs.\nGroupe d'action animé tout au long de l'année avec les têtes de réseau de l'insertion et de l'emploi.\nLien avec les notes d'opportunité, le forum et la cartographie.",
+    audience: "Acheteurs publics et privés de la région ; structures de l'ESS en capacité de répondre à la commande publique.",
+    calendar: "À préciser dans le rétroplanning.",
+    sponsorId: director.id,
+  });
+  if (aser) {
+    const rq = (field: string, body: string, day: string) => ({ editionId: aser.id, field, body, authorId: director.id, createdAt: dayjs(day).toDate() });
+    await prisma.fieldRemark.createMany({ data: [
+      rq("content", "À retirer la partie « identifier les filières » : voir faire une fiche filière, ou indiquer les enjeux de filières dans le contexte.", "2026-03-13"),
+      rq("calendar", "Non complété. Les dates jalons a minima : la semaine ASER, ceux posés aussi avec l'ADEME, les dates des entretiens, les GT, la sortie de l'offre.", "2026-03-13"),
+      rq("quantitativeObjectives", "Préciser le nombre d'acheteurs visés dans le réseau et l'échéance.", "2026-03-13"),
+    ] });
+    await prisma.notification.create({ data: { personId: (await prisma.project.findFirst({ where: { analyticCode: "COO-02" } }))!.pilotId, senderId: director.id, kind: "info", title: "Remarques sur la fiche PTCE et ESSOR · 2026", body: "3 remarques de la direction à traiter (contenu, calendrier, objectifs quantitatifs).", link: `/edition/${aser.id}?onglet=fiche`, createdAt: dayjs("2026-03-13").toDate() } });
+  }
+
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
   void assistant;
 }

@@ -52,6 +52,9 @@ model Person {
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
+  sponsoredEditions  Edition[]          @relation("EditionSponsor")
+  remarksWritten     FieldRemark[]      @relation("RemarkAuthor")
+  remarksResolved    FieldRemark[]      @relation("RemarkResolver")
   notifications      Notification[]     @relation("NotificationRecipient")
   notificationsSent  Notification[]     @relation("NotificationSender")
 }
@@ -192,18 +195,26 @@ model Edition {
   stakes          String?
   axis            String?
   sressMeasure    String?
+  snessLink       String? // rattachement à la SNESS (gabarit fiche projet)
+  otherTexts      String? // autres textes de rattachement
   yearPriorities  String?
-  expectedOutcome String?
+  expectedOutcome String? // impacts attendus
 
   // Couche 2 — cadre de moyens (RAF + direction)
   plannedFunders        String?
   directExpenseEnvelope Float?
   fte                   Float?
   imposedIndicators     String?
+  sponsorId             String? // sponsor de la fiche projet (membre du CODIR)
+  sponsor               Person?   @relation("EditionSponsor", fields: [sponsorId], references: [id])
 
   // Couche 3 — proposition opérationnelle (pilote)
-  operationalObjectives String?
+  operationalObjectives String? // objectifs qualitatifs (quelle problématique)
+  quantitativeObjectives String? // objectifs quantitatifs
+  content               String? // contenu développé, valeur ajoutée
+  audience              String? // public, bénéficiaires
   calendar              String?
+  deliveryDate          DateTime? // date de rendu
   partners              String?
   method                String?
   governance            String?
@@ -239,6 +250,7 @@ model Edition {
   validations  ValidationRequest[]
   docLinks     DocLink[]
   comments     Comment[]
+  remarks      FieldRemark[]
   changes      ChangeLog[]
   indicators   Indicator[]
   attachments  Attachment[]
@@ -576,4 +588,22 @@ model WorkSlot {
   allDay  Boolean  @default(false)
 
   @@index([taskId])
+}
+
+// Remarque sur une rubrique de la fiche (comme un commentaire Word accroché à un paragraphe) : la direction, la RAF ou le
+// responsable de pôle garant l'écrit, le pilote la lit en place et la marque traitée. Elle reste dans l'historique.
+model FieldRemark {
+  id           String    @id @default(cuid())
+  editionId    String
+  edition      Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  field        String // clé du champ de la fiche (stakes, calendar…)
+  body         String
+  authorId     String
+  author       Person    @relation("RemarkAuthor", fields: [authorId], references: [id])
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolvedBy   Person?   @relation("RemarkResolver", fields: [resolvedById], references: [id])
+
+  @@index([editionId, resolvedAt])
 }

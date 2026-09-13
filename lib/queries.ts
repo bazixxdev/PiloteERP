@@ -62,6 +62,7 @@ export const editionFullInclude = {
   docLinks: true,
   comments: { include: { author: true }, orderBy: { createdAt: "asc" as const } },
   changes: { include: { author: true }, orderBy: { createdAt: "desc" as const }, take: 30 },
+  remarks: { include: { author: true, resolvedBy: true }, orderBy: { createdAt: "asc" as const } },
   indicators: { orderBy: { order: "asc" as const } },
   attachments: { include: { uploadedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" as const } },
   expenses: { include: { validation: { select: { requester: { select: { name: true } }, decidedAt: true } } }, orderBy: { createdAt: "asc" as const } },

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { FieldType } from "@/lib/fields";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { FieldRemarks, type RemarkView } from "./remarks";
 
 export type LayerField = { key: string; label: string; type: FieldType; value: string | number | boolean | Date | null; options?: Option[]; suffix?: string };
 
@@ -22,6 +23,12 @@ type Props = {
   writable: boolean;
   // Une couche vide que je peux remplir s'ouvre directement en saisie ; une couche remplie se lit, et se modifie sur demande.
   defaultEditing: boolean;
+  // Remarques accrochées aux rubriques de cette couche, et droits associés.
+  remarks: RemarkView[];
+  canRemark: boolean;
+  canResolve: boolean;
+  meId: string;
+  isDirector: boolean;
 };
 
 const filledOf = (f: LayerField) => f.value !== null && f.value !== undefined && f.value !== "" && f.value !== false;
@@ -33,6 +40,10 @@ export function FicheLayer(p: Props) {
   const empty = filled === 0;
   const edit = p.writable && editing;
   const fieldId = (key: string) => `edition-${p.editionId}-${key}`;
+  const openRemarks = p.remarks.filter((r) => !r.resolvedAt).length;
+  const remarksOf = (key: string, label: string) => (
+    <FieldRemarks editionId={p.editionId} field={key} fieldLabel={label} remarks={p.remarks.filter((r) => r.field === key)} canWrite={p.canRemark} canResolve={p.canResolve} meId={p.meId} isDirector={p.isDirector} />
+  );
 
   return (
     <section data-testid={`layer-${p.layerKey}`} className={cn("rounded-md border bg-card px-[18px] py-4", empty && !edit && "border-dashed bg-muted text-muted-foreground")}>
@@ -41,6 +52,7 @@ export function FicheLayer(p: Props) {
           <span className={cn("grid size-[26px] place-items-center rounded-full border font-serif text-sm", empty ? "border-[#c9cdc5] text-muted-foreground" : "border-[#bfccba] text-mint")}>{p.no}</span>
           <h4 className="text-sm font-bold text-foreground">{p.title}</h4>
           {empty ? <StatusBadge label={`Manquant — ${p.ownerMissingLabel}`} color="warning" dot={false} /> : <StatusBadge label={`${filled}/${p.fields.length} renseignés`} color={filled === p.fields.length ? "mint" : "info"} dot={false} />}
+          {openRemarks > 0 && <span data-testid={`layer-remarks-${p.layerKey}`}><StatusBadge label={`${openRemarks} remarque${openRemarks > 1 ? "s" : ""} à traiter`} color="warning" /></span>}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground">{p.owner}{!p.writable && " · lecture seule pour vous"}</span>
@@ -55,7 +67,10 @@ export function FicheLayer(p: Props) {
       </div>
 
       {empty && !edit ? (
-        <p className="mt-2.5 ml-9 text-xs"><b>{p.ownerMissingLabel.replace(/^./, (c) => c.toUpperCase())}.</b> {p.writable ? "Cliquez sur « Modifier cette couche » pour la remplir." : "Les champs manquants restent attribués à leur propriétaire."}</p>
+        <div className="mt-2.5 ml-9 grid gap-1">
+          <p className="text-xs"><b>{p.ownerMissingLabel.replace(/^./, (c) => c.toUpperCase())}.</b> {p.writable ? "Cliquez sur « Modifier cette couche » pour la remplir." : "Les champs manquants restent attribués à leur propriétaire."}</p>
+          {p.fields.filter((f) => p.remarks.some((r) => r.field === f.key)).map((f) => <div key={f.key}><span className="text-[10px] text-muted-foreground">{f.label}</span>{remarksOf(f.key, f.label)}</div>)}
+        </div>
       ) : edit ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:ml-9">
           {p.fields.map((f) => {
@@ -69,6 +84,7 @@ export function FicheLayer(p: Props) {
                   placeholder={isBool ? f.label : "À compléter…"} suffix={f.suffix} options={f.options}
                   inputClassName={cn(f.type === "textarea" && "min-h-[3.5rem]")}
                 />
+                {remarksOf(f.key, f.label)}
               </div>
             );
           })}
@@ -79,6 +95,7 @@ export function FicheLayer(p: Props) {
             <div key={r.key} className={cn("min-w-0", r.wide && "sm:col-span-2")}>
               <dt className="text-[10px] text-muted-foreground">{r.label}</dt>
               <dd data-testid={`field-${r.key}`} data-readonly="true" className={cn("mt-0.5 whitespace-pre-line text-sm leading-relaxed", r.empty ? "italic text-muted-foreground" : "text-foreground")}>{r.text}</dd>
+              {remarksOf(r.key, r.label)}
             </div>
           ))}
         </dl>
