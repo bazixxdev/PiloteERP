@@ -53,3 +53,5 @@ prisma/prototype.db-journal
 # pièces jointes déposées dans le prototype
 /uploads/*
 !/uploads/.gitkeep
+/.next-build
+/.next-test
