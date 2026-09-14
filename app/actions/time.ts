@@ -106,8 +106,9 @@ export async function saveWeekSplit(weekStart: string, parts: { projectId: strin
   const days = weekDays(start, 5).map((d) => ({ d, exp: (() => { const r = rhythmAt(full, d, rhythms); return r ? expectedHoursOn(r, d) : 0; })() }));
   const expected = days.reduce((s, x) => s + x.exp, 0);
   if (expected <= 0) return { ok: false, error: "Rythme non configuré : impossible de convertir des parts en heures." };
+  // Une semaine se répartit en entier : pas de feuille enregistrée à 85 % ni à 120 % (règle demandée le 14/09).
   const total = parts.reduce((s, p) => s + (Number(p.percent) || 0), 0);
-  if (total > 100.01) return { ok: false, error: `Le total dépasse 100 % (${Math.round(total)} %).` };
+  if (Math.abs(total - 100) > 0.01) return { ok: false, error: `Le total doit faire exactement 100 % (actuellement ${Math.round(total)} %).` };
   for (const d of days) {
     const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId: me.id, month: monthKey(d.d.toDate()) } } });
     if (locked) return { ok: false, error: "Un mois de cette semaine est verrouillé par la RAF." };

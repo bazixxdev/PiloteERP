@@ -65,9 +65,9 @@ export function WeekSplit({ rows, weekStart, expectedWeek, currentHours, readOnl
           })}
         </ul>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-[11px] text-muted-foreground">
-          <span>{rest > 0 ? `Reste ${rest} % à répartir (${fmtNumber(expectedWeek * rest / 100, 1)} h).` : total > 100 ? "Le total dépasse 100 %." : "Toute la semaine est répartie."}</span>
+          <span>{rest > 0 ? `Reste ${rest} % à répartir (${fmtNumber(expectedWeek * rest / 100, 1)} h) : la semaine s'enregistre à 100 %, pas avant.` : total > 100 ? "Le total dépasse 100 % : retirez l'excédent." : "Toute la semaine est répartie."}</span>
           {!readOnly && (
-            <Button size="sm" disabled={pending || total > 100} data-testid="split-save" onClick={() => start(async () => { const r = await saveWeekSplit(weekStart, rows.map((row) => ({ projectId: row.projectId, actionId: row.actionId, timeCodeId: row.timeCodeId, percent: parts[key(row)] ?? 0 }))); if (!r.ok) toast.error(r.error); else { toast.success(`Répartition enregistrée : ${fmtNumber(r.data!.hours, 1)} h posées sur la semaine`); router.refresh(); } })}>
+            <Button size="sm" disabled={pending || total !== 100} title={total !== 100 ? "Le total doit faire exactement 100 %" : undefined} data-testid="split-save" onClick={() => start(async () => { const r = await saveWeekSplit(weekStart, rows.map((row) => ({ projectId: row.projectId, actionId: row.actionId, timeCodeId: row.timeCodeId, percent: parts[key(row)] ?? 0 }))); if (!r.ok) toast.error(r.error); else { toast.success(`Répartition enregistrée : ${fmtNumber(r.data!.hours, 1)} h posées sur la semaine`); router.refresh(); } })}>
               <Save />Enregistrer la répartition
             </Button>
           )}
@@ -78,7 +78,7 @@ export function WeekSplit({ rows, weekStart, expectedWeek, currentHours, readOnl
           <div className="absolute inset-[26%] grid place-items-center rounded-full bg-card text-center"><b className="text-lg tabular">{total} %</b><span className="text-[9px] text-muted-foreground">réparti</span></div>
         </div>
         <ul className="w-full text-[10px]">
-          {rows.filter((r) => (parts[key(r)] ?? 0) > 0).map((r) => { const i = rows.indexOf(r); return <li key={key(r)} className="flex items-center gap-1.5 py-0.5"><span className="size-2 rounded-sm" style={{ background: COLORS[i % COLORS.length] }} /><span className="truncate">{r.label}</span><span className="ml-auto tabular">{parts[key(r)]} %</span></li>; })}
+          {rows.filter((r) => (parts[key(r)] ?? 0) > 0).map((r) => { const i = rows.indexOf(r); return <li key={key(r)} className="flex items-center gap-1.5 py-0.5"><span className="size-2 shrink-0 rounded-sm" style={{ background: COLORS[i % COLORS.length] }} /><span className="min-w-0 flex-1 truncate" title={r.label}>{r.kind === "action" ? "↳ " : ""}{r.label}</span><span className="shrink-0 tabular whitespace-nowrap">{parts[key(r)]} %</span></li>; })}
           {total === 0 && <li className="flex items-center gap-1.5 text-muted-foreground"><PieChart className="size-3" />Poussez les curseurs.</li>}
         </ul>
       </div>
