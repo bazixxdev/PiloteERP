@@ -720,6 +720,7 @@ model TaskList {
   person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   name       String
   visibility String   @default("private")
+  color      String?  // repère visuel, même palette que les notes (lib/notes.ts NOTE_COLORS)
   editionId  String?
   edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
   order      Int      @default(0)

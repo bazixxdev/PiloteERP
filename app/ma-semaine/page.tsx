@@ -181,7 +181,7 @@ export default async function MaSemainePage() {
           </Panel>
           {tasksOn && (
             <Panel title="Mes tâches" aside={<span className="text-[11px] text-muted-foreground">{openTasks ? `${openTasks} en cours` : "Rien en cours"} · <Link href="/taches" className="text-primary hover:underline">{lists.length ? `${lists.length} liste${lists.length > 1 ? "s" : ""} →` : "mes listes →"}</Link></span>} testId="my-tasks" className="order-3 scroll-mt-4" id="mes-taches">
-              <TaskList tasks={tasks} editions={editionOpts} lists={lists.map((l) => ({ id: l.id, name: l.name }))} />
+              <TaskList tasks={tasks} editions={editionOpts} lists={lists.map((l) => ({ id: l.id, name: l.name, color: l.color }))} showList />
             </Panel>
           )}
           <details className="group order-6 overflow-hidden rounded-md border bg-card" data-testid="later">

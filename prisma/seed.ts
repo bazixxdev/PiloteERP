@@ -854,15 +854,15 @@ async function main() {
   // Listes de tâches et tâches : chacun à sa façon — l'assistante (vie statutaire partagée, demandes du jour privées), une chargée
   // de mission avec sa liste de suivi hebdo visible de son responsable, une liste de projet visible du pôle, une liste d'idées privée.
   // ─────────────────────────────────────────────────────────────────────────────────────────────
-  const list = (personId: string, name: string, visibility: string, editionId: string | null, order: number) => prisma.taskList.create({ data: { personId, name, visibility, editionId, order } });
+  const list = (personId: string, name: string, visibility: string, editionId: string | null, order: number, color: string | null = null) => prisma.taskList.create({ data: { personId, name, visibility, editionId, order, color } });
   const task = async (personId: string, listId: string | null, label: string, due: string | null, editionId?: string | null, done = false, doneAgo = 1, slot?: { day: string; start?: string; end?: string }) => {
     const t = await prisma.task.create({ data: { personId, listId, label, dueDate: due ? dayjs(due).toDate() : null, editionId: editionId ?? null, done, doneAt: done ? d(-doneAgo) : null, createdAt: d(-between(2, 12)) } });
     if (slot) await prisma.workSlot.create({ data: { taskId: t.id, startAt: slot.start ? dayjs(`${slot.day} ${slot.start}`).toDate() : dayjs(slot.day).toDate(), endAt: slot.end ? dayjs(`${slot.day} ${slot.end}`).toDate() : dayjs(slot.day).add(1, "day").toDate(), allDay: !slot.start } });
     return t;
   };
   const dd = (n: number) => today.add(n, "day").format("YYYY-MM-DD");
-  const vie = await list(assistant.id, "Vie statutaire", "all", vieEd.id, 0);
-  const jour = await list(assistant.id, "Demandes du jour", "private", null, 1);
+  const vie = await list(assistant.id, "Vie statutaire", "all", vieEd.id, 0, "ocre");
+  const jour = await list(assistant.id, "Demandes du jour", "private", null, 1, "gris");
   await task(assistant.id, vie.id, "Envoyer la convocation du CA du 1er octobre (J-15)", dd(2), vieEd.id, false, 0, { day: dd(1), start: "09:00", end: "10:00" });
   await task(assistant.id, vie.id, "Réserver la salle et le café du CA", dd(3), vieEd.id);
   await task(assistant.id, vie.id, "Relevé de décision du bureau de septembre", dd(-1), vieEd.id, true, 1);
@@ -870,13 +870,13 @@ async function main() {
   await task(assistant.id, jour.id, "Vérifier les hôtels pour le déplacement à Bruxelles", dd(0), null, false, 0, { day: dd(0), start: "14:00", end: "15:00" });
   await task(assistant.id, jour.id, "Répondre à la direction : salle réservée pour les entretiens", dd(0), null, true, 0);
   await task(assistant.id, jour.id, "Commander les badges du Mois de l'ESS", dd(5), ed("SEN-01").id);
-  const suivi = await list(ines.id, "Suivi hebdo avec mon responsable", "pole_lead", ed("OBS-01").id, 0);
+  const suivi = await list(ines.id, "Suivi hebdo avec mon responsable", "pole_lead", ed("OBS-01").id, 0, "bleu");
   await task(ines.id, suivi.id, "Rédiger la note de conjoncture (données URSSAF T2)", dd(9), ed("OBS-01").id, false, 0, { day: dd(2), start: "09:00", end: "12:30" });
   await task(ines.id, suivi.id, "Envoyer les invitations du petit-déjeuner du 14 octobre", dd(7), ed("OBS-01").id);
   await task(ines.id, suivi.id, "Chiffres par département pour le Mois de l'ESS (demande de Sophie)", dd(6), ed("SEN-01").id, false, 0, { day: dd(3), start: "14:00", end: "17:00" });
   await task(ines.id, suivi.id, "Relancer les partenaires pour le jury du Prix", dd(-3), ed("SEN-01").id, true, 2);
   await task(ines.id, null, "Préparer le point hebdo de jeudi", dd(3), null);
-  const recette = await list(romain.id, "Recette du nouveau site", "pole", ed("COM-02").id, 0);
+  const recette = await list(romain.id, "Recette du nouveau site", "pole", ed("COM-02").id, 0, "vert");
   await task(romain.id, recette.id, "Valider les pages Agenda et Carte TESS", dd(4), ed("COM-02").id, false, 0, { day: dd(1), start: "14:00", end: "17:00" });
   await task(romain.id, recette.id, "Tester le formulaire de contact (RGPD, accusé de réception)", dd(1), ed("COM-02").id);
   await task(romain.id, recette.id, "Vérifier les contrastes RGAA sur les pages projets", dd(-2), ed("COM-02").id, true, 2);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
+import { NOTE_COLORS } from "@/lib/notes";
 import { dayjs } from "@/lib/format";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -105,28 +106,30 @@ export async function deleteSlot(id: string): Promise<Result> {
 // Listes de tâches : catégories avec ou sans projet ; visibilité au choix de l'auteur ; seul l'auteur écrit.
 const VIS = ["private", "pole_lead", "pole", "all"];
 
-export async function addList(input: { name: string; visibility?: string; editionId?: string | null }): Promise<Result<{ id: string }>> {
+export async function addList(input: { name: string; visibility?: string; editionId?: string | null; color?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Donnez un nom à la liste." };
   if (input.visibility && !VIS.includes(input.visibility)) return { ok: false, error: "Visibilité inconnue." };
   const count = await prisma.taskList.count({ where: { personId: me.id } });
-  const l = await prisma.taskList.create({ data: { personId: me.id, name, visibility: input.visibility ?? "private", editionId: input.editionId || null, order: count } });
+  if (input.color && !NOTE_COLORS.some((c) => c.value === input.color)) return { ok: false, error: "Couleur inconnue." };
+  const l = await prisma.taskList.create({ data: { personId: me.id, name, visibility: input.visibility ?? "private", editionId: input.editionId || null, color: input.color || null, order: count } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: l.id } };
 }
 
-export async function updateList(id: string, patch: { name?: string; visibility?: string; editionId?: string | null }): Promise<Result> {
+export async function updateList(id: string, patch: { name?: string; visibility?: string; editionId?: string | null; color?: string | null }): Promise<Result> {
   const me = await getCurrentPerson();
   const l = await prisma.taskList.findUnique({ where: { id } });
   if (!l || l.personId !== me.id) return { ok: false, error: "Liste introuvable." };
   if (patch.visibility && !VIS.includes(patch.visibility)) return { ok: false, error: "Visibilité inconnue." };
-  await prisma.taskList.update({ where: { id }, data: { ...(patch.name !== undefined ? { name: patch.name.trim() || l.name } : {}), ...(patch.visibility ? { visibility: patch.visibility } : {}), ...(patch.editionId !== undefined ? { editionId: patch.editionId || null } : {}) } });
+  if (patch.color && !NOTE_COLORS.some((c) => c.value === patch.color)) return { ok: false, error: "Couleur inconnue." };
+  await prisma.taskList.update({ where: { id }, data: { ...(patch.name !== undefined ? { name: patch.name.trim() || l.name } : {}), ...(patch.visibility ? { visibility: patch.visibility } : {}), ...(patch.editionId !== undefined ? { editionId: patch.editionId || null } : {}), ...(patch.color !== undefined ? { color: patch.color || null } : {}) } });
   revalidatePath("/", "layout");
   return { ok: true };
 }
 
-// Supprimer une liste ne supprime pas ses tâches : elles reviennent dans « Sans liste ».
+// Supprimer une liste ne supprime pas ses tâches : elles reviennent dans « À trier ».
 export async function deleteList(id: string): Promise<Result> {
   const me = await getCurrentPerson();
   const l = await prisma.taskList.findUnique({ where: { id } });

@@ -6,27 +6,50 @@ import { iAm } from "./helpers";
 test("l'assistante gère ses listes ; son responsable lit une liste partagée, sans y écrire", async ({ page }) => {
   await page.goto("/taches");
   await iAm(page, "Léa Morin");
-  // Les listes du jeu de démo, puis une nouvelle liste visible du pôle.
-  await expect(page.locator('[data-name="Vie statutaire"]')).toBeVisible();
-  await page.getByTestId("new-list").click();
+  // Les listes du jeu de démo dans la colonne, puis une nouvelle liste visible de toute la CRESS : créée, on l'ouvre.
+  await expect(page.getByTestId("tasks-lists").locator('[data-name="Vie statutaire"]')).toBeVisible();
+  await page.getByTestId("new-list").first().click();
   await page.getByTestId("new-list-name").fill("Forum TESS");
+  await page.getByTestId("new-list-color-vert").click();
   await page.getByTestId("new-list-vis-all").check();
   await page.getByTestId("new-list-submit").click();
-  const forum = page.locator('[data-name="Forum TESS"]');
-  await expect(forum).toBeVisible();
-  await forum.getByTestId("task-input").fill("Réserver la salle du forum");
+  const forum = page.getByTestId("tasks-main");
+  await expect(forum).toHaveAttribute("data-name", "Forum TESS");
+  await forum.getByTestId("task-input").fill("Réserver la salle du forum !lundi");
+  await expect(forum.getByTestId("task-bang-due")).toBeVisible();
   await forum.getByTestId("task-input").press("Enter");
   await expect(forum).toContainText("Réserver la salle du forum");
-  await expect(forum.locator("[data-testid^=list-visibility-]")).toHaveValue("all");
+  await expect(forum.locator("[data-testid^=task-due-]").first()).toContainText("Pour lun.");
+  await expect(forum.locator("[data-testid^=list-visibility-]")).toHaveAttribute("data-value", "all");
+  // Ranger une tâche : la pastille de liste est un menu ; le glisser-déposer sur la colonne fait la même chose.
+  await forum.locator("[data-testid^=task-list-]").first().click();
+  await page.locator("[data-testid$=-none]", { hasText: "À trier" }).click();
+  await expect(forum).not.toContainText("Réserver la salle du forum");
+  await page.getByTestId("tasks-view-trier").click();
+  const trier = page.getByTestId("tasks-main");
+  await expect(trier).toContainText("Réserver la salle du forum");
+  const row = trier.locator("li", { hasText: "Réserver la salle du forum" });
+  await row.dragTo(page.getByTestId("tasks-lists").locator('[data-name="Forum TESS"]'));
+  await expect(page.getByText("Rangée dans « Forum TESS »")).toBeVisible();
+  await page.getByTestId("tasks-lists").locator('[data-name="Forum TESS"]').click();
+  await expect(forum).toContainText("Réserver la salle du forum");
+  // Réglages de la liste : renommer, sans sélecteur dans le titre.
+  await forum.locator("[data-testid^=list-settings-]").click();
+  await page.locator("[data-testid^=list-name-]").fill("Forum TESS 2026");
+  await page.locator("[data-testid^=list-name-]").blur();
+  await expect(forum.locator("h2")).toContainText("Forum TESS 2026");
+  await page.keyboard.press("Escape");
 
   // Le responsable du pôle 1 lit la liste « Suivi hebdo » d'Inès (visibilité « mon responsable ») et la liste « Forum TESS » (toute la CRESS), en lecture.
   await iAm(page, "Julien Barbot");
   await page.goto("/taches");
   const shared = page.getByTestId("shared-lists");
   await expect(shared).toContainText("Suivi hebdo avec mon responsable");
-  await expect(shared).toContainText("Forum TESS");
-  await expect(shared.locator("[data-readonly=true]").first()).toBeVisible();
-  await expect(shared.getByTestId("task-input")).toHaveCount(0);
+  await expect(shared).toContainText("Forum TESS 2026");
+  await shared.locator('[data-name="Forum TESS 2026"]').click();
+  await expect(page.getByTestId("tasks-main").locator("[data-readonly=true]")).toBeVisible();
+  await expect(page.getByTestId("tasks-main").getByTestId("task-input")).toHaveCount(0);
+  await expect(page.getByTestId("tasks-main")).toContainText("Réserver la salle du forum");
   // Une liste privée ne se voit pas.
   await expect(shared).not.toContainText("Demandes du jour");
 });

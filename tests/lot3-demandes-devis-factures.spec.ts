@@ -27,8 +27,8 @@ test("une demande interne se dépose, arrive chez l'assistante, devient une tâc
   await expect(page.locator("aside").first().getByRole("link", { name: /Demandes/ })).toContainText("2");
   await line.locator("[data-testid^=request-task-]").click();
   await expect(page.getByText("Tâche créée dans votre liste")).toBeVisible();
-  await page.goto("/taches");
-  await expect(page.getByTestId("list-unlisted")).toContainText("Réserver la salle du CA pour le jury du Prix (demande de Inès Cabral)");
+  await page.goto("/taches?vue=trier");
+  await expect(page.getByTestId("tasks-main")).toContainText("Réserver la salle du CA pour le jury du Prix (demande de Inès Cabral)");
   await page.goto("/demandes");
   await line.locator("[data-testid^=request-done-]").click();
   await expect(page.getByText("Demande faite, le demandeur est prévenu")).toBeVisible();
