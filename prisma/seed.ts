@@ -59,6 +59,7 @@ async function reset() {
   await prisma.taskList.deleteMany();
   await prisma.note.deleteMany();
   await prisma.changeProposal.deleteMany();
+  await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
   await prisma.funderContact.deleteMany();
@@ -528,9 +529,13 @@ async function main() {
         decisionComment: "OK, dans l'enveloppe.",
         targetDelayDays: 5,
         createdAt: d(-between(31, 60)),
+        supplier: ["Salle des fêtes de Blois", "Atelier Graphique Loire", "Coopérative Les Fabricants"][i],
+        supplierEmail: ["location@exemple.fr", "contact@atelier-graphique.exemple.fr", "bonjour@fabricants.exemple.fr"][i],
       },
     });
-    await prisma.expense.create({ data: { editionId: e.id, label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], committed: [900, 1500, 600][i], spent: [900, 0, 600][i], status: i === 1 ? "open" : "closed", validationId: v.id, reference: i === 1 ? null : `FAC-2026-${300 + i}` } });
+    // Circuit facture : la première payée avec service fait, la deuxième reçue en attente du service fait, la troisième payée.
+    await prisma.expense.create({ data: { editionId: e.id, label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], supplier: ["Salle des fêtes de Blois", "Atelier Graphique Loire", "Coopérative Les Fabricants"][i], committed: [900, 1500, 600][i], spent: [900, 0, 600][i], status: i === 1 ? "open" : "closed", validationId: v.id, reference: i === 1 ? null : `FAC-2026-${300 + i}`, nature: ["service", "service", "service"][i], invoiceReceivedAt: d(-[10, 3, 12][i]), paidAt: i === 1 ? null : d(-[4, 0, 6][i]), serviceDoneAt: i === 2 ? null : d(-[9, 2, 0][i]), serviceDoneById: i === 2 ? null : e.pilotId } });
+    if (i === 1) await prisma.notification.create({ data: { personId: e.pilotId, senderId: raf.id, kind: "info", title: "Facture reçue · Devis graphiste (Atelier Graphique Loire)", body: "1 500 € · la prestation est-elle conforme ? Dites-le dans l'onglet Budget (sans bloquer le paiement).", link: `/edition/${e.id}?onglet=budget`, createdAt: d(-3) } });
     const pdf = storePdf(`${["Devis location de salle", "Devis graphiste", "Devis intervenant"][i]}`);
     await prisma.attachment.create({ data: { editionId: e.id, validationId: v.id, kind: "quote", label: ["Devis location de salle", "Devis graphiste", "Devis intervenant"][i], fileName: `devis-2026-${200 + i}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: v.createdAt, ...pdf } });
   }
@@ -674,7 +679,21 @@ async function main() {
     await prisma.changeProposal.create({ data: { editionId: forum.id, field: "quantitativeObjectives", proposed: "120 participants (au lieu de 150), 15 exposants, un atelier par mission du plan opérationnel.", reason: "Le financeur retient 120 participants dans l'avenant ; la fiche affiche encore 150.", authorId: leadB.id, createdAt: dayjs().subtract(2, "day").toDate() } });
     await prisma.notification.create({ data: { personId: forum.project.pilotId, senderId: leadB.id, kind: "info", title: `Modification proposée sur ${forum.project.name} · 2026`, body: "Objectifs quantitatifs — le financeur retient 120 participants dans l'avenant.", link: `/edition/${forum.id}?onglet=fiche`, createdAt: dayjs().subtract(2, "day").toDate() } });
   }
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5 } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example" } });
+
+  // Lot 3 : demandes internes — les exemples des entretiens (salle pour la direction, chiffres pour l'Observatoire, retour sur le site).
+  const oressPilot = oress ? (await prisma.project.findUnique({ where: { id: oress.projectId } }))!.pilotId : null;
+  const ed2026 = async (code: string) => prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: code } } });
+  const com = await ed2026("COM-02");
+  const mois = await ed2026("SEN-01");
+  await prisma.request.createMany({ data: [
+    { kind: "assistant", title: "Réserver la salle du CA pour les 4 entretiens de recrutement", body: "Mardi 22 matin, 4 entretiens ; le premier à l'extérieur si possible.", requesterId: director.id, assigneeId: assistant.id, dueDate: dayjs().add(3, "day").toDate(), status: "open", createdAt: d(-1) },
+    { kind: "data", title: "Chiffres de l'emploi ESS par département pour l'ouverture du Mois de l'ESS", body: "Les 6 départements, emploi et établissements, format tableau + 3 phrases clés.", requesterId: leadB.id, assigneeId: oressPilot, editionId: mois?.id ?? null, dueDate: dayjs().add(6, "day").toDate(), status: "open", createdAt: d(-2) },
+    { kind: "site", title: "Mettre à jour la page « Nous rejoindre » avec l'offre de chargé·e de mission TE", body: "Le référentiel de poste est validé ; lien vers le PDF sur le serveur.", requesterId: raf.id, poleId: poles[2].id, editionId: com?.id ?? null, dueDate: dayjs().add(2, "day").toDate(), status: "doing", assigneeId: people.find((p) => p.name === "Romain Tessier")!.id, createdAt: d(-4) },
+    { kind: "com", title: "Visuel pour le petit-déjeuner ORESS d'octobre", requesterId: oressPilot ?? director.id, poleId: poles[2].id, dueDate: dayjs().add(12, "day").toDate(), status: "open", createdAt: d(0) },
+    { kind: "assistant", title: "Devis traiteur pour l'AG", body: "Deux devis comparés, 80 personnes.", requesterId: director.id, assigneeId: assistant.id, status: "done", answer: "Deux devis déposés dans le dossier AG, le moins cher est conforme.", doneAt: d(-2), createdAt: d(-9) },
+  ] });
+  await prisma.notification.create({ data: { personId: assistant.id, senderId: director.id, kind: "info", title: "Demande · Logistique / administratif : Réserver la salle du CA pour les 4 entretiens de recrutement", body: `${director.name} · pour le ${dayjs().add(3, "day").format("D MMM")}`, link: "/demandes", createdAt: d(-1) } });
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
 }

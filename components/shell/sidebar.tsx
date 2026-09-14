@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
@@ -25,6 +25,7 @@ function groupsFor(role: string, modules: string[]): Group[] {
         { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
         ...optional,
         { href: "/temps", label: "Temps", icon: Clock },
+        { href: "/demandes", label: "Demandes", icon: Inbox },
         { href: "/validations", label: "Validations", icon: CheckSquare },
       ]
     : [
@@ -32,6 +33,7 @@ function groupsFor(role: string, modules: string[]): Group[] {
         ...optional,
         { href: "/temps", label: "Temps", icon: Clock },
         { href: "/portefeuille", label: "Mes projets", icon: Briefcase },
+        { href: "/demandes", label: "Demandes", icon: Inbox },
         { href: "/validations", label: "Validations", icon: CheckSquare },
       ];
   const collective: Item[] = [
@@ -53,7 +55,7 @@ function groupsFor(role: string, modules: string[]): Group[] {
 }
 
 // Barre latérale sans pied ni liste des pôles : les pôles se filtrent depuis le portefeuille, l'aide « ? » reste au clavier.
-export function Sidebar({ pendingCount, remindersCount, role, modules = [] }: { pendingCount: number; remindersCount: number; role: string; modules?: string[] }) {
+export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role, modules = [] }: { pendingCount: number; remindersCount: number; requestsCount?: number; role: string; modules?: string[] }) {
   const pathname = usePathname();
   const GROUPS = groupsFor(role, modules);
   return (
@@ -72,7 +74,7 @@ export function Sidebar({ pendingCount, remindersCount, role, modules = [] }: { 
             <nav className="grid gap-[3px]" aria-label={g.caption}>
               {g.items.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs")));
-                const badge = item.href === "/validations" ? pendingCount : item.href === "/rappels" ? remindersCount : 0;
+                const badge = item.href === "/validations" ? pendingCount : item.href === "/rappels" ? remindersCount : item.href === "/demandes" ? requestsCount : 0;
                 return (
                   <Link
                     key={item.href}

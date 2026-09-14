@@ -55,7 +55,7 @@ export function ValidationCard({ v, refs, canDecide, showEdition, index, attachm
       {v.status === "pending" ? (
         canDecide ? <div className="mt-2"><DecideButtons id={v.id} /></div> : <p className="mt-2 text-xs text-muted-foreground">En attente d'un valideur de {LEVEL_LABEL[v.requiredLevel]}.</p>
       ) : (
-        <p className="mt-1 text-xs text-muted-foreground">{v.decider?.name} · {fmtDate(v.decidedAt)}{v.decisionComment ? ` · « ${v.decisionComment} »` : ""}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{v.decider?.name} · {fmtDate(v.decidedAt)}{v.decisionComment ? ` · « ${v.decisionComment} »` : ""}{v.status === "approved" && (v.kind === "quote" || v.kind === "expense") && <> · <Link href={`/validations/${v.id}/bon-pour-accord`} className="text-primary hover:underline" data-testid={`bpa-link-${v.id}`}>bon pour accord →</Link></>}</p>
       )}
     </div>
   );

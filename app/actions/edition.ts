@@ -84,7 +84,7 @@ export async function setTeam(editionId: string, personIds: string[]): Promise<R
 }
 
 // Demande de validation (EF-F1). Le niveau requis est calculé puis modifiable à la main (EF-F2).
-export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number }): Promise<Result<{ id: string; requiredLevel: number }>> {
+export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number; supplier?: string | null; supplierEmail?: string | null }): Promise<Result<{ id: string; requiredLevel: number }>> {
   const c = await ctx(input.editionId);
   const settings = await getSettings();
   const remaining = budgetOf(c.e).available;
@@ -101,6 +101,8 @@ export async function requestValidation(input: { editionId: string; actionId?: s
       attachmentUrl: input.attachmentUrl || null,
       requiredLevel: level,
       targetDelayDays: input.targetDelayDays ?? 5,
+      supplier: input.supplier?.trim() || null,
+      supplierEmail: input.supplierEmail?.trim() || null,
     },
   });
   revalidatePath("/", "layout");
@@ -140,8 +142,18 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   if (changed.count === 0) return { ok: false, error: "Cette demande vient d'être traitée par quelqu'un d'autre." };
   if (decision === "approved" && (v.kind === "quote" || v.kind === "expense") && v.amount) {
     // Le devis approuvé crée l'engagement une seule fois (validationId unique) ; le réalisé viendra s'y rattacher.
-    await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, committed: v.amount, validationId: v.id }, update: {} });
+    await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, supplier: v.supplier, committed: v.amount, validationId: v.id }, update: {} });
     await prisma.changeLog.create({ data: { editionId: v.editionId, field: "engagement", before: null, after: `+${v.amount} € (${v.label})`, authorId: me.id } });
+  }
+  // Lot 3 : le demandeur est prévenu ; pour un devis approuvé, le « bon pour accord » est prêt à envoyer (plus d'impression ni de tampon).
+  const isQuote = v.kind === "quote" || v.kind === "expense";
+  if (v.requesterId !== me.id) {
+    await prisma.notification.create({ data: { personId: v.requesterId, senderId: me.id, kind: "info", title: `${decision === "approved" ? "Approuvée" : "Refusée"} : ${v.label}`, body: decision === "approved" && isQuote ? "Bon pour accord prêt à envoyer au fournisseur." : comment.trim() || null, link: decision === "approved" && isQuote ? `/validations/${v.id}/bon-pour-accord` : `/edition/${v.editionId}?onglet=validations` } });
+  }
+  // La directrice voit tout ce qui s'engage sans elle : information, pas validation (retour du 14/09).
+  if (decision === "approved" && me.role !== "director" && v.amount) {
+    const director = await prisma.person.findFirst({ where: { role: "director", active: true } });
+    if (director && director.id !== v.requesterId) await prisma.notification.create({ data: { personId: director.id, senderId: me.id, kind: "info", title: `Pour information · ${v.label} approuvé (${v.amount} €)`, body: `Par ${me.name}, niveau ${v.requiredLevel}.`, link: `/edition/${v.editionId}?onglet=budget` } });
   }
   revalidatePath("/", "layout");
   return { ok: true };

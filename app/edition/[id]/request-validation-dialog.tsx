@@ -24,6 +24,8 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
   const [amount, setAmount] = useState("");
   const [actionId, setActionId] = useState("");
   const [url, setUrl] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
   const [fileName, setFileName] = useState("");
   const [level, setLevel] = useState(1);
   const [computed, setComputed] = useState<{ level: number; reason: string }>({ level: 1, reason: "" });
@@ -71,6 +73,18 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
               <Input id="rv-amount" type="number" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" data-testid="rv-amount" />
             </div>
           </div>
+          {(kind === "quote" || kind === "expense") && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1">
+                <Label htmlFor="rv-supplier">Fournisseur</Label>
+                <Input id="rv-supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Imprimerie Duval…" data-testid="rv-supplier" />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="rv-supplier-email">Son adresse mail <span className="font-normal text-muted-foreground">(pour le bon pour accord)</span></Label>
+                <Input id="rv-supplier-email" type="email" value={supplierEmail} onChange={(e) => setSupplierEmail(e.target.value)} placeholder="contact@…" data-testid="rv-supplier-email" />
+              </div>
+            </div>
+          )}
           <div className="grid gap-1">
             <Label htmlFor="rv-action">Action concernée</Label>
             <select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
@@ -133,7 +147,7 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
             disabled={pending || !label.trim()}
             onClick={() =>
               start(async () => {
-                const res = await requestValidation({ editionId, actionId, kind, label, amount: amountNumber, attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5 });
+                const res = await requestValidation({ editionId, actionId, kind, label, amount: amountNumber, attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5, supplier, supplierEmail });
                 if (!res.ok) { toast.error(res.error); return; }
                 const file = fileRef.current?.files?.[0];
                 if (file) {

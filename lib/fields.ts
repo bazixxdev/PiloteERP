@@ -60,11 +60,11 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   person: { name: { type: "text" }, role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" } },
   project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" } },
   editionPersonDays: { soldDays: { type: "number" }, plannedDays: { type: "number" }, availableDays: { type: "number" } },
-  expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" } },
+  expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" } },
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },
-    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" },
+    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" }, billingEmail: { type: "text" }, billingNote: { type: "textarea" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" }, notes: { type: "textarea" } },

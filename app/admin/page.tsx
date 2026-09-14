@@ -109,6 +109,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </table>
               <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Coefficient heures → jours (réalisé, exports)</span><AutoField model="settings" id="1" field="hoursPerDay" type="number" value={settings.hoursPerDay} readOnly={!rw} suffix="h/j" /></div>
               <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Jours de fonctionnement par mois déduits de la capacité du plan de charge <span className="text-xs text-muted-foreground">(réunions transverses, café, entretiens · un chargé de mission y passe environ 1 jour sur 7)</span></span><AutoField model="settings" id="1" field="operatingDaysPerMonth" type="number" value={settings.operatingDaysPerMonth} readOnly={!rw} suffix="j/mois" testId="operating-days" /></div>
+              <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_260px]"><span>Adresse de facturation <span className="text-xs text-muted-foreground">(écrite sur chaque bon pour accord : les factures y arrivent, pas chez le pilote)</span></span><AutoField model="settings" id="1" field="billingEmail" type="text" value={settings.billingEmail} readOnly={!rw} testId="billing-email" /></div>
+              <div className="mt-2 grid gap-1 text-sm"><span>Consigne de facturation (dans le bon pour accord)</span><AutoField model="settings" id="1" field="billingNote" type="textarea" rows={2} value={settings.billingNote} readOnly={!rw} /></div>
             </Section>
 
             <Section title="Codes de temps par poste" description="Codes « fonctionnement » et « non travaillé » proposés à chaque personne dans sa grille de saisie.">

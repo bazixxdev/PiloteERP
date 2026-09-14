@@ -30,7 +30,17 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
   const defaultPath = serverPath(settings.serverPathTemplate, e.project.analyticCode, e.year);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4">
+      {/* La règle des documents (lot 3), écrite une fois pour toutes : où va quoi, pour ne plus disperser. */}
+      <details className="group rounded-md border bg-muted/40 px-4 py-2.5 text-xs" data-testid="documents-rule">
+        <summary className="cursor-pointer list-none"><b>Où va quoi ?</b> Trois familles, une règle chacune <span className="text-primary group-open:hidden">· afficher</span><span className="hidden text-primary group-open:inline">· replier</span></summary>
+        <ol className="mt-2 grid gap-1.5 sm:grid-cols-3">
+          <li className="rounded-md bg-card p-2.5"><b>Ce qui naît dans l'outil</b> — fiche, objectifs, indicateurs, actions, réalisations, décisions, remarques, bilan. <span className="text-muted-foreground">Ici seulement ; le Word est un export, jamais une source.</span></li>
+          <li className="rounded-md bg-card p-2.5"><b>Les pièces qui font foi</b> — devis validé, notification, convention signée, justificatif financeur, bilan remis. <span className="text-muted-foreground">Déposées ici, rattachées à leur objet, jamais supprimées : ce sont celles qu'un contrôle demande.</span></li>
+          <li className="rounded-md bg-card p-2.5"><b>Tout le reste</b> — livrables produits, documents de travail, notes de service, comptes rendus. <span className="text-muted-foreground">Sur le serveur, dans le dossier de l'édition ; l'outil donne le chemin. Teams reste éphémère, OneDrive est arrêté.</span></li>
+        </ol>
+      </details>
+      <div className="grid gap-4 lg:grid-cols-2">
       <div className="grid content-start gap-4">
         <Section title="Sur le serveur" description="Les fichiers restent sur le serveur de la CRESS : l'outil donne le chemin, à coller dans l'Explorateur.">
           <ul className="divide-y text-sm">
@@ -57,7 +67,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
           </ul>
         </Section>
 
-        <Section title="Liens" description="Canal Teams, OneNote, convention en ligne… tout ce qui s'ouvre dans le navigateur.">
+        <Section title="Liens" description="Canal Teams, OneNote, convention en ligne… tout ce qui s'ouvre dans le navigateur. Pas de lien OneDrive : les fichiers vivent sur le serveur.">
           {links.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">Aucun lien web.</p> : (
             <ul className="mb-3 divide-y text-sm">
               {links.map((d) => (
@@ -110,6 +120,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
         </ul>
         <AddCommentForm editionId={e.id} />
       </Section>
+      </div>
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ import { fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { AddExpenseForm } from "./add-forms";
+import { InvoiceCell } from "./invoice-cell";
+import Link from "next/link";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
 export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
@@ -13,6 +15,10 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
   const b = budgetOf(e);
   const lastUpdate = e.expenses.reduce<Date | null>((m, x) => (!m || x.updatedAt > m ? x.updatedAt : m), null);
   const statusOpts = [{ value: "open", label: "En cours" }, { value: "closed", label: "Soldée" }];
+  const natureOpts = [{ value: "purchase", label: "Achat" }, { value: "investment", label: "Investissement" }, { value: "service", label: "Prestation" }];
+  // Circuit facture : la RAF, la direction ou l'assistante suivent ; le pilote et l'équipe confirment le service fait.
+  const canTrack = rw || me.role === "assistant";
+  const canConfirm = me.role === "director" || isPilot || isTeam;
   // Cellules de budget V2 : libellé discret, montant en grand, lecture en dessous.
   const card = (label: string, value: string, hint?: string, cls?: string, testId?: string) => (
     <div className={cn("rounded-md border bg-card px-3 py-4", cls)}>
@@ -53,12 +59,12 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
         )}
       </Section>
 
-      <Section title="Dépenses" description="Un devis approuvé crée l'engagement une seule fois ; la RAF rattache le réalisé (factures) à cette ligne. Une dépense sans devis se saisit avec sa référence." actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
+      <Section title="Dépenses" description="Un devis approuvé crée l'engagement une seule fois ; la RAF rattache le réalisé (factures) à cette ligne, la marque reçue puis payée — le pilote est prévenu et confirme le service fait, sans bloquer. Pas de fichier facture ici : la facture arrive à l'adresse de facturation." actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
         {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">Aucune dépense sur cette édition.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="expenses">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">État</th><th className="py-1.5 pr-2">Référence</th><th className="py-1.5">Origine</th></tr>
+                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">Nature</th><th className="py-1.5 pr-2">Facture</th><th className="py-1.5 pr-2">État</th><th className="py-1.5 pr-2">Référence</th><th className="py-1.5">Origine</th></tr>
               </thead>
               <tbody className="divide-y">
                 {e.expenses.map((x) => {
@@ -70,9 +76,11 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
                       <td className="w-28 py-1 pr-2 text-right tabular">{x.validationId ? fmtEuro(x.committed) : <AutoField model="expense" id={x.id} field="committed" type="number" value={x.committed} readOnly={!rw} suffix="€" refreshOnSave />}</td>
                       <td className="w-32 py-1 pr-2"><AutoField model="expense" id={x.id} field="spent" type="number" value={x.spent} readOnly={!rw} suffix="€" refreshOnSave testId={`expense-spent-${x.id}`} /></td>
                       <td className={cn("w-28 py-1 pr-2 text-right tabular", x.spent > x.committed && x.committed > 0 && "text-danger font-medium")} title={x.spent > x.committed && x.committed > 0 ? "Facture supérieure à l'engagement : écart à faire remonter" : undefined}>{fmtEuro(rest)}</td>
+                      <td className="w-32 py-1 pr-2"><AutoField model="expense" id={x.id} field="nature" type="select" value={x.nature} options={natureOpts} readOnly={!rw} placeholder="—" /></td>
+                      <td className="min-w-[210px] py-1 pr-2"><InvoiceCell id={x.id} receivedAt={x.invoiceReceivedAt ? fmtDate(x.invoiceReceivedAt) : null} paidAt={x.paidAt ? fmtDate(x.paidAt) : null} serviceDoneAt={x.serviceDoneAt ? fmtDate(x.serviceDoneAt) : null} serviceDoneBy={x.serviceDoneBy?.name ?? null} canTrack={canTrack} canConfirm={canConfirm} /></td>
                       <td className="w-28 py-1 pr-2"><AutoField model="expense" id={x.id} field="status" type="select" value={x.status} options={statusOpts} allowEmpty={false} readOnly={!rw} refreshOnSave /></td>
                       <td className="min-w-[120px] py-1 pr-2"><AutoField model="expense" id={x.id} field="reference" type="text" value={x.reference} readOnly={!rw} placeholder="n° facture, ligne Excel" /></td>
-                      <td className="py-1 text-xs text-muted-foreground">{x.validation ? `devis validé · ${x.validation.requester.name} · ${fmtDate(x.validation.decidedAt)}` : "saisie RAF"}</td>
+                      <td className="py-1 text-xs text-muted-foreground">{x.validation ? <>devis validé · {x.validation.requester.name} · {fmtDate(x.validation.decidedAt)} · <Link href={`/validations/${x.validation.id}/bon-pour-accord`} className="text-primary hover:underline">bon pour accord</Link></> : "saisie RAF"}</td>
                     </tr>
                   );
                 })}
