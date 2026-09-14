@@ -126,6 +126,8 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 - **« Possible de fusionner demandes et validations, ou ça pose problème ? »** — Traité le 15/09 : une seule entrée « Demandes » dans le menu (badge = demandes à traiter + validations que je peux décider), Approuver / Refuser **en place** sur la ligne d'une validation dans `/demandes`, bon pour accord depuis la ligne approuvée. `/validations` reste (file par niveau, décisions récentes) hors menu, liée depuis Demandes pour le CODIR et depuis l'onglet Validations d'une édition. Ma semaine renvoie vers Demandes pour décider.
 - **« Clôture mensuelle : appuyer sur les anomalies, le reste se zoome à la demande »** — Traité le 15/09 : deux blocs — **À traiter** (sans saisie, partiel, saisies complètes non déclarées ; lignes teintées) toujours visible avec le verrouillage collectif ; **En ordre** (déclaré, verrouillé) replié par défaut ; le mode d'emploi replié sous « Total du mois ».
 
+- **« Manque la notion d'archiver une note »** — Traité le 15/09 : `Note.archivedAt`, bouton Archiver / Désarchiver dans l'éditeur (auteur seul), vue « Archivées · n » sous Mes notes ; une archivée sort des listes, du menu du haut et de l'onglet Documents de l'édition, reste lisible (bandeau) et se désarchive.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

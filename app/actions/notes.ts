@@ -72,3 +72,13 @@ export async function setNoteShares(id: string, personIds: string[]): Promise<Re
   revalidatePath("/", "layout");
   return { ok: true, data: { added: toAdd.length } };
 }
+
+// Archiver : la note sort des listes (et du menu du haut) mais reste lisible dans « Archivées » ; réversible.
+export async function archiveNote(id: string, archived: boolean): Promise<Result> {
+  const me = await getCurrentPerson();
+  const n = await prisma.note.findUnique({ where: { id } });
+  if (!n || n.authorId !== me.id) return { ok: false, error: "Note introuvable." };
+  await prisma.note.update({ where: { id }, data: { archivedAt: archived ? new Date() : null } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

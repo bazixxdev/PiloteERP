@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 import { NoteEditor } from "./editor";
 
 // Notes (retour du 14/09) : prise de notes propre, rattachée à un projet ou transverse, privée ou partagée. Remplace le OneNote « défouloir ».
-export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string }> }) {
-  const { note: noteId, edition, focus, q, projet, contexte, auteur, couleur } = await searchParams;
+export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string; vue?: string }> }) {
+  const { note: noteId, edition, focus, q, projet, contexte, auteur, couleur, vue } = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!hasModule(me, "notes")) {
     return (
@@ -31,8 +31,11 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const isNew = noteId === "nouvelle" || (!noteId && allNotes.length === 0);
   const inFocus = focus === "1";
   // Recherche et filtres (retour du 14/09 : « après 12 mois de notes on va galérer à s'y retrouver »).
-  const filter = { q, editionId: projet, context: contexte, author: auteur, color: couleur };
+  // Archivées : une vue à part (retour du 15/09), jamais mélangées aux notes vivantes.
+  const archivedView = vue === "archivees" || Boolean(current?.archived);
+  const filter = { q, editionId: projet, context: contexte, author: auteur, color: couleur, archived: archivedView };
   const filtering = Boolean(q || projet || contexte || auteur || couleur);
+  const archivedCount = allNotes.filter((n) => n.archived).length;
   const notes = filterNotes(allNotes, filter);
   const mine = notes.filter((n) => n.mine);
   const shared = notes.filter((n) => !n.mine);
@@ -40,7 +43,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   // Les projets et auteurs proposés dans les filtres : seulement ceux qui ont des notes visibles.
   const projectOpts = Array.from(new Map(allNotes.filter((n) => n.edition).map((n) => [n.edition!.id, n.edition!])).values()).sort((a, b) => b.year - a.year || a.name.localeCompare(b.name));
   const authorOpts = Array.from(new Map(allNotes.filter((n) => !n.mine).map((n) => [n.author.id, n.author])).values()).sort((a, b) => a.name.localeCompare(b.name));
-  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, contexte, auteur, couleur, ...over })) if (v) p.set(k, v); return p.toString(); };
+  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, contexte, auteur, couleur, vue: archivedView ? "archivees" : undefined, ...over })) if (v) p.set(k, v); return p.toString(); };
 
   const NoteLink = ({ n }: { n: (typeof notes)[number] }) => (
     <Link href={`/notes?${keep({ note: n.id })}`} className={cn("block min-w-0 rounded-md px-3 py-2 hover:bg-muted", current?.id === n.id && "bg-info-soft")} style={noteColor(n.color) ? { boxShadow: `inset 3px 0 0 ${noteColor(n.color)!.hex}` } : undefined} data-testid={`note-link-${n.id}`} data-color={n.color ?? undefined}>
@@ -70,6 +73,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
           <div className="grid min-w-0 content-start gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
             <form method="get" action="/notes" className="grid gap-1.5 rounded-md border bg-card p-2" data-testid="notes-filter">
               {current && <input type="hidden" name="note" value={current.id} />}
+              {archivedView && <input type="hidden" name="vue" value="archivees" />}
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input type="search" name="q" defaultValue={q ?? ""} placeholder="Rechercher dans mes notes…" aria-label="Rechercher" className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" data-testid="notes-search" />
@@ -103,8 +107,11 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
               </div>
             </form>
             <div className="min-w-0 rounded-md border bg-card p-1.5" data-testid="my-notes">
-              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground">Mes notes · {mine.length}</div>
-              {mine.length === 0 ? <p className="px-3 pb-2 text-[11px] text-muted-foreground">{filtering ? "Aucune de mes notes ne correspond." : "Aucune note encore."}</p> : <Grouped list={mine} />}
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground">{archivedView ? "Mes notes archivées" : "Mes notes"} · {mine.length}</div>
+              {mine.length === 0 ? <p className="px-3 pb-2 text-[11px] text-muted-foreground">{archivedView ? "Aucune note archivée." : filtering ? "Aucune de mes notes ne correspond." : "Aucune note encore."}</p> : <Grouped list={mine} />}
+            </div>
+            <div className="flex items-center justify-between px-1 text-[11px]">
+              {archivedView ? <Link href="/notes" className="text-primary hover:underline" data-testid="notes-view-live">← Retour aux notes</Link> : <Link href="/notes?vue=archivees" className="text-muted-foreground hover:text-primary hover:underline" data-testid="notes-view-archived">Archivées · {archivedCount}</Link>}
             </div>
             {shared.length > 0 && (
               <div className="min-w-0 rounded-md border bg-card p-1.5" data-testid="shared-notes">

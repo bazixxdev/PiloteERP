@@ -6,7 +6,7 @@ Prototype fonctionnel, données 100 % fictives. Next.js 15 · Prisma + SQLite ·
 2. `npx prisma migrate dev` — crée la base `prisma/prototype.db`.
 3. `npm run seed` — charge les données de démonstration (15 personnes, 20 projets, 50 éditions).
 4. `npm run dev -- -p 3001` — ouvre http://localhost:3001 (3000 est pris par un autre projet sur le poste de Gaël) ; le menu utilisateur en haut à droite change la personne et ses droits (« Changer d'utilisateur »).
-5. `npm run lint && npm run build` — vérifications ; `npm test` — 34 tests Playwright sur leur propre serveur (port 3100, `.next-test`). **Ils reseedent `prisma/prototype.db`** : ne jamais lancer deux suites en même temps (même base, même serveur, même `test-results`).
+5. `npm run lint && npm run build` — vérifications ; `npm test` — 35 tests Playwright sur leur propre serveur (port 3100, `.next-test`). **Ils reseedent `prisma/prototype.db`** : ne jamais lancer deux suites en même temps (même base, même serveur, même `test-results`).
 6. `npm run screenshots` — une capture par écran dans `docs/screens/`.
 
 Démo en ligne : https://cress.bazixx.fr (rideau `auth_basic`, voir `deploy/README.md`) ; mise à jour par `./deploy/deploy.sh`.

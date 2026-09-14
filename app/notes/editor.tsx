@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Lock, Users, Eye, Maximize2, UserPlus } from "lucide-react";
+import { Trash2, Lock, Users, Eye, Maximize2, UserPlus, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { RichEditor } from "@/components/common/rich-editor";
 import { ShareWith, type PersonOpt } from "./share";
 import { ColorPicker } from "./color-picker";
-import { addNote, deleteNote, updateNote } from "@/app/actions/notes";
+import { addNote, archiveNote, deleteNote, updateNote } from "@/app/actions/notes";
 import { NOTE_CONTEXTS, noteColor, type NoteView } from "@/lib/notes";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { dayjs } from "@/lib/format";
@@ -108,6 +108,9 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
         <span className="ml-auto flex items-center gap-2 text-muted-foreground">
           {savedAt && <span data-testid="note-saved">Enregistrée à {savedAt}</span>}
           {!focus && <Link href={`/notes?note=${note?.id ?? "nouvelle"}&focus=1`} title="Mode focus : rien d'autre à l'écran (Échap pour revenir)" className="inline-flex items-center gap-1 rounded p-1 hover:bg-muted" data-testid="note-focus"><Maximize2 className="size-3.5" /></Link>}
+          {note?.mine && (
+            <button type="button" aria-label={note.archived ? "Désarchiver la note" : "Archiver la note"} title={note.archived ? "Désarchiver : la note revient dans vos listes" : "Archiver : la note sort des listes, reste lisible dans « Archivées »"} disabled={pending} onClick={() => start(async () => { const r = await archiveNote(note.id, !note.archived); if (!r.ok) toast.error(r.error); else { toast.success(note.archived ? "Note désarchivée" : "Note archivée"); router.push(note.archived ? `/notes?note=${note.id}` : "/notes"); router.refresh(); } })} className="rounded p-1 hover:bg-muted" data-testid="note-archive">{note.archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}</button>
+          )}
           {note?.mine && <button type="button" aria-label="Supprimer la note" disabled={pending} onClick={() => { if (confirm("Supprimer cette note ?")) start(async () => { const r = await deleteNote(note.id); if (!r.ok) toast.error(r.error); else { toast.success("Note supprimée"); router.push("/notes"); router.refresh(); } }); }} className="rounded p-1 hover:bg-muted hover:text-danger"><Trash2 className="size-3.5" /></button>}
         </span>
       </div>
@@ -115,6 +118,7 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
       <RichEditor value={body} readOnly={readOnly} onChange={setBody} onBlur={(html) => { if (html !== lastSaved.current) { lastSaved.current = html; save({ body: html }); } }} placeholder="Ce qui s'est dit, ce qui a été décidé, ce qu'il reste à faire…" className={cn(focus && "[&_.prose-note]:min-h-[70vh] [&_.prose-note]:text-[15px]")} testId="note-body" />
       {!readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Enregistrement automatique en quittant un champ. {pending ? "Enregistrement…" : ""}</div>}
       {readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Note partagée par {note!.author.name} : en lecture.</div>}
+      {note?.archived && <div className="border-t bg-muted/40 px-4 py-2 text-[10px] text-muted-foreground" data-testid="note-archived-banner">Note archivée{note.mine ? " : elle ne figure plus dans vos listes. Désarchivez-la pour la reprendre." : " par son auteur."}</div>}
       {!readOnly && note && note.sharedWith.length > 0 && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Partagée nominativement avec {note.sharedWith.map((p) => p.name).join(", ")}.</div>}
     </div>
   );

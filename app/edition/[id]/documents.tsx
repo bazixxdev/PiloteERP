@@ -20,7 +20,7 @@ import { hasModule } from "@/lib/modules";
 import { dayjs } from "@/lib/format";
 
 export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
-  const notes = await loadNotes(me, { editionId: e.id });
+  const notes = (await loadNotes(me, { editionId: e.id })).filter((n) => !n.archived);
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const codir = isCodir(me.role);
   const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));

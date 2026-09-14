@@ -20,12 +20,13 @@ export function bodyToHtml(body: string): string {
 }
 export const htmlToText = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
 
-export type NoteFilter = { q?: string; editionId?: string; context?: string; author?: string; color?: string };
+export type NoteFilter = { q?: string; editionId?: string; context?: string; author?: string; color?: string; archived?: boolean };
 
 // Recherche plein texte simple (titre + corps sans balises) et filtres par projet, contexte, auteur. Assez pour des centaines de notes par an.
 export function filterNotes(notes: NoteView[], f: NoteFilter): NoteView[] {
   const q = (f.q ?? "").trim().toLowerCase();
   return notes.filter((n) =>
+    n.archived === Boolean(f.archived) &&
     (!q || `${n.title} ${htmlToText(n.body)}`.toLowerCase().includes(q)) &&
     (!f.editionId || n.edition?.id === f.editionId) &&
     (!f.context || n.context === f.context) &&
@@ -57,12 +58,12 @@ export const NOTE_COLORS = [
 ] as const;
 export const noteColor = (v: string | null | undefined) => NOTE_COLORS.find((c) => c.value === v) ?? null;
 
-export type NoteView = { id: string; title: string; body: string; date: string; context: string; visibility: string; color: string | null; edition: { id: string; name: string; year: number } | null; author: { id: string; name: string }; mine: boolean; sharedWith: { id: string; name: string }[]; sharedWithMe: boolean; updatedAt: string };
+export type NoteView = { id: string; title: string; body: string; date: string; context: string; visibility: string; color: string | null; archived: boolean; edition: { id: string; name: string; year: number } | null; author: { id: string; name: string }; mine: boolean; sharedWith: { id: string; name: string }[]; sharedWithMe: boolean; updatedAt: string };
 
-type Row = { id: string; title: string; body: string; date: Date; context: string; visibility: string; color: string | null; updatedAt: Date; authorId: string; author: { id: string; name: string; poleId: string | null }; edition: { id: string; year: number; project: { name: string } } | null; shares: { person: { id: string; name: string } }[] };
+type Row = { id: string; title: string; body: string; date: Date; context: string; visibility: string; color: string | null; archivedAt: Date | null; updatedAt: Date; authorId: string; author: { id: string; name: string; poleId: string | null }; edition: { id: string; year: number; project: { name: string } } | null; shares: { person: { id: string; name: string } }[] };
 
 const toView = (me: string, n: Row): NoteView => ({
-  id: n.id, title: n.title, body: bodyToHtml(n.body), date: dayjs(n.date).format("YYYY-MM-DD"), context: n.context, visibility: n.visibility, color: n.color, updatedAt: n.updatedAt.toISOString(),
+  id: n.id, title: n.title, body: bodyToHtml(n.body), date: dayjs(n.date).format("YYYY-MM-DD"), context: n.context, visibility: n.visibility, color: n.color, archived: Boolean(n.archivedAt), updatedAt: n.updatedAt.toISOString(),
   edition: n.edition ? { id: n.edition.id, name: n.edition.project.name, year: n.edition.year } : null, author: { id: n.author.id, name: n.author.name }, mine: n.author.id === me,
   sharedWith: n.shares.map((s) => s.person), sharedWithMe: n.shares.some((s) => s.person.id === me),
 });

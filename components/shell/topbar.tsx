@@ -25,7 +25,7 @@ export async function Topbar() {
   const notifications = await prisma.notification.findMany({ where: { personId: current.id }, include: { sender: true }, orderBy: { createdAt: "desc" }, take: 20 });
   // Menus rapides Notes / Tâches : les cinq dernières de la personne (notes par date, tâches à faire par échéance).
   const [recentNotes, recentTasks] = await Promise.all([
-    hasModule(current, "notes") ? prisma.note.findMany({ where: { authorId: current.id }, orderBy: [{ updatedAt: "desc" }], take: 5, include: { edition: { include: { project: true } } } }) : Promise.resolve(null),
+    hasModule(current, "notes") ? prisma.note.findMany({ where: { authorId: current.id, archivedAt: null }, orderBy: [{ updatedAt: "desc" }], take: 5, include: { edition: { include: { project: true } } } }) : Promise.resolve(null),
     hasModule(current, "tasks") ? prisma.task.findMany({ where: { personId: current.id, done: false }, orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }], take: 5, include: { edition: { include: { project: true } } } }) : Promise.resolve(null),
   ]);
   const noteItems: QuickItem[] | null = recentNotes && recentNotes.map((n) => ({ id: n.id, title: n.title || "Sans titre", sub: `${fmtDate(n.date, "D MMM")} · ${n.edition ? `${n.edition.project.name} · ${n.edition.year}` : NOTE_CONTEXTS.find((c) => c.value === n.context)?.label ?? ""}`, href: `/notes?note=${n.id}`, color: noteColor(n.color)?.hex ?? null }));

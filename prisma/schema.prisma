@@ -743,6 +743,7 @@ model Note {
   edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
   visibility String   @default("private") // private | pole | all
   color      String?  // repère visuel choisi par l'auteur : bleu | vert | ocre | corail | violet | gris (lib/notes.ts NOTE_COLORS)
+  archivedAt DateTime? // archivée par son auteur : sort des listes, reste lisible dans « Archivées »
   shares     NoteShare[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

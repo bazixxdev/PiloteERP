@@ -133,3 +133,24 @@ test("la barre haute donne accès aux dernières notes et tâches, à la liste c
   await iAm(page, "Hugo Lemaire");
   await expect(page.getByTestId("quick-notes")).toHaveCount(0);
 });
+
+test("une note s'archive : elle sort des listes et du menu du haut, reste lisible dans « Archivées », et se désarchive", async ({ page }) => {
+  await page.goto("/notes");
+  await iAm(page, "Inès Cabral");
+  await page.getByTestId("my-notes").getByRole("link", { name: /Point partenaires du 11 septembre/ }).click();
+  await page.getByTestId("note-archive").click();
+  await expect(page.getByText("Note archivée")).toBeVisible();
+  await expect(page.getByTestId("my-notes")).not.toContainText("Point partenaires du 11 septembre");
+  await page.getByTestId("quick-notes-open").click();
+  await expect(page.locator("[data-testid=quick-notes-item]", { hasText: "Point partenaires" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.getByTestId("notes-view-archived").click();
+  await expect(page.getByTestId("my-notes")).toContainText("Point partenaires du 11 septembre");
+  await page.getByTestId("my-notes").getByRole("link", { name: /Point partenaires du 11 septembre/ }).click();
+  await expect(page.getByTestId("note-archived-banner")).toBeVisible();
+  await page.getByTestId("note-archive").click(); // désarchiver
+  await expect(page.getByText("Note désarchivée")).toBeVisible();
+  await expect(page.getByTestId("note-archived-banner")).toHaveCount(0);
+  await page.goto("/notes");
+  await expect(page.getByTestId("my-notes")).toContainText("Point partenaires du 11 septembre");
+});
