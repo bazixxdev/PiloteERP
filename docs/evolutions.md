@@ -69,3 +69,31 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | Comptabilité, clés de répartition, compteur d'heures | EF-E4, partie 5 du cahier des charges |
 | Liaison Dolibarr | Instance obsolète, écart assumé (ENF-8) ; un export CSV des congés suffirait un jour |
 | Signature électronique des devis, journal des envois newsletter/LinkedIn, plateformes financeurs | Le flux de validation interne suffit ; pas d'API exploitable côté financeurs |
+
+## Orientations du 14/09 (retour oral de Gaël après les quatre derniers entretiens) — à trancher
+
+Détail et contexte dans `RETOURS-A-CHAUD.md` §H. Le rang proposé est celui de Bazixx ; rien n'est retenu tant que Gaël n'a pas dit go.
+
+| Évolution | Rang proposé | Ce qui reste à préciser | Réf. |
+|---|---|---|---|
+| To-do dans un espace dédié, listes / catégories sans projet, visibilité au choix de la personne (privée / responsable / équipe), seul l'auteur écrit | Proto | Où vit la liste « équipe » dans la navigation | EF-G2, S15 0:06 |
+| Modules activables par personne (to-do, notes) dans Mon compte | Proto | Liste des modules | ENF-1, S14 |
+| Fiche : texte replié après validation, **verrouillage** et modification ritualisée (proposition de modification, notification, historique) | Proto | Qui peut proposer, qui accepte | EF-B6, EF-A3 |
+| Fiche éclatée : indicateurs vivants, **réalisations / livrables** consignés au fil de l'eau (inscrits, publics, livrable produit), export bilan = données | V1 | Liste des natures de réalisation | EF-I1, EF-I2, EF-I3, EF-B4 |
+| Proposition de projet par tout chargé de mission (projet en devenir → validation → CA) | Proto | Droits de création | EF-A3, S12 0:55 |
+| Prise de notes de réunion dans l'outil, rattachée ou transverse, optionnelle | V1 | Remplace OneNote ? partage ? | EF-H5 |
+| **Demandes internes unifiées avec les validations** : types (site, chiffres, achat, travail), tableau unique, tâche générée depuis une demande | V1 (proto possible) | Types et destinataires avec la responsable com et Sandrine | EF-J3, EF-F1 |
+| Devis : validation n+1 par seuil de montant, directrice en visibilité, **signature électronique** (Docuseal ou service tiers) au lieu de l'impression | V1 | Seuils (arbitrage 2) ; valeur juridique d'un « bon pour accord » suffisant ? | EF-F2, S15 0:08 |
+| Facture : état « facture reçue / payée » sur l'engagement, posé par la RAF ou l'assistante, notification au pilote ; case « service fait » du pilote non bloquante ; nature analytique (achat / invest / presta) par la RAF | V1 | Contrôle de service fait : requis ou non | EF-E1, EF-E2 |
+| Temps : saisie hebdo en **parts de mon ETP** (camembert / curseurs) convertie en heures pour l'export RAF ; personnes « à part fixe » (lettre de mission FSE) sans saisie | Proto (mode alternatif à la grille) | Vérifier avec la RAF ce que le gestionnaire FSE accepte (art. 55.5 du règlement 2021/1060) | EF-D1, EF-D8, arbitrages 5 et 12 |
+| Aide à la saisie des temps depuis les traces de l'outil (tâches faites, créneaux, actions rattachées) — sans Microsoft | Proto | — | EF-D6 (variante interne) |
+| Agenda → outil (événements Outlook codés projet remontés en proposition de temps) | V2 | Question 4, 5, 12 | EF-D6 |
+| Mode focus (saisie des temps, rédaction de fiche) | Proto | — | ENF-1 |
+| Plan de charge : cycle de vie (figé au séminaire, modification sous condition) | V1 | Règle à fixer avec la direction | EF-B3 |
+| Outil d'organisation d'événement (qui fait quoi, matériel, salles) | À voir | Tableaux Forum et AG de Sandrine | EF-G5 |
+| Contacts opérationnels par projet (partenaires) | V2 | RGPD, qui tient | — |
+| Liens partageables vers les pièces (au lieu de pièces jointes mail) | V2 | Types de documents partagés | EF-J1 |
+| Aspiration des mails façon CRM | Écarté sur mesure ; critère SaaS éventuel | — | — |
+| Documents : règle claire outil / serveur / Teams, arrêt d'OneDrive, pas de GED complète | Décision de principe à écrire (proposition Bazixx dans la réponse du 14/09) | Sécurité du NAS (hors outil) | EF-J1, EF-J4, EF-K1 |
+
+Mémos (Gaël) : demander **toutes les fiches projet en cours** ; vérifier ce qu'agrège le document de 50 pages (toutes les fiches ou par financement) ; mail à Sandrine (temps en support des projets ? + partie technique non faite : licences, MFA, invités, serveur virtuel, référent outil).

@@ -67,6 +67,45 @@ Tests : 12 existants verts + `tests/revue-ux.spec.ts` (2 scénarios). Seuls les 
 - « Un plan de charge ? » → go, fait ; puis « aller dans chaque édition n'est pas pratique » → modifiable depuis la grille.
 - Démo en ligne redéployée avec `--seed` sur demande (HEAD `bab1264` à ce moment-là ; le plan de charge n'est **pas** encore en ligne).
 
+### H. Retour oral de Gaël après les entretiens du 14/09 (transcript, 29 min) — orientations, non traitées
+
+Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15 Sandrine) et ce qu'il veut voir bouger. Rien n'est codé : chaque ligne attend un go ou une précision. Les propositions Bazixx sont marquées [P].
+
+**To-do**
+- Besoin confirmé d'une to-do « très claire, très épurée », dans un **espace dédié** (pas seulement un panneau de Ma semaine).
+- Une tâche se rattache de préférence à une **action** d'un projet (le niveau de travail, c'est l'action) ; mais il faut aussi des **listes / catégories sans projet** (Sandrine : vie statutaire, admin, demandes du jour).
+- **Visibilité au choix de la personne** : une liste est privée ou rendue visible (à son responsable, à l'équipe). Dans un premier temps, **seul l'auteur écrit** dans ses listes.
+- **Modules activables** par personne : to-do, prise de notes… « Simon n'a pas besoin de to-do, pourquoi l'embêter ? » → un réglage simple dans Mon compte.
+
+**Fiche projet**
+- Un moment de rédaction, puis la fiche devient un **support** (temps, documents, actions) : le texte rédigé n'a pas à rester en premier plan en permanence (replié une fois validé).
+- **Cycle de validation, puis verrouillage.** Les modifications en cours d'année existent (souvent à l'initiative de la directrice) : il faut les **ritualiser** — pas de modification silencieuse ; demande de modification / avenant, notification au pilote et au garant, trace dans l'historique. [P] : « Proposer une modification » sur une couche validée → même mécanique que les remarques, avec acceptation par le pilote et consignation.
+- **Éclater la fiche en objets qui vivent différemment** : objectifs généraux (stables, en intro), **indicateurs** (objet vivant, mis à jour au réel), **actions** (items avec tâches, jalons, saisie au fil de l'eau), **réalisations / livrables au sens large** (inscrits à un événement, publics touchés, livrable produit et envoyé) consignés au fil de l'eau ; puis resynthétisés dans le tableau de bord de l'édition et dans l'export bilan (des données, pas seulement un PDF).
+- **Projet en devenir** : tout chargé de mission doit pouvoir créer une proposition de projet (idée → fiche → relecture → validation → CA), pas seulement la direction. Trois origines à permettre : feuille blanche, duplication, proposition.
+- **Mémo rouge** : demander à la CRESS **toutes les fiches projet en cours** (on ne sait pas combien il y en a) pour comprendre la nature réelle des champs ; et vérifier si le document de 50 pages de Sandrine agrège **toutes** les fiches ou seulement celles d'un financement.
+
+**Événements** — un « petit outil » possible pour l'organisation (qui fait quoi, matériel, salles, traiteur) ; attendre les tableaux que Sandrine envoie (Forum, matériel AG).
+
+**Plan de charge** — définir son **cycle de vie** : est-ce validé à un moment (séminaire) ? figé ? remodifiable sous quelles conditions ?
+
+**Temps** — Simon résume : sortir du temps de travail effectif pour aller vers **l'imputation liée au financement**. Idée : raisonner en **pourcentage de mon ETP** par projet sur la semaine (camembert dynamique : « 30 % FSE = X h »), pour casser le « combien d'heures par jour sur quoi ». Les heures supplémentaires ne sont pas à l'outil (préconisations à part, éventuellement sur l'outil RH existant). Sandrine : **question oubliée** — lui demander par mail si elle a besoin d'imputer du temps ; elle est micro-fractionnée, mais quand une action concerne un projet à fiche, elle doit pouvoir dire « temps en support de ce projet ».
+
+**Agenda** — l'agenda reste le premier moyen de rendre compte du travail ; poser des codes / projets sur ses événements est utile ; **creuser l'interconnexion dans l'autre sens** (agenda → outil) pour remonter les temps. En attendant : **aide à la saisie hebdo à partir des traces laissées dans l'outil** (tâches faites, créneaux posés, événements rattachés à un projet) — « j'ai bossé sur ça cette semaine », même sans durée.
+
+**Ergonomie** — **mode focus** épuré pour les moments d'attention (saisir mes temps en 10 minutes, rédiger la fiche), sans le reste de l'interface ; à répliquer là où ça a du sens.
+
+**Notes** — tout le monde prend des petites notes de réunion dans OneNote : une **prise de notes** propre dans l'outil, rattachée à un projet ou transverse (réunion d'équipe), module optionnel. Une raison de plus d'ouvrir l'outil ; le chat Teams se vide.
+
+**Demandes internes** — un ticketing interne simple, **unifié avec les validations** : types de demande (retour site, besoin de chiffres, achat / devis, travail à faire…), un tableau unique « où en est ma demande » côté demandeur et côté traitant, possibilité de **générer une tâche** depuis une demande.
+
+**Devis et factures** — « vraiment dommage » de ne pas répondre au circuit scanner / tamponner / signer. Le devis doit être **soumis et mis en visibilité selon le montant**, validé par le **n+1** (pas forcément la directrice, qui voit tout) ; règles par montant. La pré-validation de Sandrine ne semble pas utile. **Signature électronique** (service tiers ou open source auto-hébergé) pour éviter l'impression. Dimension analytique du devis (achat / investissement / prestation) : plutôt à la RAF. Facture : le paiement se gère côté assistante / RAF, hors outil ; le pilote doit juste **savoir que la facture est payée** ; adresse de facturation écrite sur le devis, transfert par mail si elle arrive au pilote ; pas besoin du fichier facture dans l'outil ; question du **contrôle de service fait** à vérifier, sans usine à gaz.
+
+**Documents** — Gaël n'est « pas clair » et demande une proposition nette. Constats : NAS local en VPN, suppression possible des fichiers des autres, sécurité inconnue ; uploader des pièces dans l'outil risque de **disperser encore** (Teams + outil + serveur + OneDrive) ; arrêter OneDrive ; distinguer documents de projet et documents internes (notes de service) ; à quel moment une GED « un peu aboutie » devient nécessaire si on uploade PDF/Word/Excel dans tous les sens ? Liens partageables pour éviter les pièces jointes : V2, pas prioritaire. Aspiration des mails (façon CRM) : trop lourd pour le sur mesure ; à mentionner comme critère SaaS éventuel.
+
+**Contacts** — au-delà des contacts financeurs, des **contacts opérationnels par projet** (partenaires impliqués) pour la continuité de service ; V2, mais rend l'outil indispensable.
+
+**Périmètre financier** — l'outil ne traite pas la finance ; il fournit les données du bilan financier. Il ne trace que le temps et les devis.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
