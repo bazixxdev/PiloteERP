@@ -10,7 +10,7 @@ export function TimeNav({ current, showTeam, showCloture, teamHref }: { current:
   const single = !showTeam && !showCloture;
   return (
     <nav className={cn("mb-4 flex-wrap gap-1 border-b", single ? "hidden md:flex" : "flex")} data-testid="time-nav">
-      {tab("me", "Ma saisie", "/temps", "time-nav-me")}
+      {tab("me", "Ma répartition", "/temps", "time-nav-me")}
       {showTeam && tab("team", "Temps de l'équipe", teamHref ?? "/temps?equipe=1", "time-nav-team")}
       {showCloture && tab("cloture", "Clôture mensuelle", "/cloture", "time-nav-cloture")}
     </nav>

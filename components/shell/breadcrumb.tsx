@@ -8,6 +8,8 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/edition/, "Projets", "Édition"],
   [/^\/ma-semaine/, "Mon travail", "Ma semaine"],
   [/^\/temps/, "Mon travail", "Temps"],
+  [/^\/taches/, "Mon travail", "Tâches"],
+  [/^\/notes/, "Mon travail", "Notes"],
   [/^\/cloture/, "Mon travail", "Temps"],
   [/^\/annuel/, "Pilotage", "Vue annuelle"],
   [/^\/plan-de-charge/, "Pilotage", "Plan de charge"],
@@ -47,7 +49,7 @@ export function Breadcrumb({ editions }: { editions: { id: string; label: string
   } else if (pathname.startsWith("/cloture")) {
     parts.push(page, "Clôture mensuelle");
   } else if (pathname.startsWith("/temps")) {
-    parts.push(page, sp.get("personne") || sp.get("equipe") ? "Temps de l'équipe" : "Ma saisie");
+    parts.push(page, sp.get("personne") || sp.get("equipe") ? "Temps de l'équipe" : "Ma répartition");
   } else if (pathname.startsWith("/admin")) {
     parts.push(page, ADMIN_SECTIONS[sp.get("section") ?? "personnes"] ?? "Personnes");
   } else if (pathname.startsWith("/portefeuille") && sp.get("mode") === "codir") {

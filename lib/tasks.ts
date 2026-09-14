@@ -1,18 +1,52 @@
 import { prisma } from "./db";
 import { dayjs } from "./format";
-import type { TaskView } from "@/components/tasks/task-list";
+import { canReadShared } from "./modules";
+import type { EditionOpt, TaskView } from "@/components/tasks/task-list";
+
+const toView = (t: { id: string; label: string; dueDate: Date | null; done: boolean; listId: string | null; edition: { id: string; year: number; project: { name: string } } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
+  id: t.id, label: t.label, dueDate: t.dueDate ? dayjs(t.dueDate).format("YYYY-MM-DD") : null, done: t.done, listId: t.listId,
+  edition: t.edition ? { id: t.edition.id, name: t.edition.project.name, year: t.edition.year } : null,
+  action: t.action ? { id: t.action.id, name: t.action.name } : null,
+  slots: t.slots.map((s) => ({ id: s.id, startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString(), allDay: s.allDay })),
+});
+
+const include = { edition: { include: { project: true } }, action: true, slots: { orderBy: { startAt: "asc" as const } } };
 
 // Tâches de la personne connectée, prêtes pour le client (dates en chaînes). Les terminées de plus de 14 jours disparaissent.
 export async function loadMyTasks(personId: string, opts?: { editionId?: string }): Promise<TaskView[]> {
   const rows = await prisma.task.findMany({
     where: { personId, ...(opts?.editionId ? { editionId: opts.editionId } : {}), OR: [{ done: false }, { doneAt: { gte: dayjs().subtract(14, "day").toDate() } }] },
-    include: { edition: { include: { project: true } }, action: true, slots: { orderBy: { startAt: "asc" } } },
+    include,
     orderBy: [{ done: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
   });
-  return rows.map((t) => ({
-    id: t.id, label: t.label, dueDate: t.dueDate ? dayjs(t.dueDate).format("YYYY-MM-DD") : null, done: t.done,
-    edition: t.edition ? { id: t.edition.id, name: t.edition.project.name, year: t.edition.year } : null,
-    action: t.action ? { id: t.action.id, name: t.action.name } : null,
-    slots: t.slots.map((s) => ({ id: s.id, startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString(), allDay: s.allDay })),
-  }));
+  return rows.map(toView);
+}
+
+export type ListView = { id: string; name: string; visibility: string; edition: { id: string; name: string; year: number } | null; owner: { id: string; name: string } };
+
+// Mes listes, dans l'ordre.
+export async function loadMyLists(personId: string): Promise<ListView[]> {
+  const rows = await prisma.taskList.findMany({ where: { personId }, include: { edition: { include: { project: true } }, person: true }, orderBy: [{ order: "asc" }, { createdAt: "asc" }] });
+  return rows.map((l) => ({ id: l.id, name: l.name, visibility: l.visibility, edition: l.edition ? { id: l.edition.id, name: l.edition.project.name, year: l.edition.year } : null, owner: { id: l.person.id, name: l.person.name } }));
+}
+
+// Listes que d'autres ont partagées avec moi (visibilité pole_lead / pole / all), avec leurs tâches en cours : lecture seule.
+export async function loadSharedLists(me: { id: string; role: string; poleId: string | null }): Promise<{ list: ListView; tasks: TaskView[] }[]> {
+  const rows = await prisma.taskList.findMany({
+    where: { personId: { not: me.id }, visibility: { not: "private" }, person: { active: true } },
+    include: { edition: { include: { project: true } }, person: true, tasks: { where: { OR: [{ done: false }, { doneAt: { gte: dayjs().subtract(14, "day").toDate() } }] }, include, orderBy: [{ done: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }] } },
+    orderBy: [{ person: { order: "asc" } }, { order: "asc" }],
+  });
+  return rows
+    .filter((l) => canReadShared(me, l.person, l.visibility))
+    .map((l) => ({ list: { id: l.id, name: l.name, visibility: l.visibility, edition: l.edition ? { id: l.edition.id, name: l.edition.project.name, year: l.edition.year } : null, owner: { id: l.person.id, name: l.person.name } }, tasks: l.tasks.map(toView) }));
+}
+
+// Éditions proposables dans la saisie (« @ ») : les plus pertinentes pour la personne d'abord (je pilote, je contribue, mon pôle…).
+export async function loadEditionOpts(me: { id: string; role: string; poleId: string | null }, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }): Promise<EditionOpt[]> {
+  const { loadPortfolio } = await import("./queries");
+  const { byRelevance } = await import("./scope");
+  const portfolio = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
+  return byRelevance(me, portfolio, (e) => ({ project: e.project, teamIds: e.team.map((t) => t.personId), ownerIds: e.actions.map((a) => a.ownerId ?? "") }), (a, b) => a.project.name.localeCompare(b.project.name, "fr") || a.year - b.year)
+    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter((a) => a.state !== "done").map((a) => ({ id: a.id, name: a.name })) }));
 }

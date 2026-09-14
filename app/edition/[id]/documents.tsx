@@ -13,8 +13,14 @@ import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
 import { REF_DEFAULTS, refLabel } from "@/lib/refs";
 import { canEditFunding } from "@/lib/rights";
+import Link from "next/link";
+import { NotebookPen } from "lucide-react";
+import { loadNotes, NOTE_CONTEXTS } from "@/lib/notes";
+import { hasModule } from "@/lib/modules";
+import { dayjs } from "@/lib/format";
 
-export function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
+export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
+  const notes = await loadNotes(me, { editionId: e.id });
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const codir = isCodir(me.role);
   const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
@@ -76,6 +82,20 @@ export function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx)
       <Section title="Pièces qui font foi" description="Devis, conventions, notifications, justificatifs, bilans remis : petites pièces gardées avec l'édition (5 Mo au plus). Le dossier complet reste sur le serveur." testId="pieces">
         <AttachmentList items={e.attachments} refs={refs} emptyText="Aucune pièce déposée sur cette édition." />
         {(rw || canEditFunding(me.role)) && <div className="mt-3"><UploadForm editionId={e.id} kinds={kinds} defaultKind="other" /></div>}
+      </Section>
+
+      <Section title="Notes" description="Notes de réunion rattachées à cette édition : les vôtres, et celles que des collègues ont partagées." testId="edition-notes">
+        {notes.length === 0 ? <p className="mb-2 text-sm text-muted-foreground">Aucune note rattachée.</p> : (
+          <ul className="mb-2 divide-y text-sm">
+            {notes.map((n) => (
+              <li key={n.id} className="flex items-center gap-2 py-1.5">
+                <NotebookPen className="size-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1"><Link href={`/notes?note=${n.id}`} className="font-medium hover:underline">{n.title || "Sans titre"}</Link><div className="text-[11px] text-muted-foreground">{dayjs(n.date).format("D MMM YYYY")} · {NOTE_CONTEXTS.find((c) => c.value === n.context)?.label} · {n.mine ? "moi" : n.author.name}</div></div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {hasModule(me, "notes") && <Link href={`/notes?note=nouvelle&edition=${e.id}`} className="text-xs text-primary hover:underline" data-testid="edition-new-note">+ Prendre une note sur cette édition</Link>}
       </Section>
 
       <Section title="Discussion" description="Fil de l'édition, en lien ou à la place du canal Teams.">

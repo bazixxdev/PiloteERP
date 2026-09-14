@@ -23,11 +23,14 @@ import { DocumentsTab } from "./documents";
 import { BilanTab } from "./bilan";
 import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
-import { Eye } from "lucide-react";
+import { Eye, Maximize2 } from "lucide-react";
+import { FocusMode } from "@/components/common/focus-mode";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string }> }) {
+export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string }> }) {
   const { id } = await params;
-  const { onglet, relecture } = await searchParams;
+  const { onglet, relecture, focus } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
@@ -48,6 +51,17 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   };
 
   const owners = { pilot: e.project.pilot, guarantor: e.project.guarantor };
+  // Mode focus sur la fiche (retour du 14/09) : rédiger sans le reste de l'interface ; Échap ramène à l'onglet.
+  if (focus === "1" && tab === "fiche") {
+    return (
+      <div className="mx-auto max-w-4xl p-4 md:p-8">
+        <FocusMode on exitHref={`/edition/${e.id}?onglet=fiche${relecture === "1" ? "&relecture=1" : ""}`} />
+        <h1 className="mb-1 text-[22px] font-bold leading-tight tracking-[-0.5px]">{e.project.name} · {e.year}</h1>
+        <p className="mb-5 text-xs text-muted-foreground">Fiche en mode focus : la rédaction seulement. Chaque champ s'enregistre en le quittant.</p>
+        <FicheTab {...ctx} />
+      </div>
+    );
+  }
   return (
     <div className="p-4 md:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
@@ -89,7 +103,10 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           <Eye className="size-4 text-muted-foreground" />Édition du pôle <strong>{e.project.pole.name}</strong>, hors de votre pôle : vous la consultez, vous n'y intervenez pas.
         </div>
       )}
-      <TabsNav editionId={e.id} current={tab} counts={counts} />
+      <div className="relative">
+        <TabsNav editionId={e.id} current={tab} counts={counts} />
+        {tab === "fiche" && <Button asChild variant="outline" size="icon" className="absolute top-0.5 right-0 size-8 shrink-0" title="Mode focus : rédiger la fiche sans le reste de l'interface"><Link href={`/edition/${e.id}?onglet=fiche&focus=1${relecture === "1" ? "&relecture=1" : ""}`} data-testid="fiche-focus"><Maximize2 /></Link></Button>}
+      </div>
 
       {tab === "fiche" && <FicheTab {...ctx} />}
       {tab === "actions" && <ActionsTab {...ctx} />}

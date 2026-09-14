@@ -94,3 +94,44 @@ export async function lockMonthForAll(month: string, personIds: string[]): Promi
   }
   return { ok: true, data: { count } };
 }
+
+// « Répartir ma semaine » (retour du 14/09) : la personne donne des parts de son temps par projet ; l'outil les convertit en heures
+// sur les jours attendus du rythme, et l'export de la RAF ne change pas. Remplace les saisies de la semaine sur les lignes données.
+export async function saveWeekSplit(weekStart: string, parts: { projectId: string | null; actionId: string | null; timeCodeId: string | null; percent: number }[]): Promise<Result<{ hours: number }>> {
+  const me = await getCurrentPerson();
+  const start = dayjs(weekStart).startOf("isoWeek");
+  const { loadRhythms, rhythmAt, expectedHoursOn, weekDays } = await import("@/lib/time");
+  const [rhythms, full] = await Promise.all([loadRhythms(), prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } } } })]);
+  if (!full) return { ok: false, error: "Personne introuvable." };
+  const days = weekDays(start, 5).map((d) => ({ d, exp: (() => { const r = rhythmAt(full, d, rhythms); return r ? expectedHoursOn(r, d) : 0; })() }));
+  const expected = days.reduce((s, x) => s + x.exp, 0);
+  if (expected <= 0) return { ok: false, error: "Rythme non configuré : impossible de convertir des parts en heures." };
+  const total = parts.reduce((s, p) => s + (Number(p.percent) || 0), 0);
+  if (total > 100.01) return { ok: false, error: `Le total dépasse 100 % (${Math.round(total)} %).` };
+  for (const d of days) {
+    const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId: me.id, month: monthKey(d.d.toDate()) } } });
+    if (locked) return { ok: false, error: "Un mois de cette semaine est verrouillé par la RAF." };
+  }
+  const q = (x: number) => Math.round(x * 4) / 4; // pas de 0,25 h
+  let written = 0;
+  for (const p of parts) {
+    const where = { personId: me.id, projectId: p.projectId ?? null, actionId: p.actionId ?? null, timeCodeId: p.timeCodeId ?? null };
+    await prisma.timeEntry.deleteMany({ where: { ...where, date: { gte: start.toDate(), lt: start.add(1, "week").toDate() } } });
+    const hours = q(expected * (Number(p.percent) || 0) / 100);
+    if (hours <= 0) continue;
+    // Réparti au prorata des heures attendues de chaque jour ; le reste d'arrondi va sur le dernier jour travaillé.
+    let left = hours;
+    const workDays = days.filter((x) => x.exp > 0);
+    for (let i = 0; i < workDays.length; i++) {
+      const x = workDays[i];
+      const h = i === workDays.length - 1 ? q(left) : q(hours * x.exp / expected);
+      if (h <= 0) continue;
+      await prisma.timeEntry.create({ data: { ...where, date: x.d.toDate(), hours: h } });
+      left -= h; written += h;
+    }
+  }
+  await prisma.weekDeclaration.deleteMany({ where: { personId: me.id, week: weekKey(start) } });
+  revalidatePath("/temps");
+  revalidatePath("/ma-semaine");
+  return { ok: true, data: { hours: Math.round(written * 100) / 100 } };
+}

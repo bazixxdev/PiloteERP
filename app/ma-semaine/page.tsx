@@ -17,6 +17,8 @@ import { prisma } from "@/lib/db";
 import { expectedHoursOn, loadRhythms, rhythmAt, weekDays } from "@/lib/time";
 import { loadMyTasks } from "@/lib/tasks";
 import { TaskList } from "@/components/tasks/task-list";
+import { hasModule } from "@/lib/modules";
+import { loadMyLists } from "@/lib/tasks";
 
 // Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
 // les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
@@ -27,16 +29,18 @@ export default async function MaSemainePage() {
   const weekStart = dayjs().startOf("isoWeek");
   const weekEnd = weekStart.add(6, "day");
   const days = weekDays(weekStart, 5);
-  const [agenda, portfolio, unread, personFull, rhythms, weekEntries, tasks, openRemarks] = await Promise.all([
+  const tasksOn = hasModule(me, "tasks");
+  const [agenda, portfolio, unread, personFull, rhythms, weekEntries, tasks, openRemarks, lists] = await Promise.all([
     loadAgenda(settings.horizonDays),
     loadPortfolio(settings, { statuses: ["in_progress", "validated"] }),
     prisma.notification.findMany({ where: { personId: me.id, readAt: null }, include: { sender: true }, orderBy: { createdAt: "desc" } }),
     prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } } } }),
     loadRhythms(),
     prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: weekStart.toDate(), lt: weekStart.add(1, "week").toDate() } }, select: { hours: true, date: true } }),
-    loadMyTasks(me.id),
+    tasksOn ? loadMyTasks(me.id) : Promise.resolve([]),
     // Remarques ouvertes de la direction (ou du garant) sur les fiches que je pilote ou où je contribue.
     prisma.fieldRemark.findMany({ where: { resolvedAt: null, edition: { status: { not: "closed" }, OR: [{ project: { pilotId: me.id } }, { team: { some: { personId: me.id } } }] } }, include: { author: true, edition: { include: { project: true } } }, orderBy: { createdAt: "desc" } }),
+    tasksOn ? loadMyLists(me.id) : Promise.resolve([]),
   ]);
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
@@ -107,7 +111,7 @@ export default async function MaSemainePage() {
           <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">Bonjour {firstName}.</h1>
           <p className="mt-1 text-xs text-muted-foreground">Semaine du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · ce qui vous attend, dans l'ordre.</p>
         </div>
-        <Button asChild><Link href="/temps"><Clock />Saisir mes temps</Link></Button>
+        <Button asChild><Link href="/temps"><Clock />Répartir mon temps</Link></Button>
       </div>
 
       {attention ? (
@@ -148,7 +152,7 @@ export default async function MaSemainePage() {
         <div className="mb-4 rounded-md border bg-card px-4 py-3" data-testid="today">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-[13px] font-bold">Aujourd'hui · {dayjs().format("dddd D MMMM")}</h4>
-            <span className="text-[11px] text-muted-foreground"><b className="tabular text-foreground">{fmtNumber(todayHours, 1)} h</b> saisies{todayExpected ? ` sur ${fmtNumber(todayExpected, 1)} h attendues` : ""} · <Link href="/temps" className="text-primary hover:underline">saisir</Link></span>
+            <span className="text-[11px] text-muted-foreground"><b className="tabular text-foreground">{fmtNumber(todayHours, 1)} h</b> réparties{todayExpected ? ` sur ${fmtNumber(todayExpected, 1)} h attendues` : ""} · <Link href="/temps" className="text-primary hover:underline">répartir</Link></span>
           </div>
           {todayItems.length + todayTasks.length + todaySlots.length === 0 ? (
             <p className="mt-1 text-[11px] text-muted-foreground">Rien de daté aujourd'hui. Posez un créneau sur une tâche pour organiser la journée.</p>
@@ -171,9 +175,11 @@ export default async function MaSemainePage() {
           <Panel title="Cette semaine" aside={<span className="text-[11px] text-muted-foreground">Jusqu'au {weekEnd.format("D MMMM")}</span>} testId="this-week" className="order-2">
             {thisWeek.length === 0 ? <Note>✓ Aucune échéance d'ici dimanche.</Note> : thisWeek.map((it) => <ItemRow key={it.id} it={it} />)}
           </Panel>
-          <Panel title="Mes tâches" aside={<span className="text-[11px] text-muted-foreground">{openTasks ? `${openTasks} en cours` : "Rien en cours"} · privées</span>} testId="my-tasks" className="order-3 scroll-mt-4" id="mes-taches">
-            <TaskList tasks={tasks} editions={editionOpts} />
-          </Panel>
+          {tasksOn && (
+            <Panel title="Mes tâches" aside={<span className="text-[11px] text-muted-foreground">{openTasks ? `${openTasks} en cours` : "Rien en cours"} · <Link href="/taches" className="text-primary hover:underline">{lists.length ? `${lists.length} liste${lists.length > 1 ? "s" : ""} →` : "mes listes →"}</Link></span>} testId="my-tasks" className="order-3 scroll-mt-4" id="mes-taches">
+              <TaskList tasks={tasks} editions={editionOpts} lists={lists.map((l) => ({ id: l.id, name: l.name }))} />
+            </Panel>
+          )}
           <details className="group order-6 overflow-hidden rounded-md border bg-card" data-testid="later">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5">
               <h4 className="text-[13px] font-bold">Plus tard</h4>
@@ -210,15 +216,15 @@ export default async function MaSemainePage() {
           </Panel>
 
           <div className="order-5 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
-            <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mes temps à saisir</h4><span aria-hidden>◷</span></div>
+            <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mon temps à répartir</h4><span aria-hidden>◷</span></div>
             <p className="mt-2 mb-4 text-xs text-muted-foreground">
-              {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est saisie jusqu'ici.<br /></> : null}
+              {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est répartie jusqu'ici.<br /></> : null}
               <b className="tabular text-foreground">{fmtNumber(weekTotal, 1)} h{expected !== null ? ` sur ${fmtNumber(expected, 1)} h attendues` : ""}</b> cette semaine.
             </p>
             {expected !== null && <div className="h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expected) * 100)}%` }} /></div>}
             {missing.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5" data-testid="missing-days">
-                <span className="w-full text-[10px] text-muted-foreground">Jours des deux dernières semaines sans saisie :</span>
+                <span className="w-full text-[10px] text-muted-foreground">Jours des deux dernières semaines sans répartition :</span>
                 {missing.map((d) => (
                   <Link key={d} href={`/temps?semaine=${dayjs(d).isoWeekYear()}-W${String(dayjs(d).isoWeek()).padStart(2, "0")}`} className="rounded-sm bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-foreground hover:bg-warning/30">{dayjs(d).format("ddd D MMM")}</Link>
                 ))}

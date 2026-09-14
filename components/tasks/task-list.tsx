@@ -18,14 +18,16 @@ export type EditionOpt = { id: string; name: string; year: number; actions: { id
 const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export type TaskView = {
-  id: string; label: string; dueDate: string | null; done: boolean;
+  id: string; label: string; dueDate: string | null; done: boolean; listId?: string | null;
   edition: { id: string; name: string; year: number } | null; action: { id: string; name: string } | null;
   slots: { id: string; startAt: string; endAt: string; allDay: boolean }[];
 };
 
 
 // Liste des tâches personnelles : ajout en une ligne, échéance (pour quand) et créneaux (quand je m'y mets), lien vers l'édition.
-export function TaskList({ tasks, editions = [], editionId, actionId, compact }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; compact?: boolean }) {
+export type ListOpt = { id: string; name: string };
+
+export function TaskList({ tasks, editions = [], editionId, actionId, compact, listId, lists = [], readOnly, emptyText }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; compact?: boolean; listId?: string | null; lists?: ListOpt[]; readOnly?: boolean; emptyText?: string }) {
   const [label, setLabel] = useState("");
   const [linked, setLinked] = useState<string | null>(editionId ?? null);
   const [cursor, setCursor] = useState(0);
@@ -41,10 +43,20 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact }:
   const suggestions = useMemo(() => { if (!at) return []; const q = norm(at[1].trim()); return editions.filter((e) => !q || norm(`${e.name} ${e.year}`).includes(q)).slice(0, 8); }, [at, editions]);
   const pick = (e: EditionOpt) => { setLinked(e.id); setLabel(label.replace(/@[^@]*$/, "").trimEnd()); setCursor(0); inputRef.current?.focus(); };
   const linkedEdition = editions.find((e) => e.id === linked);
-  const submit = () => { if (!label.trim()) return; run(() => addTask({ label, editionId: linked, actionId: linked === editionId ? actionId : null }), () => { setLabel(""); setLinked(editionId ?? null); }); };
+  const submit = () => { if (!label.trim()) return; run(() => addTask({ label, editionId: linked, actionId: linked === editionId ? actionId : null, listId: listId ?? null }), () => { setLabel(""); setLinked(editionId ?? null); }); };
+
+  if (readOnly) {
+    return (
+      <div data-testid="task-list" data-readonly="true">
+        {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">{emptyText ?? "Aucune tâche en cours."}</p>}
+        <ul className="divide-y">{open.map((t) => <ReadRow key={t.id} t={t} />)}</ul>
+        {done.length > 0 && <details className="group border-t px-4 py-2"><summary className="cursor-pointer list-none text-[11px] text-muted-foreground">Terminées · {done.length}</summary><ul className="mt-1 divide-y">{done.map((t) => <ReadRow key={t.id} t={t} />)}</ul></details>}
+      </div>
+    );
+  }
 
   return (
-    <div data-testid="task-list">
+    <div data-testid="task-list" data-list={listId ?? ""}>
       <form className="relative border-b px-4 py-3" onSubmit={(e) => { e.preventDefault(); if (at && suggestions[cursor]) { pick(suggestions[cursor]); return; } submit(); }}>
         <div className="flex items-center gap-2">
           <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -75,21 +87,40 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact }:
         )}
         {at && suggestions.length === 0 && editions.length > 0 && <p className="mt-1 pl-6 text-[10px] text-muted-foreground">Aucune édition ne correspond à « {at[1].trim()} ».</p>}
       </form>
-      {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">Aucune tâche en cours. Une tâche, c'est pour vous seul : ce n'est ni une action du projet, ni un jalon.</p>}
+      {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">{emptyText ?? "Aucune tâche en cours. Une tâche, c'est à vous : ce n'est ni une action du projet, ni un jalon."}</p>}
       <ul className="divide-y">
-        {open.map((t) => <TaskRow key={t.id} t={t} pending={pending} run={run} compact={compact} editions={editions} />)}
+        {open.map((t) => <TaskRow key={t.id} t={t} pending={pending} run={run} compact={compact} editions={editions} lists={lists} />)}
       </ul>
       {done.length > 0 && (
         <details className="group border-t px-4 py-2">
           <summary className="cursor-pointer list-none text-[11px] text-muted-foreground">Terminées · {done.length} <span className="text-primary group-open:hidden">afficher</span><span className="hidden text-primary group-open:inline">masquer</span></summary>
-          <ul className="mt-1 divide-y">{done.map((t) => <TaskRow key={t.id} t={t} pending={pending} run={run} compact editions={editions} />)}</ul>
+          <ul className="mt-1 divide-y">{done.map((t) => <TaskRow key={t.id} t={t} pending={pending} run={run} compact editions={editions} lists={lists} />)}</ul>
         </details>
       )}
     </div>
   );
 }
 
-function TaskRow({ t, pending, run, compact, editions }: { t: TaskView; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void; compact?: boolean; editions: EditionOpt[] }) {
+// Ligne en lecture seule : une liste partagée par un collègue se lit, ne se modifie pas.
+function ReadRow({ t }: { t: TaskView }) {
+  const due = t.dueDate ? dayjs(t.dueDate) : null;
+  const n = due ? due.startOf("day").diff(dayjs().startOf("day"), "day") : null;
+  return (
+    <li className={cn("flex items-start gap-2.5 px-4 py-2.5", t.done && "opacity-60")} data-testid={`task-${t.id}`}>
+      <span className={cn("mt-1 inline-block size-4 rounded border border-border", t.done && "bg-mint")} aria-hidden />
+      <div className="min-w-0 flex-1">
+        <span className={cn("text-xs font-semibold", t.done && "line-through")}>{t.label}</span>
+        <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+          {t.edition && <Link href={`/edition/${t.edition.id}`} className="rounded-full bg-secondary px-1.5 py-px text-primary hover:underline">{t.edition.name} · {t.edition.year}{t.action ? ` · ${t.action.name}` : ""}</Link>}
+          {due && !t.done && <span className={cn("rounded-sm px-1.5 py-px", n !== null && n < 0 ? "bg-danger-soft font-semibold text-danger" : "bg-warning-soft text-warning-foreground")}>Pour {n === 0 ? "aujourd'hui" : n === 1 ? "demain" : due.format("ddd D MMM")}</span>}
+          {t.slots.map((s) => <span key={s.id} className="inline-flex items-center gap-1 rounded-sm bg-muted px-1.5 py-px"><CalendarClock className="size-3" aria-hidden />{slotLabel(s)}</span>)}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function TaskRow({ t, pending, run, compact, editions, lists = [] }: { t: TaskView; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void; compact?: boolean; editions: EditionOpt[]; lists?: ListOpt[] }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(t.label);
   // Coche immédiate (optimiste), confirmée par le rafraîchissement.
@@ -116,6 +147,12 @@ function TaskRow({ t, pending, run, compact, editions }: { t: TaskView; pending:
             <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} />
           )}
           {!t.done && <DuePicker t={t} pending={pending} run={run} label={dueText} late={n !== null && n < 0} />}
+          {!t.done && lists.length > 0 && (
+            <select aria-label="Liste de la tâche" value={t.listId ?? ""} disabled={pending} onChange={(e) => run(() => updateTask(t.id, { listId: e.target.value || null }))} className="h-[18px] rounded-sm border border-dashed bg-transparent px-1 text-[10px] text-muted-foreground" data-testid={`task-list-${t.id}`}>
+              <option value="">Sans liste</option>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          )}
           {t.slots.map((s) => (
             <span key={s.id} className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px", dayjs(s.endAt).isBefore(dayjs()) ? "bg-muted" : "bg-info-soft text-primary")} title="Créneau posé dans votre agenda" data-testid={`slot-${s.id}`}>
               <CalendarClock className="size-3" aria-hidden />{slotLabel(s)}

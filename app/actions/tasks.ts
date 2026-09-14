@@ -17,18 +17,29 @@ async function mine(taskId: string) {
 
 const day = (d: string | null | undefined) => (d ? dayjs(d, "YYYY-MM-DD").startOf("day").toDate() : null);
 
-export async function addTask(input: { label: string; dueDate?: string | null; editionId?: string | null; actionId?: string | null }): Promise<Result<{ id: string }>> {
+export async function addTask(input: { label: string; dueDate?: string | null; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Écrivez la tâche." };
-  const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId: input.editionId || null, actionId: input.actionId || null } });
+  let editionId = input.editionId || null;
+  if (input.listId) {
+    const l = await prisma.taskList.findUnique({ where: { id: input.listId } });
+    if (!l || l.personId !== me.id) return { ok: false, error: "Liste introuvable." };
+    // Une liste rattachée à une édition rattache ses tâches, sauf rattachement explicite.
+    if (!editionId && l.editionId) editionId = l.editionId;
+  }
+  const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId, actionId: input.actionId || null, listId: input.listId || null } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: t.id } };
 }
 
-export async function updateTask(id: string, patch: { label?: string; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null }): Promise<Result> {
+export async function updateTask(id: string, patch: { label?: string; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result> {
   const t = await mine(id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
+  if (patch.listId) {
+    const l = await prisma.taskList.findUnique({ where: { id: patch.listId } });
+    if (!l || l.personId !== t.personId) return { ok: false, error: "Liste introuvable." };
+  }
   if (patch.editionId) {
     const e = await prisma.edition.findUnique({ where: { id: patch.editionId } });
     if (!e) return { ok: false, error: "Édition introuvable." };
@@ -44,6 +55,7 @@ export async function updateTask(id: string, patch: { label?: string; dueDate?: 
       ...(patch.label !== undefined ? { label: patch.label.trim() || t.label } : {}),
       ...(patch.dueDate !== undefined ? { dueDate: day(patch.dueDate) } : {}),
       ...(patch.done !== undefined ? { done: patch.done, doneAt: patch.done ? new Date() : null } : {}),
+      ...(patch.listId !== undefined ? { listId: patch.listId || null } : {}),
       // Changer d'édition détache l'action : elle appartenait à l'ancienne.
       ...(patch.editionId !== undefined ? { editionId: patch.editionId || null, actionId: patch.actionId !== undefined ? patch.actionId || null : null } : patch.actionId !== undefined ? { actionId: patch.actionId || null } : {}),
     },
@@ -86,6 +98,40 @@ export async function deleteSlot(id: string): Promise<Result> {
   const s = await prisma.workSlot.findUnique({ where: { id }, include: { task: true } });
   if (!s || s.task.personId !== me.id) return { ok: false, error: "Créneau introuvable." };
   await prisma.workSlot.delete({ where: { id } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// Listes de tâches : catégories avec ou sans projet ; visibilité au choix de l'auteur ; seul l'auteur écrit.
+const VIS = ["private", "pole_lead", "pole", "all"];
+
+export async function addList(input: { name: string; visibility?: string; editionId?: string | null }): Promise<Result<{ id: string }>> {
+  const me = await getCurrentPerson();
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: "Donnez un nom à la liste." };
+  if (input.visibility && !VIS.includes(input.visibility)) return { ok: false, error: "Visibilité inconnue." };
+  const count = await prisma.taskList.count({ where: { personId: me.id } });
+  const l = await prisma.taskList.create({ data: { personId: me.id, name, visibility: input.visibility ?? "private", editionId: input.editionId || null, order: count } });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { id: l.id } };
+}
+
+export async function updateList(id: string, patch: { name?: string; visibility?: string; editionId?: string | null }): Promise<Result> {
+  const me = await getCurrentPerson();
+  const l = await prisma.taskList.findUnique({ where: { id } });
+  if (!l || l.personId !== me.id) return { ok: false, error: "Liste introuvable." };
+  if (patch.visibility && !VIS.includes(patch.visibility)) return { ok: false, error: "Visibilité inconnue." };
+  await prisma.taskList.update({ where: { id }, data: { ...(patch.name !== undefined ? { name: patch.name.trim() || l.name } : {}), ...(patch.visibility ? { visibility: patch.visibility } : {}), ...(patch.editionId !== undefined ? { editionId: patch.editionId || null } : {}) } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// Supprimer une liste ne supprime pas ses tâches : elles reviennent dans « Sans liste ».
+export async function deleteList(id: string): Promise<Result> {
+  const me = await getCurrentPerson();
+  const l = await prisma.taskList.findUnique({ where: { id } });
+  if (!l || l.personId !== me.id) return { ok: false, error: "Liste introuvable." };
+  await prisma.taskList.delete({ where: { id } });
   revalidatePath("/", "layout");
   return { ok: true };
 }

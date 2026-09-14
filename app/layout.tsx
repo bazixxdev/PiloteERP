@@ -34,6 +34,7 @@ async function counters() {
     pending: pending.filter((v) => canDecideValidation(me, v)).length,
     reminders: reminders.filter((r) => r.who.includes(me.name)).length,
     role: me.role,
+    modules: me.modules.split(",").map((x) => x.trim()).filter(Boolean),
   };
 }
 
@@ -43,7 +44,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="fr">
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
-          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} role={c.role} />
+          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} role={c.role} modules={c.modules} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>

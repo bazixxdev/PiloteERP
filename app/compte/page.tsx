@@ -7,6 +7,8 @@ import { getCurrentPerson, getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
 import { dayjs } from "@/lib/format";
 import { loadRhythms, rhythmAt } from "@/lib/time";
+import { modulesOf } from "@/lib/modules";
+import { ModulesForm } from "./modules-form";
 
 // Mon compte : ce que l'outil sait de moi (rôle, pôle, rythme, codes de temps) et mon flux agenda. Rien ne se modifie ici :
 // les personnes et leurs rythmes se règlent dans l'admin ; en V1, l'identité viendra du compte Microsoft.
@@ -36,9 +38,15 @@ export default async function ComptePage() {
             {row("Jours disponibles par an", full?.availableDays ?? "—")}
             {row("Codes de temps", full?.timeCodes.length ? full.timeCodes.map((c) => c.timeCode.label).join(", ") : "Aucun code hors projet")}
             {row("Projets pilotés", full?.pilotedProjects.length ? full.pilotedProjects.map((p) => p.name).join(", ") : "Aucun")}
+            {row("Temps", me.fixedShare ? <span data-testid="fixed-share"><b>Part fixe</b> — {me.fixedShareNote || "pourcentage déclaré sur lettre de mission"} : aucune répartition hebdomadaire attendue.</span> : "Répartition hebdomadaire par projet")}
           </dl>
         </Section>
-        <IcsCard kind="me" personId={me.id} />
+        <div className="grid content-start gap-4">
+          <Section title="Mes modules" description="Ce que l'outil vous montre. Désactivez ce qui ne vous sert pas : rien n'est perdu, tout revient en réactivant.">
+            <ModulesForm enabled={[...modulesOf(me)]} />
+          </Section>
+          <IcsCard kind="me" personId={me.id} />
+        </div>
       </div>
     </div>
   );

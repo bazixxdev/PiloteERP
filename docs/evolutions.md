@@ -24,6 +24,7 @@ Tenu à jour au fil des échanges avec la CRESS. Ce qui est **fait** est dans le
 | 13/09/2026 | « Projets et financements » : une entrée, trois onglets — Projets et éditions (`/projets`, sorti de l'admin), Conventions (liste + page, rattacher / détacher une édition), Financeurs (liste + page, contacts avec principal et contact du dossier) | Demande de Gaël : comparer et lire, contacts des financeurs, plus de doublon admin |
 | 13/09/2026 | To-do personnelle : tâches privées, échéance (pour quand) distincte des créneaux de travail (quand je m'y mets : journée ou plage horaire, posés dans l'agenda iCal comme occupés), `@` pour rattacher une édition, bloc « Aujourd'hui » dans Ma semaine, « Me créer une tâche » depuis une édition | Demande de Gaël |
 | 13/09/2026 | Fiche projet alignée sur le gabarit Word CRESS (objectifs qualitatifs / quantitatifs, SNESS, contenu et valeur ajoutée, public, sponsor, date de rendu), export Word au format du gabarit, **remarques par rubrique** (droit CODIR, mode relecture, traitées par le pilote, notification et Ma semaine), trois fiches réelles transposées en démo | Constat de Gaël : l'outil ne reproduisait ni les rubriques ni les commentaires de la direction |
+| 14/09/2026 | **Lot 1 « Mon travail »** (retour oral du 14/09) : espace **Tâches** (`/taches`) avec listes avec ou sans projet et **visibilité au choix** (privée / mon responsable / mon pôle / CRESS, seul l'auteur écrit, lecture des listes partagées) ; **Notes** (`/notes`, rattachées à une édition ou transverses, privées ou partagées, listées dans l'onglet Documents) ; **modules activables** dans Mon compte (tâches, notes, parts) ; **« Parts de ma semaine »** (curseurs, camembert, conversion en heures sur le rythme) ; **part fixe** (lettre de mission FSE, rien à répartir) ; **aide à la saisie** depuis les traces de la semaine (tâches faites, créneaux, notes, jalons) ; vocabulaire « répartition » partout ; **mode focus** (temps, notes, fiche) | `RETOURS-A-CHAUD.md` §H, `LOTS-14-09.md` lot 1 |
 | 13/09/2026 | **Plan de charge** (`/plan-de-charge`) : personnes × mois face à la capacité, éditions en cours et à venir, vue par projet, réalisé sur les mois passés, ventilation mensuelle depuis l'édition ou directement depuis la grille (`PlannedLoad`) | Rien ne répartissait la charge dans le temps entre le séminaire et la saisie |
 
 ## V1 (janvier 2027) — retenu, à chiffrer
@@ -76,19 +77,19 @@ Détail et contexte dans `RETOURS-A-CHAUD.md` §H. Le rang proposé est celui de
 
 | Évolution | Rang proposé | Ce qui reste à préciser | Réf. |
 |---|---|---|---|
-| To-do dans un espace dédié, listes / catégories sans projet, visibilité au choix de la personne (privée / responsable / équipe), seul l'auteur écrit | Proto | Où vit la liste « équipe » dans la navigation | EF-G2, S15 0:06 |
-| Modules activables par personne (to-do, notes) dans Mon compte | Proto | Liste des modules | ENF-1, S14 |
+| To-do dans un espace dédié, listes / catégories sans projet, visibilité au choix de la personne (privée / responsable / équipe), seul l'auteur écrit | **Fait (lot 1)** | Où vit la liste « équipe » dans la navigation | EF-G2, S15 0:06 |
+| Modules activables par personne (to-do, notes) dans Mon compte | **Fait (lot 1)** | Liste des modules | ENF-1, S14 |
 | Fiche : texte replié après validation, **verrouillage** et modification ritualisée (proposition de modification, notification, historique) | Proto | Qui peut proposer, qui accepte | EF-B6, EF-A3 |
 | Fiche éclatée : indicateurs vivants, **réalisations / livrables** consignés au fil de l'eau (inscrits, publics, livrable produit), export bilan = données | V1 | Liste des natures de réalisation | EF-I1, EF-I2, EF-I3, EF-B4 |
 | Proposition de projet par tout chargé de mission (projet en devenir → validation → CA) | Proto | Droits de création | EF-A3, S12 0:55 |
-| Prise de notes de réunion dans l'outil, rattachée ou transverse, optionnelle | V1 | Remplace OneNote ? partage ? | EF-H5 |
+| Prise de notes de réunion dans l'outil, rattachée ou transverse, optionnelle | **Fait (lot 1)** | Remplace OneNote ? partage ? | EF-H5 |
 | **Demandes internes unifiées avec les validations** : types (site, chiffres, achat, travail), tableau unique, tâche générée depuis une demande | V1 (proto possible) | Types et destinataires avec la responsable com et Sandrine | EF-J3, EF-F1 |
 | Devis : validation n+1 par seuil de montant, directrice en visibilité, **signature électronique** (Docuseal ou service tiers) au lieu de l'impression | V1 | Seuils (arbitrage 2) ; valeur juridique d'un « bon pour accord » suffisant ? | EF-F2, S15 0:08 |
 | Facture : état « facture reçue / payée » sur l'engagement, posé par la RAF ou l'assistante, notification au pilote ; case « service fait » du pilote non bloquante ; nature analytique (achat / invest / presta) par la RAF | V1 | Contrôle de service fait : requis ou non | EF-E1, EF-E2 |
-| Temps : saisie hebdo en **parts de mon ETP** (camembert / curseurs) convertie en heures pour l'export RAF ; personnes « à part fixe » (lettre de mission FSE) sans saisie | Proto (mode alternatif à la grille) | Vérifier avec la RAF ce que le gestionnaire FSE accepte (art. 55.5 du règlement 2021/1060) | EF-D1, EF-D8, arbitrages 5 et 12 |
-| Aide à la saisie des temps depuis les traces de l'outil (tâches faites, créneaux, actions rattachées) — sans Microsoft | Proto | — | EF-D6 (variante interne) |
+| Temps : saisie hebdo en **parts de mon ETP** (camembert / curseurs) convertie en heures pour l'export RAF ; personnes « à part fixe » (lettre de mission FSE) sans saisie | **Fait (lot 1)** | Vérifier avec la RAF ce que le gestionnaire FSE accepte (art. 55.5 du règlement 2021/1060) | EF-D1, EF-D8, arbitrages 5 et 12 |
+| Aide à la saisie des temps depuis les traces de l'outil (tâches faites, créneaux, actions rattachées) — sans Microsoft | **Fait (lot 1)** | — | EF-D6 (variante interne) |
 | Agenda → outil (événements Outlook codés projet remontés en proposition de temps) | V2 | Question 4, 5, 12 | EF-D6 |
-| Mode focus (saisie des temps, rédaction de fiche) | Proto | — | ENF-1 |
+| Mode focus (saisie des temps, rédaction de fiche) | **Fait (lot 1)** | — | ENF-1 |
 | Plan de charge : cycle de vie (figé au séminaire, modification sous condition) | V1 | Règle à fixer avec la direction | EF-B3 |
 | Outil d'organisation d'événement (qui fait quoi, matériel, salles) | À voir | Tableaux Forum et AG de Sandrine | EF-G5 |
 | Contacts opérationnels par projet (partenaires) | V2 | RGPD, qui tient | — |

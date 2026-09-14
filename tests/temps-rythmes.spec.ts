@@ -25,7 +25,7 @@ test("les heures attendues suivent le rythme réel de la personne et de la semai
   await page.goto("/temps?semaine=2026-W37");
   await expect(page.getByTestId("declare-week")).toBeVisible();
   await page.getByTestId("declare-week").click();
-  await expect(page.getByText("Semaine déclarée complète")).toBeVisible();
+  await expect(page.getByText("Répartition déclarée complète")).toBeVisible();
   await page.reload();
   await expect(page.getByTestId("week-declaration")).toContainText("déclarée complète le");
   const cell = page.getByTestId("cell-0-0");

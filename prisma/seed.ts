@@ -56,6 +56,8 @@ async function reset() {
   await prisma.plannedLoad.deleteMany();
   await prisma.workSlot.deleteMany();
   await prisma.task.deleteMany();
+  await prisma.taskList.deleteMany();
+  await prisma.note.deleteMany();
   await prisma.funderContact.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
@@ -610,8 +612,34 @@ async function main() {
     await prisma.notification.create({ data: { personId: (await prisma.project.findFirst({ where: { analyticCode: "COO-02" } }))!.pilotId, senderId: director.id, kind: "info", title: "Remarques sur la fiche PTCE et ESSOR · 2026", body: "3 remarques de la direction à traiter (contenu, calendrier, objectifs quantitatifs).", link: `/edition/${aser.id}?onglet=fiche`, createdAt: dayjs("2026-03-12").toDate() } });
   }
 
+  // Lot 1 « Mon travail » : une personne à part fixe (lettre de mission FSE), des listes partagées, des notes.
+  const yasmine = people.find((p) => p.name === "Yasmine Benali")!;
+  await prisma.person.update({ where: { id: yasmine.id }, data: { fixedShare: true, fixedShareNote: "Lettre de mission FSE : 50 % sur AIO, 20 % sur Coopération territoriale" } });
+  await prisma.person.update({ where: { id: people.find((p) => p.name === "Hugo Lemaire")!.id }, data: { modules: "split" } }); // Hugo n'a pas de to-do : « pourquoi l'embêter ? »
+  const agEd = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "REP-01" } } });
+  // L'assistante : une liste « Vie statutaire » visible de toute la CRESS, une liste privée « Demandes du jour ».
+  const vie = await prisma.taskList.create({ data: { personId: assistant.id, name: "Vie statutaire", visibility: "all", editionId: agEd?.id ?? null, order: 0 } });
+  const jour = await prisma.taskList.create({ data: { personId: assistant.id, name: "Demandes du jour", visibility: "private", order: 1 } });
+  const t = async (personId: string, listId: string | null, label: string, due: string | null, editionId?: string | null, done = false) =>
+    prisma.task.create({ data: { personId, listId, label, dueDate: due ? dayjs(due).toDate() : null, editionId: editionId ?? null, done, doneAt: done ? dayjs().subtract(1, "day").toDate() : null } });
+  await t(assistant.id, vie.id, "Réserver la salle du CA du 1er octobre", "2026-09-18", agEd?.id);
+  await t(assistant.id, vie.id, "Devis traiteur pour l'AG", "2026-09-25", agEd?.id);
+  await t(assistant.id, vie.id, "Convocations du bureau", "2026-09-22", agEd?.id);
+  await t(assistant.id, jour.id, "Vérifier les hôtels pour Bruxelles", dayjs().format("YYYY-MM-DD"));
+  await t(assistant.id, jour.id, "Répondre à la direction : salle réservée pour les entretiens", dayjs().format("YYYY-MM-DD"), null, true);
+  // Une chargée de mission : une liste par projet visible de son responsable de pôle.
+  const ines = people.find((p) => p.name === "Inès Cabral")!;
+  const inesEd = allEditions.find((e) => e.year === 2026 && e.pilotId === ines.id);
+  if (inesEd) {
+    const l = await prisma.taskList.create({ data: { personId: ines.id, name: "Suivi hebdo avec mon responsable", visibility: "pole_lead", editionId: inesEd.id, order: 0 } });
+    await t(ines.id, l.id, "Relancer les partenaires pour le jury", "2026-09-19", inesEd.id);
+    await t(ines.id, l.id, "Mettre à jour la liste des inscrits", null, inesEd.id, true);
+  }
+  // Notes : une note de réunion de pôle partagée, une note privée.
+  await prisma.note.create({ data: { authorId: leadA.id, title: "Réunion de pôle du 8 septembre", context: "pole", visibility: "pole", date: dayjs("2026-09-08").toDate(), body: "Tour de table des projets de la rentrée.\n\nDécisions :\n- Forum : le rétroplanning est à jour, relance des exposants la semaine prochaine.\n- Note d'opportunité : cadrage à revoir avec la direction avant d'aller plus loin.\n\nÀ faire : chacun met à jour ses jalons dans l'outil avant lundi." } });
+  if (inesEd) await prisma.note.create({ data: { authorId: ines.id, title: "Point partenaires du 11 septembre", context: "partner", visibility: "private", editionId: inesEd.id, date: dayjs("2026-09-11").toDate(), body: "Le partenaire confirme sa participation au jury. Demande une convention simplifiée : à voir avec la RAF." } });
+
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
-  void assistant;
 }
 
 main()

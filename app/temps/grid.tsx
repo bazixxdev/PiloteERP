@@ -68,10 +68,10 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   const mobileRo = p.readOnly || locked(mobileDay) || isFuture(mobileDay);
   const pastEmptyDays = p.days.filter((d, i) => !isFuture(d) && dayTotals[i] === 0 && (p.expectedByDay[i] ?? 0) > 0);
   const status = expectedWeek !== null && Math.abs(weekTotal - expectedWeek) < 0.01
-    ? { label: "✓ Total attendu atteint", color: "mint" }
+    ? { label: "✓ Semaine entièrement répartie", color: "mint" }
     : pastEmptyDays.length > 0
       ? { label: `○ Premier jour incomplet : ${dayjs(pastEmptyDays[0]).format("dddd")}`, color: "warning" }
-      : weekTotal === 0 ? { label: "○ Semaine à saisir", color: "muted" } : { label: "○ Semaine en cours", color: "info" };
+      : weekTotal === 0 ? { label: "○ Semaine à répartir", color: "muted" } : { label: "○ Répartition en cours", color: "info" };
   const STATUS: Record<string, string> = { mint: "bg-mint-soft text-mint", warning: "bg-warning-soft text-warning-foreground", muted: "bg-muted text-muted-foreground", info: "bg-info-soft text-primary" };
 
   return (
@@ -79,13 +79,13 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
       {/* Bannière de la semaine : total saisi face au total attendu, informatif seulement. Compacte sur mobile : une ligne, la jauge, l'état. */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-3 py-2.5 md:mb-5 md:gap-5 md:px-[18px] md:py-4">
         <div className="min-w-[160px] md:min-w-[200px]">
-          <span className="hidden text-xs text-muted-foreground md:block">{p.readOnly ? "Sa semaine" : "Votre semaine"}</span>
+          <span className="hidden text-xs text-muted-foreground md:block">{p.readOnly ? "Sa semaine" : "Votre semaine, répartie"}</span>
           <b className="block text-[19px] leading-tight tracking-[-0.5px] tabular md:mt-0.5 md:text-[25px] md:tracking-[-0.7px]" data-testid="week-total">{fmtNumber(weekTotal, 2)} h <small className="text-[12px] font-normal tracking-normal text-muted-foreground md:text-[13px]">{expectedWeek !== null ? `/ ${fmtNumber(expectedWeek, 2)} h attendues` : "· référence non configurée"}</small></b>
           {expectedWeek !== null && <div className="mt-1.5 h-[5px] w-[140px] overflow-hidden rounded-[3px] bg-[#e8e9e1] md:w-[180px]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expectedWeek) * 100)}%` }} /></div>}
         </div>
         <div>
           <span className={cn("inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", STATUS[status.color])} data-testid="week-status">{status.label}</span>
-          <p className="mt-1.5 hidden text-xs text-muted-foreground md:block">Le total attendu dépend de votre rythme de travail.</p>
+          <p className="mt-1.5 hidden text-xs text-muted-foreground md:block">Le total attendu vient de votre rythme : une clé de répartition, pas un pointage.</p>
         </div>
         {p.canCopyPrevious ? (
           <Button size="sm" variant="outline" className="h-11 md:h-8" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
@@ -255,12 +255,12 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
         {!p.readOnly && (
           <div className="flex flex-wrap items-center gap-3" data-testid="week-declaration">
             {p.declaredAt ? (
-              <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Semaine déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
+              <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Répartition déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
             ) : (
               <>
-                <span>Quand tout est saisi, déclarez la semaine complète : la RAF le voit dans la clôture.</span>
+                <span>Quand tout est réparti, déclarez-le : la RAF le voit dans la clôture.</span>
                 <Button size="sm" variant="outline" disabled={pending || weekTotal === 0} data-testid="declare-week" onClick={() => start(async () => { const r = await declareWeek(p.weekKey); if (!r.ok) toast.error(r.error); else { toast.success("Semaine déclarée complète"); router.refresh(); } })}>
-                  <CheckCircle2 />Cette semaine est complète
+                  <CheckCircle2 />Ma répartition de la semaine est faite
                 </Button>
               </>
             )}

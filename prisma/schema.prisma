@@ -31,6 +31,11 @@ model Person {
   active        Boolean  @default(true)
   order         Int      @default(0)
   icsToken      String?  @unique // jeton du flux agenda personnel (.ics)
+  // Modules activés par la personne (Mon compte) : tasks | notes | split. Un module coupé disparaît de la navigation.
+  modules       String   @default("tasks,notes,split")
+  // Part fixe (lettre de mission FSE, art. 55 §5 du règlement 2021/1060) : aucune répartition hebdomadaire attendue.
+  fixedShare     Boolean @default(false)
+  fixedShareNote String?
   rhythmPeriods PersonRhythmPeriod[]
   weekDeclarations WeekDeclaration[]
 
@@ -52,6 +57,8 @@ model Person {
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
+  taskLists          TaskList[]
+  notes              Note[]
   plannedLoads       PlannedLoad[]
   sponsoredEditions  Edition[]          @relation("EditionSponsor")
   remarksWritten     FieldRemark[]      @relation("RemarkAuthor")
@@ -259,6 +266,8 @@ model Edition {
   expenses     Expense[]
   decisions    Decision[]
   tasks        Task[]
+  taskLists    TaskList[]
+  notes        Note[]
 
   @@unique([projectId, year])
 }
@@ -588,10 +597,48 @@ model Task {
   edition   Edition?   @relation(fields: [editionId], references: [id], onDelete: SetNull)
   actionId  String?
   action    Action?    @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  listId    String?
+  list      TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
   slots     WorkSlot[]
 
   @@index([personId, done])
+}
+
+// Liste de tâches (catégorie) : avec ou sans projet ; visibilité au choix de son auteur (private | pole_lead | pole | all).
+// Seul l'auteur écrit dedans ; les autres lisent quand la visibilité le permet.
+model TaskList {
+  id         String   @id @default(cuid())
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  name       String
+  visibility String   @default("private")
+  editionId  String?
+  edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  tasks      Task[]
+
+  @@index([personId])
+}
+
+// Note de réunion ou note libre : rattachée à une édition ou transverse (réunion d'équipe, café du lundi) ; privée ou partagée.
+model Note {
+  id         String   @id @default(cuid())
+  authorId   String
+  author     Person   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title      String
+  body       String   @default("")
+  date       DateTime @default(now())
+  context    String   @default("project") // project | team | pole | cafe | other
+  editionId  String?
+  edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  visibility String   @default("private") // private | pole | all
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([editionId])
 }
 
 // Créneau de travail posé sur une tâche : une journée entière (allDay) ou une plage horaire (de 9 h à 11 h le 23/09).

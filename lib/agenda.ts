@@ -16,7 +16,8 @@ export async function loadAgenda(horizonDays: number) {
       orderBy: { dueDate: "asc" },
     }),
     prisma.validationRequest.findMany({ where: { status: "pending" }, include: { requester: true, edition: { include: { project: { include: { pilot: true, pole: true } } } }, action: true }, orderBy: { createdAt: "asc" } }),
-    prisma.person.findMany({ where: { active: true, role: { not: "assistant" } }, include: { pole: true }, orderBy: { order: "asc" } }),
+    // Les personnes à part fixe (lettre de mission) n'ont rien à répartir : hors relances.
+    prisma.person.findMany({ where: { active: true, role: { not: "assistant" }, fixedShare: false }, include: { pole: true }, orderBy: { order: "asc" } }),
     prisma.timeEntry.findMany({ where: { date: { gte: dayjs().subtract(14, "day").startOf("day").toDate() } }, select: { personId: true, date: true } }),
   ]);
 

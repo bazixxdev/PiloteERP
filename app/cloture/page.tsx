@@ -41,7 +41,8 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);
   const rows: ClotureRow[] = people
-    .filter((p) => p.role !== "assistant" || entries.some((t) => t.personId === p.id))
+    // Part fixe (lettre de mission) : rien à clôturer, sauf si des heures existent.
+    .filter((p) => (p.role !== "assistant" && !p.fixedShare) || entries.some((t) => t.personId === p.id))
     .map((p) => {
       const mine = entries.filter((t) => t.personId === p.id);
       const daysDone = new Set(mine.map((t) => dayjs(t.date).format("YYYY-MM-DD"))).size;

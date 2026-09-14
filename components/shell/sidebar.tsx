@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3 } from "lucide-react";
+import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
@@ -12,17 +12,24 @@ import { withBase } from "@/lib/base-path";
 type Item = { href: string; label: string; icon: typeof Briefcase };
 type Group = { caption: string; items: Item[] };
 
-function groupsFor(role: string): Group[] {
+function groupsFor(role: string, modules: string[]): Group[] {
   const codir = ["director", "raf", "pole_lead"].includes(role);
+  // Modules activés par la personne (Mon compte) : Tâches et Notes n'apparaissent que si elle les veut.
+  const optional: Item[] = [
+    ...(modules.includes("tasks") ? [{ href: "/taches", label: "Tâches", icon: ListTodo }] : []),
+    ...(modules.includes("notes") ? [{ href: "/notes", label: "Notes", icon: NotebookPen }] : []),
+  ];
   const work: Item[] = codir
     ? [
         { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
         { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        ...optional,
         { href: "/temps", label: "Temps", icon: Clock },
         { href: "/validations", label: "Validations", icon: CheckSquare },
       ]
     : [
         { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        ...optional,
         { href: "/temps", label: "Temps", icon: Clock },
         { href: "/portefeuille", label: "Mes projets", icon: Briefcase },
         { href: "/validations", label: "Validations", icon: CheckSquare },
@@ -46,9 +53,9 @@ function groupsFor(role: string): Group[] {
 }
 
 // Barre latérale sans pied ni liste des pôles : les pôles se filtrent depuis le portefeuille, l'aide « ? » reste au clavier.
-export function Sidebar({ pendingCount, remindersCount, role }: { pendingCount: number; remindersCount: number; role: string }) {
+export function Sidebar({ pendingCount, remindersCount, role, modules = [] }: { pendingCount: number; remindersCount: number; role: string; modules?: string[] }) {
   const pathname = usePathname();
-  const GROUPS = groupsFor(role);
+  const GROUPS = groupsFor(role, modules);
   return (
     <aside className="hidden h-screen w-14 md:flex shrink-0 flex-col gap-5 border-r bg-sidebar px-2 py-4 text-sidebar-foreground transition-[width] lg:w-[194px] lg:px-3 lg:py-5 print:hidden">
       <Link href="/portefeuille" className="flex items-center justify-center px-1 lg:justify-start lg:px-2" aria-label="CRESS Centre-Val de Loire · Portefeuille">
