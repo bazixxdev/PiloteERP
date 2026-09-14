@@ -675,6 +675,24 @@ async function main() {
     }
   }
   // Une seule relance en cours : la RAF a relancé Élise hier.
+  // Objectifs de temps cohérents avec le réalisé : un objectif se fixe en janvier avec de la marge. Une seule action dépasse
+  // vraiment (le jury du Prix, plus long que prévu) : c'est l'alerte « temps hors objectif » de la démo.
+  const consumedByAction = await prisma.timeEntry.groupBy({ by: ["actionId"], _sum: { hours: true }, where: { actionId: { not: null } } });
+  for (const c of consumedByAction) {
+    const a = await prisma.action.findUnique({ where: { id: c.actionId! }, include: { edition: true } });
+    if (!a || a.edition.year !== 2026 || a.name === "Jury du Prix") continue;
+    const used = c._sum.hours ?? 0;
+    const target = Math.max(a.timeTarget ?? 0, Math.ceil((used * (a.state === "done" ? 1.15 : 1.6)) / 7) * 7);
+    if (target !== a.timeTarget) await prisma.action.update({ where: { id: a.id }, data: { timeTarget: target } });
+  }
+  // Au niveau de l'édition aussi : le temps posé sur le projet sans action compte dans le consommé ; l'objectif global garde de la marge.
+  for (const e of editions2026) {
+    if (e.code === "SEN-01") continue; // le Mois de l'ESS déborde, c'est voulu
+    const consumed = (await prisma.timeEntry.aggregate({ _sum: { hours: true }, where: { projectId: e.projectId, date: { gte: new Date("2026-01-01"), lt: new Date("2027-01-01") } } }))._sum.hours ?? 0;
+    const actions = await prisma.action.findMany({ where: { editionId: e.id }, orderBy: { order: "asc" } });
+    const total = actions.reduce((s, a) => s + (a.timeTarget ?? 0), 0);
+    if (consumed > total * 0.9 && actions[0]) await prisma.action.update({ where: { id: actions[0].id }, data: { timeTarget: (actions[0].timeTarget ?? 0) + Math.ceil((consumed * 1.25 - total) / 7) * 7 } });
+  }
   // (La relance d'Élise se fait en direct depuis la clôture : rien de pré-envoyé, pour que la démo montre le geste.)
 
   // ─────────────────────────────────────────────────────────────────────────────────────────────
