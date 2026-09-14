@@ -14,7 +14,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/cloture/, "Mon travail", "Temps"],
   [/^\/annuel/, "Pilotage", "Vue annuelle"],
   [/^\/plan-de-charge/, "Pilotage", "Plan de charge"],
-  [/^\/validations/, "Pilotage", "Validations"],
+  [/^\/validations/, "Mon travail", "Demandes · file des validations"],
   [/^\/cafe/, "Collectif", "Écran café"],
   [/^\/codir/, "Collectif", "Écran CODIR"],
   [/^\/seminaire/, "Collectif", "Séminaire"],

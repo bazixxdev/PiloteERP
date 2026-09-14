@@ -38,8 +38,8 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title="Validations"
-        subtitle={`${forMe.length} à traiter par moi · ${pending.length} en attente ${isTransversal(me) || perimeter === "cress" ? "dans toute la CRESS" : `dans mon pôle (${me.pole?.name ?? "—"})`} · seuils : ${fmtEuro(settings.validationThresholdLevel1)} (niveau 2) et ${fmtEuro(settings.validationThresholdLevel2)} (niveau 3) ; au-delà de l'enveloppe restante, niveau 3.`}
+        title="File des validations"
+        subtitle={`Vue par niveau et décisions récentes ; le quotidien se traite dans Demandes. ${forMe.length} à traiter par moi · ${pending.length} en attente ${isTransversal(me) || perimeter === "cress" ? "dans toute la CRESS" : `dans mon pôle (${me.pole?.name ?? "—"})`} · seuils : ${fmtEuro(settings.validationThresholdLevel1)} (niveau 2) et ${fmtEuro(settings.validationThresholdLevel2)} (niveau 3) ; au-delà de l'enveloppe restante, niveau 3.`}
       />
 
       <Section title="À traiter par moi" description={`${me.name} · ${me.role === "assistant" || me.role === "contributor" ? "vous ne validez pas" : `vous validez jusqu'au niveau ${myLevel}${me.role === "pilot" ? " sur vos projets" : me.role === "pole_lead" ? " sur votre pôle" : ""}`}.`} className="mb-4" testId="for-me">

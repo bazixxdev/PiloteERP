@@ -143,6 +143,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await iAm(page, "Nadia Ferrand");
   const month = dayjs().format("YYYY-MM");
   await page.goto(`/cloture?mois=${month}`);
+  await page.getByTestId("cloture-show-ok").click(); // une fois verrouillé, Lucas passe dans « En ordre » (replié par défaut)
   const lucas = page.getByTestId("cloture-table").locator("tr", { hasText: "Lucas Perrin" });
   await expect(lucas).toContainText("Partiel");
   await lucas.getByRole("button", { name: "Relancer" }).click();

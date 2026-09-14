@@ -9,7 +9,7 @@ test("la relance de la RAF notifie la personne dans l'outil et reste tracée dan
   await expect(page.getByTestId("time-nav-cloture")).toHaveAttribute("aria-current", "page");
   const row = page.getByTestId("cloture-table").locator("tr", { hasText: "Élise Fontaine" });
   await row.getByRole("button", { name: "Relancer" }).click();
-  await expect(page.getByText("notification dans l'outil")).toBeVisible();
+  await expect(page.getByText(/Relance envoyée à Élise Fontaine/)).toBeVisible();
   await expect(row).toContainText("Relancé·e le");
 
   // Le détail des heures est accessible à la RAF depuis la clôture.

@@ -34,6 +34,7 @@ test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un
   // La RAF verrouille août pour cette personne et exporte le CSV.
   await iAm(page, "Nadia Ferrand");
   await page.goto("/cloture?mois=2026-08");
+  await page.getByTestId("cloture-show-ok").click(); // « En ordre » est replié par défaut : anomalies d'abord (revue du 15/09)
   const row = page.getByTestId("cloture-table").locator("tr", { hasText: "Maxime Roussel" });
   await row.getByRole("button", { name: "Verrouiller" }).click();
   await expect(row).toContainText("Verrouillé", { timeout: 10_000 });

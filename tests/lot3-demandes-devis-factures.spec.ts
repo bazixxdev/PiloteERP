@@ -49,10 +49,11 @@ test("un devis approuvé produit un bon pour accord ; la facture est reçue, le 
   await page.getByTestId("rv-supplier-email").fill("devis@duval.exemple.fr");
   await page.getByTestId("rv-submit").click();
   await expect(page.getByText("Devis impression de la lettre AIESSE")).toBeVisible();
-  // Le responsable de pôle approuve : la direction est informée, le demandeur a son bon pour accord.
+  // Le responsable de pôle approuve depuis Demandes (validations fusionnées, décision en place) : la direction est informée, le demandeur a son bon pour accord.
   await iAm(page, "Julien Barbot");
-  await page.goto("/validations");
-  const card = page.getByTestId("for-me").locator("[data-testid^=validation-]", { hasText: "Devis impression de la lettre AIESSE" });
+  await expect(page.locator("aside").first().getByRole("link", { name: /Validations/ })).toHaveCount(0);
+  await page.goto("/demandes");
+  const card = page.getByTestId("requests-open").locator("[data-testid^=validation-line-]", { hasText: "Devis impression de la lettre AIESSE" });
   await card.getByTestId("approve").click();
   await expect(page.getByText("Approuvée : le montant est engagé")).toBeVisible();
   await iAm(page, "Inès Cabral");

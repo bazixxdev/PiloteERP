@@ -84,7 +84,7 @@ export default async function MaSemainePage() {
   const attention = late[0]
     ? { text: <><b>Un point d'attention :</b> {late[0].kind === "deliverable" ? "le livrable" : "le jalon"} « {late[0].title} » est dépassé de {-late[0].daysLeft} jour{-late[0].daysLeft > 1 ? "s" : ""}.</>, badge: late[0].kind === "deliverable" ? "À remettre" : "À reprendre", href: late[0].href }
     : overdueValidation
-      ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/validations" }
+      ? { text: <><b>Un point d'attention :</b> la demande « {overdueValidation.label} » attend depuis {overdueValidation.age} jours (cible {overdueValidation.targetDelayDays} j).</>, badge: "À décider", href: "/demandes" }
       : null;
   const remarksByEdition = [...new Map(openRemarks.map((r) => [r.editionId, { edition: r.edition, items: openRemarks.filter((x) => x.editionId === r.editionId) }])).values()];
   const nothingToDo = late.length === 0 && thisWeek.length === 0 && toDecide.length === 0 && missingThisWeek.length === 0 && missing.length === 0 && openTasks === 0 && openRemarks.length === 0;
@@ -200,11 +200,11 @@ export default async function MaSemainePage() {
                 {toDecide.map((v) => (
                   <Row key={v.id}>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold"><Link href="/validations" className="hover:underline">{v.label}</Link>{v.amount ? ` · ${fmtNumber(v.amount, 0)} €` : ""}</h4>
+                      <h4 className="text-xs font-semibold"><Link href="/demandes" className="hover:underline">{v.label}</Link>{v.amount ? ` · ${fmtNumber(v.amount, 0)} €` : ""}</h4>
                       <p className="mt-1 text-[10px] text-muted-foreground">{v.edition.project.name} · Demandé par {v.requester.name}</p>
                       <p className="mt-1 text-[10px] text-muted-foreground"><span className={cn(v.age > v.targetDelayDays ? "text-danger" : v.age > 0 ? "text-warning-foreground" : "")}>Depuis {v.age} jour{v.age > 1 ? "s" : ""}</span> · Délai cible : {v.targetDelayDays} jours</p>
                     </div>
-                    <Button asChild size="sm" variant="outline"><Link href="/validations">Examiner</Link></Button>
+                    <Button asChild size="sm" variant="outline"><Link href="/demandes">Décider</Link></Button>
                   </Row>
                 ))}
                 {myRequests.map((v) => (

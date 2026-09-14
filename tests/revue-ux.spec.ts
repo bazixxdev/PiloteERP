@@ -56,17 +56,22 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   await expect(page.getByTestId("rv-file")).toBeAttached();
   await page.keyboard.press("Escape");
 
-  // Contributeur : Ma semaine en premier, pas d'accès CODIR ni Admin, aucun compteur collectif sur Validations.
+  // Contributeur : Ma semaine en premier, pas d'accès CODIR ni Admin, aucun compteur collectif sur Demandes (validations fusionnées).
   await iAm(page, "Lucas Perrin");
   const sidebar = page.locator("aside");
   await expect(sidebar.getByRole("link", { name: "Écran CODIR" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Admin" })).toHaveCount(0);
-  await expect(sidebar.getByRole("link", { name: "Validations" })).not.toContainText(/\d/);
+  await expect(sidebar.getByRole("link", { name: "Validations" })).toHaveCount(0);
+  // Le badge Demandes est personnel : il vaut exactement « À traiter par moi » (demandes adressées à Lucas ou à son pôle), pas un total collectif.
+  await page.goto("/demandes");
+  const forMe = (await page.getByTestId("requests-view-moi").innerText()).match(/\((\d+)\)/)![1];
+  const badge = (await sidebar.getByRole("link", { name: /^Demandes/ }).innerText()).replace("Demandes", "").trim();
+  expect(badge).toBe(forMe === "0" ? "" : forMe);
   await page.goto("/portefeuille");
   await expect(page.getByTestId("codir-mode")).toHaveCount(0);
   await page.goto("/validations");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Validations");
-  await expect(page.getByText("0 à traiter par moi")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("File des validations");
+  await expect(page.getByText(/0 à traiter par moi/)).toBeVisible();
 
   // CODIR : 3 à 5 sujets regroupés par édition, avec problème, décision attendue, responsable, échéance.
   await iAm(page, "Claire Vasseur");

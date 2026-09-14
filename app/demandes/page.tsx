@@ -12,6 +12,8 @@ import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NewRequestDialog } from "./new-request";
 import { RequestActions } from "./request-row";
+import { DecideButtons } from "@/components/common/decide-buttons";
+import { isCodir } from "@/lib/rights";
 
 // Demandes (retour du 14/09) : un seul tableau pour tout ce qu'on demande à quelqu'un — demandes internes et validations —
 // côté « à traiter par moi » et côté « mes demandes ». Un achat / devis reste une validation ; il apparaît ici aussi.
@@ -38,7 +40,8 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
     ...validations.map((v): Line => ({
       id: v.id, family: "validation", kind: refLabel(refs, "validation_kind", v.kind), title: `${v.label}${v.amount != null ? ` · ${fmtEuro(v.amount)}` : ""}`, sub: `${v.edition.project.name} · ${v.edition.year}`,
       who: v.requester.name, to: ["", "pilote", "responsable de pôle", "direction"][v.requiredLevel] ?? "—", due: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), status: { label: refLabel(refs, "validation_status", v.status), color: v.status === "pending" ? "warning" : v.status === "approved" ? "mint" : "muted" }, age: ageDays(v.createdAt), href: `/edition/${v.editionId}?onglet=validations`, open: v.status === "pending",
-      actions: v.status === "pending" && canDecideValidation(me, v) ? <Link href="/validations" className="mt-1.5 inline-block text-xs text-primary hover:underline">Décider dans Validations →</Link> : undefined,
+      // Fusion demandes / validations (retour du 15/09) : on décide ici, en place ; la file par niveau reste dans /validations.
+      actions: v.status === "pending" && canDecideValidation(me, v) ? <div className="mt-1.5" data-testid={`decide-${v.id}`}><DecideButtons id={v.id} /></div> : v.status === "approved" && (v.kind === "quote" || v.kind === "expense") ? <Link href={`/validations/${v.id}/bon-pour-accord`} className="mt-1 inline-block text-xs text-primary hover:underline">Bon pour accord →</Link> : undefined,
     })),
   ];
   const forMe = lines.filter((l) => l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : canDecideValidation(me, validations.find((v) => v.id === l.id)!)));
@@ -70,7 +73,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Demandes" subtitle={`${forMe.length} à traiter par moi · ${mine.filter((l) => l.open).length} de mes demandes en cours. Un seul endroit pour ce qu'on demande à quelqu'un : site, chiffres, logistique, travail à faire — et les validations.`} actions={<NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />} />
+      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours. Un seul endroit pour ce qu'on demande à quelqu'un — site, chiffres, logistique, travail à faire — et pour les validations, qui se décident ici.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />} />
       <div className="mb-3 flex flex-wrap gap-1">
         {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>

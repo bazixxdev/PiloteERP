@@ -2,7 +2,6 @@ import Link from "next/link";
 import { withBase } from "@/lib/base-path";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
-import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -73,7 +72,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
       <TimeNav current="cloture" showTeam showCloture />
       <PageHeader
         title="Clôture mensuelle"
-        subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés écoulés · ${weeksOfMonth.length} semaines · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""} (saisies ou déclaration), ${summary.partial} à compléter, ${summary.missing} sans saisie.`}
+        subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés · ${weeksOfMonth.length} semaines · ${summary.partial + summary.missing ? `${summary.missing} sans saisie, ${summary.partial} à compléter` : "aucune anomalie"} · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}.`}
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="icon" aria-label="Mois précédent"><Link href={`/cloture?mois=${prev}`}><ChevronLeft /></Link></Button>
@@ -86,9 +85,10 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
         }
       />
       <ClotureTable month={month} rows={rows} />
-      <Section title="Total du mois" className="mt-4">
-        <p className="text-sm text-muted-foreground">{fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes. Lecture d'une ligne : <b>Saisies</b> compte les jours attendus du rythme de la personne qui portent au moins une saisie ; <b>Déclaration</b> compte les semaines que la personne a déclarées complètes ; <b>État</b> résume les deux, sans tolérance : un jour attendu sans saisie reste « à compléter ». Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction. « Relancer » envoie une notification dans l'outil à la personne (cloche en haut à droite, et dans « Ma semaine ») et laisse une trace ici ; en V1, un mail part aussi. « Détail » ouvre la grille de la personne, semaine par semaine.</p>
-      </Section>
+      <details className="group mt-4 rounded-md border bg-card px-4 py-3">
+        <summary className="cursor-pointer list-none text-sm"><span className="font-semibold">Total du mois</span> · {fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes <span className="text-[11px] text-primary group-open:hidden">· comment lire cet écran</span></summary>
+        <p className="mt-2 text-sm text-muted-foreground">Lecture d'une ligne : <b>Saisies</b> compte les jours attendus du rythme de la personne qui portent au moins une saisie ; <b>Déclaration</b> compte les semaines que la personne a déclarées complètes ; <b>État</b> résume les deux, sans tolérance : un jour attendu sans saisie reste « à compléter ». Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction. « Relancer » envoie une notification dans l'outil à la personne (cloche en haut à droite, et dans « Ma semaine ») et laisse une trace ici ; en V1, un mail part aussi. « Détail » ouvre la grille de la personne, semaine par semaine.</p>
+      </details>
     </div>
   );
 }
