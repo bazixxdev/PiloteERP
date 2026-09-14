@@ -13,7 +13,7 @@ DIR=/var/www/cress-pilote
 DATA=/var/www/cress-pilote-data
 MEDIAS=/var/www/cress-pilote-medias
 HEALTH="http://127.0.0.1:3002/outilcli/cress/pilote/portefeuille"
-SEED="${1:-}"
+SEED="${1:-none}" # « none » plutôt que vide : ssh perd un argument vide et $6 devenait « unbound »
 STAMP="$(date +%Y%m%d-%H%M%S)"
 LOCAL="$(cd "$(dirname "$0")/.." && pwd)"
 
