@@ -9,6 +9,8 @@ import type { FieldType } from "@/lib/fields";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { FieldRemarks, type RemarkView } from "./remarks";
+import { ProposeChangeDialog, type ProposableField } from "./proposals";
+import { ChevronDown, Lock } from "lucide-react";
 
 export type LayerField = { key: string; label: string; type: FieldType; value: string | number | boolean | Date | null; options?: Option[]; suffix?: string };
 
@@ -29,6 +31,10 @@ type Props = {
   canResolve: boolean;
   meId: string;
   isDirector: boolean;
+  // Fiche validée : couche verrouillée, texte replié ; « Proposer une modification » remplace « Modifier ».
+  locked?: boolean;
+  canPropose?: boolean;
+  pendingProposals?: number;
 };
 
 const filledOf = (f: LayerField) => f.value !== null && f.value !== undefined && f.value !== "" && f.value !== false;
@@ -36,9 +42,13 @@ const filledOf = (f: LayerField) => f.value !== null && f.value !== undefined &&
 // Une couche de la fiche : lecture compacte par défaut, « Modifier cette couche » pour son propriétaire.
 export function FicheLayer(p: Props) {
   const [editing, setEditing] = useState(p.defaultEditing);
+  // Texte replié une fois la fiche validée : un résumé, on déplie si besoin (retour du 14/09).
+  // Déplié d'office en relecture (on annote du texte, pas un résumé) et quand une remarque attend.
+  const [expanded, setExpanded] = useState(!p.locked || p.canRemark || p.remarks.some((r) => !r.resolvedAt));
   const filled = p.fields.filter(filledOf).length;
   const empty = filled === 0;
-  const edit = p.writable && editing;
+  const edit = p.writable && !p.locked && editing;
+  const proposable: ProposableField[] = p.fields.filter((f) => f.type !== "bool" && f.type !== "select").map((f) => ({ key: f.key, label: f.label, current: readableValue(f), multiline: f.type === "textarea" }));
   const fieldId = (key: string) => `edition-${p.editionId}-${key}`;
   const openRemarks = p.remarks.filter((r) => !r.resolvedAt).length;
   const remarksOf = (key: string, label: string) => (
@@ -46,17 +56,21 @@ export function FicheLayer(p: Props) {
   );
 
   return (
-    <section data-testid={`layer-${p.layerKey}`} className={cn("rounded-md border bg-card px-[18px] py-4", empty && !edit && "border-dashed bg-muted text-muted-foreground")}>
+    <section data-testid={`layer-${p.layerKey}`} className={cn("min-w-0 overflow-hidden rounded-md border bg-card px-[18px] py-4", empty && !edit && "border-dashed bg-muted text-muted-foreground")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className={cn("grid size-[26px] place-items-center rounded-full border font-serif text-sm", empty ? "border-[#c9cdc5] text-muted-foreground" : "border-[#bfccba] text-mint")}>{p.no}</span>
           <h4 className="text-sm font-bold text-foreground">{p.title}</h4>
           {empty ? <StatusBadge label={`Manquant — ${p.ownerMissingLabel}`} color="warning" dot={false} /> : <StatusBadge label={`${filled}/${p.fields.length} renseignés`} color={filled === p.fields.length ? "mint" : "info"} dot={false} />}
           {openRemarks > 0 && <span data-testid={`layer-remarks-${p.layerKey}`}><StatusBadge label={`${openRemarks} remarque${openRemarks > 1 ? "s" : ""} à traiter`} color="warning" /></span>}
+          {p.locked && <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground" title="Fiche validée : cette couche ne se modifie plus en direct"><Lock className="size-3" />verrouillée</span>}
+          {(p.pendingProposals ?? 0) > 0 && <StatusBadge label={`${p.pendingProposals} proposition${p.pendingProposals! > 1 ? "s" : ""}`} color="info" dot={false} />}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">{p.owner}{!p.writable && " · lecture seule pour vous"}</span>
-          {p.writable && (
+          <span className="text-[10px] text-muted-foreground">{p.owner}{!p.writable && !p.locked && " · lecture seule pour vous"}</span>
+          {p.locked && !empty && <Button size="xs" variant="ghost" onClick={() => setExpanded((x) => !x)} data-testid={`layer-toggle-${p.layerKey}`}><ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />{expanded ? "Replier" : "Déplier"}</Button>}
+          {p.locked && p.canPropose && <ProposeChangeDialog editionId={p.editionId} fields={proposable} layerTitle={p.title} />}
+          {p.writable && !p.locked && (
             edit ? (
               <Button size="xs" variant="outline" onClick={() => setEditing(false)} data-testid={`layer-done-${p.layerKey}`}><Check />Terminer</Button>
             ) : (
@@ -71,6 +85,8 @@ export function FicheLayer(p: Props) {
           <p className="text-xs"><b>{p.ownerMissingLabel.replace(/^./, (c) => c.toUpperCase())}.</b> {p.writable ? "Cliquez sur « Modifier cette couche » pour la remplir." : "Les champs manquants restent attribués à leur propriétaire."}</p>
           {p.fields.filter((f) => p.remarks.some((r) => r.field === f.key)).map((f) => <div key={f.key}><span className="text-[10px] text-muted-foreground">{f.label}</span>{remarksOf(f.key, f.label)}</div>)}
         </div>
+      ) : p.locked && !expanded ? (
+        <p className="mt-2 ml-9 truncate text-xs text-muted-foreground" data-testid={`layer-summary-${p.layerKey}`}>{readRows(p.fields).filter((r) => !r.empty).map((r) => `${r.label} : ${r.text}`).join(" · ")}</p>
       ) : edit ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:ml-9">
           {p.fields.map((f) => {

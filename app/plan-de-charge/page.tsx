@@ -9,6 +9,9 @@ import { loadPlan, monthKeys } from "@/lib/load";
 import { cn } from "@/lib/utils";
 import { LoadGrid } from "./grid";
 import { LoadFilters } from "./filters";
+import { FreezeControl } from "./freeze";
+import { canEditFunding } from "@/lib/rights";
+import { fmtDate } from "@/lib/format";
 
 type Search = { debut?: string; horizon?: string; pole?: string; vue?: string; avenir?: string };
 
@@ -22,7 +25,12 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
   const months = monthKeys(start, horizon);
   // Éditions en cours et validées par défaut ; « à venir » ajoute les proposées et re-challengées ; « à venir seulement » les isole.
   const future = sp.avenir === "seul" ? ["proposed", "rechallenged", "validated"] : sp.avenir === "non" ? ["in_progress", "validated"] : ["in_progress", "validated", "proposed", "rechallenged"];
-  const rows = await loadPlan(months, { statuses: future, hoursPerDay: settings.hoursPerDay || 7, poleId: sp.pole || null });
+  const rows = await loadPlan(months, { statuses: future, hoursPerDay: settings.hoursPerDay || 7, poleId: sp.pole || null, operatingDaysPerMonth: settings.operatingDaysPerMonth || 0 });
+  // Année pilotée = celle du premier mois affiché ; figée au séminaire, ses modifications ultérieures se voient.
+  const focusYear = Number(start.slice(0, 4));
+  const freeze = await prisma.loadFreeze.findUnique({ where: { year: focusYear }, include: { frozenBy: true } });
+  const changedAfter = freeze ? await prisma.changeLog.findMany({ where: { field: { startsWith: "plannedLoad:" }, createdAt: { gt: freeze.frozenAt }, edition: { year: focusYear } }, include: { author: true, edition: { include: { project: true } } }, orderBy: { createdAt: "desc" }, take: 20 }) : [];
+  const changedPeople = new Set(changedAfter.map((c) => c.field.split(":")[1]));
   // Éditions proposables dans une cellule, avec le droit de la personne courante (pilote de l'édition, RAF, direction, responsable de pôle).
   const years = [...new Set(months.map((m) => Number(m.slice(0, 4))))];
   const allEditions = await prisma.edition.findMany({ where: { status: { in: future }, year: { in: years } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] });
@@ -50,6 +58,13 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
       />
       <LoadFilters poles={poles.map((p) => ({ value: p.id, label: p.name }))} current={{ debut: start, horizon: String(horizon), pole: sp.pole ?? "", vue: sp.vue ?? "personnes", avenir: sp.avenir ?? "" }} allValue={isTransversal(me) ? "" : "tous"} />
 
+      <FreezeControl year={focusYear} frozen={freeze ? { at: fmtDate(freeze.frozenAt), by: freeze.frozenBy.name, note: freeze.note } : null} canFreeze={canEditFunding(me.role)} />
+      {changedAfter.length > 0 && (
+        <details className="mb-3 rounded-md border border-l-4 border-l-warning bg-card px-3.5 py-2 text-xs" data-testid="load-changed-after">
+          <summary className="cursor-pointer list-none"><b>{changedAfter.length} modification{changedAfter.length > 1 ? "s" : ""} après validation</b> · {[...changedPeople].length} personne{changedPeople.size > 1 ? "s" : ""} concernée{changedPeople.size > 1 ? "s" : ""}</summary>
+          <ul className="mt-1.5 grid gap-0.5 text-[11px] text-muted-foreground">{changedAfter.map((c) => <li key={c.id}>{fmtDate(c.createdAt, "D MMM HH:mm")} · {c.author.name} · <Link href={`/edition/${c.editionId}?onglet=temps`} className="text-primary hover:underline">{c.edition.project.name}</Link> · {c.before} → {c.after}</li>)}</ul>
+        </details>
+      )}
       {over.length > 0 && (
         <div className="mb-3 rounded-md border-l-4 border-l-danger bg-danger-soft/50 px-3.5 py-2.5 text-xs" data-testid="load-over">
           <b>Dépassements :</b> {over.map((r) => `${r.person.name} (${months.filter((m) => r.months[m].capacity > 0 && r.months[m].planned > r.months[m].capacity).map((m) => dayjs(m + "-01").format("MMM")).join(", ")})`).join(" · ")}.
@@ -77,10 +92,10 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
           </table>
         </div>
       ) : (
-        <LoadGrid rows={rows} months={months} today={today} groupByPole={!sp.pole} editions={editionOpts} />
+        <LoadGrid rows={rows} months={months} today={today} groupByPole={!sp.pole} editions={editionOpts} changedPeople={[...changedPeople]} />
       )}
 
-      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne. Cliquez une cellule pour modifier les jours de chaque édition ou en ajouter une (droit : pilote de l'édition, RAF, direction, responsable de pôle). « lissé » : total annuel non ventilé, étalé sur 12 mois — modifier un mois pose la ventilation, aussi possible depuis l'onglet Temps de l'édition. Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ {settings.hoursPerDay || 7}.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne{settings.operatingDaysPerMonth ? `, moins ${settings.operatingDaysPerMonth} j de fonctionnement par mois (réunions transverses, café, entretiens)` : ""}. Cliquez une cellule pour modifier les jours de chaque édition ou en ajouter une (droit : pilote de l'édition, RAF, direction, responsable de pôle). « lissé » : total annuel non ventilé, étalé sur 12 mois — modifier un mois pose la ventilation, aussi possible depuis l'onglet Temps de l'édition. Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ {settings.hoursPerDay || 7}.</p>
     </div>
   );
 }

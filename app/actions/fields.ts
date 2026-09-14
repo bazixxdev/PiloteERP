@@ -7,6 +7,7 @@ import { FIELDS, coerce, type Model } from "@/lib/fields";
 import { canAdmin, canEditActions, canEditFunding, canWriteLayer } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
+import { isLocked } from "@/lib/lock";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
@@ -25,6 +26,8 @@ async function allowed(model: Model, id: string, field: string, personId: string
     if (field === "status" || field === "decisionDate" || field === "conditionalStart") {
       return role === "director" || role === "raf" ? null : "Seules la direction et la RAF changent le statut.";
     }
+    // Fiche validée : les couches 1 à 3 ne se modifient plus en direct, seulement par proposition acceptée (retour du 14/09).
+    if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return "Fiche validée : proposez une modification, elle sera acceptée par le pilote ou la direction et tracée.";
     return canWriteLayer(role, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {

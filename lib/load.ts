@@ -8,13 +8,17 @@ import { expectedDaysOfMonth, loadRhythms, type PersonRhythms, type RhythmDef } 
 
 export const monthKeys = (from: string, count: number): string[] => Array.from({ length: count }, (_, i) => dayjs(from + "-01").add(i, "month").format("YYYY-MM"));
 
-export function monthCapacity(p: PersonRhythms & { availableDays: number }, month: string, rhythms: RhythmDef[]): number {
+// Les jours de fonctionnement (réunions transverses, café, entretiens — réglage admin) sont déduits au prorata du rythme :
+// un 80 % en perd 80 %. Capacité nette, jamais négative.
+export function monthCapacity(p: PersonRhythms & { availableDays: number }, month: string, rhythms: RhythmDef[], operatingDaysPerMonth = 0): number {
   const year = month.slice(0, 4);
   const endOf = (m: string) => dayjs(m + "-01").endOf("month");
   const inMonth = expectedDaysOfMonth(p, month, rhythms, endOf(month)).days.length;
   const inYear = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`).reduce((s, m) => s + expectedDaysOfMonth(p, m, rhythms, endOf(m)).days.length, 0);
   if (!inYear) return 0;
-  return Math.round(((p.availableDays * inMonth) / inYear) * 10) / 10;
+  const gross = (p.availableDays * inMonth) / inYear;
+  const operating = operatingDaysPerMonth * Math.min(1, inMonth / 21);
+  return Math.max(0, Math.round((gross - operating) * 10) / 10);
 }
 
 export type LoadCell = { editionId: string; project: string; year: number; status: string; days: number; ventilated: boolean };
@@ -39,7 +43,7 @@ export type PersonLoad = {
 };
 
 // Charge de toutes les personnes actives sur une fenêtre de mois, avec le réalisé (heures saisies ÷ coefficient) sur les mois passés.
-export async function loadPlan(months: string[], opts: { statuses: string[]; hoursPerDay: number; poleId?: string | null }): Promise<PersonLoad[]> {
+export async function loadPlan(months: string[], opts: { statuses: string[]; hoursPerDay: number; poleId?: string | null; operatingDaysPerMonth?: number }): Promise<PersonLoad[]> {
   const [rhythms, people, editions, entries] = await Promise.all([
     loadRhythms(),
     prisma.person.findMany({ where: { active: true, role: { not: "assistant" }, ...(opts.poleId ? { poleId: opts.poleId } : {}) }, include: { pole: true, rhythmPeriods: { include: { rhythm: true } } }, orderBy: [{ pole: { name: "asc" } }, { order: "asc" }] }),
@@ -49,7 +53,7 @@ export async function loadPlan(months: string[], opts: { statuses: string[]; hou
   const today = dayjs().format("YYYY-MM");
   return people.map((p) => {
     const monthsOut: PersonLoad["months"] = {};
-    for (const m of months) monthsOut[m] = { planned: 0, capacity: monthCapacity(p, m, rhythms), realized: m <= today ? 0 : null, cells: [] };
+    for (const m of months) monthsOut[m] = { planned: 0, capacity: monthCapacity(p, m, rhythms, opts.operatingDaysPerMonth ?? 0), realized: m <= today ? 0 : null, cells: [] };
     for (const e of editions) {
       const pd = e.personDays.find((d) => d.personId === p.id);
       const loads = e.plannedLoads.filter((l) => l.personId === p.id);

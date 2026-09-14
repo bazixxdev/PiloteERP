@@ -14,7 +14,9 @@ export async function canRemark(me: { id: string; role: string; poleId: string |
   return isCodir(me.role);
 }
 
-export async function addRemark(editionId: string, field: string, body: string): Promise<Result<{ id: string }>> {
+const REASONS = ["funder", "strategy", "feasibility", "form", "other"];
+
+export async function addRemark(editionId: string, field: string, body: string, reason = "other"): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true, pilot: true } } } });
   if (!e) return { ok: false, error: "Édition introuvable." };
@@ -22,11 +24,12 @@ export async function addRemark(editionId: string, field: string, body: string):
   if (!(await canRemark(me))) return { ok: false, error: "Les remarques sur la fiche sont un droit du CODIR : direction, RAF, responsables de pôle." };
   const text = body.trim();
   if (!text) return { ok: false, error: "Écrivez la remarque." };
-  const r = await prisma.fieldRemark.create({ data: { editionId, field, body: text, authorId: me.id } });
+  if (!REASONS.includes(reason)) return { ok: false, error: "Motif inconnu." };
+  const r = await prisma.fieldRemark.create({ data: { editionId, field, body: text, reason, authorId: me.id } });
   await prisma.changeLog.create({ data: { editionId, field, before: null, after: `Remarque : ${text}`.slice(0, 500), authorId: me.id } });
   // Le pilote est prévenu dans l'outil (cloche + Ma semaine), sauf s'il est lui-même l'auteur.
   if (e.project.pilotId !== me.id) {
-    await prisma.notification.create({ data: { personId: e.project.pilotId, senderId: me.id, kind: "info", title: `Remarque sur la fiche ${e.project.name} · ${e.year}`, body: `${FIELDS.edition[field].label ?? field} : ${text.slice(0, 140)}`, link: `/edition/${editionId}?onglet=fiche` } });
+    await prisma.notification.create({ data: { personId: e.project.pilotId, senderId: me.id, kind: "info", title: `Remarque sur la fiche ${e.project.name} · ${e.year}`, body: `${FIELDS.edition[field].label ?? field} (${{ funder: "financeur", strategy: "stratégie", feasibility: "faisabilité", form: "forme", other: "autre" }[reason]}) : ${text.slice(0, 140)}`, link: `/edition/${editionId}?onglet=fiche` } });
   }
   revalidatePath(`/edition/${editionId}`);
   return { ok: true, data: { id: r.id } };

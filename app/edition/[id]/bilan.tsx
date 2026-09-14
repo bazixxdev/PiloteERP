@@ -7,6 +7,8 @@ import { canWriteLayer } from "@/lib/rights";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { AddIndicatorForm } from "./add-forms";
+import { Achievements } from "./achievements";
+import { dayjs } from "@/lib/format";
 
 export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
   const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
@@ -34,6 +36,10 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
         </div>
       </Section>
 
+      <div className="grid content-start gap-4">
+      <Section title="Réalisations au fil de l'année" description="Ce qui a été fait, avec un chiffre quand il y en a un : inscrits, publics, livrables produits. Repris dans l'export du bilan." testId="achievements-section">
+        <Achievements editionId={e.id} items={e.achievements.map((a) => ({ id: a.id, kind: a.kind, label: a.label, value: a.value, unit: a.unit, date: dayjs(a.date).format("YYYY-MM-DD"), author: a.author.name, authorId: a.authorId, action: a.action?.name ?? null }))} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} canWrite={rw} meId={me.id} canDeleteAll={me.role === "director" || isPilot} />
+      </Section>
       <Section title="Indicateurs" description="Cible et réalisé, imposés par les financeurs ou propres au projet.">
         <table className="mb-3 w-full text-sm" data-testid="indicators">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
@@ -53,6 +59,7 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
         </table>
         {rw && <AddIndicatorForm editionId={e.id} />}
       </Section>
+      </div>
     </div>
   );
 }

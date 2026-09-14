@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Maximize2 } from "lucide-react";
+import { Lightbulb, Maximize2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Gauge } from "@/components/common/gauge";
@@ -74,7 +74,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR</Link></Button>
           ) : isCodir(me.role) ? (
             <Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode CODIR</Link></Button>
-          ) : undefined
+          ) : (
+            <Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button>
+          )
         }
       />
 

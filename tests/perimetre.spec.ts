@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { expandLayer, iAm } from "./helpers";
 
 // Périmètre : une personne de pôle voit son pôle par défaut, peut élargir ; un projet commun apparaît dans ses deux pôles.
 test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet commun est vu par ses deux pôles", async ({ page }) => {
@@ -26,6 +26,7 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   // Une édition hors de son pôle : consultable, avec le bandeau.
   await table.getByRole("link", { name: "Chroniquer la TESS" }).click();
   await expect(page.getByTestId("outside-scope")).toContainText("hors de votre pôle");
+  await expandLayer(page, "proposal");
   await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");
 
   // Le responsable du pôle secondaire a ses droits de garant sur le projet commun.

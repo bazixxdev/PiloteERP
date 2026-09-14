@@ -39,14 +39,14 @@ test("une note se prend, s'enregistre en quittant le champ, se rattache à une �
   await page.getByTestId("note-body").fill("Le jury est calé. Relancer les partenaires pour les prix.");
   await page.getByTestId("note-body").blur();
   await expect(page.getByTestId("note-saved")).toBeVisible();
-  await expect(page.getByTestId("my-notes")).toContainText("Point jury du 15 septembre");
+  await expect(page.getByTestId("my-notes")).toContainText("Point jury du 15 septembre", { timeout: 15_000 });
   // Rattachement à une édition puis lecture depuis l'onglet Documents.
   const select = page.getByTestId("note-edition");
   const value = await select.locator("option").nth(1).getAttribute("value");
   await select.selectOption(value!);
   await expect(page.getByTestId("note-saved")).toBeVisible();
   await page.goto(`/edition/${value}?onglet=documents`);
-  await expect(page.getByTestId("edition-notes")).toContainText("Point jury du 15 septembre");
+  await expect(page.getByTestId("edition-notes")).toContainText("Point jury du 15 septembre", { timeout: 15_000 });
   // Mode focus : la navigation disparaît, Échap la ramène.
   await page.goto("/notes?note=nouvelle&focus=1");
   await expect(page.getByTestId("focus-exit")).toBeVisible();

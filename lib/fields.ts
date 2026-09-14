@@ -48,6 +48,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   },
   action: {
     name: { type: "text" }, ownerId: { type: "select" }, milestoneDate: { type: "date" }, timeTarget: { type: "number" }, state: { type: "select" }, fundingLineId: { type: "select" }, isPublic: { type: "bool" },
+    description: { type: "textarea", label: "Contenu" }, venue: { type: "text", label: "Lieu" }, participants: { type: "textarea", label: "Participants, invités" },
   },
   fundingLine: {
     funderId: { type: "select" }, conventionId: { type: "select" }, scheme: { type: "text" }, status: { type: "select" }, amountRequested: { type: "number" }, amountGranted: { type: "number" },
@@ -63,7 +64,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },
-    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" },
+    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" }, notes: { type: "textarea" } },

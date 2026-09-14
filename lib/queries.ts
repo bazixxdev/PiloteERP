@@ -68,6 +68,8 @@ export const editionFullInclude = {
   attachments: { include: { uploadedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" as const } },
   expenses: { include: { validation: { select: { requester: { select: { name: true } }, decidedAt: true } } }, orderBy: { createdAt: "asc" as const } },
   decisions: { include: { author: true, followUp: true }, orderBy: { decidedAt: "desc" as const } },
+  proposals: { include: { author: true, decidedBy: true }, orderBy: { createdAt: "desc" as const } },
+  achievements: { include: { author: true, action: true }, orderBy: { date: "desc" as const } },
 };
 
 export type EditionFull = NonNullable<Awaited<ReturnType<typeof loadEdition>>>;

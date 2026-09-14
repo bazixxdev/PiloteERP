@@ -287,3 +287,43 @@ export async function addFundingLineFromConvention(editionId: string, convention
   revalidatePath(path(editionId));
   return { ok: true };
 }
+
+// Dupliquer une action (occurrences : petits-déjeuners, forums SPRO) : même contenu, lieu, participants et objectif ; jalon vidé, état « à faire ».
+export async function duplicateAction(actionId: string): Promise<Result<{ id: string }>> {
+  const a = await prisma.action.findUnique({ where: { id: actionId } });
+  if (!a) return { ok: false, error: "Action introuvable." };
+  const c = await ctx(a.editionId);
+  if (!canEditActions(c.me.role, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: "Vous ne pouvez pas dupliquer cette action." };
+  const count = await prisma.action.count({ where: { editionId: a.editionId } });
+  const d = await prisma.action.create({ data: { editionId: a.editionId, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
+  revalidatePath(path(a.editionId));
+  return { ok: true, data: { id: d.id } };
+}
+
+// Proposition de projet par tout chargé de mission (retour du 14/09 ; S12 : « fais-moi une fiche projet »). Un projet « en devenir » :
+// première édition en statut proposée, le proposant en pilote, son pôle, le responsable de pôle en garant. Le cycle relecture →
+// validation → CA se fait ensuite sur la fiche.
+export async function proposeProject(input: { name: string; missionId: string; year: number; summary: string; poleId?: string | null }): Promise<Result<{ editionId: string }>> {
+  const me = await getCurrentPerson();
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: "Donnez un nom au projet." };
+  if (!input.summary.trim()) return { ok: false, error: "Dites en quelques lignes ce que vous proposez." };
+  const mission = await prisma.mission.findUnique({ where: { id: input.missionId } });
+  if (!mission) return { ok: false, error: "Mission introuvable." };
+  const poleId = input.poleId || me.poleId;
+  if (!poleId) return { ok: false, error: "Choisissez le pôle qui portera le projet." };
+  const pole = await prisma.pole.findUnique({ where: { id: poleId } });
+  if (!pole) return { ok: false, error: "Pôle introuvable." };
+  if (![2026, 2027, 2028].includes(input.year) && (input.year < new Date().getFullYear() || input.year > new Date().getFullYear() + 2)) return { ok: false, error: "Année hors de portée." };
+  const n = (await prisma.project.count({ where: { analyticCode: { startsWith: "PROP-" } } })) + 1;
+  const p = await prisma.project.create({ data: { name, analyticCode: `PROP-${String(n).padStart(2, "0")}`, poleId, pilotId: me.id, guarantorId: pole.leadId ?? null, missionId: mission.id, recurring: false } });
+  const e = await prisma.edition.create({ data: { projectId: p.id, year: input.year, status: "proposed", operationalObjectives: input.summary.trim(), team: { create: [{ personId: me.id }] }, personDays: { create: [{ personId: me.id, soldDays: 0 }] } } });
+  await prisma.changeLog.create({ data: { editionId: e.id, field: "status", before: null, after: `Projet proposé par ${me.name}`, authorId: me.id } });
+  const recipients = new Set<string>();
+  if (pole.leadId && pole.leadId !== me.id) recipients.add(pole.leadId);
+  const director = await prisma.person.findFirst({ where: { role: "director", active: true } });
+  if (director && director.id !== me.id) recipients.add(director.id);
+  await prisma.notification.createMany({ data: [...recipients].map((personId) => ({ personId, senderId: me.id, kind: "info", title: `Nouveau projet proposé : ${name}`, body: `${me.name} propose « ${name} » pour ${input.year} (${pole.name}). La fiche attend votre relecture.`, link: `/edition/${e.id}?onglet=fiche` })) });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { editionId: e.id } };
+}

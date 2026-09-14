@@ -58,6 +58,9 @@ async function reset() {
   await prisma.task.deleteMany();
   await prisma.taskList.deleteMany();
   await prisma.note.deleteMany();
+  await prisma.changeProposal.deleteMany();
+  await prisma.achievement.deleteMany();
+  await prisma.loadFreeze.deleteMany();
   await prisma.funderContact.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
@@ -603,11 +606,11 @@ async function main() {
     sponsorId: director.id,
   });
   if (aser) {
-    const rq = (field: string, body: string, day: string) => ({ editionId: aser.id, field, body, authorId: director.id, createdAt: dayjs(day).toDate() });
+    const rq = (field: string, body: string, day: string, reason = "other") => ({ editionId: aser.id, field, body, reason, authorId: director.id, createdAt: dayjs(day).toDate() });
     await prisma.fieldRemark.createMany({ data: [
-      rq("content", "Le lien avec la cartographie mérite un paragraphe à part : qui la met à jour, à quel rythme, et ce qu'on en attend pour les acheteurs.", "2026-03-12"),
-      rq("calendar", "Le calendrier est à écrire : au minimum les dates du groupe d'action, des entretiens acheteurs et de la rencontre régionale, pour que le portefeuille les affiche.", "2026-03-12"),
-      rq("quantitativeObjectives", "Combien d'acheteurs dans le réseau à la fin de l'année, et combien de structures ESS accompagnées ? Il nous faut deux chiffres pour le bilan financeur.", "2026-03-12"),
+      rq("content", "Le lien avec la cartographie mérite un paragraphe à part : qui la met à jour, à quel rythme, et ce qu'on en attend pour les acheteurs.", "2026-03-12", "form"),
+      rq("calendar", "Le calendrier est à écrire : au minimum les dates du groupe d'action, des entretiens acheteurs et de la rencontre régionale, pour que le portefeuille les affiche.", "2026-03-12", "feasibility"),
+      rq("quantitativeObjectives", "Combien d'acheteurs dans le réseau à la fin de l'année, et combien de structures ESS accompagnées ? Il nous faut deux chiffres pour le bilan financeur.", "2026-03-12", "funder"),
     ] });
     await prisma.notification.create({ data: { personId: (await prisma.project.findFirst({ where: { analyticCode: "COO-02" } }))!.pilotId, senderId: director.id, kind: "info", title: "Remarques sur la fiche PTCE et ESSOR · 2026", body: "3 remarques de la direction à traiter (contenu, calendrier, objectifs quantitatifs).", link: `/edition/${aser.id}?onglet=fiche`, createdAt: dayjs("2026-03-12").toDate() } });
   }
@@ -638,6 +641,40 @@ async function main() {
   // Notes : une note de réunion de pôle partagée, une note privée.
   await prisma.note.create({ data: { authorId: leadA.id, title: "Réunion de pôle du 8 septembre", context: "pole", visibility: "pole", date: dayjs("2026-09-08").toDate(), body: "Tour de table des projets de la rentrée.\n\nDécisions :\n- Forum : le rétroplanning est à jour, relance des exposants la semaine prochaine.\n- Note d'opportunité : cadrage à revoir avec la direction avant d'aller plus loin.\n\nÀ faire : chacun met à jour ses jalons dans l'outil avant lundi." } });
   if (inesEd) await prisma.note.create({ data: { authorId: ines.id, title: "Point partenaires du 11 septembre", context: "partner", visibility: "private", editionId: inesEd.id, date: dayjs("2026-09-11").toDate(), body: "Le partenaire confirme sa participation au jury. Demande une convention simplifiée : à voir avec la RAF." } });
+
+  // Lot 2 « La fiche et son cycle » : vie statutaire en projet, occurrences d'action, réalisations, une proposition de modification.
+  const vieProject = await prisma.project.create({ data: { name: "Vie statutaire (CA, bureaux, AG)", analyticCode: "REP-04", poleId: poles[0].id, pilotId: director.id, guarantorId: leadA.id, missionId: missions[0].id, recurring: true, createdAt: dayjs("2024-01-15").toDate() } });
+  const vieEd = await prisma.edition.create({ data: { projectId: vieProject.id, year: 2026, status: "in_progress", codirDecision: "renew", codirDate: dayjs("2025-12-11").toDate(), stakes: "Faire vivre la gouvernance : cinq conseils d'administration, des bureaux mensuels, une assemblée générale.", operationalObjectives: "Convocations, logistique, comptes rendus et relevés de décision dans les délais statutaires.", team: { create: [{ personId: assistant.id }, { personId: director.id }] }, personDays: { create: [{ personId: assistant.id, soldDays: 0, plannedDays: 25 }] } } });
+  const vieActions = [["CA du 12 février", "2026-02-12", "done"], ["Bureau de mars", "2026-03-10", "done"], ["CA du 22 avril", "2026-04-22", "done"], ["Assemblée générale", "2026-06-18", "done"], ["CA du 1er octobre", "2026-10-01", "doing"], ["Bureau de novembre", "2026-11-05", "todo"], ["CA de décembre", "2026-12-15", "todo"]] as const;
+  for (const [i, [name, day, state]] of vieActions.entries()) await prisma.action.create({ data: { editionId: vieEd.id, name, ownerId: assistant.id, milestoneDate: dayjs(day).toDate(), state, order: i, venue: "Siège de la CRESS, Orléans", participants: name.startsWith("Assemblée") ? "Adhérents, partenaires institutionnels, salariés" : "Administrateurs, direction, assistante de direction" } });
+  // Petits-déjeuners de l'Observatoire : une action par occurrence, chacune avec sa petite fiche.
+  const oress = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "OBS-01" } }, include: { actions: true } });
+  if (oress) {
+    const pdj = oress.actions.find((a) => a.name === "Petit-déjeuner ORESS");
+    if (pdj) {
+      await prisma.action.update({ where: { id: pdj.id }, data: { name: "Petit-déjeuner ORESS · mars · emploi", description: "Chiffres de l'emploi ESS 2025 : évolution par secteur, focus sur les services à la personne.", venue: "CRESS, Orléans — salle du CA", participants: "Têtes de réseau, DREETS, Région ; 24 inscrits" } });
+      await prisma.action.create({ data: { editionId: oress.id, name: "Petit-déjeuner ORESS · juin · réemploi", ownerId: pdj.ownerId, milestoneDate: dayjs("2026-06-24").toDate(), state: "done", order: oress.actions.length, description: "Filière réemploi : état des lieux régional, chiffres et acteurs.", venue: "Tours — tiers-lieu partenaire", participants: "Structures du réemploi, ADEME, collectivités ; 31 inscrits" } });
+      await prisma.action.create({ data: { editionId: oress.id, name: "Petit-déjeuner ORESS · octobre · égalité", ownerId: pdj.ownerId, milestoneDate: dayjs("2026-10-14").toDate(), state: "todo", order: oress.actions.length + 1, description: "Baromètre égalité femmes-hommes dans l'ESS régionale.", venue: "CRESS, Orléans", participants: "Réseau Femmes et ESS, adhérents" } });
+    }
+    const pilotId = (await prisma.project.findUnique({ where: { id: oress.projectId } }))!.pilotId;
+    await prisma.achievement.createMany({ data: [
+      { editionId: oress.id, kind: "participants", label: "Inscrits au petit-déjeuner de mars (emploi)", value: 24, unit: "personnes", date: dayjs("2026-03-18").toDate(), authorId: pilotId },
+      { editionId: oress.id, kind: "participants", label: "Inscrits au petit-déjeuner de juin (réemploi)", value: 31, unit: "personnes", date: dayjs("2026-06-24").toDate(), authorId: pilotId },
+      { editionId: oress.id, kind: "deliverable", label: "Chiffres de l'emploi 2025 publiés et envoyés aux têtes de réseau", date: dayjs("2026-05-06").toDate(), authorId: pilotId },
+      { editionId: oress.id, kind: "press", label: "Article dans La Nouvelle République sur les chiffres de l'emploi", date: dayjs("2026-05-20").toDate(), authorId: pilotId },
+    ] });
+  }
+  const forum = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "SEN-03" } }, include: { project: true } });
+  if (forum) {
+    await prisma.achievement.createMany({ data: [
+      { editionId: forum.id, kind: "participants", label: "Inscrits au forum régional", value: 118, unit: "personnes", date: dayjs("2026-06-12").toDate(), authorId: forum.project.pilotId },
+      { editionId: forum.id, kind: "partner", label: "Partenaires exposants confirmés", value: 14, unit: "structures", date: dayjs("2026-05-30").toDate(), authorId: forum.project.pilotId },
+    ] });
+    // Une proposition de modification en attente sur une fiche validée : le garant propose de revoir l'objectif quantitatif, pour le financeur.
+    await prisma.changeProposal.create({ data: { editionId: forum.id, field: "quantitativeObjectives", proposed: "120 participants (au lieu de 150), 15 exposants, un atelier par mission du plan opérationnel.", reason: "Le financeur retient 120 participants dans l'avenant ; la fiche affiche encore 150.", authorId: leadB.id, createdAt: dayjs().subtract(2, "day").toDate() } });
+    await prisma.notification.create({ data: { personId: forum.project.pilotId, senderId: leadB.id, kind: "info", title: `Modification proposée sur ${forum.project.name} · 2026`, body: "Objectifs quantitatifs — le financeur retient 120 participants dans l'avenant.", link: `/edition/${forum.id}?onglet=fiche`, createdAt: dayjs().subtract(2, "day").toDate() } });
+  }
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5 } });
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length} projets, ${allEditions.length} éditions.`);
 }

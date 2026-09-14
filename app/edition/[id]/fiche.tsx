@@ -12,6 +12,9 @@ import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { TeamPicker } from "./team-picker";
 import { FicheLayer, type LayerField } from "./fiche-layer";
+import { ProposalsPanel, type ProposalView } from "./proposals";
+import { isLocked, LOCKED_STATUSES } from "@/lib/lock";
+import { Lock } from "lucide-react";
 import type { RemarkView } from "./remarks";
 import { cn } from "@/lib/utils";
 import { isCodir } from "@/lib/rights";
@@ -39,12 +42,18 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: Tab
   // Remarques : un droit du CODIR (direction, RAF, responsables de pôle) — la relecture des fiches se fait en CODIR ; le pilote et l'équipe les traitent.
   const canRemark = isCodir(me.role);
   const canResolve = isPilot || isTeam || canRemark;
-  const remarks: RemarkView[] = e.remarks.map((r) => ({ id: r.id, field: r.field, body: r.body, author: r.author.name, authorId: r.authorId, createdAt: fmtDate(r.createdAt), resolvedAt: r.resolvedAt ? fmtDate(r.resolvedAt) : null, resolvedBy: r.resolvedBy?.name ?? null }));
+  const remarks: RemarkView[] = e.remarks.map((r) => ({ id: r.id, field: r.field, body: r.body, reason: r.reason, author: r.author.name, authorId: r.authorId, createdAt: fmtDate(r.createdAt), resolvedAt: r.resolvedAt ? fmtDate(r.resolvedAt) : null, resolvedBy: r.resolvedBy?.name ?? null }));
   const openRemarks = remarks.filter((r) => !r.resolvedAt).length;
+  // Fiche validée = verrouillée (retour du 14/09) : les couches 1 à 3 passent par une proposition de modification ; la 4 et le fil de l'année restent vivants.
+  const locked = isLocked(e);
+  const canPropose = canRemark || isPilot || isTeam;
+  const canDecideProposal = me.role === "director" || isPilot;
+  const proposals: ProposalView[] = e.proposals.map((p) => ({ id: p.id, field: p.field, fieldLabel: FIELDS.edition[p.field]?.label ?? p.field, proposed: p.proposed, reason: p.reason, author: p.author.name, authorId: p.authorId, createdAt: fmtDate(p.createdAt), status: p.status, decidedBy: p.decidedBy?.name ?? null, decidedAt: p.decidedAt ? fmtDate(p.decidedAt) : null, comment: p.comment }));
+  const validatedAt = e.codirDate ?? e.changes.find((c) => (c.field === "codirDecision" && c.after) || (c.field === "status" && c.after && LOCKED_STATUSES.includes(c.after)))?.createdAt ?? e.decisionDate ?? null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-      <div className="grid gap-3">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 gap-3">
         {/* Mode relecture : réservé à qui peut annoter ; hors de ce mode, la fiche reste propre, seules les remarques posées se voient. */}
         {canRemark && (
           <div className={cn("flex flex-wrap items-center justify-between gap-2 rounded-md px-3.5 py-2 text-xs", feedback ? "border border-primary/40 bg-info-soft text-primary" : "bg-muted text-muted-foreground")} data-testid="feedback-bar">
@@ -54,6 +63,13 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: Tab
             </Button>
           </div>
         )}
+        {locked && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/60 px-3.5 py-2 text-xs" data-testid="fiche-locked">
+            <span className="inline-flex items-center gap-1.5"><Lock className="size-3.5 text-muted-foreground" /><b>Fiche validée{validatedAt ? ` le ${fmtDate(validatedAt)}` : ""} : verrouillée.</b> Le texte est replié ; toute modification des couches 1 à 3 passe par une proposition (qui, quoi, pourquoi), acceptée par le pilote ou la direction et gardée dans l'historique.</span>
+            {canStatus && <span className="text-[10px] text-muted-foreground">Effacer la décision du CODIR (couche 4) et repasser le statut à « proposée » rouvre la fiche en direct — tracé.</span>}
+          </div>
+        )}
+        <ProposalsPanel proposals={proposals} canDecide={canDecideProposal} meId={me.id} isDirector={me.role === "director"} />
         {openRemarks > 0 && (
           <div className="flex items-center justify-between gap-3 rounded-md bg-warning-soft px-3.5 py-2.5 text-xs text-warning-foreground" data-testid="fiche-remarks-banner"><span><b>{openRemarks} remarque{openRemarks > 1 ? "s" : ""} à traiter</b> sur cette fiche, posée{openRemarks > 1 ? "s" : ""} par {[...new Set(remarks.filter((r) => !r.resolvedAt).map((r) => r.author))].join(", ")}. Elles apparaissent sous les rubriques concernées.</span></div>
         )}
@@ -77,6 +93,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: Tab
               key={layer.key} editionId={e.id} layerKey={layer.key} no={layer.no} title={layer.title} owner={layer.owner}
               ownerMissingLabel={LAYER_OWNER_LABEL[layer.key]} fields={fields} writable={writable} defaultEditing={writable && !layerFilled(layer)}
               remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark && Boolean(feedback)} canResolve={canResolve} meId={me.id} isDirector={me.role === "director"}
+              locked={locked && ["strategic", "means", "proposal"].includes(layer.key)} canPropose={canPropose} pendingProposals={proposals.filter((p) => p.status === "pending" && layer.fields.includes(p.field)).length}
             />
           );
         })}

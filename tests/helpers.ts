@@ -13,3 +13,9 @@ export async function openEditionByName(page: Page, name: string) {
   await page.getByRole("link", { name, exact: true }).first().click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
 }
+
+// Fiche validée : les couches sont repliées ; on déplie avant de lire les rubriques.
+export async function expandLayer(page: Page, layer: "strategic" | "means" | "proposal") {
+  const toggle = page.getByTestId(`layer-toggle-${layer}`);
+  if (await toggle.count()) await toggle.click();
+}

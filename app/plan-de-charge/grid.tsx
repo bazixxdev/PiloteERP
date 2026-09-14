@@ -26,7 +26,7 @@ const tone = (planned: number, capacity: number) => {
 };
 
 // Grille personnes × mois : jours prévus colorés face à la capacité ; clic sur une cellule → détail par édition et réalisé.
-export function LoadGrid({ rows, months, today, groupByPole, editions }: { rows: Row[]; months: string[]; today: string; groupByPole: boolean; editions: EditionOpt[] }) {
+export function LoadGrid({ rows, months, today, groupByPole, editions, changedPeople = [] }: { rows: Row[]; months: string[]; today: string; groupByPole: boolean; editions: EditionOpt[]; changedPeople?: string[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -59,7 +59,7 @@ export function LoadGrid({ rows, months, today, groupByPole, editions }: { rows:
                 const tc = months.reduce((s, m) => s + r.months[m].capacity, 0);
                 return (
                   <tr key={r.person.id} className="border-t border-[#e3e9eb]" data-testid={`load-row-${r.person.id}`}>
-                    <td className="sticky left-0 z-[1] bg-card px-3 py-1.5 font-medium whitespace-nowrap">{r.person.name}<small className="block text-[10px] font-normal text-muted-foreground">{r.person.availableDays} j / an</small></td>
+                    <td className="sticky left-0 z-[1] bg-card px-3 py-1.5 font-medium whitespace-nowrap">{r.person.name}{changedPeople.includes(r.person.id) && <span className="ml-1 rounded-sm bg-warning-soft px-1 text-[9px] font-semibold text-warning-foreground" title="Charge modifiée après validation du plan" data-testid={`load-changed-${r.person.id}`}>modifié</span>}<small className="block text-[10px] font-normal text-muted-foreground">{r.person.availableDays} j / an</small></td>
                     {months.map((m) => {
                       const c = r.months[m];
                       const key = `${r.person.id}:${m}`;

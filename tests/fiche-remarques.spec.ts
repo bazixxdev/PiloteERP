@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { expandLayer, iAm, openEditionByName } from "./helpers";
 
 // Fiche projet : rubriques du gabarit CRESS, remarques par rubrique (comme les commentaires Word), export Word au format du gabarit.
 test("la direction pose une remarque sur une rubrique, le pilote la voit en place et la traite ; la fiche s'exporte au format du gabarit", async ({ page }) => {
@@ -7,7 +7,9 @@ test("la direction pose une remarque sur une rubrique, le pilote la voit en plac
   await iAm(page, "Claire Vasseur");
   await openEditionByName(page, "Refonte du site internet");
 
-  // Les rubriques du gabarit sont là, remplies.
+  // Les rubriques du gabarit sont là, remplies (fiche validée : couches repliées, on déplie).
+  await expandLayer(page, "proposal");
+  await expandLayer(page, "means");
   await expect(page.getByTestId("field-content")).toContainText("UX design");
   await expect(page.getByTestId("field-audience")).toContainText("adhérents");
   await expect(page.getByTestId("field-deliveryDate")).toContainText("30 novembre 2026");

@@ -7,6 +7,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
 import { AddSimpleForm, CreateProjectForm, ProjectPolesPicker } from "@/app/admin/forms";
+import { Button } from "@/components/ui/button";
+import { withBase } from "@/lib/base-path";
+import { FileDown, Lightbulb } from "lucide-react";
 
 // Projets et éditions : objets permanents et leurs éditions annuelles. Modifiable par la direction et la RAF, lisible par tous.
 export default async function ProjetsPage() {
@@ -19,10 +22,20 @@ export default async function ProjetsPage() {
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
+  const currentYear = new Date().getFullYear();
   return (
     <div className="p-4 md:p-6">
       <DossiersNav current="projets" />
-      <PageHeader title="Projets et éditions" subtitle={`${projects.length} projets · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions.${rw ? "" : " Lecture seule : la direction et la RAF créent les projets et les éditions."}`} />
+      <PageHeader
+        title="Projets et éditions"
+        subtitle={`${projects.length} projets · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions.${rw ? "" : " Lecture seule : la direction et la RAF créent les projets ; vous pouvez en proposer un."}`}
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm"><Link href="/projets/proposer" data-testid="propose-project"><Lightbulb />Proposer un projet</Link></Button>
+            <Button asChild variant="outline" size="sm" title="Toutes les fiches de l'année en un seul Word, par pôle puis mission — à la place du copier-coller"><a href={withBase(`/plan-operationnel/export?annee=${currentYear}`)} data-testid="export-plan-operationnel"><FileDown />Plan opérationnel {currentYear} (Word)</a></Button>
+          </>
+        }
+      />
       <div className="overflow-x-auto">
         <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
           <table className="w-full text-sm" data-testid="projects-table">

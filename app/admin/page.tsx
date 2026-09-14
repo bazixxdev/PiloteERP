@@ -108,6 +108,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 </tbody>
               </table>
               <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Coefficient heures → jours (réalisé, exports)</span><AutoField model="settings" id="1" field="hoursPerDay" type="number" value={settings.hoursPerDay} readOnly={!rw} suffix="h/j" /></div>
+              <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Jours de fonctionnement par mois déduits de la capacité du plan de charge <span className="text-xs text-muted-foreground">(réunions transverses, café, entretiens · un chargé de mission y passe environ 1 jour sur 7)</span></span><AutoField model="settings" id="1" field="operatingDaysPerMonth" type="number" value={settings.operatingDaysPerMonth} readOnly={!rw} suffix="j/mois" testId="operating-days" /></div>
             </Section>
 
             <Section title="Codes de temps par poste" description="Codes « fonctionnement » et « non travaillé » proposés à chaque personne dans sa grille de saisie.">

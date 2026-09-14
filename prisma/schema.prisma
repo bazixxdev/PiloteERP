@@ -59,6 +59,10 @@ model Person {
   tasks              Task[]
   taskLists          TaskList[]
   notes              Note[]
+  loadFreezes        LoadFreeze[]
+  proposalsWritten   ChangeProposal[]   @relation("ProposalAuthor")
+  proposalsDecided   ChangeProposal[]   @relation("ProposalDecider")
+  achievements       Achievement[]
   plannedLoads       PlannedLoad[]
   sponsoredEditions  Edition[]          @relation("EditionSponsor")
   remarksWritten     FieldRemark[]      @relation("RemarkAuthor")
@@ -268,6 +272,8 @@ model Edition {
   tasks        Task[]
   taskLists    TaskList[]
   notes        Note[]
+  proposals    ChangeProposal[]
+  achievements Achievement[]
 
   @@unique([projectId, year])
 }
@@ -323,6 +329,11 @@ model Action {
   fundingLine   FundingLine? @relation(fields: [fundingLineId], references: [id])
   order         Int          @default(0)
   isPublic      Boolean      @default(false) // événement public : flux agenda du site
+  // Occurrence (petit-déjeuner, forum SPRO…) : contenu, lieu, participants — une action peut porter sa petite fiche et se dupliquer.
+  description   String?
+  venue         String?
+  participants  String?
+  achievements  Achievement[]
   timeEntries   TimeEntry[]
   validations   ValidationRequest[]
   tasks         Task[]
@@ -434,6 +445,58 @@ model Settings {
   teamIcsToken              String? // jeton du flux agenda équipe (.ics)
   apiToken                  String? // jeton des exports pour Excel / outils externes
   hoursPerDay               Float   @default(7) // coefficient heures → jours, avec son origine dans la notice
+  // Jours de fonctionnement par mois (réunions transverses, café, entretiens…) déduits de la capacité du plan de charge (S14 : 9 j / 86).
+  operatingDaysPerMonth     Float   @default(0)
+}
+
+// Plan de charge figé par année (au séminaire) : après cette date, les modifications restent possibles mais sont tracées et signalées.
+model LoadFreeze {
+  year       Int      @id
+  frozenAt   DateTime @default(now())
+  frozenById String
+  frozenBy   Person   @relation(fields: [frozenById], references: [id])
+  note       String?
+}
+
+// Proposition de modification d'une fiche validée (retour du 14/09) : rien ne change en silence. Qui, quoi, pourquoi ;
+// le pilote (ou la direction) accepte, la valeur s'applique et l'historique le garde.
+model ChangeProposal {
+  id          String    @id @default(cuid())
+  editionId   String
+  edition     Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  field       String
+  proposed    String
+  reason      String
+  authorId    String
+  author      Person    @relation("ProposalAuthor", fields: [authorId], references: [id])
+  status      String    @default("pending") // pending | accepted | refused
+  decidedById String?
+  decidedBy   Person?   @relation("ProposalDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  comment     String?
+  createdAt   DateTime  @default(now())
+
+  @@index([editionId, status])
+}
+
+// Réalisation consignée au fil de l'année (retour du 14/09) : inscrits, publics touchés, livrable produit, retombée…
+// Reprise dans le tableau de bord de l'édition et dans l'export bilan. Un chiffre facultatif, une date, un libellé.
+model Achievement {
+  id        String   @id @default(cuid())
+  editionId String
+  edition   Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  actionId  String?
+  action    Action?  @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  kind      String   @default("other") // participants | audience | deliverable | press | partner | other
+  label     String
+  value     Float?
+  unit      String?
+  date      DateTime @default(now())
+  authorId  String
+  author    Person   @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([editionId, date])
 }
 
 model DocLink {
@@ -662,6 +725,8 @@ model FieldRemark {
   edition      Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
   field        String // clé du champ de la fiche (stakes, calendar…)
   body         String
+  // Motif (retour du 14/09, Simon : « je ne sais pas d'où ça vient, pourquoi ») : funder | strategy | feasibility | form | other
+  reason       String    @default("other")
   authorId     String
   author       Person    @relation("RemarkAuthor", fields: [authorId], references: [id])
   createdAt    DateTime  @default(now())

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { AddActionForm } from "./add-forms";
+import { ActionExtrasToggle } from "./action-extras";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me.role, isPilot, isTeam, inMyPole(me, e.project));
@@ -48,7 +49,15 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   return (
                     <tr key={a.id} className="group" data-testid={`action-row-${i}`}>
                       <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
-                      <td className="min-w-[220px] py-1 pr-2"><AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" label={`Nom de l'action ${i + 1}`} /></td>
+                      <td className="min-w-[220px] py-1 pr-2">
+                        <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" label={`Nom de l'action ${i + 1}`} />
+                        {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
+                        <ActionExtrasToggle actionId={a.id} index={i} filled={[a.description, a.venue, a.participants].filter(Boolean).length} canDuplicate={rw}>
+                          <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`action-description-${i}`} label={`Contenu, ${a.name}`} /></div>
+                          <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
+                          <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Participants, invités</span><AutoField model="action" id={a.id} field="participants" type="textarea" rows={2} value={a.participants} readOnly={!rw} placeholder="—" label={`Participants, ${a.name}`} /></div>
+                        </ActionExtrasToggle>
+                      </td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} label={`Jalon, ${a.name}`} placeholder="—" /></td>
                       {/* Largeur réservée aux chiffres : 7 h, 77 h, 105 h et 1 050 h se lisent en entier, sans cliquer dans le champ. */}
