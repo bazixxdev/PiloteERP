@@ -78,6 +78,8 @@ test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et
   expect(docx.headers()["content-type"]).toContain("wordprocessingml");
   // Figer le plan de charge 2026, puis modifier un mois : la modification est signalée.
   await page.goto("/plan-de-charge?debut=2026-09&horizon=6&pole=tous");
+  // Le jeu de démo a figé 2026 au séminaire : on rouvre, puis on fige à nouveau pour montrer le geste.
+  if (await page.getByTestId("load-unfreeze").count()) { await page.getByTestId("load-unfreeze").click(); await expect(page.getByTestId("load-freeze")).toBeVisible(); }
   await page.getByTestId("load-freeze").click();
   await expect(page.getByTestId("load-frozen")).toContainText("validé le");
   const hugoRow = page.locator("[data-testid^=load-row-]", { hasText: "Hugo Lemaire" });

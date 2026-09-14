@@ -60,6 +60,8 @@ test("la semaine se répartit en parts de mon temps et devient des heures pour l
   await iAm(page, "Inès Cabral");
   await page.getByTestId("mode-parts").click();
   await expect(page.getByTestId("week-split")).toBeVisible();
+  // La semaine porte déjà des heures : on repart de zéro avant de répartir.
+  for (const input of await page.locator("[data-testid^=split-pct-]").all()) await input.fill("0");
   await page.getByTestId("split-pct-0").fill("60");
   await page.getByTestId("split-pct-2").fill("40");
   await expect(page.getByTestId("split-total")).toContainText("100 %");

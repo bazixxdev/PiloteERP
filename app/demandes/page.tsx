@@ -36,7 +36,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
       actions: <RequestActions id={r.id} status={r.status} canTreat={canTreat(r)} canWithdraw={r.requesterId === me.id} people={peopleOpts} assigneeId={r.assigneeId} />,
     })),
     ...validations.map((v): Line => ({
-      id: v.id, family: "validation", kind: `Validation · ${refLabel(refs, "validation_kind", v.kind)}`, title: `${v.label}${v.amount != null ? ` · ${fmtEuro(v.amount)}` : ""}`, sub: `${v.edition.project.name} · ${v.edition.year}`,
+      id: v.id, family: "validation", kind: refLabel(refs, "validation_kind", v.kind), title: `${v.label}${v.amount != null ? ` · ${fmtEuro(v.amount)}` : ""}`, sub: `${v.edition.project.name} · ${v.edition.year}`,
       who: v.requester.name, to: ["", "pilote", "responsable de pôle", "direction"][v.requiredLevel] ?? "—", due: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), status: { label: refLabel(refs, "validation_status", v.status), color: v.status === "pending" ? "warning" : v.status === "approved" ? "mint" : "muted" }, age: ageDays(v.createdAt), href: `/edition/${v.editionId}?onglet=validations`, open: v.status === "pending",
       actions: v.status === "pending" && canDecideValidation(me, v) ? <Link href="/validations" className="mt-1.5 inline-block text-xs text-primary hover:underline">Décider dans Validations →</Link> : undefined,
     })),
@@ -53,7 +53,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
     const late = l.open && l.due && dayjs(l.due).isBefore(dayjs(), "day");
     return (
       <div className={cn("grid gap-2 border-b px-4 py-3 last:border-b-0 sm:grid-cols-[150px_1fr_150px_110px_100px]", late && "bg-[#fff8f0]")} data-testid={`${l.family}-line-${l.id}`}>
-        <div><StatusBadge label={l.kind} color={l.family === "validation" ? "primary" : "info"} dot={false} /></div>
+        <div className="min-w-0"><div className="text-[10px] font-semibold uppercase tracking-[.5px] text-muted-foreground">{l.family === "validation" ? "Validation" : "Demande"}</div><StatusBadge label={l.kind} color={l.family === "validation" ? "primary" : "info"} dot={false} className="max-w-full whitespace-normal" /></div>
         <div className="min-w-0">
           <div className="text-sm font-medium"><Link href={l.href} className="hover:underline">{l.title}</Link></div>
           {l.sub && <div className="truncate text-[11px] text-muted-foreground">{l.sub}</div>}
