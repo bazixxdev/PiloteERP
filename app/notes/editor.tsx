@@ -68,14 +68,24 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
   return (
     <div className={cn("flex h-full flex-col rounded-md border bg-card", focus && "mx-auto max-w-3xl")} style={noteColor(color) ? { borderTop: `4px solid ${noteColor(color)!.hex}` } : undefined} data-testid="note-editor">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5 text-[11px]">
-        <Input type="date" value={date} disabled={readOnly || pending} onChange={(e) => { setDate(e.target.value); save({ date: e.target.value }); }} aria-label="Date de la note" className="h-7 w-36 text-[11px]" />
-        <select value={context} disabled={readOnly || pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
+        {readOnly ? (
+          // En lecture : du texte, pas des sélecteurs grisés qui ont l'air modifiables.
+          <span className="inline-flex flex-wrap items-center gap-x-2 text-muted-foreground" data-testid="note-meta">
+            <span className="font-medium text-foreground">{dayjs(date).format("D MMMM YYYY")}</span>
+            <span>· {NOTE_CONTEXTS.find((c) => c.value === context)?.label ?? context}</span>
+            <span>· {note?.edition ? <Link href={`/edition/${note.edition.id}`} className="text-primary hover:underline">{note.edition.name} · {note.edition.year}</Link> : "transverse"}</span>
+            <span>·</span>
+          </span>
+        ) : (<>
+        <Input type="date" value={date} disabled={pending} onChange={(e) => { setDate(e.target.value); save({ date: e.target.value }); }} aria-label="Date de la note" className="h-7 w-36 text-[11px]" />
+        <select value={context} disabled={pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
           {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
-        <select value={editionId} disabled={readOnly || pending} onChange={(e) => { setEditionId(e.target.value); save({ editionId: e.target.value || null }); }} aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-edition">
+        <select value={editionId} disabled={pending} onChange={(e) => { setEditionId(e.target.value); save({ editionId: e.target.value || null }); }} aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-edition">
           <option value="">Transverse — sans projet</option>
           {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
         </select>
+        </>)}
         {readOnly ? (
           <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return note!.sharedWithMe ? <><UserPlus className="size-3" />Partagée avec vous · note de {note!.author.name}</> : <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>
         ) : (
