@@ -68,3 +68,44 @@ test("une note écrite en texte brut avant l'éditeur riche s'affiche en paragra
   await expect.poll(() => paras.count()).toBeGreaterThan(1);
   await expect(page.getByTestId("note-body")).toContainText("Décisions");
 });
+
+test("une note privée se partage nominativement (la personne est prévenue) et se colore pour se repérer", async ({ page }) => {
+  await page.goto("/notes");
+  await iAm(page, "Inès Cabral");
+  await page.getByTestId("new-note").click();
+  await page.getByTestId("note-title").fill("Point Crédit Coopératif — convention simplifiée");
+  await page.getByTestId("note-title").blur();
+  await expect(page.getByTestId("note-saved")).toBeVisible();
+  // Couleur : pastille dans l'éditeur, filet dans la liste, filtre par couleur.
+  await page.getByTestId("note-color").click();
+  await page.getByTestId("note-color-corail").click();
+  await expect(page.getByTestId("note-color")).toContainText("Corail");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("my-notes").locator("[data-color=corail]", { hasText: "Crédit Coopératif" })).toHaveCount(1, { timeout: 15_000 });
+  await page.getByTestId("notes-filter-color-vert").click();
+  await expect(page.getByTestId("my-notes")).not.toContainText("Crédit Coopératif");
+  await page.getByTestId("notes-filter-color-corail").click();
+  await expect(page.getByTestId("my-notes")).toContainText("Crédit Coopératif");
+  // Partage nominatif avec la RAF, qui n'est pas du pôle : la note reste privée pour les autres.
+  await page.getByTestId("my-notes").getByRole("link", { name: /Crédit Coopératif/ }).click();
+  await page.getByTestId("note-share").click();
+  const nadia = page.getByTestId("note-share-list").getByRole("button", { name: "Nadia Ferrand" });
+  await nadia.click();
+  await expect(page.getByText("Personne prévenue")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("note-share")).toContainText("Nadia");
+  await expect(page.getByText("Partagée nominativement avec Nadia Ferrand.")).toBeVisible();
+  const url = page.url();
+  await iAm(page, "Nadia Ferrand");
+  await page.goto("/ma-semaine");
+  await expect(page.getByTestId("unread-notifications")).toContainText("Note partagée : Point Crédit Coopératif");
+  await page.goto(url);
+  await expect(page.getByText("Partagée avec vous · note de Inès Cabral")).toBeVisible();
+  await expect(page.getByTestId("note-body")).toHaveAttribute("contenteditable", "false");
+  await expect(page.getByTestId("shared-notes")).toContainText("pour vous");
+  // Un collègue non nommé (même pôle) ne la voit pas.
+  await iAm(page, "Maxime Roussel");
+  await page.goto(url);
+  await expect(page.getByTestId("note-editor")).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText("Crédit Coopératif");
+});

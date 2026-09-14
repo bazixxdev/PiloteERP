@@ -4,8 +4,8 @@ import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { FocusMode } from "@/components/common/focus-mode";
-import { getCurrentPerson, getSettings } from "@/lib/session";
-import { filterNotes, groupByMonth, htmlToText, loadNote, loadNotes, NOTE_CONTEXTS } from "@/lib/notes";
+import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
+import { filterNotes, groupByMonth, htmlToText, loadNote, loadNotes, NOTE_COLORS, NOTE_CONTEXTS, noteColor } from "@/lib/notes";
 import { loadEditionOpts } from "@/lib/tasks";
 import { hasModule } from "@/lib/modules";
 import { dayjs } from "@/lib/format";
@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 import { NoteEditor } from "./editor";
 
 // Notes (retour du 14/09) : prise de notes propre, rattachée à un projet ou transverse, privée ou partagée. Remplace le OneNote « défouloir ».
-export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string }> }) {
-  const { note: noteId, edition, focus, q, projet, contexte, auteur } = await searchParams;
+export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string }> }) {
+  const { note: noteId, edition, focus, q, projet, contexte, auteur, couleur } = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!hasModule(me, "notes")) {
     return (
@@ -25,13 +25,14 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       </div>
     );
   }
-  const [allNotes, editions] = await Promise.all([loadNotes(me), loadEditionOpts(me, settings)]);
+  const [allNotes, editions, people] = await Promise.all([loadNotes(me), loadEditionOpts(me, settings), getPeople()]);
+  const peopleOpts = people.filter((p) => p.id !== me.id && p.active).map((p) => ({ id: p.id, name: p.name, poleName: p.pole?.name ?? null }));
   const current = noteId && noteId !== "nouvelle" ? await loadNote(me, noteId) : null;
   const isNew = noteId === "nouvelle" || (!noteId && allNotes.length === 0);
   const inFocus = focus === "1";
   // Recherche et filtres (retour du 14/09 : « après 12 mois de notes on va galérer à s'y retrouver »).
-  const filter = { q, editionId: projet, context: contexte, author: auteur };
-  const filtering = Boolean(q || projet || contexte || auteur);
+  const filter = { q, editionId: projet, context: contexte, author: auteur, color: couleur };
+  const filtering = Boolean(q || projet || contexte || auteur || couleur);
   const notes = filterNotes(allNotes, filter);
   const mine = notes.filter((n) => n.mine);
   const shared = notes.filter((n) => !n.mine);
@@ -39,12 +40,12 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   // Les projets et auteurs proposés dans les filtres : seulement ceux qui ont des notes visibles.
   const projectOpts = Array.from(new Map(allNotes.filter((n) => n.edition).map((n) => [n.edition!.id, n.edition!])).values()).sort((a, b) => b.year - a.year || a.name.localeCompare(b.name));
   const authorOpts = Array.from(new Map(allNotes.filter((n) => !n.mine).map((n) => [n.author.id, n.author])).values()).sort((a, b) => a.name.localeCompare(b.name));
-  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, contexte, auteur, ...over })) if (v) p.set(k, v); return p.toString(); };
+  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, contexte, auteur, couleur, ...over })) if (v) p.set(k, v); return p.toString(); };
 
   const NoteLink = ({ n }: { n: (typeof notes)[number] }) => (
-    <Link href={`/notes?${keep({ note: n.id })}`} className={cn("block min-w-0 rounded-md px-3 py-2 hover:bg-muted", current?.id === n.id && "bg-info-soft")} data-testid={`note-link-${n.id}`}>
-      <div className="truncate text-xs font-semibold">{n.title || "Sans titre"}</div>
-      <div className="truncate text-[10px] text-muted-foreground">{dayjs(n.date).format("D MMM")} · {n.edition ? `${n.edition.name} · ${n.edition.year}` : ctxLabel(n.context)}{!n.mine ? ` · ${n.author.name}` : ""}</div>
+    <Link href={`/notes?${keep({ note: n.id })}`} className={cn("block min-w-0 rounded-md px-3 py-2 hover:bg-muted", current?.id === n.id && "bg-info-soft")} style={noteColor(n.color) ? { boxShadow: `inset 3px 0 0 ${noteColor(n.color)!.hex}` } : undefined} data-testid={`note-link-${n.id}`} data-color={n.color ?? undefined}>
+      <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">{noteColor(n.color) && <span className="size-2 shrink-0 rounded-full" style={{ background: noteColor(n.color)!.hex }} aria-hidden />}<span className="truncate">{n.title || "Sans titre"}</span></div>
+      <div className="truncate text-[10px] text-muted-foreground">{dayjs(n.date).format("D MMM")} · {n.edition ? `${n.edition.name} · ${n.edition.year}` : ctxLabel(n.context)}{!n.mine ? ` · ${n.author.name}` : ""}{n.sharedWithMe ? " · pour vous" : ""}</div>
       {q && <div className="truncate text-[10px] text-muted-foreground/80">{snippet(htmlToText(n.body), q)}</div>}
     </Link>
   );
@@ -83,6 +84,12 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                   {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
+              <div className="flex items-center gap-1 px-0.5" data-testid="notes-filter-colors">
+                {NOTE_COLORS.map((k) => (
+                  <Link key={k.value} href={`/notes?${keep({ couleur: couleur === k.value ? undefined : k.value, note: current?.id })}`} title={k.label} aria-label={`Couleur ${k.label}`} className={cn("size-4 rounded-full border-2", couleur === k.value ? "border-foreground" : "border-transparent hover:border-border")} style={{ background: k.hex }} data-testid={`notes-filter-color-${k.value}`} />
+                ))}
+                <span className="ml-1 text-[10px] text-muted-foreground">{couleur ? noteColor(couleur)?.label : "Par couleur"}</span>
+              </div>
               {authorOpts.length > 0 && (
                 <select name="auteur" defaultValue={auteur ?? ""} aria-label="Auteur" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-author">
                   <option value="">Moi et mes collègues</option>
@@ -109,7 +116,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
         )}
         <div className="min-w-0">
           {current || isNew ? (
-            <NoteEditor key={current?.id ?? "new"} note={current} editions={editions} defaultEditionId={edition} focus={inFocus} />
+            <NoteEditor key={current?.id ?? "new"} note={current} editions={editions} people={peopleOpts} defaultEditionId={edition} focus={inFocus} />
           ) : (
             <EmptyState title="Choisissez une note, ou créez-en une" hint="Une note, c'est du texte : ce qui s'est dit, ce qui a été décidé. Rattachez-la à un projet pour la retrouver depuis sa fiche." icon="✎" />
           )}

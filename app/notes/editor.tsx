@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Lock, Users, Eye, Maximize2 } from "lucide-react";
+import { Trash2, Lock, Users, Eye, Maximize2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { RichEditor } from "@/components/common/rich-editor";
+import { ShareWith, type PersonOpt } from "./share";
+import { ColorPicker } from "./color-picker";
 import { addNote, deleteNote, updateNote } from "@/app/actions/notes";
-import { NOTE_CONTEXTS, type NoteView } from "@/lib/notes";
+import { NOTE_CONTEXTS, noteColor, type NoteView } from "@/lib/notes";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -20,7 +22,7 @@ const VIS = [
 ];
 
 // Éditeur de note : texte mis en forme (Tiptap), enregistré à la volée. En lecture pour une note partagée par un collègue.
-export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: NoteView | null; editions: EditionOpt[]; defaultEditionId?: string; focus?: boolean }) {
+export function NoteEditor({ note, editions, people, defaultEditionId, focus }: { note: NoteView | null; editions: EditionOpt[]; people: PersonOpt[]; defaultEditionId?: string; focus?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(note?.title ?? "");
@@ -29,6 +31,7 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
   const [context, setContext] = useState(note?.context ?? (defaultEditionId ? "project" : "team"));
   const [editionId, setEditionId] = useState(note?.edition?.id ?? defaultEditionId ?? "");
   const [visibility, setVisibility] = useState(note?.visibility ?? "private");
+  const [color, setColor] = useState<string | null>(note?.color ?? null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const idRef = useRef<string | null>(note?.id ?? null);
   const lastSaved = useRef(note?.body ?? "");
@@ -63,7 +66,7 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
   };
 
   return (
-    <div className={cn("flex h-full flex-col rounded-md border bg-card", focus && "mx-auto max-w-3xl")} data-testid="note-editor">
+    <div className={cn("flex h-full flex-col rounded-md border bg-card", focus && "mx-auto max-w-3xl")} style={noteColor(color) ? { borderTop: `4px solid ${noteColor(color)!.hex}` } : undefined} data-testid="note-editor">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5 text-[11px]">
         <Input type="date" value={date} disabled={readOnly || pending} onChange={(e) => { setDate(e.target.value); save({ date: e.target.value }); }} aria-label="Date de la note" className="h-7 w-36 text-[11px]" />
         <select value={context} disabled={readOnly || pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
@@ -74,7 +77,7 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
           {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
         </select>
         {readOnly ? (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>
+          <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return note!.sharedWithMe ? <><UserPlus className="size-3" />Partagée avec vous · note de {note!.author.name}</> : <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-md border px-1.5 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return <V.icon className="size-3" aria-hidden />; })()}
             <select value={visibility} disabled={pending} onChange={(e) => { setVisibility(e.target.value); save({ visibility: e.target.value }); }} aria-label="Visibilité de la note" className="h-7 bg-transparent text-[11px]" data-testid="note-visibility">
@@ -82,6 +85,8 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
             </select>
           </span>
         )}
+        {!readOnly && <ColorPicker value={color} disabled={pending} onChange={(v) => { setColor(v); save({ color: v }); }} />}
+        {!readOnly && <ShareWith key={note?.id ?? "new"} noteId={note?.id ?? null} people={people} sharedWith={note?.sharedWith ?? []} disabled={pending} />}
         <span className="ml-auto flex items-center gap-2 text-muted-foreground">
           {savedAt && <span data-testid="note-saved">Enregistrée à {savedAt}</span>}
           {!focus && <Link href={`/notes?note=${note?.id ?? "nouvelle"}&focus=1`} title="Mode focus : rien d'autre à l'écran (Échap pour revenir)" className="inline-flex items-center gap-1 rounded p-1 hover:bg-muted" data-testid="note-focus"><Maximize2 className="size-3.5" /></Link>}
@@ -92,6 +97,7 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
       <RichEditor value={body} readOnly={readOnly} onChange={setBody} onBlur={(html) => { if (html !== lastSaved.current) { lastSaved.current = html; save({ body: html }); } }} placeholder="Ce qui s'est dit, ce qui a été décidé, ce qu'il reste à faire…" className={cn(focus && "[&_.prose-note]:min-h-[70vh] [&_.prose-note]:text-[15px]")} testId="note-body" />
       {!readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Enregistrement automatique en quittant un champ. {pending ? "Enregistrement…" : ""}</div>}
       {readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Note partagée par {note!.author.name} : en lecture.</div>}
+      {!readOnly && note && note.sharedWith.length > 0 && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Partagée nominativement avec {note.sharedWith.map((p) => p.name).join(", ")}.</div>}
     </div>
   );
 }

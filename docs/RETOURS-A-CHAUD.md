@@ -113,6 +113,9 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 - **Notes : « après 12 mois on va galérer à s'y retrouver »** — Traité le 14/09 : recherche plein texte (titre + corps, avec extrait), filtres projet / type / auteur, liste **groupée par mois**.
 - **Notes : « tu peux pas proposer du wysiwyg ? »** — Traité le 14/09 : éditeur riche Tiptap (`components/common/rich-editor.tsx`) — titres, gras, italique, listes, **cases à cocher** pour les « à faire », citation, séparateur ; raccourcis Markdown (`# `, `- `, `[] `). Le corps est stocké en HTML ; les notes en texte brut sont converties en paragraphes à l'affichage (`bodyToHtml`). Lecture seule sans barre d'outils pour une note partagée. Corrigé au passage : deux champs quittés à la suite créaient deux notes.
 
+- **Notes : « on peut partager nominativement ? »** — Traité le 15/09 : `NoteShare` (note × personne), bouton « Partager avec… » dans l'éditeur (liste des collègues avec recherche), en plus de la visibilité ; la personne nommée reçoit une notification en cloche et lit la note sans la modifier ; « Partagée avec vous » dans l'en-tête, « pour vous » dans la liste. Action `setNoteShares`.
+- **Notes : « de la couleur, ça aide à ranger et c'est moins triste »** — Traité le 15/09 : `Note.color` (bleu, vert, ocre, corail, violet, gris — palette de la charte, jamais le rouge d'alerte), pastille dans l'éditeur (liseré en haut), pastille + filet dans la liste, filtre par couleur dans la colonne. Un repère choisi par l'auteur, pas un statut.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
