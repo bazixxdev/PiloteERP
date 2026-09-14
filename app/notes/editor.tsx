@@ -36,7 +36,15 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
   const idRef = useRef<string | null>(note?.id ?? null);
   const lastSaved = useRef(note?.body ?? "");
   const readOnly = Boolean(note && !note.mine);
-  useEffect(() => { idRef.current = note?.id ?? null; }, [note?.id]);
+  // Changement de note affichée : on recharge les champs. Sauf si c'est la note qu'on vient de créer (même id) :
+  // ce qui est à l'écran est plus récent que ce que le serveur renvoie, on le garde (sinon le texte tapé pendant la création disparaît).
+  useEffect(() => {
+    if ((note?.id ?? null) === idRef.current) return;
+    idRef.current = note?.id ?? null;
+    setTitle(note?.title ?? ""); setBody(note?.body ?? ""); setDate(note?.date ?? dayjs().format("YYYY-MM-DD"));
+    setContext(note?.context ?? (defaultEditionId ? "project" : "team")); setEditionId(note?.edition?.id ?? defaultEditionId ?? "");
+    setVisibility(note?.visibility ?? "private"); setColor(note?.color ?? null); setSavedAt(null); lastSaved.current = note?.body ?? "";
+  }, [note, defaultEditionId]);
 
   // Première sauvegarde = création ; les suivantes = mise à jour. Rien ne se perd si on quitte : chaque champ enregistre en le quittant.
   // Si une création est en cours (titre quitté, puis contenu quitté juste après), on l'attend au lieu de créer une deuxième note.

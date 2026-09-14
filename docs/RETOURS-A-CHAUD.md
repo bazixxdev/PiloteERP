@@ -116,6 +116,10 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 - **Notes : « on peut partager nominativement ? »** — Traité le 15/09 : `NoteShare` (note × personne), bouton « Partager avec… » dans l'éditeur (liste des collègues avec recherche), en plus de la visibilité ; la personne nommée reçoit une notification en cloche et lit la note sans la modifier ; « Partagée avec vous » dans l'en-tête, « pour vous » dans la liste. Action `setNoteShares`.
 - **Notes : « de la couleur, ça aide à ranger et c'est moins triste »** — Traité le 15/09 : `Note.color` (bleu, vert, ocre, corail, violet, gris — palette de la charte, jamais le rouge d'alerte), pastille dans l'éditeur (liseré en haut), pastille + filet dans la liste, filtre par couleur dans la colonne. Un repère choisi par l'auteur, pas un statut.
 
+- **Notes en lecture : « des chevrons alors que je ne peux pas éditer, ça me gêne »** — Traité le 15/09 : en lecture, date, type et projet (lien vers la fiche) sont du texte.
+- **« Tu ne reprends pas l'iconographie dans les titres des sections, et dans les menus »** — Traité le 15/09 : registre unique `components/shell/section-icons.tsx` (écran → icône) utilisé par la barre latérale, la navigation basse mobile (fini les symboles typographiques) et `PageHeader` (icône dans une pastille devant le titre) ; ajoutée aussi sur Ma semaine, la fiche d'édition, conventions et financeurs.
+- **« Notes et tâches dans le menu du haut : les dernières, la liste complète, un petit ajout »** — Traité le 15/09 : `components/shell/quick-menus.tsx` — deux boutons dans la barre haute (selon les modules activés) : menu avec les 5 dernières notes (pastille de couleur) / 5 prochaines tâches à faire, « Toutes mes notes / tâches », et un « + » qui ouvre `/notes?note=nouvelle` ou `/taches?ajouter=1` (saisie focalisée). Corrigé au passage : le texte tapé juste après le titre d'une nouvelle note pouvait disparaître au moment où la note se créait (l'éditeur se remontait).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

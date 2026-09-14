@@ -1,3 +1,4 @@
+import { SectionIcon } from "@/components/shell/section-icon";
 import Link from "next/link";
 import { Clock, Bell } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -107,9 +108,12 @@ export default async function MaSemainePage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-5">
-        <div>
+        <div className="flex items-start gap-3">
+          <SectionIcon />
+          <div>
           <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">Bonjour {firstName}.</h1>
           <p className="mt-1 text-xs text-muted-foreground">Semaine du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · ce qui vous attend, dans l'ordre.</p>
+          </div>
         </div>
         <Button asChild><Link href="/temps"><Clock />Répartir mon temps</Link></Button>
       </div>

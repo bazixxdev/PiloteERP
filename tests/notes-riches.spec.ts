@@ -109,3 +109,27 @@ test("une note privée se partage nominativement (la personne est prévenue) et 
   await expect(page.getByTestId("note-editor")).toHaveCount(0);
   await expect(page.locator("main")).not.toContainText("Crédit Coopératif");
 });
+
+test("la barre haute donne accès aux dernières notes et tâches, à la liste complète et à l'ajout", async ({ page }) => {
+  await page.goto("/portefeuille");
+  await iAm(page, "Inès Cabral");
+  // Icône de l'écran devant le titre, la même que dans le menu.
+  await expect(page.locator("h1").first()).toContainText("Portefeuille");
+  await page.getByTestId("quick-notes-open").click();
+  await expect(page.getByTestId("quick-notes-open")).toBeVisible();
+  await expect(page.locator("[data-testid=quick-notes-item]", { hasText: "Point partenaires du 11 septembre" })).toHaveCount(1);
+  await page.getByTestId("quick-notes-all").click();
+  await expect(page).toHaveURL(/\/notes$/);
+  await page.getByTestId("quick-notes-add").click();
+  await expect(page).toHaveURL(/note=nouvelle/);
+  await expect(page.getByTestId("note-title")).toBeVisible();
+  await page.getByTestId("quick-tasks-open").click();
+  await expect(page.locator("[data-testid=quick-tasks-item]").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("quick-tasks-add").click();
+  await expect(page).toHaveURL(/taches\?ajouter=1/);
+  await expect(page.getByTestId("task-input").first()).toBeFocused();
+  // Hugo n'a pas le module Notes : pas de menu Notes dans la barre haute.
+  await iAm(page, "Hugo Lemaire");
+  await expect(page.getByTestId("quick-notes")).toHaveCount(0);
+});

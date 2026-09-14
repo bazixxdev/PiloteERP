@@ -2,50 +2,50 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, CalendarDays, Clock, LayoutGrid, CheckSquare, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox } from "lucide-react";
+import { iconFor } from "./section-icons";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 
 // Barre latérale V2 : fond clair, logo CRESS sur fond transparent.
 // Les groupes suivent le profil : un salarié commence par Ma semaine, Temps et ses projets ; les accès collectifs ou
 // occasionnels viennent ensuite, et les écrans CODIR et Séminaire n'apparaissent qu'aux rôles CODIR. L'admin est dans le menu utilisateur.
-type Item = { href: string; label: string; icon: typeof Briefcase };
+type Item = { href: string; label: string };
 type Group = { caption: string; items: Item[] };
 
 function groupsFor(role: string, modules: string[]): Group[] {
   const codir = ["director", "raf", "pole_lead"].includes(role);
   // Modules activés par la personne (Mon compte) : Tâches et Notes n'apparaissent que si elle les veut.
   const optional: Item[] = [
-    ...(modules.includes("tasks") ? [{ href: "/taches", label: "Tâches", icon: ListTodo }] : []),
-    ...(modules.includes("notes") ? [{ href: "/notes", label: "Notes", icon: NotebookPen }] : []),
+    ...(modules.includes("tasks") ? [{ href: "/taches", label: "Tâches" }] : []),
+    ...(modules.includes("notes") ? [{ href: "/notes", label: "Notes" }] : []),
   ];
   const work: Item[] = codir
     ? [
-        { href: "/portefeuille", label: "Portefeuille", icon: Briefcase },
-        { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        { href: "/portefeuille", label: "Portefeuille" },
+        { href: "/ma-semaine", label: "Ma semaine" },
         ...optional,
-        { href: "/temps", label: "Temps", icon: Clock },
-        { href: "/demandes", label: "Demandes", icon: Inbox },
-        { href: "/validations", label: "Validations", icon: CheckSquare },
+        { href: "/temps", label: "Temps" },
+        { href: "/demandes", label: "Demandes" },
+        { href: "/validations", label: "Validations" },
       ]
     : [
-        { href: "/ma-semaine", label: "Ma semaine", icon: CalendarDays },
+        { href: "/ma-semaine", label: "Ma semaine" },
         ...optional,
-        { href: "/temps", label: "Temps", icon: Clock },
-        { href: "/portefeuille", label: "Mes projets", icon: Briefcase },
-        { href: "/demandes", label: "Demandes", icon: Inbox },
-        { href: "/validations", label: "Validations", icon: CheckSquare },
+        { href: "/temps", label: "Temps" },
+        { href: "/portefeuille", label: "Mes projets" },
+        { href: "/demandes", label: "Demandes" },
+        { href: "/validations", label: "Validations" },
       ];
   const collective: Item[] = [
-    { href: "/cafe", label: "Écran café", icon: Coffee },
-    { href: "/annuel", label: "Vue annuelle", icon: LayoutGrid },
-    { href: "/plan-de-charge", label: "Plan de charge", icon: BarChart3 },
-    { href: "/projets", label: "Projets et financements", icon: FileSignature },
-    { href: "/rappels", label: "Rappels", icon: Bell },
+    { href: "/cafe", label: "Écran café" },
+    { href: "/annuel", label: "Vue annuelle" },
+    { href: "/plan-de-charge", label: "Plan de charge" },
+    { href: "/projets", label: "Projets et financements" },
+    { href: "/rappels", label: "Rappels" },
   ];
   const direction: Item[] = codir ? [
-    { href: "/codir", label: "Écran CODIR", icon: Gavel },
-    { href: "/seminaire", label: "Séminaire", icon: Presentation },
+    { href: "/codir", label: "Écran CODIR" },
+    { href: "/seminaire", label: "Séminaire" },
   ] : [];
   return [
     { caption: codir ? "Espace de travail" : "Mon travail", items: work },
@@ -74,6 +74,7 @@ export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role,
             <nav className="grid gap-[3px]" aria-label={g.caption}>
               {g.items.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs")));
+                const Icon = iconFor(item.href)!;
                 const badge = item.href === "/validations" ? pendingCount : item.href === "/rappels" ? remindersCount : item.href === "/demandes" ? requestsCount : 0;
                 return (
                   <Link
@@ -86,7 +87,7 @@ export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role,
                       active && "bg-sidebar-accent font-bold text-sidebar-accent-foreground",
                     )}
                   >
-                    <item.icon className="size-4 shrink-0" />
+                    <Icon className="size-4 shrink-0" />
                     <span className="hidden flex-1 lg:inline">{item.label}</span>
                     {badge > 0 && <span className="hidden rounded-sm bg-warning-soft px-1.5 text-[10px] font-semibold text-warning-foreground lg:inline" title="À traiter par moi" aria-label={`${badge} à traiter par moi`}>{badge}</span>}
                   </Link>

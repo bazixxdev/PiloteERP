@@ -1,3 +1,4 @@
+import { SectionIcon } from "@/components/shell/section-icon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -51,6 +52,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
         <div className="min-w-0">
           <Link href="/conventions" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Toutes les conventions</Link>
           <div className="flex flex-wrap items-center gap-2">
+            <SectionIcon />
             <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{c.funder.name} · {c.reference}</h1>
             <StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} />
             {a.over && <StatusBadge label={`Affectations au-delà du notifié · ${fmtEuro(-a.remaining!)}`} color="danger" dot={false} />}

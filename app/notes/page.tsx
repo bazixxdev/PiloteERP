@@ -116,7 +116,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
         )}
         <div className="min-w-0">
           {current || isNew ? (
-            <NoteEditor key={current?.id ?? "new"} note={current} editions={editions} people={peopleOpts} defaultEditionId={edition} focus={inFocus} />
+            <NoteEditor note={current} editions={editions} people={peopleOpts} defaultEditionId={edition} focus={inFocus} />
           ) : (
             <EmptyState title="Choisissez une note, ou créez-en une" hint="Une note, c'est du texte : ce qui s'est dit, ce qui a été décidé. Rattachez-la à un projet pour la retrouver depuis sa fiche." icon="✎" />
           )}

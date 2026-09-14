@@ -1,3 +1,4 @@
+import { SectionIcon } from "@/components/shell/section-icon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -45,6 +46,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
         <div className="min-w-0">
           <Link href="/financeurs" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Tous les financeurs</Link>
           <div className="flex flex-wrap items-center gap-2">
+            <SectionIcon />
             {rw ? <AutoField model="funder" id={f.id} field="name" type="text" value={f.name} inputClassName="text-[25px] font-bold leading-tight tracking-[-0.7px]" className="min-w-[280px]" label="Nom du financeur" /> : <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{f.name}</h1>}
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">{f.contacts.length} contact{f.contacts.length > 1 ? "s" : ""} · {active.length} convention{active.length > 1 ? "s" : ""} active{active.length > 1 ? "s" : ""} · {f.lines.length} ligne{f.lines.length > 1 ? "s" : ""} de financement{rw ? "" : " · lecture seule : tenu par la RAF"}</p>

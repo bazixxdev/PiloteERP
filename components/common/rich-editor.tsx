@@ -22,6 +22,11 @@ export function RichEditor({ value, onChange, onBlur, readOnly, placeholder, cla
     onBlur: ({ editor }) => onBlur?.(editor.getHTML()),
   });
   useEffect(() => { editor?.setEditable(!readOnly); }, [editor, readOnly]);
+  // Contenu changé de l'extérieur (autre note affichée) : on remplace, sans toucher à ce que l'utilisateur est en train de taper.
+  useEffect(() => {
+    if (!editor || editor.isFocused) return;
+    if (value !== editor.getHTML()) editor.commands.setContent(value, { emitUpdate: false });
+  }, [editor, value]);
 
   return (
     <div className={cn("flex flex-1 flex-col", className)}>

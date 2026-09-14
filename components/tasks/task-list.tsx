@@ -27,7 +27,7 @@ export type TaskView = {
 // Liste des tâches personnelles : ajout en une ligne, échéance (pour quand) et créneaux (quand je m'y mets), lien vers l'édition.
 export type ListOpt = { id: string; name: string };
 
-export function TaskList({ tasks, editions = [], editionId, actionId, compact, listId, lists = [], readOnly, emptyText }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; compact?: boolean; listId?: string | null; lists?: ListOpt[]; readOnly?: boolean; emptyText?: string }) {
+export function TaskList({ tasks, editions = [], editionId, actionId, compact, listId, lists = [], readOnly, emptyText, autoFocus }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; compact?: boolean; listId?: string | null; lists?: ListOpt[]; readOnly?: boolean; emptyText?: string; autoFocus?: boolean }) {
   const [label, setLabel] = useState("");
   const [linked, setLinked] = useState<string | null>(editionId ?? null);
   const [cursor, setCursor] = useState(0);
@@ -64,7 +64,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
             ref={inputRef} value={label} onChange={(e) => { setLabel(e.target.value); setCursor(0); }}
             onKeyDown={(e) => { if (!at || suggestions.length === 0) return; if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => (c + 1) % suggestions.length); } else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => (c - 1 + suggestions.length) % suggestions.length); } else if (e.key === "Escape") { setLabel(label.replace(/@[^@]*$/, "")); } }}
             placeholder={editions.length ? "Ajouter une tâche… @ pour rattacher une édition, puis Entrée" : "Ajouter une tâche… puis Entrée"} aria-label="Nouvelle tâche" aria-autocomplete="list" aria-expanded={Boolean(at && suggestions.length)}
-            className="h-8 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" data-testid="task-input" disabled={pending}
+            className="h-8 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" data-testid="task-input" disabled={pending} autoFocus={autoFocus}
           />
           {linkedEdition && !editionId && (
             <span className="inline-flex max-w-[200px] items-center gap-1 rounded-full bg-secondary px-2 py-px text-[10px] text-primary" data-testid="task-linked">

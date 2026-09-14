@@ -9,7 +9,8 @@ import { ListHeader, NewListDialog } from "./list-card";
 import { visibilityIcon } from "@/components/common/visibility-icon";
 
 // Espace Tâches (retour du 14/09) : mes listes, avec ou sans projet, visibilité au choix ; les listes que d'autres partagent avec moi, en lecture.
-export default async function TachesPage() {
+export default async function TachesPage({ searchParams }: { searchParams: Promise<{ ajouter?: string }> }) {
+  const { ajouter } = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!hasModule(me, "tasks")) {
     return (
@@ -36,7 +37,7 @@ export default async function TachesPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="overflow-hidden rounded-md border bg-card" data-testid="list-unlisted">
           <div className="flex items-center justify-between border-b px-4 py-3"><h4 className="text-[13px] font-bold">Sans liste</h4><span className="text-[11px] text-muted-foreground">{unlisted.filter((t) => !t.done).length ? `${unlisted.filter((t) => !t.done).length} en cours` : "rien en cours"} · privées</span></div>
-          <TaskList tasks={unlisted} editions={editions} lists={listOpts} emptyText="Aucune tâche hors liste. Ajoutez-en une ici, ou créez une liste." />
+          <TaskList tasks={unlisted} editions={editions} lists={listOpts} autoFocus={ajouter === "1"} emptyText="Aucune tâche hors liste. Ajoutez-en une ici, ou créez une liste." />
         </div>
         {lists.map((l) => {
           const mine = tasks.filter((t) => t.listId === l.id);

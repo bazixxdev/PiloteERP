@@ -1,3 +1,4 @@
+import { SectionIcon } from "@/components/shell/section-icon";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shell/person-switcher";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -65,7 +66,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   return (
     <div className="p-4 md:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          <SectionIcon className="mt-[3px] hidden size-9 shrink-0 place-items-center rounded-md bg-info-soft text-primary sm:grid print:hidden" />
+          <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{e.project.name}</h1>
             <EditionPicker currentId={e.id} editions={e.project.editions.map((x) => ({ id: x.id, year: x.year, statusLabel: refLabel(refs, "edition_status", x.status) }))} />
@@ -78,6 +81,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">Projet commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
