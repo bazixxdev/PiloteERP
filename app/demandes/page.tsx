@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { canDecideValidation } from "@/lib/rights";
 import { refLabel } from "@/lib/refs";
-import { ageDays, isForMe, kindLabel, loadRequests, statusOf } from "@/lib/requests";
+import { ageDays, canSeeValidation, isForMe, kindLabel, loadRequests, statusOf, wideViewLabel } from "@/lib/requests";
 import { loadEditionOpts } from "@/lib/tasks";
 import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,8 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const { vue } = await searchParams;
   const [me, people, refs, settings] = await Promise.all([getCurrentPerson(), getPeople(), getRefs(), getSettings()]);
   const [requests, validations, poles, editions] = await Promise.all([
-    loadRequests(),
-    prisma.validationRequest.findMany({ include: { requester: true, decider: true, edition: { include: { project: { include: { secondaryPoles: true } } } } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] }),
+    loadRequests(me),
+    prisma.validationRequest.findMany({ include: { requester: true, decider: true, edition: { include: { project: { include: { secondaryPoles: true } } } } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] }).then((vs) => vs.filter((v) => canSeeValidation(me, v))),
     prisma.pole.findMany({ orderBy: { name: "asc" } }),
     loadEditionOpts(me, settings),
   ]);
@@ -44,7 +44,8 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const forMe = lines.filter((l) => l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : canDecideValidation(me, validations.find((v) => v.id === l.id)!)));
   const mine = lines.filter((l) => (l.family === "request" ? requests.find((r) => r.id === l.id)!.requesterId === me.id : validations.find((v) => v.id === l.id)!.requesterId === me.id));
   const all = lines;
-  const view = vue === "mes" ? "mes" : vue === "toutes" ? "toutes" : "moi";
+  const wide = wideViewLabel(me.role);
+  const view = vue === "mes" ? "mes" : vue === "toutes" && wide ? "toutes" : "moi";
   const shown = view === "mes" ? mine : view === "toutes" ? all : forMe;
   const openShown = shown.filter((l) => l.open).sort((a, b) => (a.due?.getTime() ?? 9e15) - (b.due?.getTime() ?? 9e15));
   const closedShown = shown.filter((l) => !l.open).slice(0, 15);
@@ -71,11 +72,11 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
     <div className="p-4 md:p-6">
       <PageHeader title="Demandes" subtitle={`${forMe.length} à traiter par moi · ${mine.filter((l) => l.open).length} de mes demandes en cours. Un seul endroit pour ce qu'on demande à quelqu'un : site, chiffres, logistique, travail à faire — et les validations.`} actions={<NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />} />
       <div className="mb-3 flex flex-wrap gap-1">
-        {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ["toutes", `Toutes (${all.filter((l) => l.open).length})`]].map(([k, label]) => (
+        {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
         ))}
       </div>
-      <Section title={view === "moi" ? "À traiter par moi" : view === "mes" ? "Mes demandes" : "Toutes les demandes en cours"} description="Demandes internes et validations dans le même tableau, les plus urgentes en premier." className="mb-4" testId="requests-open">
+      <Section title={view === "moi" ? "À traiter par moi" : view === "mes" ? "Mes demandes" : `En cours · ${wide}`} description={view === "toutes" ? "Ce que vous pouvez suivre au-delà de vos propres demandes : vos projets, votre pôle, ou toute la CRESS selon votre rôle." : "Demandes internes et validations dans le même tableau, les plus urgentes en premier."} className="mb-4" testId="requests-open">
         {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{view === "moi" ? "Rien à traiter. Les demandes qui vous sont adressées, ou adressées à votre pôle, arriveront ici." : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
       </Section>
       {closedShown.length > 0 && (

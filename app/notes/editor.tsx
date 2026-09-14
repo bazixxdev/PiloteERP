@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2, Lock, Users, Eye, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { RichEditor } from "@/components/common/rich-editor";
 import { addNote, deleteNote, updateNote } from "@/app/actions/notes";
 import { NOTE_CONTEXTS, type NoteView } from "@/lib/notes";
 import type { EditionOpt } from "@/components/tasks/task-list";
@@ -18,7 +19,7 @@ const VIS = [
   { value: "all", label: "Toute la CRESS", icon: Users },
 ];
 
-// Éditeur de note : juste du texte, enregistré à la volée. En lecture pour une note partagée par un collègue.
+// Éditeur de note : texte mis en forme (Tiptap), enregistré à la volée. En lecture pour une note partagée par un collègue.
 export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: NoteView | null; editions: EditionOpt[]; defaultEditionId?: string; focus?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -30,22 +31,31 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
   const [visibility, setVisibility] = useState(note?.visibility ?? "private");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const idRef = useRef<string | null>(note?.id ?? null);
+  const lastSaved = useRef(note?.body ?? "");
   const readOnly = Boolean(note && !note.mine);
   useEffect(() => { idRef.current = note?.id ?? null; }, [note?.id]);
 
   // Première sauvegarde = création ; les suivantes = mise à jour. Rien ne se perd si on quitte : chaque champ enregistre en le quittant.
+  // Si une création est en cours (titre quitté, puis contenu quitté juste après), on l'attend au lieu de créer une deuxième note.
+  const creating = useRef<Promise<string | null> | null>(null);
   const save = (patch: Parameters<typeof updateNote>[1]) => {
     if (readOnly) return;
     start(async () => {
+      if (!idRef.current && creating.current) await creating.current;
       if (idRef.current) {
         const r = await updateNote(idRef.current, patch);
         if (!r.ok) { toast.error(r.error); return; }
       } else {
-        if (!(patch.title ?? title).trim() && !(patch.body ?? body).trim()) return;
-        const r = await addNote({ title, body, date, context, editionId: editionId || null, visibility, ...patch });
-        if (!r.ok) { toast.error(r.error); return; }
-        idRef.current = r.data!.id;
-        router.replace(`/notes?note=${r.data!.id}${focus ? "&focus=1" : ""}`);
+        if (!(patch.title ?? title).trim() && !(patch.body ?? body).replace(/<[^>]+>/g, "").trim()) return;
+        creating.current = addNote({ title, body, date, context, editionId: editionId || null, visibility, ...patch }).then((r) => {
+          if (!r.ok) { toast.error(r.error); return null; }
+          idRef.current = r.data!.id;
+          return r.data!.id;
+        });
+        const id = await creating.current;
+        creating.current = null;
+        if (!id) return;
+        router.replace(`/notes?note=${id}${focus ? "&focus=1" : ""}`);
       }
       setSavedAt(dayjs().format("HH:mm"));
       router.refresh();
@@ -79,7 +89,7 @@ export function NoteEditor({ note, editions, defaultEditionId, focus }: { note: 
         </span>
       </div>
       <input value={title} readOnly={readOnly} onChange={(e) => setTitle(e.target.value)} onBlur={() => save({ title })} placeholder="Titre de la note" aria-label="Titre" className={cn("border-0 bg-transparent px-5 pt-4 pb-1 font-bold outline-none placeholder:text-muted-foreground/60", focus ? "text-2xl" : "text-lg")} data-testid="note-title" />
-      <textarea value={body} readOnly={readOnly} onChange={(e) => setBody(e.target.value)} onBlur={() => save({ body })} placeholder="Ce qui s'est dit, ce qui a été décidé, ce qu'il reste à faire…" aria-label="Contenu de la note" className={cn("min-h-[420px] flex-1 resize-none border-0 bg-transparent px-5 pb-5 text-sm leading-relaxed outline-none", focus && "min-h-[70vh] text-[15px]")} data-testid="note-body" />
+      <RichEditor value={body} readOnly={readOnly} onChange={setBody} onBlur={(html) => { if (html !== lastSaved.current) { lastSaved.current = html; save({ body: html }); } }} placeholder="Ce qui s'est dit, ce qui a été décidé, ce qu'il reste à faire…" className={cn(focus && "[&_.prose-note]:min-h-[70vh] [&_.prose-note]:text-[15px]")} testId="note-body" />
       {!readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Enregistrement automatique en quittant un champ. {pending ? "Enregistrement…" : ""}</div>}
       {readOnly && <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">Note partagée par {note!.author.name} : en lecture.</div>}
     </div>

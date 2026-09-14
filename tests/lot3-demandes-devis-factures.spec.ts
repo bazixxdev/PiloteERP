@@ -87,3 +87,39 @@ test("un devis approuvé produit un bon pour accord ; la facture est reçue, le 
   await page.getByRole("tab", { name: /Documents/ }).click();
   await expect(page.getByTestId("documents-rule")).toContainText("Trois familles");
 });
+
+test("chacun ne voit que les demandes qui le concernent : son pôle pour un responsable, ses projets pour un pilote, tout pour la direction", async ({ page }) => {
+  await page.goto("/demandes");
+  await iAm(page, "Inès Cabral"); // pilote, pôle Observatoire
+  await page.getByTestId("new-request").click();
+  await page.getByTestId("request-kind-assistant").click();
+  await page.getByTestId("request-title").fill("Commander les badges du jury");
+  const to = page.getByTestId("request-to");
+  await to.selectOption((await to.locator("option", { hasText: "Léa Morin" }).getAttribute("value"))!);
+  await page.getByTestId("request-submit").click();
+  await expect(page.getByText("Demande envoyée")).toBeVisible();
+  // Un pilote d'un autre pôle : pas d'onglet « Toute la CRESS », et la demande n'apparaît nulle part.
+  await iAm(page, "Hugo Lemaire");
+  await page.goto("/demandes?vue=toutes");
+  await expect(page.getByTestId("requests-view-toutes")).toContainText("Mes projets");
+  await expect(page.getByTestId("requests-open")).not.toContainText("Commander les badges du jury");
+  // L'assistante destinataire n'a que « À traiter par moi » et « Mes demandes ».
+  await iAm(page, "Léa Morin");
+  await page.goto("/demandes");
+  await expect(page.getByTestId("requests-view-toutes")).toHaveCount(0);
+  await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
+  // Le responsable du pôle d'Inès la voit dans « Mon pôle ».
+  await iAm(page, "Julien Barbot");
+  await page.goto("/demandes?vue=toutes");
+  await expect(page.getByTestId("requests-view-toutes")).toContainText("Mon pôle");
+  await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
+  // Le responsable de l'autre pôle, non.
+  await iAm(page, "Sophie Delaunay");
+  await page.goto("/demandes?vue=toutes");
+  await expect(page.getByTestId("requests-open")).not.toContainText("Commander les badges du jury");
+  // La direction voit tout.
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/demandes?vue=toutes");
+  await expect(page.getByTestId("requests-view-toutes")).toContainText("Toute la CRESS");
+  await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
+});

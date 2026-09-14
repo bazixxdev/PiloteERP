@@ -106,6 +106,13 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 
 **Périmètre financier** — l'outil ne traite pas la finance ; il fournit les données du bilan financier. Il ne trace que le temps et les devis.
 
+### I. Retours de Gaël sur la démo en ligne (14/09, nuit) — traités le 14/09
+
+- **Demandes : « tout le monde ne doit pas voir les demandes de tout le monde »** — Traité le 14/09. `loadRequests(me)` filtre par périmètre (`canSeeRequest`, `canSeeValidation` dans `lib/requests.ts`) : je vois ce qui me concerne (demandeur, destinataire, mon pôle destinataire), les demandes rattachées à une édition que je pilote ; un responsable de pôle voit son pôle (demandeur, destinataire, projet) ; direction et RAF voient tout. Le troisième onglet s'appelle « Toute la CRESS » (direction, RAF), « Mon pôle » (responsable), « Mes projets » (pilote) et disparaît pour les contributeurs et l'assistante. Le badge de la barre latérale et les notifications étaient déjà personnels.
+- **Notes : la colonne de gauche passait sous l'éditeur** — Traité le 14/09 (`min-w-0` sur la colonne et les cartes, grille `300px / minmax(0, 1fr)`, colonne collante et défilante).
+- **Notes : « après 12 mois on va galérer à s'y retrouver »** — Traité le 14/09 : recherche plein texte (titre + corps, avec extrait), filtres projet / type / auteur, liste **groupée par mois**.
+- **Notes : « tu peux pas proposer du wysiwyg ? »** — Traité le 14/09 : éditeur riche Tiptap (`components/common/rich-editor.tsx`) — titres, gras, italique, listes, **cases à cocher** pour les « à faire », citation, séparateur ; raccourcis Markdown (`# `, `- `, `[] `). Le corps est stocké en HTML ; les notes en texte brut sont converties en paragraphes à l'affichage (`bodyToHtml`). Lecture seule sans barre d'outils pour une note partagée. Corrigé au passage : deux champs quittés à la suite créaient deux notes.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
