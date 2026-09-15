@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
+import { LexiqueDialog } from "@/components/common/lexique-dialog";
 import { Section } from "@/components/common/section";
 import { AutoField } from "@/components/inline/auto-field";
 import { DossiersNav } from "@/components/common/dossiers-nav";
@@ -31,6 +32,7 @@ export default async function ProjetsPage() {
         subtitle={`${projects.length} projets · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions.${rw ? "" : " Lecture seule : la direction et la RAF créent les projets ; vous pouvez en proposer un."}`}
         actions={
           <>
+            <LexiqueDialog />
             <Button asChild variant="outline" size="sm"><Link href="/projets/proposer" data-testid="propose-project"><Lightbulb />Proposer un projet</Link></Button>
             <Button asChild variant="outline" size="sm" title="Toutes les fiches de l'année en un seul Word, par pôle puis mission — à la place du copier-coller"><a href={withBase(`/plan-operationnel/export?annee=${currentYear}`)} data-testid="export-plan-operationnel"><FileDown />Plan opérationnel {currentYear} (Word)</a></Button>
           </>

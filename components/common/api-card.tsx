@@ -28,6 +28,7 @@ export function ApiCard({ apiToken }: { apiToken: string | null }) {
           <ul className="divide-y">
             {row("Temps (toutes saisies)", `/admin/export?table=temps&jeton=${apiToken}`, "api-url-temps")}
             {row("Temps du mois par projet", `/cloture/export?mois=AAAA-MM&par=projet&jeton=${apiToken}`)}
+            {row("Qui finance quoi (année)", `/matrice/export?annee=AAAA&jeton=${apiToken}`, "api-url-matrice")}
             {row("Financements", `/admin/export?table=financements&jeton=${apiToken}`)}
             {row("Éditions (budget)", `/admin/export?table=editions&jeton=${apiToken}`)}
           </ul>

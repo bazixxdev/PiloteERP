@@ -179,6 +179,14 @@ Première brique reprise d'`erp-tlst` (analyse dans `CRESS/point-fusion-erp-tlst
 - **Piège rencontré** : le serveur de dev 3001 lancé avant `prisma generate` lisait `settings.modules` undefined (« Cannot read properties of undefined (reading 'split') ») → relancer le serveur après toute migration.
 - **Reste ouvert** : notifier en cloche les dépôts « on dépose » (J-30 / J-7) ; import d'un flux JSON/CSV (contrat zod prêt à écrire) ; faut-il un appel « reconduit » automatiquement au passage de la date, plutôt qu'un bouton.
 
+### N. Lot C « Qui finance quoi » (15/09, nuit) — fait, `docs/LOTS-TLST.md`
+
+- `lib/matrix.ts` (pur : `buildMatrix`, `cellOf`, `coverageTone`, `matrixToCsv`), page `/matrice` (+ `year-picker.tsx`), route `/matrice/export` (CSV, jeton), onglet dans `DossiersNav` (toujours présent, ce n'est pas un module), bouton « Qui finance quoi » sur `/annuel`, ligne dans l'`ApiCard`. Colonnes : Édition · Enveloppe · Obtenu · Couverture, puis un financeur par colonne (présents sur l'année, par total obtenu décroissant) ; première colonne figée. Zones d'attention sous la matrice.
+- **Lexique** : `lib/lexique.ts` + `components/common/lexique-dialog.tsx` ; ouvert depuis la matrice, le portefeuille et Projets et éditions. Le § 0 de `LOTS-TLST.md` en est la source.
+- **Choix pris en cours de route** : (1) Obtenu et Couverture placés **avant** les financeurs — sinon, avec huit financeurs, les chiffres clés sortaient de l'écran ; (2) la couverture n'est **jamais rouge** au-delà de 100 % : le seed la dépasse presque partout parce que les subventions couvrent aussi les jours vendus, et un tableau rouge aurait raconté une fausse alerte ; (3) une ligne « à déposer » qui porte déjà un montant demandé s'affiche « à déposer 15 500 € », pas en italique (le dossier n'est pas parti).
+- Tests : `tests/matrice.spec.ts` (2) — RAF : montants, couverture TES-02 = 95 %, Vie statutaire sans financement, totaux par financeur, FSE sous-affectée, 2027 en « à déposer », CSV 200 avec en-tête et ligne TES-02, lexique depuis la matrice et le portefeuille ; contributeur : pastilles, pas de €, pas de CSV, export anonyme 401. 43 tests au total.
+- **Reste ouvert** : filtrer les colonnes (un financeur) ou les lignes (un pôle) en plus du périmètre ; vue par mission ; les montants d'une convention partagée apparaissent sur chaque ligne affectée (par construction), sans total « convention » — la page Conventions le donne.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

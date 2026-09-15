@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
+import { Grid3x3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Section } from "@/components/common/section";
 import { AlertChips } from "@/components/common/alert-chips";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -35,7 +37,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et éditions de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} />
+      <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et éditions de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} actions={<Button asChild variant="outline" size="sm"><Link href={`/matrice?annee=${year}`} data-testid="to-matrix"><Grid3x3 />Qui finance quoi</Link></Button>} />
       <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} allValue={isTransversal(me) ? "" : "tous"} />
 
       {sp.pole && (

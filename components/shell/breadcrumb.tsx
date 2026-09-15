@@ -23,6 +23,7 @@ const SECTIONS: [RegExp, string, string][] = [
   [/^\/projets/, "Projets et financements", "Projets et éditions"],
   [/^\/conventions/, "Projets et financements", "Conventions"],
   [/^\/financeurs/, "Projets et financements", "Financeurs"],
+  [/^\/matrice/, "Projets et financements", "Qui finance quoi"],
   [/^\/appels/, "Projets et financements", "Appels à projets"],
   [/^\/admin/, "Réglages", "Admin"],
   [/^\/compte/, "Réglages", "Mon compte"],

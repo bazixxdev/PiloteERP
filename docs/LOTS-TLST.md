@@ -68,7 +68,7 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 - Seed : 6-8 appels réels (FSE, Région, ADEME, Banque des Territoires, Cap'Asso). Tests : statut d'équipe, promotion, refus de doublon, module éteint = onglet absent.
 **Taille** : 1 session (+ ½ pour le lot 0).
 
-## Lot C — « Qui finance quoi » : la matrice éditions × financeurs
+## Lot C — « Qui finance quoi » : la matrice éditions × financeurs — **FAIT le 15/09** (RETOURS-A-CHAUD §N, `tests/matrice.spec.ts`)
 
 **Constat** : les données existent (une édition → n lignes de financement → n financeurs) mais aucune page ne les croise ; on les voit édition par édition (onglet Budget › Recettes) ou financeur par financeur (`/financeurs`). Le portefeuille ne cite le financeur que sur un livrable.
 **Repris de TLST** : `/pilotage` — matrice en lecture pure (fonctions pures testables), couverture par colonne, argent non fléché, éditions orphelines, montants remplacés par des pastilles sans le droit, première colonne figée.

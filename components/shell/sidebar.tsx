@@ -65,7 +65,7 @@ export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role 
             <div className="mb-1.5 hidden px-2 text-[10px] font-semibold text-muted-foreground lg:block">{g.caption}</div>
             <nav className="grid gap-[3px]" aria-label={g.caption}>
               {g.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/demandes" && pathname.startsWith("/validations")) || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs") || pathname.startsWith("/appels")));
+                const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/demandes" && pathname.startsWith("/validations")) || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs") || pathname.startsWith("/matrice") || pathname.startsWith("/appels")));
                 const Icon = iconFor(item.href)!;
                 // Demandes et validations fusionnées (15/09) : un seul badge = ce que j'ai à traiter, des deux côtés.
                 const badge = item.href === "/echeances" ? remindersCount : item.href === "/demandes" ? requestsCount + pendingCount : 0;
