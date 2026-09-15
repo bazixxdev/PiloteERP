@@ -152,6 +152,7 @@ model Convention {
   contactId       String? // contact du dossier ; sinon le contact principal du financeur
   contact         FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
+  payments        Payment[]
   createdAt       DateTime      @default(now())
 
   @@unique([reference])
@@ -369,6 +370,7 @@ model FundingLine {
   deliverables     Deliverable[]
   actions          Action[]
   attachments      Attachment[]
+  payments         Payment[]
 }
 
 model Deliverable {
@@ -380,6 +382,28 @@ model Deliverable {
   done          Boolean     @default(false)
   doneAt        DateTime?
   attachments   Attachment[]
+}
+
+// Versement (lot A) : l'argent attendu puis reçu. Sur une ligne de financement dans le cas courant (un financeur, une édition,
+// une année) ; sur une convention quand l'accord est pluriannuel ou multi-projets et se verse par tranches. Le statut
+// attendu / reçu se lit de `receivedAt` (jamais stocké) ; « reçu » est posé par la RAF ou la direction, jamais automatiquement.
+model Payment {
+  id            String       @id @default(cuid())
+  fundingLineId String?
+  fundingLine   FundingLine? @relation(fields: [fundingLineId], references: [id], onDelete: Cascade)
+  conventionId  String?
+  convention    Convention?  @relation(fields: [conventionId], references: [id], onDelete: Cascade)
+  label         String // acompte, solde, avance, tranche 2027…
+  amount        Float
+  expectedAt    DateTime
+  receivedAt    DateTime?
+  reference     String? // référence du virement, numéro de mandat
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  @@index([fundingLineId])
+  @@index([conventionId])
+  @@index([expectedAt])
 }
 
 model TimeEntry {

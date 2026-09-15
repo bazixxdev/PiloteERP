@@ -21,29 +21,32 @@ function sentAt(r: Reminder, lastSync: Date | null): Date {
 }
 
 function titleOf(r: Reminder): string {
-  const what = r.kind === "deliverable" ? "Livrable" : "Jalon";
+  const what = r.kind === "deliverable" ? "Livrable" : r.kind === "payment" ? "Versement" : "Jalon";
   return r.stage === "retard" ? `${what} en retard : ${r.label}` : `${what} à J-${r.stage} : ${r.label}`;
 }
 
+const KIND_LABEL: Record<Reminder["kind"], string> = { deliverable: "livrable financeur", milestone: "jalon interne", payment: "versement attendu" };
+
 // Renvoie aussi les rappels calculés, pour que le layout ne refasse pas la requête.
 export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder[]; created: number }> {
-  const [settings, editions, raf] = await Promise.all([
+  const [settings, editions, raf, director] = await Promise.all([
     prisma.settings.findUniqueOrThrow({ where: { id: 1 } }),
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
-      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true },
+      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true },
     }),
-    prisma.person.findFirst({ where: { role: "raf" } }),
+    prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
+    prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);
-  const reminders = computeReminders(editions, raf ? { id: raf.id, name: raf.name } : null, settings.reminderDaysBefore.split(",").map(Number), settings.horizonDays);
+  const reminders = computeReminders(editions, raf ? { id: raf.id, name: raf.name } : null, settings.reminderDaysBefore.split(",").map(Number), settings.horizonDays, director ? { id: director.id, name: director.name } : null);
   const year = new Map(editions.map((e) => [e.id, e.year]));
   const wanted = reminders.flatMap((r) => r.whoIds.map((personId) => ({
     personId,
     kind: DEADLINE_KIND,
     dedupeKey: deadlineKey(r),
     title: titleOf(r),
-    body: `${r.project} · ${year.get(r.editionId)} — ${r.kind === "deliverable" ? "livrable financeur" : "jalon interne"} au ${fmtDate(r.dueDate)}.`,
-    link: `/edition/${r.editionId}?onglet=${r.kind === "deliverable" ? "budget" : "actions"}`,
+    body: `${r.project} · ${year.get(r.editionId)} — ${KIND_LABEL[r.kind]} au ${fmtDate(r.dueDate)}.`,
+    link: `/edition/${r.editionId}?onglet=${r.kind === "milestone" ? "actions" : "budget"}`,
     createdAt: sentAt(r, settings.deadlineSyncAt),
   })));
   // L'horodatage du passage n'est réécrit qu'une fois par minute : le layout appelle cette passe à chaque requête, et SQLite

@@ -16,19 +16,20 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
   const { perimetre } = await searchParams;
   const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
   const perimeter = perimeterFrom(me, perimetre);
-  const [editions, raf] = await Promise.all([
-    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true } }),
-    prisma.person.findFirst({ where: { role: "raf" } }),
+  const [editions, raf, director] = await Promise.all([
+    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, actions: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true } }),
+    prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
+    prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);
   const days = settings.reminderDaysBefore.split(",").map(Number);
   const scoped = perimeter === "pole" ? editions.filter((e) => inMyScope(me, e.project, e.team.map((t) => t.personId))) : editions;
   const tierOf = new Map(scoped.map((e) => [e.id, relevanceTier(me, e.project, e.team.map((t) => t.personId), e.actions.map((a) => a.ownerId ?? ""))]));
-  const reminders = computeReminders(scoped, raf ? { id: raf.id, name: raf.name } : null, days, settings.horizonDays)
+  const reminders = computeReminders(scoped, raf ? { id: raf.id, name: raf.name } : null, days, settings.horizonDays, director ? { id: director.id, name: director.name } : null)
     .map((r) => ({ ...r, tier: tierOf.get(r.editionId) ?? 3 }))
     .sort((a, b) => (isTransversal(me) ? 0 : a.tier - b.tier) || a.daysLeft - b.daysLeft);
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Échéances" subtitle={`Livrables financeurs et jalons internes à ${settings.horizonDays} jours. Le pilote (et la RAF pour les livrables) est prévenu à J-${days.join(", J-")} puis en cas de retard — dans la cloche ici, par mail en V1.`} />
+      <PageHeader title="Échéances" subtitle={`Livrables financeurs, jalons internes et versements attendus à ${settings.horizonDays} jours. Le pilote (et la RAF pour les livrables) est prévenu à J-${days.join(", J-")} puis en cas de retard ; la RAF et la direction quand un versement attendu est dépassé — dans la cloche ici, par mail en V1.`} />
       {!isTransversal(me) && <div className="mb-3"><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/echeances?perimetre=${p}`} /></div>}
       {reminders.length === 0 ? <EmptyState title="Aucune échéance" hint="Rien n'arrive à échéance dans l'horizon." icon={<CalendarClock className="size-5" />} /> : (
         <div className="overflow-hidden rounded-2xl border bg-card">
@@ -43,9 +44,9 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
                     <div>{fmtDate(r.dueDate)}</div>
                     <div className={cn("text-xs", r.daysLeft < 0 ? "text-danger" : "text-muted-foreground")}>{r.daysLeft < 0 ? `${-r.daysLeft} j de retard` : `J-${r.daysLeft}`}</div>
                   </td>
-                  <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : "Jalon interne"}</span></td>
+                  <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : r.kind === "payment" ? "bg-warning-soft text-warning-foreground" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : r.kind === "payment" ? "Versement attendu" : "Jalon interne"}</span></td>
                   <td className="px-3 py-2">{r.label}</td>
-                  <td className="px-3 py-2"><Link href={`/edition/${r.editionId}?onglet=${r.kind === "deliverable" ? "financements" : "actions"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
+                  <td className="px-3 py-2"><Link href={`/edition/${r.editionId}?onglet=${r.kind === "milestone" ? "actions" : "budget"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.who.join(", ")}<span className="ml-1 text-xs">· {r.stage === "retard" ? "retard" : `J-${r.stage}`}</span></td>
                 </tr>
               ))}

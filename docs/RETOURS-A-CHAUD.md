@@ -158,6 +158,18 @@ Question de Gaël : on a une section « Rappels » et des notifications, mais pa
 - Deux migrations : `20260915150000_notification_dedupe_key`, `20260915151000_settings_deadline_sync`. Test étendu dans `scenario-collectif` (cloche → centre → filtre échéances → tout lu). Leçon : le layout ne doit pas écrire en base à chaque requête (SQLite + requêtes RSC parallèles = actions serveur qui échouent) — l'horodatage n'est réécrit qu'une fois par minute.
 - Reste à trancher avec la CRESS : « Échéances » ouvre sur « Toute la CRESS » ou sur « Mon pôle » par défaut ; faut-il aussi notifier le garant.
 
+### L. Lot A « Versements » (15/09, soir) — fait, `docs/LOTS-TLST.md`
+
+Première brique reprise d'`erp-tlst` (analyse dans `CRESS/point-fusion-erp-tlst-pilote.md`, plan de lots dans `docs/LOTS-TLST.md`). Corrections de Gaël intégrées avant de coder : la direction a les mêmes droits que la RAF sur les versements ; une convention est l'exception (pluriannuel / multi-projets), la ligne de financement le cas courant — tout se lit par ligne d'abord.
+
+- **Modèle** `Payment` (ligne **ou** convention ; libellé, montant, date attendue, date reçue, référence, note). `lib/payments.ts` : statut calculé, reçu / attendu / reste à percevoir / non planifié / en retard.
+- **Écrans** : `/conventions/[id]` (carte « Versé », bloc « Versements » avec ajout et case « reçu », tranches de la convention **plus** versements propres des lignes rattachées, avec leur projet) ; `/conventions` (colonne « Versé · reste », total versé et retards dans le sous-titre) ; édition › Budget › Recettes (colonne « Versé », versements dans le panneau « Gérer » de la ligne, section « Versements » de l'édition en lecture avec case reçu, note « versé par tranches sur convention ») ; `/financeurs` (« versé 2026 : … » ou « n versements en retard »).
+- **Alertes** : `computeAlerts` → `payment_late` (bande d'état, onglet Budget) ; `computeReminders` → rappel de type `payment` au palier « retard » seulement, destinataires RAF + direction ; radar `/echeances` (badge « Versement attendu ») ; passerelle de notifications (titre « Versement en retard : … »).
+- **Seed** : tranches FSE (avance 2026 reçue, acompte 2027, solde 2028) et CPO Région (2025 et 2026 reçues, 2027 attendue) ; lignes 2026 conventionnées : acompte 50 % reçu en avril, solde attendu le 15/12 ; lignes notifiées non signées : avance attendue au 30/10 ; 2025 : soldes reçus ; Cotisations : rien. **Un seul retard** : solde ADEME de « Cycle de conférences transition » (TES-02), attendu il y a 18 jours.
+- **Tests** : `tests/versements.spec.ts` (3) — convention FSE (liste, page, ajout, réception, reste, pas de suppression d'un reçu) ; édition TES-02 (colonne, section, retard) → radar (prévenus RAF et direction) → cloche des deux ; contributeur en lecture seule. 39 tests au total.
+- **Leçons** : une case « reçu » contrôlée par la prop serveur ne bascule qu'au `router.refresh()` → Playwright `check()` échoue ; case optimiste avec retour arrière si le serveur refuse. Les libellés modifiables en place sont des `input` : les tests lisent `input[value=…]`, pas du texte. Une ligne à cinq éléments en `flex` sans `flex-wrap` écrase le libellé dans une colonne étroite.
+- **Reste ouvert** : faut-il un palier J-7 avant un versement attendu (relance préventive du financeur) ; la suite du lot D pourra proposer « reçu » depuis les 7x de la compta.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

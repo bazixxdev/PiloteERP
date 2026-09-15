@@ -8,6 +8,7 @@ import { getCurrentPerson, getRefs } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
+import { paymentSummary } from "@/lib/payments";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CreateConventionDialog } from "./create-form";
@@ -21,7 +22,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const [me, refs, funders, all] = await Promise.all([
     getCurrentPerson(), getRefs(), prisma.funder.findMany({ orderBy: { name: "asc" } }),
-    prisma.convention.findMany({ include: { funder: true, lines: { include: { edition: { include: { project: true } }, deliverables: { where: { done: false }, orderBy: { dueDate: "asc" } } } } }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] }),
+    prisma.convention.findMany({ include: { funder: true, payments: true, lines: { include: { edition: { include: { project: true } }, deliverables: { where: { done: false }, orderBy: { dueDate: "asc" } }, payments: true } } }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] }),
   ]);
   const rw = canEditFunding(me.role);
   const isMulti = (c: (typeof all)[number]) => c.endYear > c.startYear || c.lines.length > 1;
@@ -34,6 +35,9 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
   const totalNotified = all.reduce((s, c) => s + (c.amountNotified ?? 0), 0);
   const totalGranted = all.reduce((s, c) => s + allocationOf(c).granted, 0);
   const overCount = all.filter((c) => allocationOf(c).over).length;
+  const payOf = (c: (typeof all)[number]) => paymentSummary(c.amountNotified, [...c.payments, ...c.lines.flatMap((l) => l.payments)]);
+  const totalReceived = all.reduce((s, c) => s + payOf(c).received, 0);
+  const lateCount = all.reduce((s, c) => s + payOf(c).late.length, 0);
   const year = new Date().getFullYear();
 
   return (
@@ -41,7 +45,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
       <DossiersNav current="conventions" />
       <PageHeader
         title="Conventions"
-        subtitle={`${all.length} convention${all.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions${overCount ? ` · ${overCount} en dépassement` : ""}. Une convention existe une fois, même sur plusieurs années et plusieurs projets ; la somme des affectations ne dépasse pas le notifié.`}
+        subtitle={`${all.length} convention${all.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}. Une convention existe une fois, même sur plusieurs années et plusieurs projets ; la somme des affectations ne dépasse pas le notifié.`}
         actions={rw ? <CreateConventionDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined}
       />
 
@@ -63,6 +67,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                 <th className="px-3 py-2.5">Statut</th>
                 <th className="px-3 py-2.5 text-right">Notifié</th>
                 <th className="px-3 py-2.5">Affecté · reste</th>
+                <th className="px-3 py-2.5">Versé · reste</th>
                 <th className="px-3 py-2.5">Éditions couvertes</th>
                 <th className="px-3 py-2.5">Prochaine obligation</th>
               </tr>
@@ -74,6 +79,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                 const nextDays = next ? daysFromNow(next.d.dueDate) : null;
                 const active = c.startYear <= year && year <= c.endYear;
                 const pct = a.ceiling ? Math.round((a.granted / a.ceiling) * 100) : null;
+                const pay = payOf(c);
                 return (
                   <tr key={c.id} className={cn("border-t border-[#e3e9eb] align-top hover:bg-[#f8f9f3]", !active && "text-muted-foreground")} data-testid={`convention-${c.reference}`}>
                     <td className={cn("min-w-[160px] px-3 py-3", a.over ? "border-l-[3px] border-l-danger" : nextDays !== null && nextDays < 0 ? "border-l-[3px] border-l-warning" : "border-l-[3px] border-l-transparent")}>
@@ -87,6 +93,10 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                       <span className={cn(a.over && "font-semibold text-danger")} data-testid={`allocated-${c.reference}`}>{fmtEuro(a.granted)}{pct !== null && <span className="text-muted-foreground"> · {pct} %</span>}</span>
                       <small className={cn("mt-1 block text-[10px]", a.remaining !== null && a.remaining < 0 ? "font-semibold text-danger" : "text-mint")}>{a.remaining === null ? "notifié inconnu" : a.remaining < 0 ? `dépassement ${fmtEuro(-a.remaining)}` : `reste ${fmtEuro(a.remaining)}`}</small>
                       {a.ceiling ? <div className="mt-1 h-[4px] w-24 overflow-hidden rounded-[2px] bg-[#e8e9e1]"><i className={cn("block h-full", a.over ? "bg-danger" : "bg-mint")} style={{ width: `${Math.min(100, pct ?? 0)}%` }} /></div> : null}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap tabular" data-testid={`received-${c.reference}`}>
+                      <span className={cn(pay.late.length > 0 && "font-semibold text-danger")}>{fmtEuro(pay.received)}{pay.pct !== null && <span className="text-muted-foreground"> · {pay.pct} %</span>}</span>
+                      <small className={cn("mt-1 block text-[10px]", pay.late.length > 0 ? "font-semibold text-danger" : "text-muted-foreground")}>{pay.late.length > 0 ? `${pay.late.length} en retard` : pay.remaining === null ? "notifié inconnu" : pay.remaining > 0 ? `reste ${fmtEuro(pay.remaining)}` : "tout perçu"}</small>
                     </td>
                     <td className="min-w-[170px] max-w-[210px] px-3 py-3">
                       {c.lines.length === 0 ? <span className="text-xs text-muted-foreground">aucune — à rattacher depuis l'onglet Financements d'une édition</span> : (

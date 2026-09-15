@@ -15,13 +15,15 @@ import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AttachEditionForm, DetachButton } from "./allocations";
 import { ContactLine } from "@/components/funders/contacts";
+import { PaymentsList } from "@/components/funding/payments-list";
+import { paymentSummary } from "@/lib/payments";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, refs, c] = await Promise.all([
     getCurrentPerson(), getRefs(),
-    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } } }, orderBy: { edition: { year: "asc" } } } } }),
+    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
   const rw = canEditFunding(me.role);
@@ -30,6 +32,10 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
   const a = allocationOf(c);
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
   const pct = a.ceiling ? Math.round((a.granted / a.ceiling) * 100) : null;
+  // Versements : les tranches de la convention, plus ceux posés directement sur une ligne rattachée (propres à une édition).
+  const linePayments = c.lines.flatMap((l) => l.payments.map((p) => ({ ...p, source: { label: `${l.edition.project.name} · ${l.edition.year}`, href: `/edition/${l.editionId}?onglet=budget#recettes` } })));
+  const allPayments = [...c.payments, ...linePayments];
+  const pay = paymentSummary(c.amountNotified, allPayments);
   const obligations = c.lines.flatMap((l) => l.deliverables.filter((d) => !d.done).map((d) => ({ d, l }))).sort((x, y) => x.d.dueDate.getTime() - y.d.dueDate.getTime());
   const fid = (f: string) => `convention-${c.id}-${f}`;
   const card = (label: string, value: string, hint?: string, cls?: string, testId?: string) => (
@@ -63,11 +69,12 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
         <Button asChild variant="outline"><Link href="/conventions">Retour à la liste</Link></Button>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-5">
         {card("Demandé", c.amountRequested === null ? "—" : fmtEuro(c.amountRequested), "au dépôt du dossier")}
         {card("Notifié", c.amountNotified === null ? "—" : fmtEuro(c.amountNotified), "plafond des affectations", undefined, `notified-value-${c.reference}`)}
         {card("Affecté aux éditions", fmtEuro(a.granted), pct !== null ? `${pct} % du notifié · montants obtenus des lignes` : "somme des montants obtenus", a.over ? "border-danger bg-danger-soft/50" : undefined, `allocated-${c.reference}`)}
         {card("Reste à affecter", a.remaining === null ? "—" : fmtEuro(a.remaining), a.remaining === null ? "renseignez le notifié" : a.remaining < 0 ? "dépassement : réduisez une affectation ou corrigez le notifié" : "disponible pour une édition à venir", a.remaining !== null && a.remaining < 0 ? "border-danger bg-danger-soft/50" : undefined)}
+        {card("Versé", fmtEuro(pay.received), pay.remaining === null ? "renseignez le notifié" : pay.late.length > 0 ? `${pay.late.length} versement${pay.late.length > 1 ? "s" : ""} en retard` : pay.remaining > 0 ? `reste à percevoir ${fmtEuro(pay.remaining)}` : "tout est perçu", pay.late.length > 0 ? "border-danger bg-danger-soft/50" : undefined, `received-${c.reference}`)}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -103,6 +110,10 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                 </table>
               </div>
             )}
+          </Section>
+
+          <Section title="Versements" description="Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par la RAF ou la direction. Un versement propre à une édition se saisit sur sa ligne et apparaît ici avec son projet." testId="convention-payments">
+            <PaymentsList payments={allPayments} reference={c.amountNotified} rw={rw} target={{ conventionId: c.id }} showSource testId="convention-payments-list" />
           </Section>
 
           <Section title="Informations" description={rw ? "Sauvegarde automatique à chaque champ." : "Renseignées par la RAF."}>

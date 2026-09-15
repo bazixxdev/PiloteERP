@@ -53,6 +53,7 @@ function storePdf(title: string): { storedName: string; size: number } {
 }
 
 async function reset() {
+  await prisma.payment.deleteMany();
   await prisma.fieldRemark.deleteMany();
   await prisma.plannedLoad.deleteMany();
   await prisma.workSlot.deleteMany();
@@ -140,6 +141,15 @@ async function main() {
   // Conventions partagées : FSE 2026-2028 (DLA + sensibilisation) ; CPO Région 2025-2027 pour les projets Région pluriannuels.
   const fseConv = await prisma.convention.create({ data: { funderId: funders[2].id, reference: "FSE-2026-2028", scheme: "FSE+ 2021-2027 — axe inclusion", label: "Convention FSE+ inclusion 2026-2028", startYear: 2026, endYear: 2028, status: "contracted", amountRequested: 180000, amountNotified: 165000, submittedAt: dayjs("2025-10-15").toDate(), notifiedAt: dayjs("2026-02-20").toDate(), signedAt: dayjs("2026-03-28").toDate(), notes: "Trois ans, deux projets ; clés de répartition dans l'onglet FSE de l'Excel RAF." } });
   const cpoConv = await prisma.convention.create({ data: { funderId: funders[0].id, reference: "CPO-REGION-2025-2027", scheme: "Convention pluriannuelle d'objectifs", label: "CPO Région 2025-2027", startYear: 2025, endYear: 2027, status: "contracted", amountRequested: 240000, amountNotified: 225000, submittedAt: dayjs("2024-10-01").toDate(), notifiedAt: dayjs("2025-01-15").toDate(), signedAt: dayjs("2025-02-10").toDate() } });
+  // Tranches des conventions partagées (lot A) : versées par l'accord, pas par édition.
+  await prisma.payment.createMany({ data: [
+    { conventionId: fseConv.id, label: "Avance 2026 (30 %)", amount: 49500, expectedAt: dayjs("2026-04-30").toDate(), receivedAt: dayjs("2026-05-06").toDate(), reference: "FSE-AV-2026" },
+    { conventionId: fseConv.id, label: "Acompte 2027 sur bilan intermédiaire", amount: 49500, expectedAt: dayjs("2027-03-31").toDate(), receivedAt: null },
+    { conventionId: fseConv.id, label: "Solde 2028 sur bilan final", amount: 66000, expectedAt: dayjs("2028-09-30").toDate(), receivedAt: null },
+    { conventionId: cpoConv.id, label: "Tranche 2025", amount: 75000, expectedAt: dayjs("2025-03-31").toDate(), receivedAt: dayjs("2025-04-02").toDate(), reference: "CPO-25" },
+    { conventionId: cpoConv.id, label: "Tranche 2026", amount: 75000, expectedAt: dayjs("2026-03-31").toDate(), receivedAt: dayjs("2026-04-14").toDate(), reference: "CPO-26" },
+    { conventionId: cpoConv.id, label: "Tranche 2027", amount: 75000, expectedAt: dayjs("2027-03-31").toDate(), receivedAt: null },
+  ] });
 
   const missions = await Promise.all(
     [
@@ -555,6 +565,24 @@ async function main() {
           },
         });
         fundingIds.push(line.id);
+
+        // Versements (lot A) : les tranches d'une convention partagée (FSE, CPO Région) se lisent sur la convention, pas sur
+        // la ligne. Passé : tout est reçu. 2026 : acompte reçu au printemps, solde attendu en fin d'année ; « Cotisations »
+        // (fonds propres) ne se verse pas. Un seul versement en retard dans toute la CRESS : le solde ADEME de TES-02.
+        const granted = line.amountGranted ?? 0;
+        if (!line.conventionId && f.name !== "Cotisations" && granted > 0) {
+          if (isPast) {
+            await prisma.payment.create({ data: { fundingLineId: line.id, label: "Solde", amount: granted, expectedAt: dayjs("2026-02-28").toDate(), receivedAt: dayjs("2026-03-04").toDate(), reference: `VIR-${pd.code}-25` } });
+          } else if (y.year === 2026 && status === "contracted") {
+            const acompte = Math.round(granted * 0.5);
+            await prisma.payment.create({ data: { fundingLineId: line.id, label: "Acompte 50 %", amount: acompte, expectedAt: dayjs(`2026-04-${10 + fi}`).toDate(), receivedAt: dayjs(`2026-04-${20 + fi}`).toDate(), reference: `VIR-${pd.code}-${f.name.slice(0, 3).toUpperCase()}-1` } });
+            const lateOne = pd.code === "TES-02" && fi === 0;
+            await prisma.payment.create({ data: { fundingLineId: line.id, label: lateOne ? "Solde après justificatifs" : "Solde", amount: granted - acompte, expectedAt: lateOne ? today.subtract(18, "day").toDate() : dayjs("2026-12-15").toDate(), receivedAt: null, note: lateOne ? "Justificatifs envoyés le 12/08 ; relance faite par téléphone." : null } });
+          } else if (y.year === 2026 && status === "notified") {
+            // Notifié mais pas encore signé : une avance attendue à la signature.
+            await prisma.payment.create({ data: { fundingLineId: line.id, label: "Avance à la signature", amount: Math.round(granted * 0.3), expectedAt: dayjs("2026-10-30").toDate(), receivedAt: null } });
+          }
+        }
         if (y.year === 2026 && ["contracted", "justified"].includes(status)) {
           const pdf = storePdf(`Convention ${f.name} ${y.year} - ${pd.name}`);
           await prisma.attachment.create({ data: { editionId: edition.id, fundingLineId: line.id, kind: "contract", label: `Convention ${f.name} ${y.year}`, fileName: `${pd.code}-${f.name}-convention-${y.year}.pdf`, mimeType: "application/pdf", uploadedById: raf.id, createdAt: dayjs(`${y.year}-03-${12 + fi}`).toDate(), ...pdf } });

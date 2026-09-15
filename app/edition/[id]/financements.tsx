@@ -16,6 +16,9 @@ import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
 import { ContactLine } from "@/components/funders/contacts";
 import { DeliverablesList } from "./deliverables-list";
+import { PaymentsList } from "@/components/funding/payments-list";
+import { EditionPayments } from "./edition-payments";
+import { paymentSummary } from "@/lib/payments";
 
 // Recettes (revue du 15/09) : un tableau compact des lignes de financement — ce que lit le pilote — et, par ligne, un panneau
 // de gestion — ce que tient la RAF (dates, codes, convention, contact du dossier, notes, pièces, livrables).
@@ -27,6 +30,8 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
   const totalRequested = e.fundingLines.reduce((s, f) => s + (f.amountRequested ?? 0), 0);
   const totalGranted = e.fundingLines.reduce((s, f) => s + (f.amountGranted ?? 0), 0);
+  // Versé : reçu sur les lignes de l'édition (les tranches d'une convention partagée se lisent sur la convention).
+  const totalReceived = e.fundingLines.reduce((s, f) => s + paymentSummary(f.amountGranted, f.payments).received, 0);
   // Dossiers encore ouverts (à déposer, déposé) : dits dans le sous-titre, pour ne pas les chercher ligne par ligne.
   const pendingLines = e.fundingLines.filter((f) => ["to_submit", "submitted"].includes(f.status));
 
@@ -34,7 +39,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
     <div className="grid gap-4">
       <Section
         title="Lignes de financement"
-        description={<span><b className="text-foreground">{fmtEuro(totalGranted)} obtenus</b> / {fmtEuro(totalRequested)} demandés · {e.fundingLines.length} financeur{e.fundingLines.length > 1 ? "s" : ""}{pendingLines.length > 0 && <> · {pendingLines.map((f) => `${f.funder.name} : ${refLabel(refs, "funding_status", f.status).toLowerCase()}`).join(", ")}</>}{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}{rw && " · tenues par la RAF"}</span>}
+        description={<span><b className="text-foreground">{fmtEuro(totalGranted)} obtenus</b> / {fmtEuro(totalRequested)} demandés · <span data-testid="funding-received-total">{fmtEuro(totalReceived)} versés</span> · {e.fundingLines.length} financeur{e.fundingLines.length > 1 ? "s" : ""}{pendingLines.length > 0 && <> · {pendingLines.map((f) => `${f.funder.name} : ${refLabel(refs, "funding_status", f.status).toLowerCase()}`).join(", ")}</>}{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}{rw && " · tenues par la RAF"}</span>}
         actions={rw ? <AddFundingMenu editionId={e.id} funders={funders} conventions={covering.filter((c) => !c.lines.some((l) => l.editionId === e.id)).map((c) => ({ id: c.id, label: `${funders.find((f) => f.id === c.funderId)?.name ?? ""} · ${c.reference} (${c.startYear}-${c.endYear})` }))} /> : undefined}
         testId="funding-lines"
       >
@@ -50,6 +55,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                   <th className="py-1.5 pr-2">Statut</th>
                   <th className="py-1.5 pr-2 text-right">Demandé</th>
                   <th className="py-1.5 pr-2 text-right">Obtenu</th>
+                  <th className="py-1.5 pr-2 text-right">Versé</th>
                   <th className="py-1.5 pr-2">Prochain livrable</th>
                   <th className="py-1.5 pr-2">Contact</th>
                   <th className="py-1.5" />
@@ -67,6 +73,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                       <td className="py-2 pr-2"><StatusBadge label={refLabel(refs, "funding_status", f.status)} color={refColor(refs, "funding_status", f.status)} /></td>
                       <td className="py-2 pr-2 text-right tabular">{f.amountRequested != null ? fmtEuro(f.amountRequested) : "—"}</td>
                       <td className="py-2 pr-2 text-right tabular font-medium">{f.amountGranted != null ? fmtEuro(f.amountGranted) : "—"}</td>
+                      <td className="py-2 pr-2 text-right tabular text-xs" data-testid={`funding-received-${i}`}>{(() => { const ps = paymentSummary(f.amountGranted, f.payments); if (f.payments.length === 0) return f.convention && f.convention.payments.length > 0 ? <span className="text-muted-foreground" title="Versé par tranches sur la convention">sur convention</span> : <span className="text-muted-foreground">—</span>; return <><span className={cn(ps.remaining === 0 ? "text-mint" : "text-foreground")}>{fmtEuro(ps.received)}</span>{ps.late.length > 0 && <div className="text-[11px] font-semibold text-danger">{ps.late.length} en retard</div>}{ps.remaining !== null && ps.remaining > 0 && ps.late.length === 0 && <div className="text-[11px] text-muted-foreground">reste {fmtEuro(ps.remaining)}</div>}</>; })()}</td>
                       <td className="py-2 pr-2 text-xs">{next ? <><span className="text-foreground">{next.label}</span><div className={cn("text-[11px]", n! < 0 ? "font-semibold text-danger" : n! <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>{fmtDate(next.dueDate)} · {n! < 0 ? `${-n!} j de retard` : n === 0 ? "aujourd'hui" : `J-${n}`}</div></> : <span className="text-muted-foreground">aucun en attente</span>}</td>
                       <td className="py-2 pr-2 text-xs" data-testid={`funding-contact-${i}`}><ContactLine c={contact} label={f.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${f.funderId}`} className="text-primary hover:underline">fiche {f.funder.name}</Link></td>
                       <td className="py-2 text-right">
@@ -105,6 +112,13 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                             </div>
                             <div className="mt-2"><AutoField model="fundingLine" id={f.id} field="notes" type="textarea" rows={1} value={f.notes} readOnly={!rw} placeholder="Notes, justificatifs à conserver, lieu de stockage…" /></div>
                           </details>
+                          <div className="rounded-lg border p-2" data-testid={`funding-payments-${i}`}>
+                            <div className="mb-1 text-[10px] font-semibold text-muted-foreground">Versements (attendus, reçus) · posés par la RAF ou la direction</div>
+                            {f.convention && f.payments.length === 0 && f.convention.payments.length > 0
+                              ? <p className="text-xs text-muted-foreground">Cette ligne est versée par tranches sur la convention <Link href={`/conventions/${f.convention.id}`} className="text-primary hover:underline">{f.convention.reference}</Link> ({fmtEuro(paymentSummary(f.convention.amountNotified, f.convention.payments).received)} reçus sur {fmtEuro(f.convention.amountNotified)}). Ajoutez un versement ici seulement s'il est propre à cette édition.</p>
+                              : null}
+                            <PaymentsList payments={f.payments} reference={f.amountGranted} rw={rw} target={{ fundingLineId: f.id }} compact testId={`payments-line-${i}`} />
+                          </div>
                           <div className="rounded-lg bg-muted/50 p-2">
                             <div className="mb-1 flex items-center justify-between">
                               <span className="text-[10px] font-semibold text-muted-foreground">Pièces (convention, notification, bilan remis)</span>
@@ -127,6 +141,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
         )}
       </Section>
       <DeliverablesList e={e} settings={settings} canTick={rw || isPilot} canEdit={rw} />
+      <EditionPayments e={e} rw={rw} />
     </div>
   );
 }

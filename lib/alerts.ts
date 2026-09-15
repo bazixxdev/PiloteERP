@@ -1,7 +1,7 @@
 import { daysFromNow, dayjs, fmtEuro } from "./format";
 import { budgetOf, type ExpenseLike } from "./budget";
 
-export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "envelope" | "time_over" | "validation_pending";
+export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending";
 
 export type Alert = { kind: AlertKind; level: "warning" | "danger"; label: string; when?: Date };
 
@@ -10,7 +10,7 @@ type EditionForAlerts = {
   spent: number;
   expenses: ExpenseLike[];
   actions: { name: string; milestoneDate: Date | null; state: string; timeTarget: number | null; timeEntries?: { hours: number }[] }[];
-  fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[] }[];
+  fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[]; payments?: { label: string; amount: number; expectedAt: Date; receivedAt: Date | null }[] }[];
   validations: { status: string }[];
 };
 
@@ -35,6 +35,12 @@ export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[
       const n = daysFromNow(d.dueDate);
       if (n < 0) alerts.push({ kind: "deliverable_overdue", level: "danger", label: `Livrable en retard : ${d.label} (${f.funder.name})`, when: d.dueDate });
       else if (n <= s.deliverableAlertDays) alerts.push({ kind: "deliverable_soon", level: "warning", label: `Livrable dans ${n} j : ${d.label} (${f.funder.name})`, when: d.dueDate });
+    }
+    // Versement attendu dépassé (lot A) : une alerte d'argent, pas d'échéance de travail — la RAF et la direction la lisent.
+    for (const p of f.payments ?? []) {
+      if (p.receivedAt) continue;
+      const n = daysFromNow(p.expectedAt);
+      if (n < 0) alerts.push({ kind: "payment_late", level: "warning", label: `Versement en retard : ${p.label} ${fmtEuro(p.amount)} (${f.funder.name})`, when: p.expectedAt });
     }
   }
 
@@ -76,7 +82,7 @@ export function nextMilestone(e: EditionForAlerts): { name: string; date: Date }
 // Rappels J-30 / J-7 (EF-C2), calculés à la volée. `stage` = le palier franchi (le plus proche de l'échéance, ou "retard") :
 // c'est lui qui déclenche une notification (`lib/deadline-notifications.ts`), une seule par palier et par destinataire.
 export type ReminderStage = number | "retard";
-export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone"; who: string[]; whoIds: string[] };
+export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone" | "payment"; who: string[]; whoIds: string[] };
 
 function stageOf(daysLeft: number, reminderDays: number[]): ReminderStage | null {
   if (daysLeft < 0) return "retard";
@@ -89,11 +95,22 @@ export function computeReminders(
   raf: { id: string; name: string } | null,
   reminderDays: number[],
   horizonDays: number,
+  // Direction : prévenue avec la RAF d'un versement en retard (lot A). Facultatif pour ne pas changer les appels existants.
+  director: { id: string; name: string } | null = null,
 ): Reminder[] {
   const out: Reminder[] = [];
+  const money = [raf, director].filter((p): p is { id: string; name: string } => !!p);
   for (const e of editions) {
     const who = [e.project.pilot.name, ...(raf ? [raf.name] : [])];
     const whoIds = [e.project.pilot.id, ...(raf ? [raf.id] : [])];
+    // Versements : pas de J-30 / J-7 (on n'a rien à faire avant la date), seulement le retard, à la RAF et à la direction.
+    for (const f of e.fundingLines) {
+      for (const p of f.payments ?? []) {
+        if (p.receivedAt) continue;
+        const n = daysFromNow(p.expectedAt);
+        if (n < 0 && money.length > 0) out.push({ editionId: e.id, project: e.project.name, label: `${p.label} · ${fmtEuro(p.amount)} (${f.funder.name})`, dueDate: p.expectedAt, daysLeft: n, stage: "retard", kind: "payment", who: money.map((m) => m.name), whoIds: money.map((m) => m.id) });
+      }
+    }
     for (const f of e.fundingLines) {
       for (const d of f.deliverables) {
         if (d.done) continue;
