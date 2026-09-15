@@ -17,7 +17,7 @@ export function FilSheet({ editionId, comments, defaultOpen = false }: { edition
       <SheetTrigger asChild>
         <Button variant="outline" data-testid="fil-open" title="Fil de l'édition : messages à l'équipe projet"><MessageCircle />Fil{comments.length > 0 && <span className="rounded-sm bg-info-soft px-1 text-[10px] font-semibold text-primary">{comments.length}</span>}</Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-md">
+      <SheetContent side="right" className="flex w-full flex-col gap-0 data-[side=right]:sm:max-w-md">
         <SheetHeader className="border-b">
           <SheetTitle>Fil de l'édition</SheetTitle>
           <SheetDescription>Messages à l'équipe projet, en lien ou à la place du canal Teams.</SheetDescription>

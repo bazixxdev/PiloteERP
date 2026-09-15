@@ -4,13 +4,13 @@ import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { canEditActions, canWriteLayer } from "@/lib/rights";
-import { dayjs } from "@/lib/format";
+import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
-import { ActionExtrasToggle } from "./action-extras";
+import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
@@ -52,14 +52,30 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                       <td className="min-w-[220px] py-1 pr-2">
                         <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" label={`Nom de l'action ${i + 1}`} />
                         {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
-                        {/* Le détail de l'action (contenu, lieu, participants, ligne de financement, public) s'ouvre au clic ; « Dupliquer » y vit aussi (revue du 15/09). */}
-                        <ActionExtrasToggle actionId={a.id} index={i} filled={[a.description, a.venue, a.participants].filter(Boolean).length} canDuplicate={rw} hints={[a.fundingLine ? a.fundingLine.funder.name : null, a.isPublic ? "public" : null].filter(Boolean) as string[]}>
-                          <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`action-description-${i}`} label={`Contenu, ${a.name}`} /></div>
-                          <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
-                          <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Participants, invités</span><AutoField model="action" id={a.id} field="participants" type="textarea" rows={2} value={a.participants} readOnly={!rw} placeholder="—" label={`Participants, ${a.name}`} /></div>
-                          <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Ligne de financement</span><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— le projet, sans ligne dédiée —" label={`Ligne de financement, ${a.name}`} /></div>
-                          <div className="flex items-end pb-1"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} label={`Événement public, ${a.name}`} placeholder="Événement public (agenda du site)" /></div>
-                        </ActionExtrasToggle>
+                        {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
+                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[a.fundingLine ? a.fundingLine.funder.name : null, a.isPublic ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`action-description-${i}`} label={`Contenu, ${a.name}`} /></div>
+                            <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
+                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Participants, invités</span><AutoField model="action" id={a.id} field="participants" type="textarea" rows={2} value={a.participants} readOnly={!rw} placeholder="—" label={`Participants, ${a.name}`} /></div>
+                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Ligne de financement</span><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— le projet, sans ligne dédiée —" label={`Ligne de financement, ${a.name}`} /></div>
+                            <div className="flex items-end pb-1"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} label={`Événement public, ${a.name}`} placeholder="Événement public (agenda du site)" /></div>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground">Tâches en cours sur cette action</div>
+                              {a.tasks.length === 0 ? <p className="text-xs text-muted-foreground">Aucune.</p> : <ul className="mt-1 divide-y text-xs">{a.tasks.map((t) => <li key={t.id} className="flex items-center justify-between gap-2 py-1"><span className="truncate">{t.label}</span><span className="shrink-0 text-muted-foreground">{t.person.name}{t.dueDate ? ` · ${dayjs(t.dueDate).format("D MMM")}` : ""}</span></li>)}</ul>}
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground">Temps saisi par personne</div>
+                              {byPerson(a.timeEntries).length === 0 ? <p className="text-xs text-muted-foreground">Aucune heure saisie.</p> : <ul className="mt-1 divide-y text-xs">{byPerson(a.timeEntries).map(([pid, h]) => <li key={pid} className="flex items-center justify-between gap-2 py-1"><span>{people.find((p) => p.id === pid)?.name ?? "—"}</span><b className="tabular">{fmtNumber(h, 1)} h</b></li>)}</ul>}
+                            </div>
+                            <div className="sm:col-span-2">
+                              <div className="text-[10px] font-semibold text-muted-foreground">Réalisations consignées</div>
+                              {e.achievements.filter((x) => x.actionId === a.id).length === 0 ? <p className="text-xs text-muted-foreground">Aucune : consignez-les sous le tableau, en liant l'action.</p> : <ul className="mt-1 divide-y text-xs">{e.achievements.filter((x) => x.actionId === a.id).map((x) => <li key={x.id} className="py-1"><span className="text-muted-foreground">{dayjs(x.date).format("D MMM")} · </span>{x.value != null ? <b className="tabular">{x.value}{x.unit ? ` ${x.unit}` : ""} · </b> : null}{x.label}</li>)}</ul>}
+                            </div>
+                          </div>
+                        </ActionPanel>
                       </td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} label={`Jalon, ${a.name}`} placeholder="—" /></td>
@@ -117,6 +133,13 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
 }
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+
+// Heures d'une action par personne, décroissantes.
+function byPerson(entries: { hours: number; personId: string }[]): [string, number][] {
+  const m = new Map<string, number>();
+  for (const t of entries) m.set(t.personId, (m.get(t.personId) ?? 0) + t.hours);
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
 
 function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"]["actions"]; refs: TabCtx["refs"] }) {
   const start = dayjs(`${year}-01-01`);

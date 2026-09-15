@@ -91,7 +91,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                     <td className="min-w-[170px] max-w-[210px] px-3 py-3">
                       {c.lines.length === 0 ? <span className="text-xs text-muted-foreground">aucune — à rattacher depuis l'onglet Financements d'une édition</span> : (
                         <div className="flex flex-wrap gap-1">
-                          {c.lines.slice(0, 3).map((l) => <Link key={l.id} href={`/edition/${l.editionId}?onglet=financements`} className="max-w-full truncate rounded-full bg-secondary px-2 py-0.5 text-[10px] text-primary hover:underline" title={`${l.edition.project.name} · ${l.edition.year} · ${fmtEuro(l.amountGranted)} obtenus`}>{l.edition.project.name} · {l.edition.year}</Link>)}
+                          {c.lines.slice(0, 3).map((l) => <Link key={l.id} href={`/edition/${l.editionId}?onglet=budget#recettes`} className="max-w-full truncate rounded-full bg-secondary px-2 py-0.5 text-[10px] text-primary hover:underline" title={`${l.edition.project.name} · ${l.edition.year} · ${fmtEuro(l.amountGranted)} obtenus`}>{l.edition.project.name} · {l.edition.year}</Link>)}
                           {c.lines.length > 3 && <Link href={`/conventions/${c.id}`} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground hover:underline" title={c.lines.slice(3).map((l) => `${l.edition.project.name} · ${l.edition.year}`).join("\n")}>+{c.lines.length - 3} autres</Link>}
                         </div>
                       )}

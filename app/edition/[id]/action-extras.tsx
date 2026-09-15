@@ -1,43 +1,34 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { duplicateAction } from "@/app/actions/edition";
-import { cn } from "@/lib/utils";
+import { RowPanel } from "@/components/common/row-panel";
 
-// Sous une action : sa petite fiche (contenu, lieu, participants) et « Dupliquer » pour les occurrences (petits-déjeuners, forums SPRO).
-export function ActionExtrasToggle({ actionId, filled, index, canDuplicate, hints = [], children }: { actionId: string; filled: number; index: number; canDuplicate: boolean; hints?: string[]; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+// Le détail d'une action s'ouvre en panneau (revue du 15/09) : contenu, lieu, participants, ligne de financement, public,
+// tâches liées, réalisations, temps par personne ; « Dupliquer » y vit aussi (occurrences : petits-déjeuners, forums SPRO).
+export function ActionPanel({ actionId, name, index, hints = [], canDuplicate, children }: { actionId: string; name: string; index: number; hints?: string[]; canDuplicate: boolean; children: React.ReactNode }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
-    <>
-      <div className="flex items-center gap-1">
-        <button type="button" onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-0.5 rounded-sm px-1 text-[10px] text-muted-foreground hover:bg-muted hover:text-primary" aria-expanded={open} data-testid={`action-details-${index}`} title="Contenu, lieu, participants, ligne de financement, public">
-          <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />{open ? "replier" : filled || hints.length ? "détail" : "détail"}{!open && hints.length > 0 && <span className="ml-1 text-muted-foreground/80">· {hints.join(" · ")}</span>}
-        </button>
-      </div>
-      {open && (
-        <div className="mt-1 grid gap-2 rounded-md bg-muted/40 p-2 sm:grid-cols-3" data-testid={`action-extras-${index}`}>
-          {children}
-          {canDuplicate && (
-            <div className="sm:col-span-3">
-              <button type="button" disabled={pending} onClick={() => start(async () => { const r = await duplicateAction(actionId); if (!r.ok) toast.error(r.error); else { toast.success("Action dupliquée : renommez-la et posez son jalon"); router.refresh(); } })} className="inline-flex items-center gap-1 rounded-sm px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-primary" data-testid={`action-duplicate-${index}`} title="Dupliquer (même contenu, lieu, participants ; jalon à poser)">
-                <Copy className="size-3" />Dupliquer cette action
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </>
+    <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+      <RowPanel testId={`action-extras-${index}`} openTestId={`action-details-${index}`} title={name} description="Contenu, lieu, participants, ligne de financement, tâches, réalisations et temps de cette action." label="détail" className="px-1 py-0 text-[10px]" hint="Contenu, lieu, participants, ligne de financement, public" wide>
+        {children}
+        {canDuplicate && (
+          <button type="button" disabled={pending} onClick={() => start(async () => { const r = await duplicateAction(actionId); if (!r.ok) toast.error(r.error); else { toast.success("Action dupliquée : renommez-la et posez son jalon"); router.refresh(); } })} className="inline-flex w-fit items-center gap-1 rounded-sm px-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-primary" data-testid={`action-duplicate-${index}`} title="Dupliquer (même contenu, lieu, participants ; jalon à poser)">
+            <Copy className="size-3" />Dupliquer cette action
+          </button>
+        )}
+      </RowPanel>
+      {hints.length > 0 && <span className="truncate text-muted-foreground/80">· {hints.join(" · ")}</span>}
+    </div>
   );
 }
 
 export function DuplicateActionButton({ actionId }: { actionId: string }) {
   const [pending, start] = useTransition();
   const router = useRouter();
-  return <Button size="xs" variant="ghost" disabled={pending} onClick={() => start(async () => { const r = await duplicateAction(actionId); if (!r.ok) toast.error(r.error); else router.refresh(); })}><Copy />Dupliquer</Button>;
+  return <button type="button" disabled={pending} onClick={() => start(async () => { const r = await duplicateAction(actionId); if (!r.ok) toast.error(r.error); else router.refresh(); })} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Copy className="size-3" />Dupliquer</button>;
 }

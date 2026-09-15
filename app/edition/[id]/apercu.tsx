@@ -63,7 +63,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
             </div>
           </dl>
           <div className="mt-4">
-            <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground"><span>Livrables financeurs à remettre</span><Link href={`/edition/${e.id}?onglet=financements`} className="text-primary hover:underline">Financements →</Link></div>
+            <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground"><span>Livrables financeurs à remettre</span><Link href={`/edition/${e.id}?onglet=budget#recettes`} className="text-primary hover:underline">Financeurs →</Link></div>
             <DeliverablesList e={e} settings={settings} canTick={false} canEdit={false} compact />
           </div>
         </Section>

@@ -86,7 +86,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                       const open = l.deliverables.filter((d) => !d.done).length;
                       return (
                         <tr key={l.id}>
-                          <td className="py-2 pr-2"><Link href={`/edition/${l.editionId}?onglet=financements`} className="font-medium text-primary hover:underline">{l.edition.project.name} · {l.edition.year}</Link></td>
+                          <td className="py-2 pr-2"><Link href={`/edition/${l.editionId}?onglet=budget#recettes`} className="font-medium text-primary hover:underline">{l.edition.project.name} · {l.edition.year}</Link></td>
                           <td className="py-2 pr-2 text-xs text-muted-foreground">{l.edition.project.pilot.name}</td>
                           <td className="py-2 pr-2"><StatusBadge label={refLabel(refs, "funding_status", l.status)} color={refColor(refs, "funding_status", l.status)} /></td>
                           <td className="py-2 pr-2 text-right tabular">{fmtEuro(l.amountRequested)}</td>
@@ -131,7 +131,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                 return (
                   <li key={d.id} className="py-2">
                     <div className="font-medium">{d.label}</div>
-                    <div className="text-xs text-muted-foreground"><Link href={`/edition/${l.editionId}?onglet=financements`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> · {fmtDate(d.dueDate)} · <span className={cn(n < 0 ? "font-semibold text-danger" : n <= 30 ? "text-warning-foreground" : "")}>{n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}</span></div>
+                    <div className="text-xs text-muted-foreground"><Link href={`/edition/${l.editionId}?onglet=budget#recettes`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> · {fmtDate(d.dueDate)} · <span className={cn(n < 0 ? "font-semibold text-danger" : n <= 30 ? "text-warning-foreground" : "")}>{n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}</span></div>
                   </li>
                 );
               })}

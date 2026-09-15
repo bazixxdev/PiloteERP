@@ -21,13 +21,15 @@ test("la RAF tient les contacts d'un financeur ; le contact principal apparaît 
 
   // Sur une édition financée par la Région : le contact principal se lit sur la ligne, un contact du dossier peut être choisi.
   await openEditionByName(page, "Vœux et assemblée générale");
-  await page.getByRole("tab", { name: "Financements" }).click();
+  await page.getByRole("tab", { name: "Budget" }).click();
   const regionLine = page.locator('[data-testid^=funding-line-][data-funder="Région"]').first();
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Vidal");
-  await regionLine.locator("summary", { hasText: "Détail de gestion" }).click();
-  const sel = regionLine.getByLabel(/Contact du dossier/); const optVal = await sel.locator("option", { hasText: "Marchand" }).getAttribute("value"); await sel.selectOption(optVal as string);
+  await regionLine.locator("[data-testid$=-open]").click();
+  const panel = page.locator("[data-slot=sheet-content]");
+  const sel = panel.getByLabel(/Contact du dossier/); const optVal = await sel.locator("option", { hasText: "Marchand" }).getAttribute("value"); await sel.selectOption(optVal as string);
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Contact du dossier");
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Marchand");
+  await page.keyboard.press("Escape");
 
   // Un pilote lit les contacts sans pouvoir les modifier.
   await iAm(page, "Maxime Roussel");

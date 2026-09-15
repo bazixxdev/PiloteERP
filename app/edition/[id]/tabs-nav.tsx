@@ -8,9 +8,8 @@ export const TABS = [
   { key: "apercu", label: "Aperçu" },
   { key: "fiche", label: "Fiche" },
   { key: "actions", label: "Actions" },
-  { key: "financements", label: "Financements" },
-  { key: "temps", label: "Temps" },
   { key: "budget", label: "Budget" },
+  { key: "temps", label: "Temps" },
   { key: "documents", label: "Documents" },
 ] as const;
 

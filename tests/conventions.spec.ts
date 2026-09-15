@@ -13,15 +13,19 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
 
   // Plafond : une affectation qui dépasse le notifié est refusée avec l'écart.
   await openEditionByName(page, "Dispositif local d'accompagnement (DLA)");
-  await page.getByRole("tab", { name: "Financements" }).click();
-  const fseLine = page.locator("[data-testid^=funding-line-]").filter({ has: page.locator("option", { hasText: "FSE-2026-2028" }) }).first();
-  await expect(fseLine).toContainText("reste à affecter");
-  const granted = fseLine.locator('input[type="number"]').nth(1);
+  await page.getByRole("tab", { name: "Budget" }).click();
+  // La ligne se lit dans le tableau ; la gestion (montants, convention) se fait dans son panneau (revue du 15/09).
+  const fseLine = page.locator("[data-testid^=funding-line-]", { hasText: "FSE-2026-2028" }).first();
+  await fseLine.locator("[data-testid$=-open]").click();
+  const panel = page.locator("[data-slot=sheet-content]");
+  await expect(panel).toContainText("reste à affecter");
+  const granted = panel.locator('input[type="number"]').nth(1);
   const before = await granted.inputValue();
   await granted.fill("999999");
   await granted.blur();
   await expect(page.getByText(/Les affectations confirmées atteindraient/)).toBeVisible();
   await expect(granted).toHaveValue(before);
+  await page.keyboard.press("Escape");
 
   // Création d'une convention et rattachement d'une édition.
   await page.goto("/conventions");
@@ -44,20 +48,20 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await page.goto("/conventions");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");
   await openEditionByName(page, "Chroniquer la TESS");
-  await page.getByRole("tab", { name: "Financements" }).click();
+  await page.getByRole("tab", { name: "Budget" }).click();
   await page.getByTestId("add-funding-open").click();
   const opt = page.getByTestId("attach-convention-select").locator("option", { hasText: "ADEME-TEST-2026-2027" });
   await page.getByTestId("attach-convention-select").selectOption(await opt.getAttribute("value") as string);
   await page.getByTestId("attach-convention-submit").click();
-  await expect(page.locator("[data-testid^=convention-of-]", { hasText: "notifié 30 000 €" })).toHaveCount(1);
+  await expect(page.locator("[data-testid^=funding-line-]", { hasText: "ADEME-TEST-2026-2027" })).toHaveCount(1);
 
   // Reconduction : la ligne 2027 reste rattachée à la convention qui couvre 2027.
   await page.getByTestId("edition-menu").click();
   await page.getByTestId("renew-open").click();
   await page.getByTestId("renew-confirm").click();
   await expect(page.getByTestId("edition-years").locator('[aria-current="page"]')).toContainText("2027", { timeout: 15_000 });
-  await page.getByRole("tab", { name: "Financements" }).click();
-  await expect(page.locator("[data-testid^=convention-of-]", { hasText: "notifié 30 000 €" })).toHaveCount(1);
+  await page.getByRole("tab", { name: "Budget" }).click();
+  await expect(page.locator("[data-testid^=funding-line-]", { hasText: "ADEME-TEST-2026-2027" })).toHaveCount(1);
   await page.goto("/conventions");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("Chroniquer la TESS · 2027");
 });

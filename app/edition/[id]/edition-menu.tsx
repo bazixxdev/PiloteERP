@@ -34,7 +34,8 @@ export function EditionMenu({ edition, nextYearExists, canStatus, canRemark, fee
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="Autres actions" title="Autres actions" data-testid="edition-menu"><Ellipsis /></Button></DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
+        {/* Pas de retour du focus sur le bouton à la fermeture : les entrées naviguent, et le focus rendu tardivement fermait le premier popover ouvert sur la page suivante. */}
+        <DropdownMenuContent align="end" className="w-72" onCloseAutoFocus={(ev) => ev.preventDefault()}>
           <DropdownMenuItem disabled={nextYearExists} onSelect={() => setRenew(true)} data-testid="renew-open" title={nextYearExists ? `L'édition ${next} existe déjà` : undefined}><CopyPlus />Reconduire en {next}{nextYearExists && <span className="ml-auto text-[10px] text-muted-foreground">existe déjà</span>}</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Exporter</DropdownMenuLabel>

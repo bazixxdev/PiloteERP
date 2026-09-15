@@ -38,10 +38,10 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
 
   // Anciennes adresses : « validations » ouvre l'Aperçu (à décider), « bilan » la fiche (chapitre Bilan).
-  const wanted = onglet === "validations" ? "apercu" : onglet === "bilan" ? "fiche" : onglet;
+  const wanted = onglet === "validations" ? "apercu" : onglet === "bilan" ? "fiche" : onglet === "financements" ? "budget" : onglet;
   // Atterrissage : l'Aperçu une fois la fiche validée (l'année d'exécution) ; la Fiche tant qu'elle se rédige.
   const landing = isLocked(e) ? "apercu" : "fiche";
-  const tab = (["apercu", "fiche", "actions", "financements", "temps", "budget", "documents"].includes(wanted ?? "") ? wanted : landing) as TabKey;
+  const tab = (["apercu", "fiche", "actions", "budget", "temps", "documents"].includes(wanted ?? "") ? wanted : landing) as TabKey;
   const isPilot = e.project.pilotId === me.id;
   const isTeam = e.team.some((t) => t.personId === me.id);
   const alerts = computeAlerts(e, settings);
@@ -125,9 +125,15 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
       {tab === "apercu" && <ApercuTab {...ctx} />}
       {tab === "fiche" && <FicheTab {...ctx} />}
       {tab === "actions" && <ActionsTab {...ctx} />}
-      {tab === "financements" && <FinancementsTab {...ctx} />}
+      {/* Budget = l'argent de l'édition (revue du 15/09) : les dépenses (enveloppe, devis, factures) puis les recettes (financeurs, livrables). */}
+      {tab === "budget" && (
+        <div className="grid gap-4">
+          <nav className="flex gap-3 text-xs" aria-label="Sections du budget"><a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
+          <div id="depenses" className="scroll-mt-20"><BudgetTab {...ctx} /></div>
+          <div id="recettes" className="scroll-mt-20"><FinancementsTab {...ctx} /></div>
+        </div>
+      )}
       {tab === "temps" && <TempsTab {...ctx} />}
-      {tab === "budget" && <BudgetTab {...ctx} />}
       {tab === "documents" && <DocumentsTab {...ctx} />}
     </div>
   );

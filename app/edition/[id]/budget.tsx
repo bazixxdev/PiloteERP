@@ -9,6 +9,7 @@ import { AddExpenseForm } from "./add-forms";
 import { HelpTip } from "@/components/common/help-tip";
 import { ClickToEdit } from "@/components/inline/click-to-edit";
 import { InvoiceCell } from "./invoice-cell";
+import { RowPanel } from "@/components/common/row-panel";
 import Link from "next/link";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
@@ -80,25 +81,35 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
         )}
         {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">Aucune dépense sur cette édition.</p> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="expenses">
+            <table className="w-full min-w-[720px] text-sm" data-testid="expenses">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">Nature</th><th className="py-1.5 pr-2">Facture</th><th className="py-1.5 pr-2">État</th><th className="py-1.5 pr-2">Référence</th><th className="py-1.5">Origine</th></tr>
+                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">Facture</th><th className="py-1.5" /></tr>
               </thead>
               <tbody className="divide-y">
+                {/* Six colonnes lisibles ; nature, référence, origine et état se tiennent dans le panneau de la ligne (revue du 15/09). */}
                 {e.expenses.map((x) => {
                   const rest = x.status === "open" ? Math.max(0, x.committed - x.spent) : 0;
                   return (
-                    <tr key={x.id}>
-                      <td className="min-w-[200px] py-1 pr-2"><AutoField model="expense" id={x.id} field="label" type="text" value={x.label} readOnly={!rw} inputClassName="font-medium" /></td>
-                      <td className="min-w-[140px] py-1 pr-2"><AutoField model="expense" id={x.id} field="supplier" type="text" value={x.supplier} readOnly={!rw} placeholder="—" /></td>
-                      <td className="w-28 py-1 pr-2 text-right tabular">{x.validationId ? fmtEuro(x.committed) : <AutoField model="expense" id={x.id} field="committed" type="number" value={x.committed} readOnly={!rw} suffix="€" refreshOnSave />}</td>
-                      <td className="w-32 py-1 pr-2"><AutoField model="expense" id={x.id} field="spent" type="number" value={x.spent} readOnly={!rw} suffix="€" refreshOnSave testId={`expense-spent-${x.id}`} /></td>
-                      <td className={cn("w-28 py-1 pr-2 text-right tabular", x.spent > x.committed && x.committed > 0 && "text-danger font-medium")} title={x.spent > x.committed && x.committed > 0 ? "Facture supérieure à l'engagement : écart à faire remonter" : undefined}>{fmtEuro(rest)}</td>
-                      <td className="w-32 py-1 pr-2"><AutoField model="expense" id={x.id} field="nature" type="select" value={x.nature} options={natureOpts} readOnly={!rw} placeholder="—" /></td>
-                      <td className="min-w-[210px] py-1 pr-2"><InvoiceCell id={x.id} receivedAt={x.invoiceReceivedAt ? fmtDate(x.invoiceReceivedAt) : null} paidAt={x.paidAt ? fmtDate(x.paidAt) : null} serviceDoneAt={x.serviceDoneAt ? fmtDate(x.serviceDoneAt) : null} serviceDoneBy={x.serviceDoneBy?.name ?? null} canTrack={canTrack} canConfirm={canConfirm} /></td>
-                      <td className="w-28 py-1 pr-2"><AutoField model="expense" id={x.id} field="status" type="select" value={x.status} options={statusOpts} allowEmpty={false} readOnly={!rw} refreshOnSave /></td>
-                      <td className="min-w-[120px] py-1 pr-2"><AutoField model="expense" id={x.id} field="reference" type="text" value={x.reference} readOnly={!rw} placeholder="n° facture, ligne Excel" /></td>
-                      <td className="py-1 text-xs text-muted-foreground">{x.validation ? <>devis validé · {x.validation.requester.name} · {fmtDate(x.validation.decidedAt)} · <Link href={`/validations/${x.validation.id}/bon-pour-accord`} className="text-primary hover:underline">bon pour accord</Link></> : "saisie RAF"}</td>
+                    <tr key={x.id} className="align-top">
+                      <td className="min-w-[180px] py-1.5 pr-2"><div className="font-medium">{x.label}</div><div className="text-[10px] text-muted-foreground">{natureOpts.find((n) => n.value === x.nature)?.label ?? "—"}{x.reference ? ` · ${x.reference}` : ""}{x.status === "closed" ? " · soldée" : ""}</div></td>
+                      <td className="min-w-[120px] py-1.5 pr-2 text-muted-foreground">{x.supplier || "—"}</td>
+                      <td className="w-24 py-1.5 pr-2 text-right tabular">{fmtEuro(x.committed)}</td>
+                      <td className="w-24 py-1.5 pr-2 text-right tabular font-medium">{fmtEuro(x.spent)}</td>
+                      <td className={cn("w-24 py-1.5 pr-2 text-right tabular", x.spent > x.committed && x.committed > 0 && "text-danger font-medium")} title={x.spent > x.committed && x.committed > 0 ? "Facture supérieure à l'engagement : écart à faire remonter" : undefined}>{fmtEuro(rest)}</td>
+                      <td className="min-w-[210px] py-1.5 pr-2"><InvoiceCell id={x.id} receivedAt={x.invoiceReceivedAt ? fmtDate(x.invoiceReceivedAt) : null} paidAt={x.paidAt ? fmtDate(x.paidAt) : null} serviceDoneAt={x.serviceDoneAt ? fmtDate(x.serviceDoneAt) : null} serviceDoneBy={x.serviceDoneBy?.name ?? null} canTrack={canTrack} canConfirm={canConfirm} /></td>
+                      <td className="py-1.5 text-right">
+                        <RowPanel testId={`expense-panel-${x.id}`} label={rw ? "Gérer" : "Détail"} title={x.label} description={x.validation ? <>Devis validé · {x.validation.requester.name} · {fmtDate(x.validation.decidedAt)} · <Link href={`/validations/${x.validation.id}/bon-pour-accord`} className="text-primary hover:underline">bon pour accord</Link></> : "Dépense saisie par la RAF, sans devis."}>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Field label="Objet"><AutoField model="expense" id={x.id} field="label" type="text" value={x.label} readOnly={!rw} inputClassName="font-medium" /></Field>
+                            <Field label="Fournisseur"><AutoField model="expense" id={x.id} field="supplier" type="text" value={x.supplier} readOnly={!rw} placeholder="—" /></Field>
+                            <Field label="Engagé">{x.validationId ? <div className="px-2 py-1 tabular">{fmtEuro(x.committed)} <span className="text-xs text-muted-foreground">(devis validé)</span></div> : <AutoField model="expense" id={x.id} field="committed" type="number" value={x.committed} readOnly={!rw} suffix="€" refreshOnSave />}</Field>
+                            <Field label="Réalisé (factures)"><AutoField model="expense" id={x.id} field="spent" type="number" value={x.spent} readOnly={!rw} suffix="€" refreshOnSave testId={`expense-spent-${x.id}`} /></Field>
+                            <Field label="Nature"><AutoField model="expense" id={x.id} field="nature" type="select" value={x.nature} options={natureOpts} readOnly={!rw} placeholder="—" /></Field>
+                            <Field label="État"><AutoField model="expense" id={x.id} field="status" type="select" value={x.status} options={statusOpts} allowEmpty={false} readOnly={!rw} refreshOnSave /></Field>
+                            <div className="sm:col-span-2"><Field label="Référence (n° de facture, ligne de l'Excel)"><AutoField model="expense" id={x.id} field="reference" type="text" value={x.reference} readOnly={!rw} placeholder="—" /></Field></div>
+                          </div>
+                        </RowPanel>
+                      </td>
                     </tr>
                   );
                 })}
@@ -107,6 +118,15 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
           </div>
         )}
       </Section>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      {children}
     </div>
   );
 }
