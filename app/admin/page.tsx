@@ -16,6 +16,10 @@ import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 import { InstanceModulesForm } from "./instance-modules-form";
 import { modulesOf } from "@/lib/modules";
+import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
+import { loadUnknownCodes } from "@/lib/ledger-db";
+import { pennylaneConfig } from "@/lib/pennylane";
+import { SOURCE_LABEL } from "@/lib/ledger";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
@@ -44,6 +48,27 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
   const refOpt = (fam: RefFamily) => REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) }));
+  // Réalisé comptable (lot D) : journal des imports, snapshots présents, codes à rapprocher, cibles possibles.
+  const ledger = current === "donnees" ? await (async () => {
+    const [imports, snapshots, unknown, tags, editions, actions, projects, lines] = await Promise.all([
+      prisma.ledgerImport.findMany({ orderBy: { importedAt: "desc" }, take: 10 }),
+      prisma.ledgerLine.groupBy({ by: ["source", "year"], _count: { _all: true }, _sum: { debit: true, credit: true }, orderBy: [{ year: "desc" }, { source: "asc" }] }),
+      loadUnknownCodes(),
+      prisma.analyticTag.findMany({ orderBy: { code: "asc" } }),
+      prisma.edition.findMany({ include: { project: { select: { name: true } } }, orderBy: [{ year: "desc" }, { project: { name: "asc" } }] }),
+      prisma.action.findMany({ include: { edition: { include: { project: { select: { name: true } } } } }, orderBy: { name: "asc" } }),
+      prisma.project.findMany({ orderBy: { name: "asc" } }),
+      prisma.fundingLine.findMany({ include: { funder: true, edition: { include: { project: { select: { name: true } } } } } }),
+    ]);
+    const people = new Map((await prisma.person.findMany({ select: { id: true, name: true } })).map((p) => [p.id, p.name]));
+    return { imports, snapshots, unknown, tags, people,
+      editionOpts: editions.map((e) => ({ value: e.id, label: `${e.project.name} · ${e.year}` })),
+      actionOpts: actions.map((a) => ({ value: a.id, label: `${a.edition.project.name} ${a.edition.year} · ${a.name}` })),
+      projectOpts: projects.map((p) => ({ value: p.id, label: `${p.name} (${p.analyticCode})` })),
+      lineOpts: lines.map((l) => ({ value: l.id, label: `${l.edition.project.name} ${l.edition.year} · ${l.funder.name}` })),
+      targetLabel: (kind: string, id: string | null) => kind === "ignore" ? "ignoré (fonctionnement)" : (kind === "edition" ? editions.find((e) => e.id === id) && `${editions.find((e) => e.id === id)!.project.name} · ${editions.find((e) => e.id === id)!.year}` : kind === "action" ? actions.find((a) => a.id === id)?.name : kind === "project" ? projects.find((p) => p.id === id)?.name : lines.find((l) => l.id === id) && `${lines.find((l) => l.id === id)!.edition.project.name} · ${lines.find((l) => l.id === id)!.funder.name}`) ?? "cible introuvable",
+    };
+  })() : null;
 
   return (
     <div className="p-4 md:p-6">
@@ -209,6 +234,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Règles de saisie du temps" description="Affichées à chaque personne dans « Temps », sous « Aide et règles de saisie ».">
             <AutoField model="settings" id="1" field="timeRules" type="textarea" rows={6} value={settings.timeRules} readOnly={!rw} placeholder="Qui saisit, où vont les réunions transverses, quels codes par poste…" />
           </Section>
+          <Section title="Réalisé comptable" description="Quelle source compte dans les alertes d'enveloppe, le portefeuille et le niveau des validations : le réalisé saisi par la RAF sur les dépenses, ou les charges du grand livre importé. L'autre s'affiche en regard dans l'onglet Budget ; jamais les deux additionnés." testId="realized-source">
+            <div className="grid gap-3">
+              <Row label="Source du réalisé"><AutoField model="settings" id="1" field="realizedSource" type="select" value={settings.realizedSource} options={[{ value: "raf", label: "Saisi par la RAF (dépenses)" }, { value: "ledger", label: "Grand livre importé (compta)" }]} readOnly={!rw} allowEmpty={false} testId="realized-source-select" /></Row>
+              <Row label="Axes analytiques Pennylane (préfixes, séparés par des virgules ; vide = tout)"><AutoField model="settings" id="1" field="pennylaneAxes" type="text" value={settings.pennylaneAxes} readOnly={!rw} placeholder="PROJETS, FINANCEMENT" /></Row>
+            </div>
+          </Section>
           <Section title="Modules de l'installation" description="Ce que cette installation utilise. Un module éteint disparaît de la navigation ; ses données restent. Chacun règle aussi ses propres modules dans Mon compte." testId="instance-modules">
             <InstanceModulesForm enabled={[...modulesOf(settings)]} readOnly={!rw} />
           </Section>
@@ -232,6 +263,44 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <ApiCard apiToken={settings.apiToken} />
           </Section>
+          {ledger && (
+            <Section title="Réalisé comptable" description="Le grand livre analytique du logiciel de compta, importé par exercice et rapproché des éditions par le code analytique. Réimporter un exercice remplace ses lignes (aucun doublon). Colonnes attendues : code analytique, compte, débit, crédit ; libellé, date, pièce, tiers facultatifs." testId="ledger-admin" className="lg:col-span-2">
+              {rw ? (
+                <div className="grid gap-4">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <LedgerImportForm defaultYear={new Date().getFullYear()} />
+                    <PennylaneSyncButton configured={!!pennylaneConfig()} year={new Date().getFullYear()} />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Snapshots présents</div>
+                      {ledger.snapshots.length === 0 ? <p className="text-xs text-muted-foreground">Aucun réalisé importé.</p> : (
+                        <ul className="divide-y text-sm" data-testid="ledger-snapshots">
+                          {ledger.snapshots.map((sn) => <li key={`${sn.source}-${sn.year}`} className="flex items-center justify-between py-1"><span>{SOURCE_LABEL[sn.source] ?? sn.source} · {sn.year} <span className="text-xs text-muted-foreground">· {sn._count._all} lignes · {fmtEuroShort(sn._sum.debit ?? 0)} au débit</span></span><ClearLedgerButton source={sn.source} year={sn.year} /></li>)}
+                        </ul>
+                      )}
+                      <div className="mt-3 mb-1 text-[11px] font-semibold text-muted-foreground">Derniers imports</div>
+                      {ledger.imports.length === 0 ? <p className="text-xs text-muted-foreground">—</p> : <ul className="divide-y text-xs text-muted-foreground" data-testid="ledger-imports">{ledger.imports.map((i) => <li key={i.id} className="py-1">{fmtDate(i.importedAt)} · {SOURCE_LABEL[i.source] ?? i.source} {i.year}{i.fileName ? ` · ${i.fileName}` : ""} · {i.rows} écritures → {i.lines} lignes · {ledger.people.get(i.byId ?? "") ?? "—"}</li>)}</ul>}
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Codes à rapprocher <span className="font-normal">· présents dans la compta, inconnus de l&apos;outil</span></div>
+                      {ledger.unknown.length === 0 ? <p className="text-xs text-mint">Tous les codes du réalisé sont reconnus.</p> : (
+                        <ul className="divide-y text-sm" data-testid="ledger-unknown">
+                          {ledger.unknown.map((u) => <li key={`${u.code}-${u.year}`} className="grid gap-1 py-2"><div><code className="rounded bg-muted px-1 font-mono text-xs">{u.code}</code> <span className="text-xs text-muted-foreground">· {u.year} · {fmtEuroShort(u.amount)}{u.sample ? ` · ${u.sample}` : ""}</span></div><TagForm code={u.code} editions={ledger.editionOpts} actions={ledger.actionOpts} projects={ledger.projectOpts} lines={ledger.lineOpts} /></li>)}
+                        </ul>
+                      )}
+                      {ledger.tags.length > 0 && (
+                        <>
+                          <div className="mt-3 mb-1 text-[11px] font-semibold text-muted-foreground">Correspondances posées</div>
+                          <ul className="divide-y text-xs" data-testid="ledger-tags">{ledger.tags.map((t) => <li key={t.code} className="flex items-center justify-between py-1"><span><code className="rounded bg-muted px-1 font-mono">{t.code}</code> → {ledger.targetLabel(t.targetKind, t.targetId)}</span><DeleteTagButton code={t.code} /></li>)}</ul>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : <p className="text-sm text-muted-foreground">Réservé à l'administration.</p>}
+            </Section>
+          )}
           <Section title="Import CSV" description="Création seulement (les doublons sont ignorés). Première ligne = en-têtes.">
             {rw ? <ImportForm /> : <p className="text-sm text-muted-foreground">Réservé à l'administration.</p>}
             <div className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -245,6 +314,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     </div>
   );
 }
+
+const fmtEuroShort = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (

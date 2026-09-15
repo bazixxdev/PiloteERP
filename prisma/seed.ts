@@ -53,6 +53,9 @@ function storePdf(title: string): { storedName: string; size: number } {
 }
 
 async function reset() {
+  await prisma.ledgerLine.deleteMany();
+  await prisma.ledgerImport.deleteMany();
+  await prisma.analyticTag.deleteMany();
   await prisma.call.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.fieldRemark.deleteMany();
@@ -988,6 +991,49 @@ async function main() {
     { funderId: fx("DREETS"), label: "Appel à projets Impact social · expérimentations", scheme: "AAP 2026", deadline: today.add(25, "day").toDate(), amountHint: "40 000 €", teamStatus: "dismissed", statusById: director.id, statusAt: d(-3), note: "Trop loin de nos missions ; orienter Familles Rurales.", createdAt: d(-10) },
     { funderId: fx("Région"), label: "Appel à projets Économie sociale et solidaire · innovation", scheme: "AAP ESS 2026", deadline: today.subtract(45, "day").toDate(), recurring: true, amountHint: "jusqu'à 25 000 €", teamStatus: "dismissed", statusById: raf.id, statusAt: d(-60), note: "Pas cette année (Forum) ; à reconduire pour 2027.", createdAt: d(-120) },
   ] });
+
+  // Réalisé comptable (lot D) : le grand livre analytique 2026, importé « depuis le logiciel de compta » (source fichier).
+  // Charges sur le code du projet, réparties par poste ; frais de déplacement (625) partout où l'équipe se déplace ; produits
+  // (7411 subventions) sur le code de la ligne de financement quand un versement est reçu. Un écart voulu avec la saisie RAF
+  // sur quelques éditions, un code d'action rapproché à la main, deux codes inconnus à rapprocher dans l'admin.
+  const eds2026 = await prisma.edition.findMany({ where: { year: 2026, status: "in_progress" }, include: { project: true, expenses: true, actions: true, fundingLines: { include: { funder: true, payments: true } } } });
+  const ledger: { analyticCode: string; accountNumber: string; accountLabel: string; year: number; debit: number; credit: number; detail: { date: string; piece: string; thirdParty: string; label: string; debit: number; credit: number }[] }[] = [];
+  const pieceNo = { n: 4100 };
+  const push = (code: string, account: string, label: string, pieces: { d: string; tiers: string; lib: string; amt: number; product?: boolean }[]) => {
+    const detail = pieces.map((x) => ({ date: x.d, piece: `${x.product ? "VT" : "AC"}-${pieceNo.n++}`, thirdParty: x.tiers, label: x.lib, debit: x.product ? 0 : x.amt, credit: x.product ? x.amt : 0 }));
+    ledger.push({ analyticCode: code, accountNumber: account, accountLabel: label, year: 2026, debit: detail.reduce((s, x) => s + x.debit, 0), credit: detail.reduce((s, x) => s + x.credit, 0), detail });
+  };
+  for (const [i, e] of eds2026.entries()) {
+    const code = e.project.analyticCode;
+    const spent = e.expenses.reduce((s, x) => s + x.spent, 0) + e.spent;
+    if (spent <= 0 && i % 2 === 1) continue; // quelques éditions sans écriture encore
+    // La compta colle à la saisie RAF sauf sur trois éditions : une facture de plus en compta, une saisie en avance sur la compta.
+    const factor = ["TES-02", "SEN-03"].includes(code) ? 1.12 : code === "COM-02" ? 0.85 : 1;
+    const base = Math.max(400, Math.round((spent * factor) / 10) * 10);
+    const prest = Math.round(base * 0.55), achats = Math.round(base * 0.2), com = base - prest - achats;
+    if (prest > 0) push(code, "6226", "Honoraires", [{ d: "2026-03-18", tiers: e.fundingLines[0]?.funder.name === "FSE" ? "Cabinet Ligne Claire" : "Atelier Graphique du Val", lib: `Prestation ${e.project.name.slice(0, 28)}`, amt: Math.round(prest * 0.6) }, { d: "2026-06-24", tiers: "Intervenant·e", lib: "Animation, intervention", amt: prest - Math.round(prest * 0.6) }]);
+    if (achats > 0) push(code, "6064", "Fournitures administratives", [{ d: "2026-02-09", tiers: "Bureau Vallée", lib: "Fournitures", amt: achats }]);
+    if (com > 0) push(code, "6231", "Annonces et insertions", [{ d: "2026-05-12", tiers: "La Nouvelle République", lib: "Insertion presse", amt: com }]);
+    // Frais de déplacement et missions : là où l'équipe est « souvent en déplacement » (Q26).
+    if (i % 3 !== 2) push(code, "6251", "Voyages et déplacements", [{ d: "2026-04-03", tiers: "SNCF", lib: "Train Orléans–Tours", amt: 86 }, { d: "2026-05-21", tiers: "Note de frais", lib: "Déplacements pilote · km", amt: 143.5 }]);
+    if (i % 4 === 0) push(code, "6257", "Réceptions", [{ d: "2026-06-11", tiers: "Traiteur Les Saveurs", lib: "Buffet réunion partenaires", amt: 312 }]);
+    // Produits : la subvention comptabilisée sur le code de la ligne, égale aux versements reçus (sauf une : la compta a encaissé plus).
+    for (const l of e.fundingLines) {
+      const received = l.payments.filter((p) => p.receivedAt).reduce((s, p) => s + p.amount, 0);
+      if (received > 0 && l.analyticCode) push(l.analyticCode, "7411", "Subventions d'exploitation", [{ d: "2026-04-25", tiers: l.funder.name, lib: `Subvention ${l.funder.name} 2026`, amt: code === "OBS-01" ? received + 2500 : received, product: true }]);
+    }
+  }
+  // Un code d'action posé par la RAF (la soirée de remise du Prix a son propre code chez le comptable) et deux codes inconnus.
+  const sen01 = eds2026.find((e) => e.project.analyticCode === "SEN-01");
+  const soiree = sen01?.actions.find((a) => a.name === "Soirée de remise");
+  if (sen01 && soiree) {
+    push("SEN-01-SOIREE", "6234", "Cadeaux, trophées", [{ d: "2026-11-20", tiers: "Trophées du Centre", lib: "Trophées Prix ESS", amt: 640 }, { d: "2026-11-20", tiers: "Traiteur Les Saveurs", lib: "Cocktail de remise", amt: 1180 }]);
+    await prisma.analyticTag.create({ data: { code: "SEN-01-SOIREE", targetKind: "action", targetId: soiree.id, note: "Code du comptable pour la soirée de remise." } });
+  }
+  push("FONCT-2026", "6132", "Locations immobilières", [{ d: "2026-01-05", tiers: "SCI Les Halles", lib: "Loyer janvier", amt: 1850 }, { d: "2026-02-05", tiers: "SCI Les Halles", lib: "Loyer février", amt: 1850 }]);
+  push("TESS-ETUDE", "6226", "Honoraires", [{ d: "2026-07-02", tiers: "Bureau d'études Mobilis", lib: "Étude mobilité — acompte", amt: 3200 }]);
+  await prisma.ledgerLine.createMany({ data: ledger.map((l) => ({ source: "file", analyticCode: l.analyticCode, accountNumber: l.accountNumber, accountLabel: l.accountLabel, year: l.year, debit: l.debit, credit: l.credit, detail: JSON.stringify(l.detail), importedAt: d(-4) })) });
+  await prisma.ledgerImport.create({ data: { source: "file", year: 2026, fileName: "grand-livre-analytique-2026-08.xlsx", lines: ledger.length, rows: ledger.reduce((s, l) => s + l.detail.length, 0), byId: raf.id, importedAt: d(-4) } });
 
   // Notifications d'échéance (J-30, J-7, retard) : la passerelle les génère datées du jour où le mail serait parti ;
   // celles de plus de trois jours sont marquées lues, comme des mails déjà ouverts — la cloche ne montre que le frais.

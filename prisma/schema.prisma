@@ -519,6 +519,52 @@ model Settings {
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
   modules                   String  @default("veille")
+  // Réalisé comptable (lot D) : quelle source alimente le « réalisé » des alertes d'enveloppe et du portefeuille —
+  // raf = saisi par la RAF sur les dépenses (Expense.spent) ; ledger = le grand livre analytique importé. L'autre s'affiche en regard.
+  realizedSource            String  @default("raf")
+  // Axes analytiques Pennylane retenus (libellés, séparés par des virgules) ; vide = toutes les lignes.
+  pennylaneAxes             String  @default("")
+}
+
+// Réalisé comptable (lot D) : snapshot agrégé du grand livre analytique, par source (fichier importé, Pennylane…), rapproché
+// des éditions par le code analytique — **aucune clé étrangère** : une édition sans code n'a simplement pas de réalisé.
+// Idempotent : réimporter un exercice remplace ses lignes pour cette source, sans doublon (patron LigneRealise d'erp-tlst).
+model LedgerLine {
+  id            String   @id @default(cuid())
+  source        String // file | pennylane
+  analyticCode  String
+  accountNumber String // 6x charges, 7x produits ; 625x = déplacements, missions, réceptions (frais)
+  accountLabel  String?
+  year          Int
+  debit         Float    @default(0)
+  credit        Float    @default(0)
+  detail        String? // JSON : pièces (date, pièce, tiers, libellé, débit, crédit)
+  importedAt    DateTime @default(now())
+
+  @@unique([source, analyticCode, accountNumber, year])
+  @@index([analyticCode, year])
+}
+
+// Correspondance d'un code analytique vers un objet de l'outil quand le code n'est ni celui d'un projet ni celui d'une ligne de
+// financement : une édition précise, une action, ou un code de fonctionnement à ignorer. Tenue dans l'admin.
+model AnalyticTag {
+  code       String   @id
+  targetKind String // project | edition | action | fundingLine | ignore
+  targetId   String?
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+// Journal des imports du réalisé : qui, quand, quelle source, quel exercice, combien de lignes.
+model LedgerImport {
+  id         String   @id @default(cuid())
+  source     String
+  year       Int
+  fileName   String?
+  lines      Int
+  rows       Int
+  byId       String?
+  importedAt DateTime @default(now())
 }
 
 // Appel à projets (lot B, module « veille ») : une opportunité de financement repérée, avant qu'elle devienne une convention.

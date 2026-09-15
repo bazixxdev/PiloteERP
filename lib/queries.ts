@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { computeAlerts, nextDeliverable, nextMilestone, type Alert } from "./alerts";
 import { dayjs } from "./format";
 import { budgetOf } from "./budget";
+import { attachLedgerSpent } from "./ledger-db";
 
 export const editionListInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } } } },
@@ -15,13 +16,13 @@ export const editionListInclude = {
 export type EditionRow = Awaited<ReturnType<typeof loadPortfolio>>[number];
 
 // Toutes les éditions « vivantes » avec leurs alertes calculées (EF-G1).
-export async function loadPortfolio(settings: { envelopeAlertPercent: number; deliverableAlertDays: number }, opts?: { statuses?: string[]; year?: number }) {
+export async function loadPortfolio(settings: { envelopeAlertPercent: number; deliverableAlertDays: number; realizedSource?: string }, opts?: { statuses?: string[]; year?: number }) {
   const statuses = opts?.statuses ?? ["in_progress", "validated", "proposed", "rechallenged"];
-  const editions = await prisma.edition.findMany({
+  const editions = await attachLedgerSpent(await prisma.edition.findMany({
     where: { status: { in: statuses }, ...(opts?.year ? { year: opts.year } : {}) },
     include: editionListInclude,
     orderBy: [{ project: { pole: { name: "asc" } } }, { project: { name: "asc" } }, { year: "asc" }],
-  });
+  }), { realizedSource: settings.realizedSource ?? "raf" });
 
   // Temps consommé par édition = temps saisi sur le projet pendant l'année de l'édition.
   const projectIds = [...new Set(editions.map((e) => e.projectId))];
@@ -75,7 +76,9 @@ export const editionFullInclude = {
 export type EditionFull = NonNullable<Awaited<ReturnType<typeof loadEdition>>>;
 
 export async function loadEdition(id: string) {
-  const e = await prisma.edition.findUnique({ where: { id }, include: editionFullInclude });
+  const raw = await prisma.edition.findUnique({ where: { id }, include: editionFullInclude });
+  const settings = await prisma.settings.findUnique({ where: { id: 1 }, select: { realizedSource: true } });
+  const e = raw ? (await attachLedgerSpent([raw], { realizedSource: settings?.realizedSource ?? "raf" }))[0] : null;
   if (!e) return null;
   const entries = await prisma.timeEntry.findMany({
     where: { projectId: e.projectId, date: { gte: new Date(`${e.year}-01-01`), lt: new Date(`${e.year + 1}-01-01`) } },

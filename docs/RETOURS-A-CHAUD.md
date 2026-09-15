@@ -187,6 +187,15 @@ Première brique reprise d'`erp-tlst` (analyse dans `CRESS/point-fusion-erp-tlst
 - Tests : `tests/matrice.spec.ts` (2) — RAF : montants, couverture TES-02 = 95 %, Vie statutaire sans financement, totaux par financeur, FSE sous-affectée, 2027 en « à déposer », CSV 200 avec en-tête et ligne TES-02, lexique depuis la matrice et le portefeuille ; contributeur : pastilles, pas de €, pas de CSV, export anonyme 401. 43 tests au total.
 - **Reste ouvert** : filtrer les colonnes (un financeur) ou les lignes (un pôle) en plus du périmètre ; vue par mission ; les montants d'une convention partagée apparaissent sur chaque ligne affectée (par construction), sans total « convention » — la page Conventions le donne.
 
+### O. Lot D « Réalisé comptable » (15/09, nuit) — fait, `docs/LOTS-TLST.md`
+
+- **Modèle** : `LedgerLine` (snapshot, `@@unique(source, code, compte, exercice)`), `AnalyticTag` (code → édition / action / projet / ligne / ignorer), `LedgerImport` (journal), `Settings.realizedSource`, `Settings.pennylaneAxes`.
+- **Code** : `lib/ledger.ts` (pur : lecture des en-têtes FR/EN, agrégation, résolution des codes, réalisé par édition / action / financement, codes inconnus), `lib/ledger-db.ts` (contexte, `attachLedgerSpent`), `lib/pennylane.ts` (client v2 : export du grand livre analytique → xlsx → mêmes lignes ; lecteur injectable), `app/actions/ledger.ts` (import fichier, synchro Pennylane, correspondances, purge), `app/edition/[id]/ledger-block.tsx`, `app/admin/ledger-forms.tsx` + section admin › Import / export, réglage admin › Paramètres › « Réalisé comptable ». `budgetOf` accepte `ledgerSpent` ; `loadPortfolio`, `loadEdition` et le contexte des actions d'édition l'attachent selon le réglage. Dépendance ajoutée : `xlsx` (SheetJS).
+- **Piège** : un code de ligne se répète d'une année sur l'autre → la résolution choisit la ligne de l'exercice, sinon les produits 2026 tombaient sur la ligne 2025 (0 € affiché).
+- **Seed** : 112 lignes 2026 « fichier » sur les codes projet (charges 6226 / 6064 / 6231, frais 6251 / 6257) et les codes de ligne (7411 = versements reçus) ; écarts voulus (TES-02 et SEN-03 +12 %, COM-02 −15 %), ORESS encaissé +2 500 € (suggestion « un versement à marquer reçu ? »), `SEN-01-SOIREE` → action « Soirée de remise », `FONCT-2026` (loyer) et `TESS-ETUDE` inconnus.
+- **Tests** : `tests/realise.spec.ts` (2) — bloc de TES-02 (charges 8 110 €, frais 230 €, produits 6 650 €, écart, pièces, par financement cohérent), ORESS (suggestion), Mois de l'ESS (par action 1 820 €) ; admin : rapprocher FONCT-2026 (ignorer) et TESS-ETUDE (édition), import d'un csv de 3 écritures (remplace le snapshot : 1 300 € de charges), bascule `realizedSource` → le « Réalisé » de l'enveloppe devient la compta, puis retour. 45 tests au total.
+- **Reste ouvert** : « Excel en direct » (Gaël) ; logiciel de compta réel de la CRESS ; Pennylane testé sur données réelles (jeton) ; suggestion « reçu » → bouton qui pré-remplit la réception ; import automatique planifié.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

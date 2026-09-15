@@ -81,7 +81,7 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 - Tests : matrice cohérente avec le seed, masquage des montants pour un contributeur.
 **Taille** : 1 session.
 
-## Lot D — Réalisé comptable : les dépenses tagguées par code analytique, plusieurs sources
+## Lot D — Réalisé comptable : les dépenses tagguées par code analytique, plusieurs sources — **FAIT le 15/09** (RETOURS-A-CHAUD §O, `tests/realise.spec.ts`) ; « Excel en direct » et le logiciel réel restent à préciser
 
 **Besoin CRESS (reformulé par Gaël)** : ce n'est pas d'abord rapprocher les montants perçus (lot A), c'est voir **les dépenses réelles de la compta, tagguées par code analytique, en face d'une édition, d'une action ou d'un financement**. Et ça doit marcher avec **plusieurs sources** : un fichier importé (la base), l'API Pennylane en premier connecteur, et peut-être un Excel « en direct ». La CRESS n'est pas sur Dolibarr pour la compta ; le logiciel réel reste à confirmer (Sandrine, partie technique non faite).
 **Repris de TLST** : le **patron** `LigneRealise` — snapshot agrégé `(source, code analytique, compte, exercice)` avec `@@unique`, **sans clé étrangère**, upsert + purge par exercice et par source, 6x charges / 7x produits, détail par pièce ; et le **client Pennylane** + moteur de synchro (`src/lib/pennylane/client.ts`, `sync.ts` — TypeScript pur, réutilisables quasi tels quels, lecteurs injectables pour les tests). Le choix des axes analytiques Pennylane est un réglage, pas du code.
@@ -105,7 +105,7 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 better-auth (argon2id, sessions, anti-bruteforce, désactivation = sessions révoquées, mot de passe oublié sans mail tant que les mails ne sont pas branchés), `User` ↔ `Person.userId`, admin des comptes ; `getCurrentPerson` lit la session ; « Je suis… » derrière un drapeau démo ; Entra ID plus tard. Pas de permissions par module en base dans ce lot.
 **Taille** : 2 sessions. Consigne 8 du brief : pas sans go.
 
-## Lot G — Notes de frais (module activable)
+## Lot G — Notes de frais (module activable) — **mode import FAIT avec D** (comptes 625 dans le bloc Réalisé) ; module natif à faire
 
 **Besoin (Gaël, 15/09)** : les notes de frais sont très souvent rattachées à un projet, une édition ou une action, et pèsent lourd sur une asso et sur certaines actions. Deux façons de faire, et il faut pouvoir choisir l'une ou l'autre par installation.
 **Corpus CRESS** : la moitié de l'équipe est « souvent en déplacement ou chez des partenaires » (Q26) ; les notes de frais se font **dans Dolibarr** et la directrice les a remises à plus tard : « s'il faut continuer à faire les notes de frais et les demandes de congés sur notre vieux Dolibarr… tant pis, on verra dans un an » (S5.29). Donc pour la CRESS en V1 : **mode import** ; le module natif est une option pour « dans un an » et pour le produit.

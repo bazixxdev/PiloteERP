@@ -7,7 +7,7 @@ import { loadEdition } from "@/lib/queries";
 import { getCurrentPerson, getRefs, getSettings, getPeople } from "@/lib/session";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { computeAlerts } from "@/lib/alerts";
-import { isCodir } from "@/lib/rights";
+import { canAdmin, isCodir } from "@/lib/rights";
 import { isLocked } from "@/lib/lock";
 import { TabsNav, type TabKey } from "./tabs-nav";
 import { ApercuTab } from "./apercu";
@@ -23,6 +23,7 @@ import { ActionsTab } from "./actions-tab";
 import { FinancementsTab } from "./financements";
 import { TempsTab } from "./temps";
 import { BudgetTab } from "./budget";
+import { LedgerBlock } from "./ledger-block";
 import { DocumentsTab } from "./documents";
 import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
@@ -128,8 +129,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
       {/* Budget = l'argent de l'édition (revue du 15/09) : les dépenses (enveloppe, devis, factures) puis les recettes (financeurs, livrables). */}
       {tab === "budget" && (
         <div className="grid gap-4">
-          <nav className="flex gap-3 text-xs" aria-label="Sections du budget"><a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
+          <nav className="flex gap-3 text-xs" aria-label="Sections du budget"><a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#realise" className="text-primary hover:underline">Réalisé comptable</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
           <div id="depenses" className="scroll-mt-20"><BudgetTab {...ctx} /></div>
+          <div id="realise" className="scroll-mt-20"><LedgerBlock e={ctx.e} settings={ctx.settings} canAdmin={canAdmin(me.role)} /></div>
           <div id="recettes" className="scroll-mt-20"><FinancementsTab {...ctx} /></div>
         </div>
       )}

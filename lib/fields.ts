@@ -66,7 +66,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },
-    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" }, billingEmail: { type: "text" }, billingNote: { type: "textarea" },
+    deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" }, billingEmail: { type: "text" }, billingNote: { type: "textarea" }, realizedSource: { type: "select" }, pennylaneAxes: { type: "text" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" }, notes: { type: "textarea" } },

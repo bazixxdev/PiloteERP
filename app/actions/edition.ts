@@ -7,13 +7,15 @@ import { canDecideValidation, canEditActions, canEditFunding, canWriteLayer, req
 import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
+import { attachLedgerSpent } from "@/lib/ledger-db";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function ctx(editionId: string) {
   const me = await getCurrentPerson();
-  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true, expenses: true } });
-  if (!e) throw new Error("Édition introuvable");
+  const raw = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true, expenses: true } });
+  if (!raw) throw new Error("Édition introuvable");
+  const [e] = await attachLedgerSpent([raw], await getSettings());
   return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: inMyPole(me, e.project) };
 }
 
@@ -124,7 +126,8 @@ export async function computeRequiredLevel(editionId: string, amount: number | n
 // Niveau requis et sa raison, en clair, pour que le demandeur sache à qui part sa demande et pourquoi.
 export async function explainRequiredLevel(editionId: string, amount: number | null): Promise<{ level: number; reason: string }> {
   const settings = await getSettings();
-  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { expenses: true } });
+  const raw = await prisma.edition.findUnique({ where: { id: editionId }, include: { expenses: true } });
+  const e = raw ? (await attachLedgerSpent([raw], settings))[0] : null;
   const remaining = e ? budgetOf(e).available : null;
   const level = requiredLevelFor(amount, settings, remaining);
   const euro = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
