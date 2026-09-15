@@ -15,4 +15,6 @@ export type TabCtx = {
   isTeam: boolean;
   // Mode relecture : les boutons « Remarque » s'affichent sous les rubriques (sinon, seules les remarques existantes).
   feedback?: boolean;
+  // Mes tâches ouvertes sur cette édition (Aperçu).
+  myTasks?: { id: string; label: string; dueDate: Date | null; action: { name: string } | null }[];
 };

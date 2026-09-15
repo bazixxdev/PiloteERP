@@ -9,16 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/common/reveal";
 import { addAchievement, deleteAchievement } from "@/app/actions/proposals";
 import { dayjs } from "@/lib/format";
-
-export const ACHIEVEMENT_KINDS = [
-  { value: "participants", label: "Participants / inscrits", unit: "personnes" },
-  { value: "audience", label: "Public touché", unit: "personnes" },
-  { value: "deliverable", label: "Livrable produit ou envoyé", unit: "" },
-  { value: "press", label: "Retombée (presse, réseaux)", unit: "" },
-  { value: "partner", label: "Partenaire mobilisé", unit: "" },
-  { value: "other", label: "Autre réalisation", unit: "" },
-];
-export const kindLabel = (v: string) => ACHIEVEMENT_KINDS.find((k) => k.value === v)?.label ?? v;
+import { ACHIEVEMENT_KINDS, kindLabel } from "@/lib/achievements";
 
 export type AchievementView = { id: string; kind: string; label: string; value: number | null; unit: string | null; date: string; author: string; authorId: string; action: string | null };
 

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // Bande d'état (revue du 15/09) : les alertes de l'édition en taille lisible, sous l'en-tête, chacune menant à l'onglet où l'on agit.
 // Une alerte acquittée par une décision d'instance passe en gris avec la référence de la décision.
-const TAB_OF: Record<Alert["kind"], string> = { milestone_overdue: "actions", time_over: "temps", deliverable_overdue: "financements", deliverable_soon: "financements", envelope: "budget", validation_pending: "validations" };
+const TAB_OF: Record<Alert["kind"], string> = { milestone_overdue: "actions", time_over: "temps", deliverable_overdue: "financements", deliverable_soon: "financements", envelope: "budget", validation_pending: "apercu" };
 
 export type AlertAck = { kind: Alert["kind"]; by: string };
 

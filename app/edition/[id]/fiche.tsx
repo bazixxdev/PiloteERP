@@ -1,5 +1,10 @@
+import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
-import { Lock, MessageSquareText, X } from "lucide-react";
+import { AutoField } from "@/components/inline/auto-field";
+import { DecisionForm } from "@/app/codir/decision-form";
+import { computeAlerts } from "@/lib/alerts";
+import { withBase } from "@/lib/base-path";
+import { FileDown, Lock, MessageSquareText, X } from "lucide-react";
 import Link from "next/link";
 import { FIELDS } from "@/lib/fields";
 import { canWriteLayer, LAYER_OWNER_LABEL, type Layer } from "@/lib/rights";
@@ -19,8 +24,9 @@ import { isCodir } from "@/lib/rights";
 // Les quatre couches de la fiche (numérotées comme dans la maquette V2), plus la logistique renseignée au fil de l'année.
 const LAYERS: { key: Layer; no: string; title: string; owner: string; fields: string[]; optional?: boolean }[] = [
   { key: "strategic", no: "1", title: "Cadre stratégique", owner: "Propriétaire · direction", fields: ["stakes", "axis", "sressMeasure", "snessLink", "otherTexts", "yearPriorities", "expectedOutcome"] },
-  { key: "means", no: "2", title: "Cadre de moyens", owner: "Propriétaires · RAF et direction", fields: ["plannedFunders", "directExpenseEnvelope", "fte", "imposedIndicators", "sponsorId"] },
-  { key: "proposal", no: "3", title: "Proposition opérationnelle", owner: "Propriétaire · pilote", fields: ["operationalObjectives", "quantitativeObjectives", "content", "audience", "calendar", "deliveryDate", "partners", "method", "governance", "ownIndicators", "timeNeed", "budgetNeed"] },
+  // Les indicateurs ne sont plus deux champs texte (couches 2 et 3) mais un objet vivant : cible à la rédaction, réalisé dans l'année (revue du 15/09).
+  { key: "means", no: "2", title: "Cadre de moyens", owner: "Propriétaires · RAF et direction", fields: ["plannedFunders", "directExpenseEnvelope", "fte", "sponsorId"] },
+  { key: "proposal", no: "3", title: "Proposition opérationnelle", owner: "Propriétaire · pilote", fields: ["operationalObjectives", "quantitativeObjectives", "content", "audience", "calendar", "deliveryDate", "partners", "method", "governance", "timeNeed", "budgetNeed"] },
   { key: "validation", no: "4", title: "Validation", owner: "Propriétaires · CODIR puis CA", fields: ["codirDecision", "codirDate", "boardValidated", "boardDate"] },
   { key: "year", no: "↻", title: "Logistique", owner: "Renseigné par le pilote au fil de l'année", fields: ["venues", "equipment", "evidenceToKeep"], optional: true },
 ];
@@ -29,7 +35,8 @@ const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && v 
 
 // La fiche = le document de l'édition, en chapitres : une ligne d'état, les couches lisibles en entier, l'équipe, l'historique.
 // Sommaire collant à gauche ; le rare (export, plein écran, relecture) est dans le menu « … » de l'en-tête (revue du 15/09).
-export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: TabCtx) {
+export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, settings }: TabCtx) {
+  const alerts = computeAlerts(e, settings);
   const row = e as unknown as Record<string, unknown>;
   const canStatus = me.role === "director" || me.role === "raf";
   const layerFilled = (l: (typeof LAYERS)[number]) => l.fields.some((f) => isFilled(row[f]));
@@ -57,7 +64,11 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: Tab
     };
   });
   const proposable: ProposableField[] = LAYERS.slice(0, 3).flatMap((l) => layerFields(l).filter((f) => f.type !== "bool" && f.type !== "select").map((f) => ({ key: f.key, label: f.label, current: readableValue(f), multiline: f.type === "textarea", group: `${l.no} · ${l.title}` })));
-  const toc = [...LAYERS.map((l) => ({ id: `couche-${l.key}`, label: `${l.no} ${l.title}` })), { id: "equipe", label: "Équipe" }, { id: "historique", label: "Historique" }];
+  const toc = [...LAYERS.slice(0, 4).map((l) => ({ id: `couche-${l.key}`, label: `${l.no} ${l.title}` })), { id: "indicateurs", label: "Indicateurs" }, { id: "decisions", label: "Décisions" }, { id: "bilan", label: "Bilan" }, { id: "couche-year", label: "Logistique" }, { id: "equipe", label: "Équipe" }, { id: "historique", label: "Historique" }];
+  const canYear = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
+  const instances = REF_DEFAULTS.decision_instance.map((k) => ({ value: k.code, label: refLabel(refs, "decision_instance", k.code) }));
+  const alertOpts = alerts.map((a) => ({ value: a.kind, label: a.label }));
+  const legacyIndicators = [e.imposedIndicators, e.ownIndicators].filter(Boolean) as string[];
 
   return (
     <div className="grid gap-4 lg:grid-cols-[170px_minmax(0,1fr)]">
@@ -102,14 +113,66 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback }: Tab
         )}
         {LAYERS.map((layer) => {
           const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam, inMyPole(me, e.project));
-          return (
+          const chapters = layer.key === "validation";
+          return (<Fragment key={layer.key}>
             <FicheLayer
               key={layer.key} editionId={e.id} layerKey={layer.key} no={layer.no} title={layer.title} owner={layer.owner}
               ownerMissingLabel={LAYER_OWNER_LABEL[layer.key]} fields={layerFields(layer)} writable={writable} defaultEditing={writable && !layerFilled(layer)} optional={layer.optional} hideCount={locked}
               remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark && Boolean(feedback)} canResolve={canResolve} meId={me.id} isDirector={me.role === "director"}
               locked={locked && ["strategic", "means", "proposal"].includes(layer.key)} pendingProposals={proposals.filter((p) => p.status === "pending" && layer.fields.includes(p.field)).length}
             />
-          );
+            {chapters && (
+              <>
+                {/* Indicateurs : la cible se fixe ici, le réalisé se met à jour dans Actions ; un seul objet, lu aux deux endroits. */}
+                <section id="indicateurs" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-indicators">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">◎</span><h4 className="text-sm font-bold">Indicateurs</h4><span className="text-[10px] text-muted-foreground">cible fixée à la rédaction · réalisé mis à jour dans l'année</span></div>
+                    <Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">Mettre à jour dans Actions →</Link>
+                  </div>
+                  {e.indicators.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">Aucun indicateur : ajoutez-les depuis l'onglet Actions (cible, imposé par un financeur ou propre au projet).</p> : (
+                    <ul className="mt-2.5 grid gap-1 text-sm lg:ml-9">
+                      {e.indicators.map((i) => <li key={i.id} className="flex items-baseline justify-between gap-2 border-b border-dashed py-1"><span className="min-w-0 truncate">{i.label}{i.imposed && <span className="ml-1 rounded-sm bg-info-soft px-1 text-[10px] text-primary">imposé</span>}</span><span className="shrink-0 text-xs tabular text-muted-foreground">cible <b className="text-foreground">{i.target ?? "—"}</b>{i.actual ? <> · réalisé <b className="text-foreground">{i.actual}</b></> : null}</span></li>)}
+                    </ul>
+                  )}
+                  {legacyIndicators.length > 0 && <p className="mt-2 text-xs text-muted-foreground lg:ml-9"><b>Texte d'origine :</b> {legacyIndicators.join(" · ")}</p>}
+                </section>
+                {/* Décisions d'instance : CODIR, réunion de pôle, revue trimestrielle, CA — datées, avec la suite à donner ; une décision peut régler une alerte. */}
+                <section id="decisions" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="instance-decisions">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">⚖</span><h4 className="text-sm font-bold">Décisions des instances</h4><span className="text-[10px] text-muted-foreground">CODIR, réunion de pôle, revue trimestrielle, CA</span></div>
+                    {isCodir(me.role) && <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} alerts={alertOpts} />}
+                  </div>
+                  {e.decisions.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">Aucune décision consignée.</p> : (
+                    <ul className="mt-2.5 divide-y text-sm lg:ml-9">
+                      {e.decisions.map((d) => (
+                        <li key={d.id} className="py-1.5">
+                          <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refLabel(refs, "decision_instance", d.instance)}</span> {d.body}
+                          <span className="text-xs text-muted-foreground"> · {fmtDate(d.decidedAt)} · {d.author.name}{d.followUp ? ` · suite : ${d.followUp.name}${d.dueDate ? ` pour le ${fmtDate(d.dueDate)}` : ""}` : ""}{d.alertKind ? " · règle une alerte" : ""}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+                {/* Bilan : le dernier chapitre du document de l'édition, rédigé en fin d'année, exporté tel quel. */}
+                <section id="bilan" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-bilan">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">✎</span><h4 className="text-sm font-bold">Bilan de l'édition</h4><span className="text-[10px] text-muted-foreground">{e.report ? "réutilisé tel quel pour le rapport d'activité et les bilans financeurs" : "à rédiger en fin d'année"}</span></div>
+                    <Button asChild size="xs" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)} data-testid="export-docx"><FileDown />Exporter le bilan (Word)</a></Button>
+                  </div>
+                  <div className="mt-3 grid gap-3 lg:ml-9">
+                    <div className="grid gap-1">
+                      <label htmlFor={`edition-${e.id}-evaluation`} className="text-[10px] text-muted-foreground">Évaluation</label>
+                      <AutoField model="edition" id={e.id} field="evaluation" type="textarea" rows={e.evaluation ? 4 : 2} value={e.evaluation} readOnly={!canYear} inputId={`edition-${e.id}-evaluation`} placeholder="Ce qui a marché, ce qui a moins marché, écarts avec le cadre validé…" />
+                    </div>
+                    <div className="grid gap-1">
+                      <label htmlFor={`edition-${e.id}-report`} className="text-[10px] text-muted-foreground">Bilan (texte long)</label>
+                      <AutoField model="edition" id={e.id} field="report" type="textarea" rows={e.report ? 12 : 3} value={e.report} readOnly={!canYear} inputId={`edition-${e.id}-report`} placeholder="À rédiger en fin d'année : ce texte servira tel quel dans le rapport d'activité." testId="field-report" />
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+          </Fragment>);
         })}
 
         <TeamSection editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me.role, "proposal", isPilot, isTeam)} />

@@ -11,7 +11,7 @@ import { AddDeliverableForm, AddFundingMenu } from "./add-forms";
 import { Reveal } from "@/components/common/reveal";
 import { allocationOf, conventionCovers } from "@/lib/conventions";
 import Link from "next/link";
-import { DeliverableDone } from "./deliverable-done";
+import { DeliverablesList } from "./deliverables-list";
 import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
 import { ContactLine } from "@/components/funders/contacts";
@@ -22,20 +22,14 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
   const funderOpts = funders.map((f) => ({ value: f.id, label: f.name }));
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
-  const reminderDays = settings.reminderDaysBefore.split(",").map(Number);
   const totalRequested = e.fundingLines.reduce((s, f) => s + (f.amountRequested ?? 0), 0);
   const totalGranted = e.fundingLines.reduce((s, f) => s + (f.amountGranted ?? 0), 0);
 
   // Dossiers encore ouverts (à déposer, déposé) : dits dans le sous-titre, pour ne pas les chercher ligne par ligne.
   const pendingLines = e.fundingLines.filter((f) => ["to_submit", "submitted"].includes(f.status));
-  const upcoming = e.fundingLines
-    .flatMap((f) => f.deliverables.filter((d) => !d.done).map((d) => ({ ...d, funder: f.funder.name })))
-    .map((d) => ({ ...d, n: daysFromNow(d.dueDate) }))
-    .filter((d) => d.n <= settings.horizonDays)
-    .sort((a, b) => a.n - b.n);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <div className="grid gap-4">
       <div className="grid gap-4">
         <Section
           title="Lignes de financement"
@@ -103,56 +97,18 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                   </div>
                   </details>
 
-                  <div className="mt-3 rounded-lg bg-muted/50 p-2">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Livrables dus</span>
-                      {rw && <AddDeliverableForm fundingLineId={f.id} />}
-                    </div>
-                    {f.deliverables.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Aucun livrable renseigné.</p>
-                    ) : (
-                      <ul className="divide-y">
-                        {f.deliverables.map((d) => {
-                          const n = daysFromNow(d.dueDate);
-                          return (
-                            <li key={d.id} className="flex items-center gap-2 py-1 text-sm">
-                              <DeliverableDone id={d.id} done={d.done} readOnly={!rw && !isPilot} />
-                              <div className="flex-1"><AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} inputClassName={cn(d.done && "line-through text-muted-foreground")} label={`Livrable, ${f.funder.name}`} /></div>
-                              <div className="w-36"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} readOnly={!rw} label={`Échéance du livrable ${d.label}`} /></div>
-                              <span className={cn("w-28 text-right text-xs", d.done ? "text-mint" : n < 0 ? "text-danger" : n <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>
-                                {d.done ? `remis ${fmtDate(d.doneAt)}` : n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
+                  {/* Les livrables se lisent et se cochent dans la liste unique sous les lignes ; ici, seulement le compte et l'ajout. */}
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{f.deliverables.length === 0 ? "Aucun livrable renseigné." : `${f.deliverables.filter((d) => !d.done).length} livrable${f.deliverables.filter((d) => !d.done).length > 1 ? "s" : ""} à remettre · ${f.deliverables.filter((d) => d.done).length} remis`}</span>
+                    {rw && <AddDeliverableForm fundingLineId={f.id} />}
                   </div>
                 </div>
               ))}
             </div>
           )}
         </Section>
+        <DeliverablesList e={e} settings={settings} canTick={rw || isPilot} canEdit={rw} />
       </div>
-
-      <Section title="Rappels" description={`J-${reminderDays.join(" et J-")} · horizon ${settings.horizonDays} jours`}>
-        {upcoming.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune échéance financeur dans l'horizon.</p>
-        ) : (
-          <ul className="space-y-2">
-            {upcoming.map((d) => {
-              const fire = d.n < 0 || reminderDays.some((r) => d.n <= r);
-              return (
-                <li key={d.id} className={cn("rounded-lg border p-2 text-sm", fire ? (d.n < 0 ? "border-danger/40 bg-danger-soft/50" : "border-warning/50 bg-warning-soft/60") : "bg-card")}>
-                  <div className="font-medium">{d.label}</div>
-                  <div className="text-xs text-muted-foreground">{d.funder} · {fmtDate(d.dueDate)} · {d.n < 0 ? `${-d.n} j de retard` : `J-${d.n}`}</div>
-                  {fire && <div className="mt-1 text-xs">Rappel au pilote et à la RAF</div>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Section>
     </div>
   );
 }

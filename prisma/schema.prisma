@@ -674,6 +674,7 @@ model Decision {
   followUp      Person?   @relation("DecisionFollowUp", fields: [followUpId], references: [id])
   dueDate       DateTime?
   decidedAt     DateTime  @default(now())
+  alertKind     String? // alerte de l'édition que cette décision règle (envelope, time_over…) : elle s'éteint dans la bande d'état
 }
 
 // Notification dans l'outil (cloche) : relance de temps, information. Dans le prototype, pas de mail : tout passe par ici.

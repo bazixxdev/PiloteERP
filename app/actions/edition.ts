@@ -156,7 +156,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   // Lot 3 : le demandeur est prévenu ; pour un devis approuvé, le « bon pour accord » est prêt à envoyer (plus d'impression ni de tampon).
   const isQuote = v.kind === "quote" || v.kind === "expense";
   if (v.requesterId !== me.id) {
-    await prisma.notification.create({ data: { personId: v.requesterId, senderId: me.id, kind: "info", title: `${decision === "approved" ? "Approuvée" : "Refusée"} : ${v.label}`, body: decision === "approved" && isQuote ? "Bon pour accord prêt à envoyer au fournisseur." : comment.trim() || null, link: decision === "approved" && isQuote ? `/validations/${v.id}/bon-pour-accord` : `/edition/${v.editionId}?onglet=validations` } });
+    await prisma.notification.create({ data: { personId: v.requesterId, senderId: me.id, kind: "info", title: `${decision === "approved" ? "Approuvée" : "Refusée"} : ${v.label}`, body: decision === "approved" && isQuote ? "Bon pour accord prêt à envoyer au fournisseur." : comment.trim() || null, link: decision === "approved" && isQuote ? `/validations/${v.id}/bon-pour-accord` : `/edition/${v.editionId}?onglet=apercu` } });
   }
   // La directrice voit tout ce qui s'engage sans elle : information, pas validation (retour du 14/09).
   if (decision === "approved" && me.role !== "director" && v.amount) {
@@ -256,13 +256,14 @@ export async function addExpense(editionId: string, label: string, spent: number
 }
 
 // Décision d'instance consignée sur l'édition, datée, avec suite éventuelle (EF-F4, EF-H2, EF-H3).
-export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null }): Promise<Result> {
+export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null; alertKind?: string | null }): Promise<Result> {
   const c = await ctx(input.editionId);
   const allowed = ["director", "raf"].includes(c.me.role) || (c.me.role === "pole_lead" && (input.instance !== "codir" ? c.samePole : true));
   if (!allowed) return { ok: false, error: "Les décisions d'instance sont consignées par le CODIR." };
   if (!input.body.trim()) return { ok: false, error: "Décision vide." };
   await prisma.decision.create({
-    data: { editionId: input.editionId, instance: input.instance, body: input.body.trim(), authorId: c.me.id, followUpId: input.followUpId || null, dueDate: input.dueDate ? new Date(input.dueDate) : null },
+    // Une décision peut régler une alerte de l'édition (dépassement accepté, jalon reporté…) : elle s'éteint dans la bande d'état (revue du 15/09).
+    data: { editionId: input.editionId, instance: input.instance, body: input.body.trim(), authorId: c.me.id, followUpId: input.followUpId || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, alertKind: input.alertKind || null },
   });
   await prisma.changeLog.create({ data: { editionId: input.editionId, field: "décision", before: null, after: `${input.instance} : ${input.body.trim().slice(0, 200)}`, authorId: c.me.id } });
   revalidatePath("/", "layout");

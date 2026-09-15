@@ -31,7 +31,7 @@ export function ValidationCard({ v, refs, canDecide, showEdition, index, attachm
             {v.amount != null && <span className="tabular text-sm font-semibold">{fmtEuro(v.amount)}</span>}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
-            {showEdition && v.edition && <><Link href={`/edition/${v.edition.id}?onglet=validations`} className="text-primary hover:underline">{v.edition.project.name} · {v.edition.year}</Link> · </>}
+            {showEdition && v.edition && <><Link href={`/edition/${v.edition.id}?onglet=apercu`} className="text-primary hover:underline">{v.edition.project.name} · {v.edition.year}</Link> · </>}
             Demandé par {v.requester.name} le {fmtDate(v.createdAt)}{v.action ? ` · action « ${v.action.name} »` : ""} · {LEVEL_LABEL[v.requiredLevel]}
             {v.attachmentUrl && (isWebLink(v.attachmentUrl) ? <> · <a href={v.attachmentUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">pièce jointe</a></> : <> · <span className="font-mono" title={v.attachmentUrl}>pièce jointe sur le serveur</span></>)}
           </div>

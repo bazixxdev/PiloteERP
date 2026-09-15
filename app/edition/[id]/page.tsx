@@ -8,7 +8,11 @@ import { getCurrentPerson, getRefs, getSettings, getPeople } from "@/lib/session
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { computeAlerts } from "@/lib/alerts";
 import { isCodir } from "@/lib/rights";
+import { isLocked } from "@/lib/lock";
 import { TabsNav, type TabKey } from "./tabs-nav";
+import { ApercuTab } from "./apercu";
+import { FilSheet } from "./fil-sheet";
+import { fmtDate } from "@/lib/format";
 import { EditionPicker } from "./edition-picker";
 import { EditionMenu } from "./edition-menu";
 import { AlertBar } from "./alert-bar";
@@ -19,34 +23,39 @@ import { ActionsTab } from "./actions-tab";
 import { FinancementsTab } from "./financements";
 import { TempsTab } from "./temps";
 import { BudgetTab } from "./budget";
-import { ValidationsTab } from "./validations-tab";
 import { DocumentsTab } from "./documents";
-import { BilanTab } from "./bilan";
 import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
 
-export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string }> }) {
+export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string }> }) {
   const { id } = await params;
-  const { onglet, relecture, focus, validation } = await searchParams;
+  const { onglet, relecture, focus, validation, fil } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
   const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
 
-  const tab = (["fiche", "actions", "financements", "temps", "budget", "validations", "documents", "bilan"].includes(onglet ?? "") ? onglet : "fiche") as TabKey;
+  // Anciennes adresses : « validations » ouvre l'Aperçu (à décider), « bilan » la fiche (chapitre Bilan).
+  const wanted = onglet === "validations" ? "apercu" : onglet === "bilan" ? "fiche" : onglet;
+  // Atterrissage : l'Aperçu une fois la fiche validée (l'année d'exécution) ; la Fiche tant qu'elle se rédige.
+  const landing = isLocked(e) ? "apercu" : "fiche";
+  const tab = (["apercu", "fiche", "actions", "financements", "temps", "budget", "documents"].includes(wanted ?? "") ? wanted : landing) as TabKey;
   const isPilot = e.project.pilotId === me.id;
   const isTeam = e.team.some((t) => t.personId === me.id);
   const alerts = computeAlerts(e, settings);
+  // Alertes réglées par une décision d'instance : elles s'éteignent dans la bande d'état, avec la référence de la décision.
+  const acks = e.decisions.filter((d) => d.alertKind).map((d) => ({ kind: d.alertKind as (typeof alerts)[number]["kind"], by: `${refLabel(refs, "decision_instance", d.instance)} ${fmtDate(d.decidedAt)}` }));
+  const myTasks = await prisma.task.findMany({ where: { personId: me.id, editionId: e.id, done: false }, select: { id: true, label: true, dueDate: true, action: { select: { name: true } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] });
   const canStatus = me.role === "director" || me.role === "raf";
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
-  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1" };
+  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks };
 
   // Compteurs d'onglet (revue du 15/09) : ce qui reste à faire, pas des totaux ; Documents = fichiers et liens seulement.
   const counts = {
+    apercu: e.validations.filter((v) => v.status === "pending").length,
     actions: e.actions.filter((a) => a.state !== "done").length,
-    validations: e.validations.filter((v) => v.status === "pending").length,
     documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.attachments.length,
   };
 
@@ -90,6 +99,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <FilSheet editionId={e.id} defaultOpen={fil === "1"} comments={e.comments.map((c) => ({ id: c.id, author: c.author.name, when: fmtDate(c.createdAt, c.createdAt.getHours() === 0 && c.createdAt.getMinutes() === 0 ? "D MMM YYYY" : "D MMM YYYY HH:mm"), body: c.body }))} />
           <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
           <RequestValidationDialog
             editionId={e.id}
@@ -103,7 +113,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me.role)} feedback={relecture === "1"} />
         </div>
       </div>
-      <AlertBar editionId={e.id} alerts={alerts} />
+      <AlertBar editionId={e.id} alerts={alerts} acks={acks} />
 
       {!isTransversal(me) && !inMyScope(me, e.project, e.team.map((t) => t.personId)) && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
@@ -112,14 +122,13 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
       )}
       <TabsNav editionId={e.id} current={tab} counts={counts} />
 
+      {tab === "apercu" && <ApercuTab {...ctx} />}
       {tab === "fiche" && <FicheTab {...ctx} />}
       {tab === "actions" && <ActionsTab {...ctx} />}
       {tab === "financements" && <FinancementsTab {...ctx} />}
       {tab === "temps" && <TempsTab {...ctx} />}
       {tab === "budget" && <BudgetTab {...ctx} />}
-      {tab === "validations" && <ValidationsTab {...ctx} />}
       {tab === "documents" && <DocumentsTab {...ctx} />}
-      {tab === "bilan" && <BilanTab {...ctx} />}
     </div>
   );
 }

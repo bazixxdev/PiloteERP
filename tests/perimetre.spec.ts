@@ -26,6 +26,7 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   // Une édition hors de son pôle : consultable, avec le bandeau.
   await table.getByRole("link", { name: "Chroniquer la TESS" }).click();
   await expect(page.getByTestId("outside-scope")).toContainText("hors de votre pôle");
+  await page.getByRole("tab", { name: "Fiche" }).click();
   await expandLayer(page, "proposal");
   await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");
 
@@ -35,7 +36,7 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   await table.getByRole("link", { name: "Sensibilisation des jeunes" }).click();
   await expect(page.getByTestId("outside-scope")).toHaveCount(0);
   await expect(page.getByText("commun avec")).toBeVisible();
-  await page.getByRole("tab", { name: "Bilan" }).click();
+  await page.getByRole("tab", { name: "Fiche" }).click();
   await expect(page.getByTestId("field-report")).not.toHaveAttribute("readonly", "");
 
   // La direction voit tout, sans bascule.

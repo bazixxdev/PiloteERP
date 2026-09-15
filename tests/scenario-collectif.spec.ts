@@ -45,7 +45,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await line.getByTestId("add-deliverable-date").fill(deliverableDue);
   await expect(line.getByTestId("add-deliverable-submit")).toBeEnabled();
   await line.getByTestId("add-deliverable-submit").click();
-  await expect(line.locator(`input[value="Bilan intermédiaire"]`)).toBeVisible();
+  await expect(page.getByTestId("deliverables").locator(`input[value="Bilan intermédiaire"]`)).toBeVisible();
   await expect(line).toContainText("dans 10 j");
   await page.getByRole("tab", { name: "Budget" }).click();
   await page.getByTestId("budget-budgetEnvelope-edit").click();
@@ -71,10 +71,11 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await row.locator("[data-testid^=action-target-edit-]").click();
   await row.locator('input[type="number"]').fill("21");
   await row.locator('input[type="number"]').blur();
-  await page.getByRole("tab", { name: "Documents" }).click();
+  await page.getByTestId("fil-open").click();
   await page.getByTestId("comment-input").fill("Lucas, peux-tu démarrer la cartographie cette semaine ?");
   await page.getByTestId("comment-submit").click();
   await expect(page.getByTestId("comments")).toContainText("démarrer la cartographie");
+  await page.keyboard.press("Escape");
 
   // 4. Le contributeur retrouve son action dans « Ma semaine », saisit 3 h dessus, répond, mais ne peut pas écrire la couche 3.
   await iAm(page, "Lucas Perrin");
@@ -94,10 +95,11 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");
   await page.getByRole("tab", { name: "Temps" }).click();
   await expect(page.getByTestId("time-by-action")).toContainText("3 h");
-  await page.getByRole("tab", { name: "Documents" }).click();
+  await page.getByTestId("fil-open").click();
   await page.getByTestId("comment-input").fill("Oui, c'est lancé : 3 h aujourd'hui.");
   await page.getByTestId("comment-submit").click();
   await expect(page.getByTestId("comments")).toContainText("c'est lancé");
+  await page.keyboard.press("Escape");
 
   // 5. Le pilote demande un devis de 2 500 € (niveau 2) ; le responsable de pôle le voit dans « Ma semaine » et l'approuve.
   await iAm(page, "Hugo Lemaire");

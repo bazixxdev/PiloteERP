@@ -199,7 +199,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
                 }
                 toast.success(`Demande transmise à ${recipient ?? LEVEL_ROLE[res.data!.requiredLevel]}${file ? ", pièce jointe" : ""}`);
                 setOpen(false); reset();
-                router.push(afterHref ?? `/edition/${editionId}?onglet=validations`);
+                router.push(afterHref ?? `/edition/${editionId}?onglet=apercu`);
                 router.refresh();
               })
             }

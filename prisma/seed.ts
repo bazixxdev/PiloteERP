@@ -745,15 +745,15 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────────────────────
   // Décisions d'instance récentes (CODIR, pôle, revue trimestrielle).
   // ─────────────────────────────────────────────────────────────────────────────────────────────
-  const dec: { code: string; instance: string; body: string; who: { id: string }; follow?: { id: string }; due?: number; ago: number }[] = [
+  const dec: { code: string; instance: string; body: string; who: { id: string }; follow?: { id: string }; due?: number; ago: number; alert?: string }[] = [
     { code: "TES-04", instance: "codir", body: "Publication de la carte TESS calée sur la mise en ligne du site (15 novembre) ; le jalon est déplacé sur la fiche.", who: director, follow: camille, due: 5, ago: 3 },
-    { code: "SEN-01", instance: "codir", body: "Dépassement de 160 € accepté sur la sonorisation ; aucune autre dépense sans validation direction jusqu'au bilan.", who: director, ago: 3 },
+    { code: "SEN-01", instance: "codir", body: "Dépassement de 160 € accepté sur la sonorisation ; aucune autre dépense sans validation direction jusqu'au bilan.", who: director, ago: 3, alert: "envelope" },
     { code: "SEN-03", instance: "codir", body: "Objectif participants aligné sur l'avenant (120) ; rapport intermédiaire ESS France à remettre cette semaine.", who: director, follow: hugo, due: 4, ago: 3 },
     { code: "DLA-01", instance: "pole", body: "Les justificatifs FSE du trimestre sont relus par la RAF avant dépôt ; Thomas les dépose le 18 au plus tard.", who: leadB, follow: thomas, due: 4, ago: 8 },
     { code: "OBS-01", instance: "quarterly", body: "Le comité technique de novembre fixe le calendrier 2027 des publications, avec les besoins des deux pôles.", who: director, follow: ines, due: 52, ago: 25 },
     { code: "COO-02", instance: "pole", body: "La rencontre régionale des PTCE se tient à Vierzon le 18 novembre ; budget déplacements à prévoir.", who: leadB, follow: thomas, ago: 12 },
   ];
-  for (const x of dec) await prisma.decision.create({ data: { editionId: ed(x.code).id, instance: x.instance, body: x.body, authorId: x.who.id, followUpId: x.follow?.id ?? null, dueDate: x.due ? d(x.due) : null, decidedAt: d(-x.ago) } });
+  for (const x of dec) await prisma.decision.create({ data: { editionId: ed(x.code).id, instance: x.instance, body: x.body, authorId: x.who.id, followUpId: x.follow?.id ?? null, dueDate: x.due ? d(x.due) : null, decidedAt: d(-x.ago), alertKind: x.alert ?? null } });
 
   // ─────────────────────────────────────────────────────────────────────────────────────────────
   // Plan de charge : validé au séminaire de décembre 2025 (figé), ventilé par mois autour des jalons pour deux tiers des affectations.

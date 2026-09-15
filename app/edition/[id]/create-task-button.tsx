@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { addTask } from "@/app/actions/tasks";
 
 // « Me créer une tâche » : une tâche personnelle rattachée à l'édition (et, au choix, à une action) ; elle vit dans Ma semaine.
-export function CreateTaskButton({ editionId, actions }: { editionId: string; actions: { id: string; name: string }[] }) {
+export function CreateTaskButton({ editionId, actions, compact }: { editionId: string; actions: { id: string; name: string }[]; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
   const [actionId, setActionId] = useState("");
@@ -19,7 +19,7 @@ export function CreateTaskButton({ editionId, actions }: { editionId: string; ac
   const router = useRouter();
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild><Button variant="outline" data-testid="task-from-edition" title="Une tâche pour moi, rattachée à cette édition"><ListTodo />Tâche</Button></PopoverTrigger>
+      <PopoverTrigger asChild><Button variant="outline" size={compact ? "xs" : "default"} data-testid={compact ? "task-from-apercu" : "task-from-edition"} title="Une tâche pour moi, rattachée à cette édition"><ListTodo />{compact ? "Tâche" : "Tâche"}</Button></PopoverTrigger>
       <PopoverContent className="w-80" align="end">
         <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addTask({ label, dueDate: due || null, editionId, actionId: actionId || null }); if (!r.ok) { toast.error(r.error); return; } toast.success("Tâche ajoutée à « Ma semaine »"); setOpen(false); setLabel(""); setDue(""); router.refresh(); }); }}>
           <div className="text-sm font-semibold">Une tâche pour moi</div>

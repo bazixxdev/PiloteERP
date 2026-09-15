@@ -8,10 +8,13 @@ export async function iAm(page: Page, name: string) {
   await expect(page.getByTestId("person-switcher")).toContainText(name, { timeout: 15_000 });
 }
 
+// Ouvre l'édition depuis le portefeuille, puis son onglet Fiche (l'atterrissage est l'Aperçu une fois la fiche validée — revue du 15/09).
 export async function openEditionByName(page: Page, name: string) {
   await page.goto("/portefeuille");
   await page.getByRole("link", { name, exact: true }).first().click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
+  const fiche = page.getByRole("tab", { name: "Fiche" });
+  if ((await fiche.getAttribute("aria-selected")) !== "true") await fiche.click();
 }
 
 // Fiche validée : les couches sont repliées ; on déplie avant de lire les rubriques.

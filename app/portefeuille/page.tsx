@@ -168,7 +168,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                       {(timeOver || !r.timeTarget) && <small className={cn("mt-1 block text-[10px]", timeOver ? "text-danger" : "text-muted-foreground")}>{timeOver ? "! Objectif dépassé" : "Sans objectif"}</small>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.pendingValidations > 0 ? <Link href={`/edition/${r.id}?onglet=validations`}><StatusBadge label={`${r.pendingValidations} en attente`} color="warning" dot={false} /></Link> : <span className="text-[11px] text-muted-foreground">—</span>}
+                      {r.pendingValidations > 0 ? <Link href={`/edition/${r.id}?onglet=apercu`}><StatusBadge label={`${r.pendingValidations} en attente`} color="warning" dot={false} /></Link> : <span className="text-[11px] text-muted-foreground">—</span>}
                     </td>
                   </tr>
                 );

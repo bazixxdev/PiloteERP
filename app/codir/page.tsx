@@ -168,7 +168,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
           <ul className="divide-y text-sm" data-testid="recent-decisions">
             {recent.map((d) => (
               <li key={d.id} className="py-1.5">
-                <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refs.decision_instance?.[d.instance]?.label ?? d.instance}</span> <Link href={`/edition/${d.editionId}?onglet=validations`} className="font-medium hover:underline">{d.edition.project.name} · {d.edition.year}</Link> — {d.body}
+                <span className="rounded-sm bg-secondary px-1.5 text-[11px] font-medium text-primary">{refs.decision_instance?.[d.instance]?.label ?? d.instance}</span> <Link href={`/edition/${d.editionId}?onglet=fiche#decisions`} className="font-medium hover:underline">{d.edition.project.name} · {d.edition.year}</Link> — {d.body}
                 {!big && <span className="text-xs text-muted-foreground"> · {fmtDate(d.decidedAt)} · {d.author.name}{d.followUp ? ` · suite : ${d.followUp.name}${d.dueDate ? ` pour le ${fmtDate(d.dueDate)}` : ""}` : ""}</span>}
               </li>
             ))}

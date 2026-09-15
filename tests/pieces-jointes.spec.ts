@@ -35,7 +35,7 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   await expect(page.getByText("Pièce trop lourde")).toBeVisible();
 
   // Les devis seedés sont visibles sur les validations, avec le dépôt possible pour le pilote.
-  await page.getByRole("tab", { name: "Validations" }).click();
+  await page.getByRole("tab", { name: /Aperçu/ }).click();
   await expect(page.getByTestId("validation-0").locator("[data-testid=attachments]")).toContainText("Devis");
   await page.getByTestId("validation-upload-open-0").click();
   await expect(page.getByTestId("validation-0").getByTestId("upload-form")).toBeVisible();

@@ -36,7 +36,7 @@ export default async function BonPourAccordPage({ params }: { params: Promise<{ 
   const mailto = `mailto:${encodeURIComponent(v.supplierEmail ?? "")}?cc=${encodeURIComponent(settings.billingEmail)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Bon pour accord" subtitle={<>Devis « {v.label} » · <Link href={`/edition/${v.editionId}?onglet=validations`} className="text-primary hover:underline">{v.edition.project.name} · {v.edition.year}</Link> · demandé par {v.requester.name}</>} />
+      <PageHeader title="Bon pour accord" subtitle={<>Devis « {v.label} » · <Link href={`/edition/${v.editionId}?onglet=apercu`} className="text-primary hover:underline">{v.edition.project.name} · {v.edition.year}</Link> · demandé par {v.requester.name}</>} />
       {!approved ? (
         <div className="rounded-md border bg-warning-soft px-4 py-3 text-sm" data-testid="bpa-not-approved">Ce devis n'est pas approuvé ({v.status === "pending" ? "en attente" : "refusé"}) : pas de bon pour accord.</div>
       ) : (

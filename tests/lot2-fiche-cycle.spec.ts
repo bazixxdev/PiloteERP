@@ -52,7 +52,8 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   await page.goto("/portefeuille");
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
-  await page.getByRole("tab", { name: /Bilan/ }).click();
+  // Les réalisations vivent dans Actions (revue du 15/09) ; le bilan est un chapitre de la fiche.
+  await page.getByRole("tab", { name: /Actions/ }).click();
   await page.getByTestId("achievement-open").click();
   await expect(page.getByTestId("achievement-totals")).toContainText("55 personnes");
   await page.getByTestId("achievement-label").fill("Inscrits au petit-déjeuner d'octobre");

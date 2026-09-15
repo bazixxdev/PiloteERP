@@ -32,7 +32,7 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   await page.getByTestId("load-save").click();
   await expect(page.getByText("24 j répartis pour Romain Tessier")).toBeVisible();
   await expect(row).toContainText("par mois");
-  await expect(row.locator('input[type="number"]').first()).toHaveValue("24");
+  await expect(row).toContainText("24 j");
 
   // Le plan de charge reflète la ventilation (6 j en octobre) ; on modifie directement depuis la grille : 8 j, puis on ajoute une édition.
   await page.goto("/plan-de-charge?debut=2026-09&horizon=6&pole=tous");
@@ -59,5 +59,5 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   // Le total annuel de l'édition a suivi : 24 − 6 + 8 = 26 j.
   await openEditionByName(page, "Refonte du site internet");
   await page.getByRole("tab", { name: "Temps" }).click();
-  await expect(page.getByTestId("hr-table").locator("tr", { hasText: "Romain Tessier" }).locator('input[type="number"]').first()).toHaveValue("26");
+  await expect(page.getByTestId("hr-table").locator("tr", { hasText: "Romain Tessier" })).toContainText("26 j");
 });

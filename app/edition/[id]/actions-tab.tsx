@@ -3,17 +3,19 @@ import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
-import { canEditActions } from "@/lib/rights";
+import { canEditActions, canWriteLayer } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
-import { AddActionForm } from "./add-forms";
+import { AddActionForm, AddIndicatorForm } from "./add-forms";
+import { Achievements } from "./achievements";
 import { ActionExtrasToggle } from "./action-extras";
 import { TimeCell } from "./time-cell";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me.role, isPilot, isTeam, inMyPole(me, e.project));
+  const yearRw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
   const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
   const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));
@@ -83,6 +85,33 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
       <Section title="Frise chronologique" description={`Jalons datés de l'année ${e.year}, sans dépendances.`}>
         <Timeline year={e.year} actions={e.actions} refs={refs} />
       </Section>
+
+      {/* Objets vivants (revue du 15/09) : les réalisations se consignent au fil de l'eau ici, près des actions ; les indicateurs
+          se mettent à jour au réel. La fiche les relit, le bilan les reprend. */}
+      <div id="realisations" className="grid scroll-mt-20 gap-4 xl:grid-cols-2">
+        <Section title="Réalisations au fil de l'année" description="Inscrits, publics, livrables produits : notez au fil de l'eau, ce sera le bilan." testId="achievements-section">
+          <Achievements editionId={e.id} items={e.achievements.map((a) => ({ id: a.id, kind: a.kind, label: a.label, value: a.value, unit: a.unit, date: dayjs(a.date).format("YYYY-MM-DD"), author: a.author.name, authorId: a.authorId, action: a.action?.name ?? null }))} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} canWrite={yearRw} meId={me.id} canDeleteAll={me.role === "director" || isPilot} />
+        </Section>
+        <Section title="Indicateurs" description="Cible fixée à la rédaction de la fiche, réalisé mis à jour dans l'année ; imposés par un financeur ou propres au projet.">
+          <table className="mb-3 w-full text-sm" data-testid="indicators">
+            <thead className="text-left text-[10px] font-semibold text-muted-foreground">
+              <tr><th className="py-1">Indicateur</th><th className="w-24 py-1 text-right">Cible</th><th className="w-24 py-1 text-right">Réalisé</th><th className="w-16 py-1 text-center" title="Imposé par un financeur">Imposé</th></tr>
+            </thead>
+            <tbody className="divide-y">
+              {e.indicators.map((i) => (
+                <tr key={i.id}>
+                  <td className="py-0.5"><AutoField model="indicator" id={i.id} field="label" type="text" value={i.label} readOnly={!yearRw} /></td>
+                  <td className="py-0.5"><AutoField model="indicator" id={i.id} field="target" type="text" value={i.target} readOnly={!yearRw} inputClassName="text-right tabular" /></td>
+                  <td className="py-0.5"><AutoField model="indicator" id={i.id} field="actual" type="text" value={i.actual} readOnly={!yearRw} inputClassName="text-right tabular font-medium" placeholder="—" /></td>
+                  <td className="py-0.5 text-center"><AutoField model="indicator" id={i.id} field="imposed" type="bool" value={i.imposed} readOnly={!yearRw} /></td>
+                </tr>
+              ))}
+              {e.indicators.length === 0 && <tr><td colSpan={4} className="py-2 text-muted-foreground">Aucun indicateur.</td></tr>}
+            </tbody>
+          </table>
+          {yearRw && <AddIndicatorForm editionId={e.id} />}
+        </Section>
+      </div>
     </div>
   );
 }

@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+// Six onglets (revue du 15/09) : l'Aperçu atterrit sur l'état du projet ; Validations → Aperçu et Demandes ; Bilan → Fiche et Actions.
 export const TABS = [
+  { key: "apercu", label: "Aperçu" },
   { key: "fiche", label: "Fiche" },
   { key: "actions", label: "Actions" },
   { key: "financements", label: "Financements" },
   { key: "temps", label: "Temps" },
   { key: "budget", label: "Budget" },
-  { key: "validations", label: "Validations" },
   { key: "documents", label: "Documents" },
-  { key: "bilan", label: "Bilan" },
 ] as const;
 
 export type TabKey = (typeof TABS)[number]["key"];

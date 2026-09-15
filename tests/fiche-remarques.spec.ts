@@ -42,6 +42,7 @@ test("la direction pose une remarque sur une rubrique, le pilote la voit en plac
   await page.goto("/portefeuille?perimetre=cress");
   await page.getByRole("link", { name: "PTCE et ESSOR", exact: true }).first().click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("PTCE et ESSOR");
+  await page.getByRole("tab", { name: "Fiche" }).click();
   await expect(page.getByTestId("fiche-remarks-banner")).toContainText("1 remarque à traiter");
   await expect(page.getByTestId("remark-add-calendar")).toHaveCount(0);
 

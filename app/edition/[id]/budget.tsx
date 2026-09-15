@@ -34,6 +34,8 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
   const barSpent = e.budgetEnvelope ? Math.min(100, (b.realized / e.budgetEnvelope) * 100) : 0;
   const barCommitted = e.budgetEnvelope ? Math.min(100 - barSpent, (b.remainingCommitments / e.budgetEnvelope) * 100) : 0;
   const overrun = b.available !== null && b.available < 0 ? -b.available : 0;
+  const pendingQuotes = e.validations.filter((v) => v.status === "pending" && (v.kind === "quote" || v.kind === "expense"));
+  const envelopeAck = e.decisions.find((d) => d.alertKind === "envelope");
   return (
     <div className="grid gap-4">
       {/* Une phrase au plus sous le titre ; la règle de calcul et l'exemple se lisent dans le « ? » (revue du 15/09). */}
@@ -52,7 +54,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
           </div>
           {card("Réalisé", fmtEuro(b.realized), `dont ${fmtEuro(b.realizedLinked)} rattachés à un devis`, undefined, "budget-realized")}
           {card("Engagements restant à réaliser", fmtEuro(b.remainingCommitments), "devis approuvés non encore facturés", undefined, "budget-committed")}
-          {card("Reste", b.available === null ? "—" : fmtEuro(b.available), b.available !== null && b.available < 0 ? `enveloppe dépassée de ${fmtEuro(-b.available)}` : "enveloppe − réalisé − engagements restants", b.available !== null && b.available < 0 ? "border-danger bg-danger-soft/50" : pct >= settings.envelopeAlertPercent ? "[&>b]:text-warning-foreground" : undefined, "budget-remaining")}
+          {card("Reste", b.available === null ? "—" : fmtEuro(b.available), b.available !== null && b.available < 0 ? (envelopeAck ? `dépassement de ${fmtEuro(-b.available)} accepté (${fmtDate(envelopeAck.decidedAt)})` : `enveloppe dépassée de ${fmtEuro(-b.available)}`) : "enveloppe − réalisé − engagements restants", b.available !== null && b.available < 0 ? "border-danger bg-danger-soft/50" : pct >= settings.envelopeAlertPercent ? "[&>b]:text-warning-foreground" : undefined, "budget-remaining")}
         </div>
         {e.budgetEnvelope ? (
           <>
@@ -70,6 +72,12 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
       <Section title="Dépenses" description={<span className="inline-flex items-center gap-1.5">Devis approuvés et factures ; la facture arrive à l'adresse de facturation <HelpTip title="Le circuit d'une dépense" testId="expenses-help">
         <p className="mt-1">Un devis approuvé crée l'engagement une seule fois. La RAF rattache le réalisé (les factures) à cette ligne, la marque reçue puis payée ; le pilote est prévenu et confirme le service fait, sans bloquer. Aucun fichier facture ici : la facture arrive à l'adresse de facturation.</p>
       </HelpTip></span>} actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
+        {/* Un devis encore en attente de validation n'est pas une dépense : on le dit ici, sans l'engager (revue du 15/09). */}
+        {pendingQuotes.length > 0 && (
+          <p className="mb-3 rounded-md bg-warning-soft/60 px-3 py-2 text-xs text-warning-foreground" data-testid="budget-pending-quotes">
+            {pendingQuotes.length} devis en attente de validation, non engagé{pendingQuotes.length > 1 ? "s" : ""} : {pendingQuotes.map((v) => `${v.label}${v.amount != null ? ` (${fmtEuro(v.amount)})` : ""}`).join(", ")} · <Link href={`/edition/${e.id}?onglet=apercu`} className="underline">à décider dans l'Aperçu</Link>
+          </p>
+        )}
         {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">Aucune dépense sur cette édition.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="expenses">

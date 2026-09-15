@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { LoadPlanner } from "./load-planner";
 import { HelpTip } from "@/components/common/help-tip";
+import { ClickToEdit } from "@/components/inline/click-to-edit";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
@@ -88,11 +89,12 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
                   <td className="py-1">{seeReal && d.personId !== me.id ? <Link href={`/temps?personne=${d.personId}`} className="hover:underline" title="Voir la grille de cette personne">{d.person.name}</Link> : d.person.name}</td>
                   <td className="w-40 py-1">
                     <div className="flex items-center gap-1">
-                      <div className="w-24"><AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} readOnly={!canPlan} suffix="j" refreshOnSave /></div>
+                      {/* Cadrage annuel : se lit, s'ajuste au crayon (revue du 15/09). */}
+                      <ClickToEdit canEdit={canPlan} hint="Ajuster les jours prévus" testId={`planned-edit-${d.personId}`} className="w-24 justify-end" valueClassName="tabular text-sm" value={<>{fmtNumber(d.plannedDays, 1)} j</>} editor={<AutoField model="editionPersonDays" id={d.id} field="plannedDays" type="number" value={d.plannedDays} suffix="j" refreshOnSave />} />
                       <LoadPlanner editionId={e.id} personId={d.personId} personName={d.person.name} year={e.year} plannedDays={d.plannedDays} loads={Object.fromEntries(e.plannedLoads.filter((l) => l.personId === d.personId).map((l) => [l.month, l.days]))} readOnly={!canPlan} />
                     </div>
                   </td>
-                  <td className="w-24 py-1"><AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} readOnly={!canSold} suffix="j" refreshOnSave /></td>
+                  <td className="w-24 py-1"><ClickToEdit canEdit={canSold} hint="Ajuster les jours conventionnés" className="justify-end" valueClassName="tabular text-sm" value={<>{fmtNumber(d.soldDays, 1)} j</>} editor={<AutoField model="editionPersonDays" id={d.id} field="soldDays" type="number" value={d.soldDays} suffix="j" refreshOnSave />} /></td>
                   <td className="w-24 py-1 text-right tabular text-muted-foreground">{seeReal ? `${fmtNumber(h / hpd, 1)} j` : "·"}</td>
                   <td className={cn("w-20 py-1 text-right tabular", pct !== null && pct > 100 && "text-danger font-medium")}>{pct === null ? "—" : `${pct} %`}</td>
                 </tr>
