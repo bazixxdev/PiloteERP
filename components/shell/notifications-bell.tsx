@@ -10,7 +10,7 @@ import { markNotificationsRead } from "@/app/actions/notifications";
 
 export type NotificationRow = { id: string; title: string; body: string | null; link: string | null; createdAt: string; readAt: string | null; sender: string | null };
 
-// Cloche : les huit dernières notifications de la personne courante ; l'historique complet et les filtres sont dans /notifications.
+// Cloche : les quatre dernières notifications de la personne courante ; l'historique complet et les filtres sont dans /notifications.
 // Marquer comme lu retire le badge, ne résout rien.
 export function NotificationsBell({ items }: { items: NotificationRow[] }) {
   const unread = items.filter((n) => !n.readAt).length;
@@ -31,7 +31,7 @@ export function NotificationsBell({ items }: { items: NotificationRow[] }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {items.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">Aucune notification. Les relances, remarques et échéances de vos projets arrivent ici (par mail en V1).</div>}
-        {items.slice(0, 8).map((n) => (
+        {items.slice(0, 4).map((n) => (
           <DropdownMenuItem key={n.id} asChild className={n.readAt ? "opacity-60" : ""}>
             <Link href={n.link ?? "/ma-semaine"} onClick={() => { if (!n.readAt) start(async () => { await markNotificationsRead([n.id]); }); }} className="flex flex-col items-start gap-0.5" data-testid="notification-item">
               <span className="font-medium">{n.title}</span>
@@ -42,7 +42,7 @@ export function NotificationsBell({ items }: { items: NotificationRow[] }) {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/notifications" className="justify-center text-sm text-primary" data-testid="bell-all">Voir toutes les notifications{items.length > 8 ? ` (${items.length})` : ""}</Link>
+          <Link href="/notifications" className="justify-center text-sm text-primary" data-testid="bell-all">Voir toutes les notifications{items.length > 4 ? ` (${items.length})` : ""}</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

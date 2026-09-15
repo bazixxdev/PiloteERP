@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 type Filter = "toutes" | "non-lues" | NotificationFamily;
 
 // Centre de notifications : tout ce qui a été adressé à la personne (relances, remarques, demandes, échéances…), lu ou non,
-// groupé par jour. La cloche n'en montre que les huit dernières ; ici, on retrouve l'historique et on filtre par famille.
+// groupé par jour. La cloche n'en montre que les quatre dernières ; ici, on retrouve l'historique et on filtre par famille.
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ filtre?: string }> }) {
   const { filtre } = await searchParams;
   const me = await getCurrentPerson();
