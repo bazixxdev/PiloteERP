@@ -50,6 +50,14 @@ export async function updateTask(id: string, patch: { label?: string; dueDate?: 
     const editionId = patch.editionId !== undefined ? patch.editionId : t.editionId;
     if (!a || a.editionId !== editionId) return { ok: false, error: "Cette action n'appartient pas à l'édition choisie." };
   }
+  // Tâche née d'une demande : la cocher fait la demande (le demandeur est prévenu), la décocher la rouvre.
+  if (patch.done !== undefined && t.requestId) {
+    const r = await prisma.request.findUnique({ where: { id: t.requestId }, include: { requester: true } });
+    if (r && (patch.done ? r.status !== "done" : r.status === "done")) {
+      await prisma.request.update({ where: { id: r.id }, data: { status: patch.done ? "done" : "doing", doneAt: patch.done ? new Date() : null } });
+      if (patch.done && r.requesterId !== t.personId) await prisma.notification.create({ data: { personId: r.requesterId, senderId: t.personId, kind: "info", title: `Demande faite : ${r.title}`, link: "/demandes" } });
+    }
+  }
   await prisma.task.update({
     where: { id },
     data: {

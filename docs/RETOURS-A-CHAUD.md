@@ -136,6 +136,8 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 - **« Rien n'empêche de demander une validation depuis Demandes, même modale + choix de l'édition »** — Traité le 15/09 : bouton **Nouvelle validation** à côté de Nouvelle demande ; même formulaire (`RequestValidationDialog` avec `editions`), l'édition en premier, actions et circuit (pilote / responsable / direction) suivent l'édition choisie ; retour sur « Mes demandes ».
 - **« Une petite base fournisseurs unifiée, recherche dans le champ, case à cocher pour ajouter »** — Traité le 15/09 : modèle `Supplier` (nom, mail, téléphone, notes), champ Fournisseur avec suggestions en tapant (l'adresse mail se remplit), case « Ajouter … à la base » cochée par défaut pour un nom inconnu, `ValidationRequest.supplierId` (nom et adresse restent copiés sur la demande). Base tenue dans Admin › Référentiels › Fournisseurs (nom, mail, nombre de devis, ajout). Jeu de démo : 9 fournisseurs.
 
+- **« J'ai mis Je m'en occupe et j'ai rien dans mes tâches »** — Traité le 15/09 : un seul geste. « Je m'en occupe » passe la demande en cours à mon nom **et** crée une tâche liée (`Task.requestId`, échéance et édition de la demande) ; « En faire une tâche » disparaît. Cocher la tâche fait la demande et prévient le demandeur ; « Faite » / « Décliner » sur la demande cochent la tâche. Pastille « demande » sur la ligne de tâche. Ligne de demande rangée : « Un mot au demandeur » juste avant Faite / Décliner, « Confier à… » explicite et en dernier, avec « (en charge) » sur la personne actuelle.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

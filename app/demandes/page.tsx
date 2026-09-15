@@ -38,7 +38,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
     ...requests.map((r): Line => ({
       id: r.id, family: "request", kind: kindLabel(r.kind), title: r.title, sub: [r.body, r.edition ? `${r.edition.project.name} · ${r.edition.year}` : null].filter(Boolean).join(" · "),
       who: r.requester.name, to: r.assignee?.name ?? (r.pole ? `pôle ${r.pole.name}` : "—"), due: r.dueDate, status: statusOf(r.status), age: ageDays(r.createdAt), href: "/demandes", open: r.status === "open" || r.status === "doing",
-      actions: <RequestActions id={r.id} status={r.status} canTreat={canTreat(r)} canWithdraw={r.requesterId === me.id} people={peopleOpts} assigneeId={r.assigneeId} />,
+      actions: <RequestActions id={r.id} status={r.status} canTreat={canTreat(r)} canWithdraw={r.requesterId === me.id} people={peopleOpts} assigneeId={r.assigneeId} hasTask={r.tasks.some((t) => t.personId === me.id)} />,
     })),
     ...validations.map((v): Line => ({
       id: v.id, family: "validation", kind: refLabel(refs, "validation_kind", v.kind), title: `${v.label}${v.amount != null ? ` · ${fmtEuro(v.amount)}` : ""}`, sub: `${v.edition.project.name} · ${v.edition.year}`,

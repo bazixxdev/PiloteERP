@@ -461,6 +461,7 @@ model Request {
   answer       String?
   doneAt       DateTime?
   createdAt    DateTime  @default(now())
+  tasks        Task[]
 
   @@index([assigneeId, status])
   @@index([poleId, status])
@@ -708,6 +709,8 @@ model Task {
   action    Action?    @relation(fields: [actionId], references: [id], onDelete: SetNull)
   listId    String?
   list      TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
+  requestId String? // tâche née d'une demande prise (« Je m'en occupe ») : cocher la tâche fait la demande, et inversement
+  request   Request?   @relation(fields: [requestId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
   slots     WorkSlot[]
 

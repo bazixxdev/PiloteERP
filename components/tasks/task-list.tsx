@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AtSign, CalendarClock, CalendarDays, Plus, Trash2, X, GripVertical, ChevronDown } from "lucide-react";
+import { AtSign, CalendarClock, CalendarDays, Plus, Trash2, X, GripVertical, ChevronDown, Inbox } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export type EditionOpt = { id: string; name: string; year: number; actions: { id
 const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export type TaskView = {
-  id: string; label: string; dueDate: string | null; done: boolean; listId?: string | null; list?: { id: string; name: string; color: string | null } | null;
+  id: string; label: string; dueDate: string | null; done: boolean; listId?: string | null; requestId?: string | null; list?: { id: string; name: string; color: string | null } | null;
   edition: { id: string; name: string; year: number } | null; action: { id: string; name: string } | null;
   slots: { id: string; startAt: string; endAt: string; allDay: boolean }[];
 };
@@ -188,6 +188,7 @@ function TaskRow({ t, pending, run, compact, editions, lists = [], showList }: {
         )}
       </div>
       <div className="flex max-w-[58%] shrink-0 flex-wrap items-center justify-end gap-1 text-[10px] text-muted-foreground">
+        {t.requestId && <Link href="/demandes" className="inline-flex items-center gap-1 rounded-sm bg-info-soft px-1.5 py-px text-primary hover:underline" title="Née d'une demande : la cocher fait la demande, le demandeur est prévenu" data-testid={`task-request-${t.id}`}><Inbox className="size-3" aria-hidden />demande</Link>}
         {!t.done && lists.length > 0 && <span className={cn(!showList && hover)}><ListChip t={t} pending={pending} run={run} lists={lists} /></span>}
         {t.done && showList && t.list && <span className="inline-flex max-w-[140px] items-center gap-1 px-1.5"><span className="size-2 shrink-0 rounded-full" style={{ background: listColor ?? "var(--border)" }} aria-hidden /><span className="truncate">{t.list.name}</span></span>}
         {t.done || editions.length === 0 ? (

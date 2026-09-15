@@ -21,7 +21,7 @@ export const REQUEST_STATUSES = [
 ] as const;
 export const statusOf = (v: string) => REQUEST_STATUSES.find((s) => s.value === v) ?? REQUEST_STATUSES[0];
 
-export const requestInclude = { requester: true, assignee: true, pole: true, edition: { include: { project: { include: { secondaryPoles: true } } } } };
+export const requestInclude = { requester: true, assignee: true, pole: true, edition: { include: { project: { include: { secondaryPoles: true } } } }, tasks: { select: { id: true, personId: true } } };
 export type RequestRow = Awaited<ReturnType<typeof loadRequests>>[number];
 
 type Viewer = { id: string; role: string; poleId: string | null };

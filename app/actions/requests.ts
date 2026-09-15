@@ -37,6 +37,7 @@ export async function setRequestStatus(id: string, status: string, answer?: stri
   const canTreat = isForMe(me, r) || me.role === "director" || me.role === "raf" || (r.poleId && me.role === "pole_lead" && me.poleId === r.poleId);
   if (!canTreat && !(r.requesterId === me.id && status === "declined")) return { ok: false, error: "Seul le destinataire fait avancer cette demande (le demandeur peut la retirer)." };
   await prisma.request.update({ where: { id }, data: { status, answer: answer?.trim() || r.answer, doneAt: status === "done" || status === "declined" ? new Date() : null, ...(status !== "open" && !r.assigneeId ? { assigneeId: me.id } : {}) } });
+  if (status === "done" || status === "declined") await prisma.task.updateMany({ where: { requestId: id, done: false }, data: { done: true, doneAt: new Date() } });
   if (r.requesterId !== me.id && (status === "done" || status === "declined")) {
     await prisma.notification.create({ data: { personId: r.requesterId, senderId: me.id, kind: "info", title: `Demande ${status === "done" ? "faite" : "déclinée"} : ${r.title}`, body: answer?.trim() || null, link: "/demandes" } });
   }
@@ -56,12 +57,16 @@ export async function assignRequest(id: string, assigneeId: string | null): Prom
   return { ok: true };
 }
 
-// Une tâche naît d'une demande : dans ma liste, avec l'échéance et l'édition de la demande.
+// Prendre une demande (« Je m'en occupe ») : elle passe en cours, à mon nom, et une tâche liée arrive dans mes tâches
+// (échéance et édition de la demande). Cocher la tâche fait la demande ; « Faite » sur la demande coche la tâche.
 export async function taskFromRequest(id: string): Promise<Result<{ taskId: string }>> {
   const me = await getCurrentPerson();
-  const r = await prisma.request.findUnique({ where: { id }, include: { requester: true } });
+  const r = await prisma.request.findUnique({ where: { id }, include: { requester: true, tasks: { where: { personId: me.id } } } });
   if (!r) return { ok: false, error: "Demande introuvable." };
-  const t = await prisma.task.create({ data: { personId: me.id, label: `${r.title} (demande de ${r.requester.name})`, dueDate: r.dueDate, editionId: r.editionId } });
+  const canTreat = isForMe(me, r) || me.role === "director" || me.role === "raf" || (r.poleId && me.role === "pole_lead" && me.poleId === r.poleId);
+  if (!canTreat) return { ok: false, error: "Seul le destinataire prend cette demande." };
+  const existing = r.tasks[0];
+  const t = existing ?? (await prisma.task.create({ data: { personId: me.id, label: `${r.title} (demande de ${r.requester.name})`, dueDate: r.dueDate, editionId: r.editionId, requestId: r.id } }));
   if (r.status === "open") await prisma.request.update({ where: { id }, data: { status: "doing", assigneeId: r.assigneeId ?? me.id } });
   revalidatePath("/", "layout");
   return { ok: true, data: { taskId: t.id } };

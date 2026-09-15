@@ -19,22 +19,26 @@ test("une demande interne se dépose, arrive chez l'assistante, devient une tâc
   await page.goto("/demandes?vue=mes");
   await expect(page.getByTestId("requests-open")).toContainText("Réserver la salle du CA pour le jury du Prix");
 
-  // L'assistante la trouve dans « À traiter par moi » (avec le compteur de la barre), en fait une tâche, puis la marque faite.
+  // L'assistante la trouve dans « À traiter par moi » (avec le compteur de la barre) ; « Je m'en occupe » la met dans ses tâches ; cocher la tâche fait la demande.
   await iAm(page, "Léa Morin");
   await page.goto("/demandes");
   const line = page.locator("[data-testid^=request-line-]", { hasText: "jury du Prix" });
   await expect(line).toBeVisible();
   await expect(page.locator("aside").first().getByRole("link", { name: /Demandes/ })).toContainText("2");
-  await line.locator("[data-testid^=request-task-]").click();
-  await expect(page.getByText("Tâche créée dans votre liste")).toBeVisible();
+  await line.locator("[data-testid^=request-take-]").click();
+  await expect(page.getByText("Demande prise : elle est dans vos tâches")).toBeVisible();
+  await expect(line.locator("[data-testid^=request-task-link-]")).toBeVisible();
   await page.goto("/taches?vue=trier");
-  await expect(page.getByTestId("tasks-main")).toContainText("Réserver la salle du CA pour le jury du Prix (demande de Inès Cabral)");
-  await page.goto("/demandes");
-  await line.locator("[data-testid^=request-done-]").click();
-  await expect(page.getByText("Demande faite, le demandeur est prévenu")).toBeVisible();
+  const task = page.getByTestId("tasks-main").locator("li", { hasText: "Réserver la salle du CA pour le jury du Prix (demande de Inès Cabral)" });
+  await expect(task.locator("[data-testid^=task-request-]")).toBeVisible();
+  await task.locator("[data-testid^=task-done-]").check();
+  await expect(task.locator("[data-testid^=task-done-]")).toBeChecked();
+  // Côté demandeur : la demande est faite et une notification est arrivée.
   await iAm(page, "Inès Cabral");
   await page.goto("/ma-semaine");
   await expect(page.getByTestId("unread-notifications")).toContainText("Demande faite : Réserver la salle du CA pour le jury du Prix");
+  await page.goto("/demandes?vue=mes");
+  await expect(page.getByTestId("requests-closed")).toContainText("Réserver la salle du CA pour le jury du Prix");
 });
 
 test("un devis approuvé produit un bon pour accord ; la facture est reçue, le service fait confirmé, puis payée — le pilote est prévenu à chaque étape", async ({ page }) => {
