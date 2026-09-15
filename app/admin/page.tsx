@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { AddSimpleForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./forms";
 import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
+import { InstanceModulesForm } from "./instance-modules-form";
+import { modulesOf } from "@/lib/modules";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
@@ -206,6 +208,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </Section>
           <Section title="Règles de saisie du temps" description="Affichées à chaque personne dans « Temps », sous « Aide et règles de saisie ».">
             <AutoField model="settings" id="1" field="timeRules" type="textarea" rows={6} value={settings.timeRules} readOnly={!rw} placeholder="Qui saisit, où vont les réunions transverses, quels codes par poste…" />
+          </Section>
+          <Section title="Modules de l'installation" description="Ce que cette installation utilise. Un module éteint disparaît de la navigation ; ses données restent. Chacun règle aussi ses propres modules dans Mon compte." testId="instance-modules">
+            <InstanceModulesForm enabled={[...modulesOf(settings)]} readOnly={!rw} />
           </Section>
         </div>
       )}

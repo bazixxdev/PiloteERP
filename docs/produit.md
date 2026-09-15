@@ -43,6 +43,10 @@ Rien d'autre : jamais de patch d'instance.
 - Les listes de valeurs en base (`RefValue`), pas en enum.
 - Ce qui vient d'`erp-tlst` se réécrit sur le modèle Pilote et sur Radix ; on reprend les règles et les idées, pas les fichiers (kit UI Base UI incompatible, vocabulaire différent : l'`Action` TLST ≈ l'`Edition` Pilote).
 
+## Déjà en place (15/09)
+
+- `Settings.modules` + admin › Paramètres › Modules de l'installation (lot 0) : premier module activable, la veille des appels à projets. Le mécanisme est générique (`INSTANCE_MODULES`, `instanceHas`) ; chaque nouveau module ajoute une entrée et garde sa page derrière `instanceHas`.
+
 ## Ce qui sera fait quand le produit sera lancé (pas avant)
 
 Postgres → auth better-auth (+ Entra ID) → permissions par module en base (matrice) au-dessus des droits contextuels → `Person` → `Personne` élargie (externes, contacts) → modules activables par instance → `config/clients/` → `deploy.sh` paramétré par instance → portage des modules TLST (Adhérents/HelloAsso, Pennylane, Trésorerie, Matériel) → archivage d'`erp-tlst`.

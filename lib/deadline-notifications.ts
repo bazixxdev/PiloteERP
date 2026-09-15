@@ -25,7 +25,7 @@ function titleOf(r: Reminder): string {
   return r.stage === "retard" ? `${what} en retard : ${r.label}` : `${what} à J-${r.stage} : ${r.label}`;
 }
 
-const KIND_LABEL: Record<Reminder["kind"], string> = { deliverable: "livrable financeur", milestone: "jalon interne", payment: "versement attendu" };
+const KIND_LABEL: Record<Reminder["kind"], string> = { deliverable: "livrable financeur", milestone: "jalon interne", payment: "versement attendu", call: "dépôt d'appel à projets" };
 
 // Renvoie aussi les rappels calculés, pour que le layout ne refasse pas la requête.
 export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder[]; created: number }> {

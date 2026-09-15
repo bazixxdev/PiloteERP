@@ -82,7 +82,7 @@ export function nextMilestone(e: EditionForAlerts): { name: string; date: Date }
 // Rappels J-30 / J-7 (EF-C2), calculés à la volée. `stage` = le palier franchi (le plus proche de l'échéance, ou "retard") :
 // c'est lui qui déclenche une notification (`lib/deadline-notifications.ts`), une seule par palier et par destinataire.
 export type ReminderStage = number | "retard";
-export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone" | "payment"; who: string[]; whoIds: string[] };
+export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone" | "payment" | "call"; who: string[]; whoIds: string[] };
 
 function stageOf(daysLeft: number, reminderDays: number[]): ReminderStage | null {
   if (daysLeft < 0) return "retard";

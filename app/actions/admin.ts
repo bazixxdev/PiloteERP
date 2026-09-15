@@ -4,12 +4,25 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
+import { INSTANCE_MODULES } from "@/lib/modules";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
   return canAdmin(me.role) ? null : "Réservé à l'administration (direction, RAF).";
+}
+
+// Modules de l'installation (lot 0) : allumer ou éteindre, rien ne se perd.
+export async function setInstanceModule(key: string, on: boolean): Promise<Result> {
+  const d = await guard(); if (d) return { ok: false, error: d };
+  if (!INSTANCE_MODULES.some((m) => m.key === key)) return { ok: false, error: "Module inconnu." };
+  const s = await prisma.settings.findUniqueOrThrow({ where: { id: 1 } });
+  const set = new Set(s.modules.split(",").map((x) => x.trim()).filter(Boolean));
+  if (on) set.add(key); else set.delete(key);
+  await prisma.settings.update({ where: { id: 1 }, data: { modules: [...set].join(",") } });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 export async function createPerson(name: string): Promise<Result> {

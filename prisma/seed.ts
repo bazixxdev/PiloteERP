@@ -53,6 +53,7 @@ function storePdf(title: string): { storedName: string; size: number } {
 }
 
 async function reset() {
+  await prisma.call.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.fieldRemark.deleteMany();
   await prisma.plannedLoad.deleteMany();
@@ -971,7 +972,22 @@ async function main() {
     { personId: director.id, senderId: leadB.id, kind: "info", title: "Pour information · Devis intervenant conférence 2 approuvé (600 €)", body: `Par ${leadB.name}, niveau 2.`, link: `/edition/${ed("TES-02").id}?onglet=budget`, createdAt: d(-97), readAt: d(-96) },
   ] });
 
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example" } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille" } });
+
+  // Appels à projets (lot B, module veille) : ce que la CRESS a repéré chez ses financeurs. Un « nouveau » pas encore regardé,
+  // un « on dépose » à échéance proche, un promu en convention (à déposer), un écarté, un au fil de l'eau, un annuel clôturé.
+  const fx = (name: string) => funders.find((f) => f.name === name)!.id;
+  const promoted = await prisma.convention.create({ data: { funderId: fx("ADEME"), reference: "ADEME-2027", scheme: "AAP Transition écologique · axe économie circulaire", label: "AAP Transition écologique 2027", startYear: 2027, endYear: 2027, status: "to_submit", amountRequested: 42000, notes: "Montant indicatif : jusqu'à 50 % des dépenses éligibles.\nAppel : https://agirpourlatransition.ademe.fr/exemple" } });
+  await prisma.call.createMany({ data: [
+    { funderId: fx("ADEME"), label: "AAP Transition écologique 2027", scheme: "Axe économie circulaire", deadline: today.add(52, "day").toDate(), recurring: true, amountHint: "jusqu'à 50 % des dépenses éligibles", link: "https://agirpourlatransition.ademe.fr/exemple", teamStatus: "apply", statusById: director.id, statusAt: d(-12), conventionId: promoted.id, createdAt: d(-30) },
+    { funderId: fx("Région"), label: "Appel à manifestation d'intérêt · Tiers-lieux et coopérations", scheme: "AMI 2026", deadline: today.add(18, "day").toDate(), amountHint: "20 000 à 60 000 €", link: "https://www.centre-valdeloire.fr/exemple-ami", teamStatus: "apply", statusById: director.id, statusAt: d(-6), note: "Portage possible avec ESSOR ; voir avec Simon pour la partie observatoire.", createdAt: d(-20) },
+    { funderId: fx("Banque des Territoires"), label: "Soutien aux têtes de réseau ESS · ingénierie", scheme: "Programme Territoires d'ESS", deadline: today.add(9, "day").toDate(), amountHint: "jusqu'à 30 000 €", teamStatus: "study", statusById: raf.id, statusAt: d(-4), note: "Sandrine attend les pièces RH ; à trancher lundi.", createdAt: d(-15) },
+    { funderId: fx("État"), label: "Fonds pour le développement de la vie associative (FDVA) · fonctionnement", scheme: "FDVA 2 · 2027", deadline: today.add(95, "day").toDate(), recurring: true, amountHint: "5 000 à 15 000 €", link: "https://www.associations.gouv.fr/fdva", createdAt: d(-2) },
+    { funderId: fx("ESS France"), label: "Fonds d'amorçage · Mois de l'ESS, projets territoriaux", deadline: today.add(40, "day").toDate(), recurring: true, amountHint: "3 000 €", createdAt: d(-1) },
+    { funderId: fx("Cap'Asso"), label: "Cap'Asso · consolidation d'emploi", scheme: "Dispositif régional", rolling: true, amountHint: "jusqu'à 45 000 € sur 3 ans", link: "https://www.capasso.fr/exemple", teamStatus: "study", statusById: leadB.id, statusAt: d(-9), createdAt: d(-40) },
+    { funderId: fx("DREETS"), label: "Appel à projets Impact social · expérimentations", scheme: "AAP 2026", deadline: today.add(25, "day").toDate(), amountHint: "40 000 €", teamStatus: "dismissed", statusById: director.id, statusAt: d(-3), note: "Trop loin de nos missions ; orienter Familles Rurales.", createdAt: d(-10) },
+    { funderId: fx("Région"), label: "Appel à projets Économie sociale et solidaire · innovation", scheme: "AAP ESS 2026", deadline: today.subtract(45, "day").toDate(), recurring: true, amountHint: "jusqu'à 25 000 €", teamStatus: "dismissed", statusById: raf.id, statusAt: d(-60), note: "Pas cette année (Forum) ; à reconduire pour 2027.", createdAt: d(-120) },
+  ] });
 
   // Notifications d'échéance (J-30, J-7, retard) : la passerelle les génère datées du jour où le mail serait parti ;
   // celles de plus de trois jours sont marquées lues, comme des mails déjà ouverts — la cloche ne montre que le frais.

@@ -4,9 +4,11 @@ import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { inMyScope, isTransversal, perimeterFrom, relevanceTier, TIER_LABEL } from "@/lib/scope";
+import { inMyScope, isTransversal, perimeterFrom, relevanceTier, TIER_LABEL, type Tier } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
-import { computeReminders } from "@/lib/alerts";
+import { computeReminders, type Reminder } from "@/lib/alerts";
+import { instanceHas } from "@/lib/modules";
+import { daysFromNow } from "@/lib/format";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +26,21 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
   const days = settings.reminderDaysBefore.split(",").map(Number);
   const scoped = perimeter === "pole" ? editions.filter((e) => inMyScope(me, e.project, e.team.map((t) => t.personId))) : editions;
   const tierOf = new Map(scoped.map((e) => [e.id, relevanceTier(me, e.project, e.team.map((t) => t.personId), e.actions.map((a) => a.ownerId ?? ""))]));
-  const reminders = computeReminders(scoped, raf ? { id: raf.id, name: raf.name } : null, days, settings.horizonDays, director ? { id: director.id, name: director.name } : null)
-    .map((r) => ({ ...r, tier: tierOf.get(r.editionId) ?? 3 }))
+  // Appels à projets « on dépose » (module veille) : la date limite de dépôt est une échéance de la RAF et de la direction.
+  // Tant que la convention n'est pas créée (« Étudier »), l'appel reste dans le radar ; ensuite c'est la convention qui vit.
+  const money = [raf, director].filter((p): p is NonNullable<typeof p> => !!p);
+  const calls = instanceHas(settings, "veille") && perimeter !== "pole"
+    ? (await prisma.call.findMany({ where: { active: true, teamStatus: "apply", conventionId: null, deadline: { not: null } }, include: { funder: true } }))
+        .map((c) => ({ c, n: daysFromNow(c.deadline!) }))
+        .filter(({ n }) => n <= settings.horizonDays)
+        .map(({ c, n }): Reminder & { tier: Tier } => ({ editionId: "", project: c.funder.name, label: c.label, dueDate: c.deadline!, daysLeft: n, stage: n < 0 ? "retard" : (days.filter((d) => n <= d).sort((a, b) => a - b)[0] ?? days[0]), kind: "call", who: money.map((m) => m.name), whoIds: money.map((m) => m.id), tier: 3 }))
+    : [];
+  const reminders = [...computeReminders(scoped, raf ? { id: raf.id, name: raf.name } : null, days, settings.horizonDays, director ? { id: director.id, name: director.name } : null)
+    .map((r) => ({ ...r, tier: (tierOf.get(r.editionId) ?? 3) as Tier })), ...calls]
     .sort((a, b) => (isTransversal(me) ? 0 : a.tier - b.tier) || a.daysLeft - b.daysLeft);
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Échéances" subtitle={`Livrables financeurs, jalons internes et versements attendus à ${settings.horizonDays} jours. Le pilote (et la RAF pour les livrables) est prévenu à J-${days.join(", J-")} puis en cas de retard ; la RAF et la direction quand un versement attendu est dépassé — dans la cloche ici, par mail en V1.`} />
+      <PageHeader title="Échéances" subtitle={`Livrables financeurs, jalons internes, versements attendus et dépôts d'appels à projets à ${settings.horizonDays} jours. Le pilote (et la RAF pour les livrables) est prévenu à J-${days.join(", J-")} puis en cas de retard ; la RAF et la direction quand un versement attendu est dépassé — dans la cloche ici, par mail en V1.`} />
       {!isTransversal(me) && <div className="mb-3"><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/echeances?perimetre=${p}`} /></div>}
       {reminders.length === 0 ? <EmptyState title="Aucune échéance" hint="Rien n'arrive à échéance dans l'horizon." icon={<CalendarClock className="size-5" />} /> : (
         <div className="overflow-hidden rounded-2xl border bg-card">
@@ -44,9 +55,9 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
                     <div>{fmtDate(r.dueDate)}</div>
                     <div className={cn("text-xs", r.daysLeft < 0 ? "text-danger" : "text-muted-foreground")}>{r.daysLeft < 0 ? `${-r.daysLeft} j de retard` : `J-${r.daysLeft}`}</div>
                   </td>
-                  <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : r.kind === "payment" ? "bg-warning-soft text-warning-foreground" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : r.kind === "payment" ? "Versement attendu" : "Jalon interne"}</span></td>
+                  <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : r.kind === "payment" ? "bg-warning-soft text-warning-foreground" : r.kind === "call" ? "bg-coral/10 text-coral" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : r.kind === "payment" ? "Versement attendu" : r.kind === "call" ? "Dépôt d'appel à projets" : "Jalon interne"}</span></td>
                   <td className="px-3 py-2">{r.label}</td>
-                  <td className="px-3 py-2"><Link href={`/edition/${r.editionId}?onglet=${r.kind === "milestone" ? "actions" : "budget"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
+                  <td className="px-3 py-2"><Link href={r.kind === "call" ? "/appels?statut=apply" : `/edition/${r.editionId}?onglet=${r.kind === "milestone" ? "actions" : "budget"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.who.join(", ")}<span className="ml-1 text-xs">· {r.stage === "retard" ? "retard" : `J-${r.stage}`}</span></td>
                 </tr>
               ))}

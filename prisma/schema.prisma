@@ -109,6 +109,7 @@ model Funder {
   lines       FundingLine[]
   conventions Convention[]
   contacts    FunderContact[]
+  calls       Call[]
 }
 
 // Interlocuteurs d'un financeur (instructeur, gestionnaire, élu référent…). Données personnelles de tiers : le minimum utile,
@@ -153,6 +154,7 @@ model Convention {
   contact         FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
   payments        Payment[]
+  call            Call?
   createdAt       DateTime      @default(now())
 
   @@unique([reference])
@@ -514,6 +516,38 @@ model Settings {
   // Adresse de facturation écrite sur le bon pour accord (lot 3) : les factures y arrivent, pas chez le pilote.
   billingEmail              String  @default("factures@cress-cvl.example")
   billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
+  // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
+  // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
+  modules                   String  @default("veille")
+}
+
+// Appel à projets (lot B, module « veille ») : une opportunité de financement repérée, avant qu'elle devienne une convention.
+// Le contenu (libellé, échéance, lien) est celui de l'appel ; le statut d'équipe (à étudier, on dépose, écarté) appartient à la
+// CRESS et ne serait jamais touché par un flux importé. Un appel promu garde le lien vers sa convention ; un appel passé ou
+// retiré reste en base (actif = false), il n'est pas supprimé.
+model Call {
+  id           String      @id @default(cuid())
+  funderId     String
+  funder       Funder      @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  label        String
+  scheme       String? // dispositif, axe
+  deadline     DateTime? // date limite de dépôt ; null si au fil de l'eau
+  rolling      Boolean     @default(false) // au fil de l'eau
+  recurring    Boolean     @default(false) // revient chaque année : « reconduire » crée l'appel de l'année suivante
+  amountHint   String? // montant indicatif, en texte (« jusqu'à 30 k€ », « 50 % des dépenses »)
+  link         String?
+  note         String?
+  teamStatus   String? // study | apply | dismissed ; null = pas encore regardé
+  statusById   String?
+  statusAt     DateTime?
+  conventionId String?     @unique // convention créée depuis cet appel (« Étudier »)
+  convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+
+  @@index([funderId])
+  @@index([deadline])
+  @@index([teamStatus])
 }
 
 // Plan de charge figé par année (au séminaire) : après cette date, les modifications restent possibles mais sont tracées et signalées.

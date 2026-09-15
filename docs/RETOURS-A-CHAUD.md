@@ -170,6 +170,15 @@ Première brique reprise d'`erp-tlst` (analyse dans `CRESS/point-fusion-erp-tlst
 - **Leçons** : une case « reçu » contrôlée par la prop serveur ne bascule qu'au `router.refresh()` → Playwright `check()` échoue ; case optimiste avec retour arrière si le serveur refuse. Les libellés modifiables en place sont des `input` : les tests lisent `input[value=…]`, pas du texte. Une ligne à cinq éléments en `flex` sans `flex-wrap` écrase le libellé dans une colonne étroite.
 - **Reste ouvert** : faut-il un palier J-7 avant un versement attendu (relance préventive du financeur) ; la suite du lot D pourra proposer « reçu » depuis les 7x de la compta.
 
+### M. Lots 0 et B « Modules par installation » et « Appels à projets » (15/09, soir) — faits, `docs/LOTS-TLST.md`
+
+- **Lot 0** : `Settings.modules` + section « Modules de l'installation » dans admin › Paramètres (`app/admin/instance-modules-form.tsx`, action `setInstanceModule`, `INSTANCE_MODULES` dans `lib/modules.ts`). `DossiersNav` est devenu un composant serveur qui lit les réglages lui-même : le quatrième onglet apparaît sans rien passer aux pages. `/appels` répond 404 quand le module est éteint ; les actions serveur refusent aussi.
+- **Lot B** : `Call` (`lib/calls.ts` : état d'échéance, tri, « nouveau », référence proposée), `app/actions/calls.ts` (repérer, statut, promouvoir, reconduire, retirer), page `/appels` (tableau, champs modifiables en place pour RAF / direction / responsables de pôle, sélecteur de statut pour le CODIR, « Étudier », filtres), bloc sur `/financeurs/[id]`, radar `/echeances` (type « Dépôt d'appel à projets », RAF + direction, seulement « on dépose » sans convention). Registres mis à jour : fil d'Ariane, icônes de section, entrée active de la barre latérale.
+- **Seed** : 8 appels chez ADEME (promu → `ADEME-2027` à déposer), Région (AMI « on dépose » J-18 ; AAP ESS 2026 écarté, annuel clôturé), Banque des Territoires (à étudier, J-9), État (FDVA, nouveau), ESS France (nouveau), Cap'Asso (fil de l'eau), DREETS (écarté).
+- **Tests** : `tests/appels.spec.ts` (2) — radar, badge Nouveau, écarté masqué, statut, promotion (page convention `REGION-2026` à déposer, badge « Convention créée », plus de bouton, disparaît du radar), repérage + retrait, fiche financeur ; contributeur en lecture, direction éteint le module (onglet absent, 404) puis le rallume. 41 tests au total.
+- **Piège rencontré** : le serveur de dev 3001 lancé avant `prisma generate` lisait `settings.modules` undefined (« Cannot read properties of undefined (reading 'split') ») → relancer le serveur après toute migration.
+- **Reste ouvert** : notifier en cloche les dépôts « on dépose » (J-30 / J-7) ; import d'un flux JSON/CSV (contrat zod prêt à écrire) ; faut-il un appel « reconduit » automatiquement au passage de la date, plutôt qu'un bouton.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

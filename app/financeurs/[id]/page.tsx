@@ -7,7 +7,9 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson, getRefs } from "@/lib/session";
+import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
+import { instanceHas } from "@/lib/modules";
+import { deadlineState, callStatusLabel, sortCalls } from "@/lib/calls";
 import { canEditFunding } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
@@ -19,13 +21,14 @@ import { FunderContacts } from "@/components/funders/contacts";
 export default async function FinanceurPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const year = new Date().getFullYear();
-  const [me, refs, f] = await Promise.all([
-    getCurrentPerson(), getRefs(),
+  const [me, refs, settings, f] = await Promise.all([
+    getCurrentPerson(), getRefs(), getSettings(),
     prisma.funder.findUnique({
       where: { id },
       include: {
         contacts: { orderBy: { createdAt: "asc" } },
         conventions: { include: { lines: true, contact: true }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] },
+        calls: { where: { active: true }, include: { convention: { select: { id: true, reference: true } } } },
         lines: { where: { edition: { status: { not: "closed" } } }, include: { edition: { include: { project: { include: { pilot: true } } } }, convention: true, contact: true, deliverables: { orderBy: { dueDate: "asc" } } }, orderBy: [{ edition: { year: "desc" } }] },
       },
     }),
@@ -108,6 +111,20 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="grid content-start gap-4">
+          {instanceHas(settings, "veille") && (
+            <Section title="Appels à projets" description="Repérés chez ce financeur ; le statut se pose dans l'onglet Appels à projets." testId="funder-calls" actions={<Link href={`/appels?financeur=${f.id}`} className="text-xs text-primary hover:underline">Tous les appels →</Link>}>
+              {f.calls.length === 0 ? <p className="text-sm text-muted-foreground">Aucun appel repéré.</p> : (
+                <ul className="divide-y text-sm">
+                  {sortCalls(f.calls, settings.deliverableAlertDays).filter((c) => c.teamStatus !== "dismissed").map((c) => { const st = deadlineState(c, settings.deliverableAlertDays); return (
+                    <li key={c.id} className="py-2">
+                      <div className="flex flex-wrap items-center gap-1.5"><span className="font-medium">{c.label}</span><StatusBadge label={st.label} color={st.tone} dot={st.key !== "open"} /></div>
+                      <div className="text-xs text-muted-foreground">{callStatusLabel(c.teamStatus)}{c.convention && <> · <Link href={`/conventions/${c.convention.id}`} className="text-primary hover:underline">{c.convention.reference}</Link></>}{c.amountHint && <> · {c.amountHint}</>}</div>
+                    </li>
+                  ); })}
+                </ul>
+              )}
+            </Section>
+          )}
           <Section title="Notes" description="Périmètre, habitudes, calendrier des appels à projets…">
             <AutoField model="funder" id={f.id} field="notes" type="textarea" value={f.notes} readOnly={!rw} placeholder={rw ? "À compléter…" : "Aucune note"} rows={4} label="Notes sur le financeur" />
           </Section>

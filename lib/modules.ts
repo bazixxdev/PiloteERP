@@ -16,6 +16,18 @@ export function hasModule(p: { modules: string }, key: ModuleKey): boolean {
   return modulesOf(p).has(key);
 }
 
+// Modules activables par installation (lot 0, docs/produit.md) : réglés dans l'admin, pour toute la structure. Un module
+// éteint disparaît de la navigation et répond « introuvable » à ses adresses ; ses données restent en base.
+export const INSTANCE_MODULES = [
+  { key: "veille", label: "Appels à projets (veille)", hint: "Les appels à projets repérés par financeur, le statut d'équipe (à étudier, on dépose, écarté) et la promotion en convention. Onglet dans Projets et financements." },
+] as const;
+
+export type InstanceModuleKey = (typeof INSTANCE_MODULES)[number]["key"];
+
+export function instanceHas(settings: { modules: string }, key: InstanceModuleKey): boolean {
+  return modulesOf(settings).has(key);
+}
+
 // Visibilité d'une liste ou d'une note : qui peut la lire, en plus de son auteur.
 export const VISIBILITIES = [
   { value: "private", label: "Privée", hint: "Moi seul·e" },

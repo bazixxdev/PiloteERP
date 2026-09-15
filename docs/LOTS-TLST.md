@@ -39,7 +39,7 @@ Une édition a **0, 1 ou n lignes de financement**, donc 0, 1 ou n financeurs. C
 | Matériel & prêts | spécifique tiers-lieu |
 | Postgres | 0,5 j au go V1 (`integrations.md`) ; SQLite suffit à la démo |
 
-## Lot 0 — Modules activables par instance (prérequis, petit)
+## Lot 0 — Modules activables par instance (prérequis, petit) — **FAIT le 15/09** (RETOURS-A-CHAUD §M)
 
 Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes, répartition). Il faut le même mécanisme **par installation** : `Settings.modules` (liste), lu par la navigation, les routes et les onglets ; un module éteint disparaît, ses données restent. Premier module concerné : la veille (lot B). Réglable dans admin › Paramètres. C'est aussi la première brique de `produit.md`.
 **Taille** : ½ session, à faire au début du lot B.
@@ -56,7 +56,7 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 - Seed : versements réalistes sur FSE, Région, État (un en retard). Tests : créer, marquer reçu, reste à percevoir, alerte.
 **Taille** : 1 session.
 
-## Lot B — Appels à projets : la veille (module activable)
+## Lot B — Appels à projets : la veille (module activable) — **FAIT le 15/09** (RETOURS-A-CHAUD §M, `tests/appels.spec.ts`)
 
 **Besoin CRESS** : le calendrier des AAP par financeur vit dans `Funder.notes` en texte libre ; « on dépose ou pas ? » n'est tracé nulle part.
 **Repris de TLST** : statut **d'équipe** distinct du contenu (à étudier / on dépose / écarté, qui, quand), badge « nouveau », un appel retiré n'est jamais supprimé, **promotion** en dossier pré-rempli sans doublon, contrat zod du flux pour un import plus tard.

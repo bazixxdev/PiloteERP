@@ -13,7 +13,7 @@ const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/cafe/, Coffee],
   [/^\/annuel/, LayoutGrid],
   [/^\/plan-de-charge/, BarChart3],
-  [/^\/(projets|conventions|financeurs)/, FileSignature],
+  [/^\/(projets|conventions|financeurs|appels)/, FileSignature],
   [/^\/(rappels|echeances)/, CalendarClock],
   [/^\/notifications/, Bell],
   [/^\/codir/, Gavel],

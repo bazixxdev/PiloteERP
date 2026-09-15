@@ -56,6 +56,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   },
   deliverable: { label: { type: "text" }, dueDate: { type: "date" }, done: { type: "bool" } },
   payment: { label: { type: "text" }, amount: { type: "number" }, expectedAt: { type: "date" }, receivedAt: { type: "date" }, reference: { type: "text" }, note: { type: "text" } },
+  call: { label: { type: "text" }, scheme: { type: "text" }, deadline: { type: "date" }, rolling: { type: "bool" }, recurring: { type: "bool" }, amountHint: { type: "text" }, link: { type: "text" }, note: { type: "textarea" } },
   convention: { reference: { type: "text" }, scheme: { type: "text" }, label: { type: "text" }, startYear: { type: "number" }, endYear: { type: "number" }, status: { type: "select" }, amountRequested: { type: "number" }, amountNotified: { type: "number" }, submittedAt: { type: "date" }, notifiedAt: { type: "date" }, signedAt: { type: "date" }, notes: { type: "textarea" }, contactId: { type: "select" } },
   indicator: { label: { type: "text" }, target: { type: "text" }, actual: { type: "text" }, imposed: { type: "bool" } },
   person: { name: { type: "text" }, role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" } },
