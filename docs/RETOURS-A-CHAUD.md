@@ -128,6 +128,11 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 
 - **« Manque la notion d'archiver une note »** — Traité le 15/09 : `Note.archivedAt`, bouton Archiver / Désarchiver dans l'éditeur (auteur seul), vue « Archivées · n » sous Mes notes ; une archivée sort des listes, du menu du haut et de l'onglet Documents de l'édition, reste lisible (bandeau) et se désarchive.
 
+- **« Ne pas remettre Notes et Tâches dans le menu de gauche (elles sont en haut) ; pas de “+ Nouvelle note” dans le déroulant »** — Traité le 15/09 : retirées de la barre latérale, déroulant sans doublon (le « + » à côté suffit), bouton actif surligné sur la page ; sur mobile elles s'ajoutent à la navigation basse selon les modules.
+- **« Je ne trouve pas le bouton “Demander une validation” »** — Il est en haut à droite de la fiche d'une édition. Traité le 15/09 : dans « Nouvelle demande », un type **Achat / devis** demande l'édition et ouvre directement le formulaire de validation sur sa fiche (`?validation=1`).
+- **« Le bouton + Demande devrait être à droite »** — Traité le 15/09 : `PageHeader` garde les actions à droite dès la largeur tablette même avec un long sous-titre.
+- **« Bug de largeur de colonne dans Mon compte »** — Traité le 15/09 : règle globale `.grid > * { min-width: 0 }` (la colonne de droite débordait à cause de l'URL du flux) ; corrige d'un coup toutes les grilles à colonne fixe.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

@@ -138,6 +138,9 @@
     border-radius: 4px;
   }
   summary::-webkit-details-marker { display: none; }
+  /* Une cellule de grille ne s'élargit jamais au-delà de sa colonne (min-width: auto est la cause des colonnes qui débordent :
+     Mon compte, Notes… retours du 15/09). Le contenu long passe à la ligne ou se tronque, la colonne tient. */
+  .grid > * { min-width: 0; }
 }
 
 /* Petites classes maison */

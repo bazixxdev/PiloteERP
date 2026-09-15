@@ -12,24 +12,18 @@ import { withBase } from "@/lib/base-path";
 type Item = { href: string; label: string };
 type Group = { caption: string; items: Item[] };
 
-function groupsFor(role: string, modules: string[]): Group[] {
+function groupsFor(role: string): Group[] {
   const codir = ["director", "raf", "pole_lead"].includes(role);
-  // Modules activés par la personne (Mon compte) : Tâches et Notes n'apparaissent que si elle les veut.
-  const optional: Item[] = [
-    ...(modules.includes("tasks") ? [{ href: "/taches", label: "Tâches" }] : []),
-    ...(modules.includes("notes") ? [{ href: "/notes", label: "Notes" }] : []),
-  ];
+  // Tâches et Notes ne sont plus ici (retour du 15/09) : elles vivent dans la barre haute (menus rapides) et, sur mobile, dans la navigation basse.
   const work: Item[] = codir
     ? [
         { href: "/portefeuille", label: "Portefeuille" },
         { href: "/ma-semaine", label: "Ma semaine" },
-        ...optional,
         { href: "/temps", label: "Temps" },
         { href: "/demandes", label: "Demandes" },
       ]
     : [
         { href: "/ma-semaine", label: "Ma semaine" },
-        ...optional,
         { href: "/temps", label: "Temps" },
         { href: "/portefeuille", label: "Mes projets" },
         { href: "/demandes", label: "Demandes" },
@@ -53,9 +47,9 @@ function groupsFor(role: string, modules: string[]): Group[] {
 }
 
 // Barre latérale sans pied ni liste des pôles : les pôles se filtrent depuis le portefeuille, l'aide « ? » reste au clavier.
-export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role, modules = [] }: { pendingCount: number; remindersCount: number; requestsCount?: number; role: string; modules?: string[] }) {
+export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role }: { pendingCount: number; remindersCount: number; requestsCount?: number; role: string }) {
   const pathname = usePathname();
-  const GROUPS = groupsFor(role, modules);
+  const GROUPS = groupsFor(role);
   return (
     <aside className="hidden h-screen w-14 md:flex shrink-0 flex-col gap-5 border-r bg-sidebar px-2 py-4 text-sidebar-foreground transition-[width] lg:w-[194px] lg:px-3 lg:py-5 print:hidden">
       <Link href="/portefeuille" className="flex items-center justify-center px-1 lg:justify-start lg:px-2" aria-label="CRESS Centre-Val de Loire · Portefeuille">

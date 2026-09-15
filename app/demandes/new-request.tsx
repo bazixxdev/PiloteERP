@@ -38,9 +38,17 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
           <div className="grid gap-1 text-xs"><span className="font-semibold">Quel type ?</span>
             <div className="flex flex-wrap gap-1">
               {REQUEST_KINDS.map((k) => <button key={k.value} type="button" onClick={() => setKind(k.value)} className={`rounded-full border px-2.5 py-1 text-xs ${kind === k.value ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted"}`} title={k.hint} data-testid={`request-kind-${k.value}`}>{k.label}</button>)}
+              <button type="button" onClick={() => setKind("quote")} className={`rounded-full border px-2.5 py-1 text-xs ${kind === "quote" ? "border-primary bg-primary text-white" : "border-dashed bg-card hover:bg-muted"}`} title="Un achat ou un devis passe par le circuit de validation (niveau selon le montant)" data-testid="request-kind-quote">Achat / devis</button>
             </div>
-            <p className="text-[10px] text-muted-foreground">Un achat ou un devis ? C'est une <Link href="/validations" className="text-primary hover:underline">validation</Link> — depuis l'édition, « Demander une validation ».</p>
           </div>
+          {kind === "quote" ? (
+            // Un achat ou un devis n'est pas une demande interne : c'est une validation, portée par une édition (retour du 15/09 : « je ne trouve pas ce bouton »).
+            <div className="grid gap-2 rounded-md border bg-muted/40 p-3 text-xs" data-testid="request-quote-redirect">
+              <p>Un achat ou un devis passe par le <b>circuit de validation</b> : il est engagé sur le budget d'une édition et validé au niveau que son montant impose. Choisissez l'édition, le formulaire s'ouvre sur sa fiche.</p>
+              <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="request-quote-edition"><option value="">— l'édition concernée —</option>{editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}</select>
+              <div className="flex justify-end"><Button asChild disabled={!editionId} data-testid="request-quote-go"><Link href={editionId ? `/edition/${editionId}?onglet=validations&validation=1` : "#"} aria-disabled={!editionId} onClick={(e) => { if (!editionId) e.preventDefault(); else setOpen(false); }}>Demander la validation sur cette édition →</Link></Button></div>
+            </div>
+          ) : (<>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Quoi ?</span><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Réserver la salle du CA pour le 1er octobre" required data-testid="request-title" /></label>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Détail <span className="font-normal text-muted-foreground">(pour quoi faire, sous quelle forme)</span></span><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} className="rounded-md border bg-card p-2 text-sm" data-testid="request-body" /></label>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -57,6 +65,7 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
             <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm"><option value="">—</option>{editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}</select>
           </label>
           <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" disabled={pending || !title.trim() || !to} data-testid="request-submit">Envoyer</Button></div>
+          </>)}
         </form>
       </DialogContent>
     </Dialog>

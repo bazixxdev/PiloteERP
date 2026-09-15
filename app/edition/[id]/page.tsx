@@ -29,9 +29,9 @@ import { FocusMode } from "@/components/common/focus-mode";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string }> }) {
+export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string }> }) {
   const { id } = await params;
-  const { onglet, relecture, focus } = await searchParams;
+  const { onglet, relecture, focus, validation } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
@@ -88,6 +88,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
           <RequestValidationDialog
             editionId={e.id}
+            defaultOpen={validation === "1"}
             actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}
             kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))}
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.

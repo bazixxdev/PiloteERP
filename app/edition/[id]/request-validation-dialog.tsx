@@ -17,8 +17,8 @@ const LEVELS = ["1 · pilote", "2 · responsable de pôle", "3 · direction"];
 export type Recipients = { 1: string | null; 2: string | null; 3: string | null };
 const LEVEL_ROLE: Record<number, string> = { 1: "pilote de l'édition", 2: "responsable de pôle", 3: "direction" };
 
-export function RequestValidationDialog({ editionId, actions, kinds, recipients, canOverride }: { editionId: string; actions: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients: Recipients; canOverride?: boolean }) {
-  const [open, setOpen] = useState(false);
+export function RequestValidationDialog({ editionId, actions, kinds, recipients, canOverride, defaultOpen }: { editionId: string; actions: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients: Recipients; canOverride?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(Boolean(defaultOpen)); // ?validation=1 depuis « Nouvelle demande › Achat / devis »
   const [kind, setKind] = useState("quote");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");

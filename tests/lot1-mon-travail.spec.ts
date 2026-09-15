@@ -99,14 +99,14 @@ test("la semaine se répartit en parts de mon temps et devient des heures pour l
 test("les modules se coupent par personne ; une part fixe n'a rien à répartir", async ({ page }) => {
   await page.goto("/ma-semaine");
   await iAm(page, "Hugo Lemaire");
-  // Hugo n'a que la répartition : ni Tâches ni Notes dans la barre, ni panneau de tâches dans Ma semaine.
-  await expect(page.locator("aside").getByRole("link", { name: "Tâches" })).toHaveCount(0);
+  // Hugo n'a que la répartition : ni Tâches ni Notes dans la barre haute, ni panneau de tâches dans Ma semaine.
+  await expect(page.getByTestId("quick-tasks")).toHaveCount(0);
   await expect(page.getByTestId("my-tasks")).toHaveCount(0);
   await page.goto("/taches");
   await expect(page.getByText("Module désactivé")).toBeVisible();
   await page.goto("/compte");
   await page.getByTestId("module-tasks").check();
-  await expect(page.locator("aside").getByRole("link", { name: "Tâches" })).toBeVisible();
+  await expect(page.getByTestId("quick-tasks")).toBeVisible();
   // Yasmine est à part fixe (lettre de mission) : pas de grille, une explication.
   await iAm(page, "Yasmine Benali");
   await page.goto("/temps");
