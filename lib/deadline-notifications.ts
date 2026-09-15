@@ -1,0 +1,60 @@
+import { prisma } from "./db";
+import { computeReminders, type Reminder } from "./alerts";
+import { dayjs, fmtDate } from "./format";
+
+// Passerelle échéances → notifications. En V1, c'est le cron quotidien qui envoie les mails J-30 / J-7 / retard
+// (docs/integrations.md) ; dans le prototype, la même passe tourne à chaque chargement et dépose la notification dans la
+// cloche. Idempotente grâce à `Notification.dedupeKey` (personne + palier), et datée du jour où le mail serait parti,
+// pour que la cloche raconte une histoire cohérente même sur un jeu de données fraîchement semé.
+export const DEADLINE_KIND = "deadline";
+
+export function deadlineKey(r: Reminder): string {
+  return `deadline:${r.kind}:${r.editionId}:${r.label}:${dayjs(r.dueDate).format("YYYY-MM-DD")}:${r.stage}`;
+}
+
+// Date d'envoi : le matin du palier (J-30, J-7, lendemain de l'échéance), jamais avant le dernier passage — une échéance
+// saisie alors qu'elle est déjà dans la fenêtre part au passage suivant, comme un mail — et jamais dans le futur.
+function sentAt(r: Reminder, lastSync: Date | null): Date {
+  const stage = (r.stage === "retard" ? dayjs(r.dueDate).add(1, "day") : dayjs(r.dueDate).subtract(r.stage, "day")).startOf("day").add(8, "hour");
+  const floor = lastSync && dayjs(lastSync).isAfter(stage) ? dayjs(lastSync) : stage;
+  return (floor.isAfter(dayjs()) ? dayjs() : floor).toDate();
+}
+
+function titleOf(r: Reminder): string {
+  const what = r.kind === "deliverable" ? "Livrable" : "Jalon";
+  return r.stage === "retard" ? `${what} en retard : ${r.label}` : `${what} à J-${r.stage} : ${r.label}`;
+}
+
+// Renvoie aussi les rappels calculés, pour que le layout ne refasse pas la requête.
+export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder[]; created: number }> {
+  const [settings, editions, raf] = await Promise.all([
+    prisma.settings.findUniqueOrThrow({ where: { id: 1 } }),
+    prisma.edition.findMany({
+      where: { status: { in: ["in_progress", "validated"] } },
+      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true } }, validations: true, expenses: true },
+    }),
+    prisma.person.findFirst({ where: { role: "raf" } }),
+  ]);
+  const reminders = computeReminders(editions, raf ? { id: raf.id, name: raf.name } : null, settings.reminderDaysBefore.split(",").map(Number), settings.horizonDays);
+  const year = new Map(editions.map((e) => [e.id, e.year]));
+  const wanted = reminders.flatMap((r) => r.whoIds.map((personId) => ({
+    personId,
+    kind: DEADLINE_KIND,
+    dedupeKey: deadlineKey(r),
+    title: titleOf(r),
+    body: `${r.project} · ${year.get(r.editionId)} — ${r.kind === "deliverable" ? "livrable financeur" : "jalon interne"} au ${fmtDate(r.dueDate)}.`,
+    link: `/edition/${r.editionId}?onglet=${r.kind === "deliverable" ? "budget" : "actions"}`,
+    createdAt: sentAt(r, settings.deadlineSyncAt),
+  })));
+  // L'horodatage du passage n'est réécrit qu'une fois par minute : le layout appelle cette passe à chaque requête, et SQLite
+  // n'aime pas les écritures concurrentes inutiles.
+  const stale = !settings.deadlineSyncAt || dayjs().diff(settings.deadlineSyncAt, "second") > 60;
+  const stamp = stale ? prisma.settings.update({ where: { id: 1 }, data: { deadlineSyncAt: new Date() } }) : Promise.resolve();
+  if (wanted.length === 0) { await stamp; return { reminders, created: 0 }; }
+  const existing = await prisma.notification.findMany({ where: { kind: DEADLINE_KIND, dedupeKey: { in: [...new Set(wanted.map((w) => w.dedupeKey))] } }, select: { personId: true, dedupeKey: true } });
+  const have = new Set(existing.map((n) => `${n.personId}|${n.dedupeKey}`));
+  const missing = wanted.filter((w) => !have.has(`${w.personId}|${w.dedupeKey}`));
+  if (missing.length > 0) await prisma.notification.createMany({ data: missing });
+  await stamp;
+  return { reminders, created: missing.length };
+}

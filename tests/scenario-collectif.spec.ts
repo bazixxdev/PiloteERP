@@ -146,9 +146,23 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.goto("/cafe");
   await expect(page.getByText("Cartographie des élus")).toBeVisible();
   await expect(page.getByText("Bilan intermédiaire")).toBeVisible();
-  await page.goto("/rappels");
+  await page.goto("/echeances");
   await expect(page.getByTestId("reminders")).toContainText("Bilan intermédiaire");
   await expect(page.getByTestId("reminders")).toContainText("Hugo Lemaire, Nadia Ferrand");
+  // La passerelle a déposé la notification J-30 chez le pilote : cloche, puis centre de notifications filtré sur les échéances.
+  await iAm(page, "Hugo Lemaire");
+  await page.goto("/ma-semaine");
+  await page.getByTestId("bell").click();
+  await expect(page.getByTestId("notification-item").filter({ hasText: "Livrable à J-30 : Bilan intermédiaire" })).toBeVisible();
+  await page.getByTestId("bell-all").click();
+  await expect(page).toHaveURL(/\/notifications$/);
+  await page.getByTestId("filtre-echeances").click();
+  await expect(page).toHaveURL(/filtre=echeances/);
+  await expect(page.getByTestId("filtre-echeances")).toHaveAttribute("aria-current", "page");
+  const notifRow = page.getByTestId("notification-row").filter({ hasText: "Bilan intermédiaire (Région)" });
+  await expect(notifRow).toHaveAttribute("data-unread", "true");
+  await page.getByTestId("mark-all-read").click();
+  await expect(notifRow).not.toHaveAttribute("data-unread", "true");
 
   // 7. La RAF clôture le mois : Lucas apparaît partiel (3 h sur un seul jour), elle le relance puis verrouille ; Lucas ne peut plus corriger.
   await iAm(page, "Nadia Ferrand");

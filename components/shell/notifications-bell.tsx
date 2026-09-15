@@ -10,7 +10,8 @@ import { markNotificationsRead } from "@/app/actions/notifications";
 
 export type NotificationRow = { id: string; title: string; body: string | null; link: string | null; createdAt: string; readAt: string | null; sender: string | null };
 
-// Cloche : notifications de la personne courante (relances de temps…). Marquer comme lu retire le badge, ne résout rien.
+// Cloche : les huit dernières notifications de la personne courante ; l'historique complet et les filtres sont dans /notifications.
+// Marquer comme lu retire le badge, ne résout rien.
 export function NotificationsBell({ items }: { items: NotificationRow[] }) {
   const unread = items.filter((n) => !n.readAt).length;
   const [pending, start] = useTransition();
@@ -23,13 +24,13 @@ export function NotificationsBell({ items }: { items: NotificationRow[] }) {
           {unread > 0 && <span className="absolute -top-1 -right-1 rounded-full bg-coral px-1.5 text-[10px] font-semibold text-white" data-testid="bell-count">{unread}</span>}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-96">
+      <DropdownMenuContent align="end" className="w-96 max-h-[70vh] overflow-y-auto">
         <DropdownMenuLabel className="flex items-center justify-between">
           Notifications
           {unread > 0 && <button type="button" className="text-xs font-normal text-primary hover:underline" disabled={pending} onClick={() => start(async () => { await markNotificationsRead(); router.refresh(); })}>Tout marquer comme lu</button>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {items.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">Aucune notification. Dans le prototype, les relances et rappels arrivent ici, pas par mail.</div>}
+        {items.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">Aucune notification. Les relances, remarques et échéances de vos projets arrivent ici (par mail en V1).</div>}
         {items.slice(0, 8).map((n) => (
           <DropdownMenuItem key={n.id} asChild className={n.readAt ? "opacity-60" : ""}>
             <Link href={n.link ?? "/ma-semaine"} onClick={() => { if (!n.readAt) start(async () => { await markNotificationsRead([n.id]); }); }} className="flex flex-col items-start gap-0.5" data-testid="notification-item">
@@ -39,6 +40,10 @@ export function NotificationsBell({ items }: { items: NotificationRow[] }) {
             </Link>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/notifications" className="justify-center text-sm text-primary" data-testid="bell-all">Voir toutes les notifications{items.length > 8 ? ` (${items.length})` : ""}</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

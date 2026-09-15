@@ -33,7 +33,7 @@ function groupsFor(role: string): Group[] {
     { href: "/annuel", label: "Vue annuelle" },
     { href: "/plan-de-charge", label: "Plan de charge" },
     { href: "/projets", label: "Projets et financements" },
-    { href: "/rappels", label: "Rappels" },
+    { href: "/echeances", label: "Échéances" },
   ];
   const direction: Item[] = codir ? [
     { href: "/codir", label: "Écran CODIR" },
@@ -68,7 +68,7 @@ export function Sidebar({ pendingCount, remindersCount, requestsCount = 0, role 
                 const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/demandes" && pathname.startsWith("/validations")) || (item.href === "/portefeuille" && pathname.startsWith("/edition")) || (item.href === "/temps" && pathname.startsWith("/cloture")) || (item.href === "/projets" && (pathname.startsWith("/conventions") || pathname.startsWith("/financeurs")));
                 const Icon = iconFor(item.href)!;
                 // Demandes et validations fusionnées (15/09) : un seul badge = ce que j'ai à traiter, des deux côtés.
-                const badge = item.href === "/rappels" ? remindersCount : item.href === "/demandes" ? requestsCount + pendingCount : 0;
+                const badge = item.href === "/echeances" ? remindersCount : item.href === "/demandes" ? requestsCount + pendingCount : 0;
                 return (
                   <Link
                     key={item.href}

@@ -148,6 +148,16 @@ Gaël : « la partie édition croule sous les informations, tout est au même ni
 - Deux corrections trouvées par les tests : le menu « … » ne rend plus le focus à son bouton en se fermant (`onCloseAutoFocus`) — le focus rendu tardivement fermait le premier popover ouvert sur la page suivante ; et ne jamais laisser tourner le `next dev` de 3001 pendant la suite (le serveur de test voit ses écritures dans `.next/` et relance un Fast Refresh en plein test).
 - Reste ouvert (revue §7) : la RAF préfère-t-elle deux onglets pour l'argent ; où vivent les indicateurs (Actions retenu) ; le Fil face au canal Teams ; cycle de vie du prévu ; HT / TTC (réglage à sortir de l'écran — fait, le texte a disparu, le réglage n'existe pas encore).
 
+### K. « Rappels » et cloche : deux choses distinctes (15/09, après-midi) — traité le 15/09
+
+Question de Gaël : on a une section « Rappels » et des notifications, mais pas de centre de notifications — deux choses ou une seule ? Réponse retenue : **deux objets de nature différente**, nommés par ce qu'ils sont, et reliés dans un seul sens.
+
+- **`/echeances`** (ex-`/rappels`, l'ancienne adresse redirige) : le **radar des échéances** — livrables financeurs et jalons internes à venir, calculés à la volée, collectif, avec bascule de périmètre. Rien ne s'y « lit » : une échéance reste tant qu'elle est là. Icône calendrier, plus de cloche. La colonne « Prévenus » dit qui a été notifié et à quel palier (J-30, J-7, retard).
+- **La cloche** = boîte de réception : ce qui m'a été adressé (relances, remarques, demandes, notes partagées, échéances de mes projets). Elle montre les huit dernières et mène à **`/notifications`**, le centre : historique complet, groupé par jour, filtres Toutes / Non lues / par famille (échéances, temps, demandes, projets, notes — `lib/notifications.ts` déduit la famille du `kind` et du lien), « Tout marquer comme lu ». Une notification ne porte jamais l'action : elle mène à l'écran où l'action se fait.
+- **Passerelle** `lib/deadline-notifications.ts` : quand une échéance franchit un palier, une notification est déposée chez le pilote (et la RAF pour un livrable) — c'est exactement ce que fera le mail en V1 (cron quotidien, `docs/integrations.md`). Idempotente (`Notification.dedupeKey`, une par personne et par palier), datée du matin où le mail serait parti, jamais avant le dernier passage (`Settings.deadlineSyncAt`) ni dans le futur ; elle tourne à chaque chargement depuis le layout. Le seed la lance et marque lues celles de plus de trois jours, sinon la cloche de la RAF ouvre à 20 non lues sur un jeu de données « tout est un peu en retard ».
+- Deux migrations : `20260915150000_notification_dedupe_key`, `20260915151000_settings_deadline_sync`. Test étendu dans `scenario-collectif` (cloche → centre → filtre échéances → tout lu). Leçon : le layout ne doit pas écrire en base à chaque requête (SQLite + requêtes RSC parallèles = actions serveur qui échouent) — l'horodatage n'est réécrit qu'une fois par minute.
+- Reste à trancher avec la CRESS : « Échéances » ouvre sur « Toute la CRESS » ou sur « Mon pôle » par défaut ; faut-il aussi notifier le garant.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

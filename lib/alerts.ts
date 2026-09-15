@@ -73,32 +73,43 @@ export function nextMilestone(e: EditionForAlerts): { name: string; date: Date }
   return best;
 }
 
-// Rappels J-30 / J-7 (EF-C2), calculés à la volée.
-export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; kind: "deliverable" | "milestone"; who: string[] };
+// Rappels J-30 / J-7 (EF-C2), calculés à la volée. `stage` = le palier franchi (le plus proche de l'échéance, ou "retard") :
+// c'est lui qui déclenche une notification (`lib/deadline-notifications.ts`), une seule par palier et par destinataire.
+export type ReminderStage = number | "retard";
+export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone"; who: string[]; whoIds: string[] };
+
+function stageOf(daysLeft: number, reminderDays: number[]): ReminderStage | null {
+  if (daysLeft < 0) return "retard";
+  const crossed = reminderDays.filter((r) => daysLeft <= r);
+  return crossed.length ? Math.min(...crossed) : null;
+}
 
 export function computeReminders(
-  editions: (EditionForAlerts & { id: string; project: { name: string; pilot: { name: string } } })[],
-  rafName: string | null,
+  editions: (EditionForAlerts & { id: string; project: { name: string; pilot: { id: string; name: string } } })[],
+  raf: { id: string; name: string } | null,
   reminderDays: number[],
   horizonDays: number,
 ): Reminder[] {
   const out: Reminder[] = [];
   for (const e of editions) {
-    const who = [e.project.pilot.name, ...(rafName ? [rafName] : [])];
+    const who = [e.project.pilot.name, ...(raf ? [raf.name] : [])];
+    const whoIds = [e.project.pilot.id, ...(raf ? [raf.id] : [])];
     for (const f of e.fundingLines) {
       for (const d of f.deliverables) {
         if (d.done) continue;
         const n = daysFromNow(d.dueDate);
-        if (n <= horizonDays && (n < 0 || reminderDays.some((r) => n <= r))) {
-          out.push({ editionId: e.id, project: e.project.name, label: `${d.label} (${f.funder.name})`, dueDate: d.dueDate, daysLeft: n, kind: "deliverable", who });
+        const stage = stageOf(n, reminderDays);
+        if (n <= horizonDays && stage !== null) {
+          out.push({ editionId: e.id, project: e.project.name, label: `${d.label} (${f.funder.name})`, dueDate: d.dueDate, daysLeft: n, stage, kind: "deliverable", who, whoIds });
         }
       }
     }
     for (const a of e.actions) {
       if (!a.milestoneDate || a.state === "done") continue;
       const n = daysFromNow(a.milestoneDate);
-      if (n <= horizonDays && (n < 0 || reminderDays.some((r) => n <= r))) {
-        out.push({ editionId: e.id, project: e.project.name, label: a.name, dueDate: a.milestoneDate, daysLeft: n, kind: "milestone", who: [e.project.pilot.name] });
+      const stage = stageOf(n, reminderDays);
+      if (n <= horizonDays && stage !== null) {
+        out.push({ editionId: e.id, project: e.project.name, label: a.name, dueDate: a.milestoneDate, daysLeft: n, stage, kind: "milestone", who: [e.project.pilot.name], whoIds: [e.project.pilot.id] });
       }
     }
   }

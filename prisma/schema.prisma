@@ -476,6 +476,9 @@ model Settings {
   deliverableAlertDays      Int    @default(30)
   timeVisibility            String @default("self_pole_lead_raf") // self | self_pole_lead_raf | codir | all
   horizonDays               Int    @default(90)
+  // Dernier passage de la passerelle échéances → notifications (lib/deadline-notifications.ts) : une échéance découverte
+  // après ce passage est notifiée à ce moment-là, pas à la date théorique du palier.
+  deadlineSyncAt            DateTime?
   timeRules                 String @default("")
   // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee})
   serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
@@ -684,13 +687,16 @@ model Notification {
   person    Person    @relation("NotificationRecipient", fields: [personId], references: [id], onDelete: Cascade)
   senderId  String?
   sender    Person?   @relation("NotificationSender", fields: [senderId], references: [id])
-  kind      String // time_reminder | info
+  kind      String // time_reminder | info | deadline
   title     String
   body      String?
   link      String?
+  // Clé d'idempotence des notifications générées (échéances J-30 / J-7 / retard) : une seule par personne et par palier franchi.
+  dedupeKey String?
   createdAt DateTime  @default(now())
   readAt    DateTime?
 
+  @@unique([personId, dedupeKey])
   @@index([personId, readAt])
 }
 

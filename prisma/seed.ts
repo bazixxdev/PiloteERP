@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
 import { dayjs } from "../lib/format";
 import { DEFAULT_RHYTHMS, expectedHoursOn, rhythmAt } from "../lib/time";
+import { syncDeadlineNotifications, DEADLINE_KIND } from "../lib/deadline-notifications";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -943,6 +944,12 @@ async function main() {
   ] });
 
   await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example" } });
+
+  // Notifications d'échéance (J-30, J-7, retard) : la passerelle les génère datées du jour où le mail serait parti ;
+  // celles de plus de trois jours sont marquées lues, comme des mails déjà ouverts — la cloche ne montre que le frais.
+  const { created } = await syncDeadlineNotifications();
+  await prisma.notification.updateMany({ where: { kind: DEADLINE_KIND, createdAt: { lt: d(-3) } }, data: { readAt: d(-1) } });
+  console.log(`Notifications d'échéance générées : ${created}.`);
 
   console.log(`Seed terminé : ${people.length} personnes, ${projectDefs.length + 2} projets, ${allEditions.length + 2} éditions.`);
 }
