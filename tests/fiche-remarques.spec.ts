@@ -17,7 +17,9 @@ test("la direction pose une remarque sur une rubrique, le pilote la voit en plac
 
   // Hors mode relecture, pas de bouton « Remarque » ; la direction active la relecture puis annote « Calendrier ».
   await expect(page.getByTestId("remark-add-calendar")).toHaveCount(0);
+  await page.getByTestId("edition-menu").click();
   await page.getByTestId("feedback-toggle").click();
+  await expect(page.getByTestId("feedback-bar")).toBeVisible();
   await page.getByTestId("remark-add-calendar").click();
   await page.getByTestId("remark-body-calendar").fill("Les dates jalons a minima : le choix du prestataire et la mise en ligne.");
   await page.getByTestId("remark-submit-calendar").click();
@@ -44,7 +46,9 @@ test("la direction pose une remarque sur une rubrique, le pilote la voit en plac
   await expect(page.getByTestId("remark-add-calendar")).toHaveCount(0);
 
   // Export Word au format du gabarit.
+  await page.getByTestId("edition-menu").click();
   const href = await page.getByTestId("export-fiche").getAttribute("href");
+  await page.keyboard.press("Escape");
   const res = await page.request.get(href as string);
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toContain("wordprocessingml");

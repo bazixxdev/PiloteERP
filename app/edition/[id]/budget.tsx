@@ -6,6 +6,8 @@ import { fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { AddExpenseForm } from "./add-forms";
+import { HelpTip } from "@/components/common/help-tip";
+import { ClickToEdit } from "@/components/inline/click-to-edit";
 import { InvoiceCell } from "./invoice-cell";
 import Link from "next/link";
 
@@ -34,11 +36,19 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
   const overrun = b.available !== null && b.available < 0 ? -b.available : 0;
   return (
     <div className="grid gap-4">
-      <Section title="Enveloppe de dépenses directes" description={rw ? "Enveloppe et réalisé hors devis saisis par la RAF ; le reste est calculé. Base HT ou TTC unique par édition, à arbitrer avec la RAF." : "Lecture seule : montants tenus par la RAF."}>
+      {/* Une phrase au plus sous le titre ; la règle de calcul et l'exemple se lisent dans le « ? » (revue du 15/09). */}
+      <Section title="Enveloppe de dépenses directes" description={<span className="inline-flex items-center gap-1.5">Tenue par la RAF · réalisé + engagements restants, sans double comptage <HelpTip title="Comment se calcule le reste" testId="budget-help">
+        <p className="mt-1">Réalisé = factures (y compris celles rattachées à un devis) + réalisé hors devis saisi par la RAF. Engagements restant à réaliser = devis approuvés non encore facturés. Reste = enveloppe − réalisé − engagements restants. Le même calcul sert au portefeuille, à l'en-tête de l'édition et à l'écran CODIR.</p>
+        <p className="mt-2">Exemple : enveloppe 8 000 €, devis validé 1 000 € → réalisé 0, engagement restant 1 000, reste 7 000. Facture partielle de 400 € → réalisé 400, engagement restant 600, reste toujours 7 000. Facture finale 900 € et reliquat soldé → réalisé 900, engagement restant 0, reste 7 100.</p>
+        {lastUpdate && <p className="mt-2 text-muted-foreground">Dernière actualisation {fmtDate(lastUpdate)}.</p>}
+      </HelpTip></span>}>
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-md border bg-card px-3 py-4">
             <small className="text-xs text-muted-foreground">Enveloppe validée</small>
-            <AutoField model="edition" id={e.id} field="budgetEnvelope" type="number" value={e.budgetEnvelope} readOnly={!rw} suffix="€" inputClassName="mt-1 text-[25px] font-semibold tracking-[-0.7px] text-left" refreshOnSave testId="budget-budgetEnvelope" placeholder={rw ? "À renseigner" : "Enveloppe à renseigner"} label="Enveloppe validée en euros" />
+            {/* Fixée une fois par an : se lit en grand, se modifie au crayon (RAF, direction). */}
+            <ClickToEdit canEdit={rw} testId="budget-budgetEnvelope-edit" hint="Modifier l'enveloppe" className="mt-2"
+              value={<b className="block text-[25px] font-semibold leading-tight tracking-[-0.7px] tabular" data-testid="budget-envelope">{e.budgetEnvelope != null ? fmtEuro(e.budgetEnvelope) : <span className="text-base font-normal text-warning-foreground">À renseigner</span>}</b>}
+              editor={<AutoField model="edition" id={e.id} field="budgetEnvelope" type="number" value={e.budgetEnvelope} suffix="€" inputClassName="text-[25px] font-semibold tracking-[-0.7px] text-left" refreshOnSave testId="budget-budgetEnvelope" placeholder="À renseigner" label="Enveloppe validée en euros" />} />
           </div>
           {card("Réalisé", fmtEuro(b.realized), `dont ${fmtEuro(b.realizedLinked)} rattachés à un devis`, undefined, "budget-realized")}
           {card("Engagements restant à réaliser", fmtEuro(b.remainingCommitments), "devis approuvés non encore facturés", undefined, "budget-committed")}
@@ -51,15 +61,15 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
               <i className={cn("block h-full", pct >= 100 ? "bg-danger" : pct >= settings.envelopeAlertPercent ? "bg-warning" : "bg-mint")} style={{ width: `${barSpent}%` }} />
               <i className="block h-full bg-[#abc1af]" style={{ width: `${barCommitted}%` }} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Compris dans le calcul : réalisé {fmtEuro(b.realized)} (factures, y compris celles rattachées à un devis) + engagements restant à réaliser {fmtEuro(b.remainingCommitments)} (devis approuvés non encore facturés) = {fmtEuro(b.used)} sur {fmtEuro(e.budgetEnvelope)} · reste : {b.available === null ? "—" : fmtEuro(b.available)}. Le même calcul sert au portefeuille, à l'en-tête de l'édition et à l'écran CODIR. {lastUpdate ? `Dernière actualisation ${fmtDate(lastUpdate)}.` : "Aucune dépense."}</p>
-            {pct >= settings.envelopeAlertPercent && <div className={cn("mt-3 flex items-start gap-2.5 rounded-md px-3 py-3 text-xs", pct >= 100 ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning-foreground")}><span>!</span><span>{overrun > 0 ? <>Enveloppe dépassée de <b>{fmtEuro(overrun)}</b> ({pct} %) : à faire remonter au CODIR.</> : <>Enveloppe consommée à {pct} %. Le seuil de vigilance est de {settings.envelopeAlertPercent} %.</>}</span></div>}
           </>
         ) : (
           <p className="mt-4 text-xs text-warning-foreground">Enveloppe à renseigner{b.used > 0 ? ` · ${fmtEuro(b.used)} déjà consommés` : ""}.</p>
         )}
       </Section>
 
-      <Section title="Dépenses" description="Un devis approuvé crée l'engagement une seule fois ; la RAF rattache le réalisé (factures) à cette ligne, la marque reçue puis payée — le pilote est prévenu et confirme le service fait, sans bloquer. Pas de fichier facture ici : la facture arrive à l'adresse de facturation." actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
+      <Section title="Dépenses" description={<span className="inline-flex items-center gap-1.5">Devis approuvés et factures ; la facture arrive à l'adresse de facturation <HelpTip title="Le circuit d'une dépense" testId="expenses-help">
+        <p className="mt-1">Un devis approuvé crée l'engagement une seule fois. La RAF rattache le réalisé (les factures) à cette ligne, la marque reçue puis payée ; le pilote est prévenu et confirme le service fait, sans bloquer. Aucun fichier facture ici : la facture arrive à l'adresse de facturation.</p>
+      </HelpTip></span>} actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
         {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">Aucune dépense sur cette édition.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="expenses">
@@ -88,7 +98,6 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
             </table>
           </div>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">Exemple : enveloppe 8 000 €, devis validé 1 000 € → réalisé 0, engagement restant 1 000, disponible 7 000. Facture partielle de 400 € → réalisé 400, engagement restant 600, disponible toujours 7 000. Facture finale 900 € et reliquat soldé → réalisé 900, engagement restant 0, disponible 7 100.</p>
       </Section>
     </div>
   );

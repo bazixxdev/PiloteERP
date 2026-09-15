@@ -4,6 +4,7 @@ import { ValidationCard } from "@/components/common/validation-card";
 import { canDecideValidation, canEditFunding } from "@/lib/rights";
 import { REF_DEFAULTS, refLabel } from "@/lib/refs";
 import { UploadForm } from "@/components/attachments/upload-form";
+import { Reveal } from "@/components/common/reveal";
 import { DecisionForm } from "@/app/codir/decision-form";
 import { isCodir } from "@/lib/rights";
 import { fmtDate } from "@/lib/format";
@@ -31,11 +32,11 @@ export function ValidationsTab({ e, me, refs, isPilot, people }: TabCtx) {
         )}
       </Section>
 
-      <Section title="En attente" description="Utilisez « Demander une validation » en haut de page pour une nouvelle demande.">
+      <Section title="En attente">
         {pending.length === 0 ? (
           <EmptyState title="Aucune validation en attente" hint="Devis, dépense, envoi, changement de périmètre ou jalon financeur : tout passe par une demande datée." />
         ) : (
-          <div className="grid gap-2">{pending.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={canDecideValidation(me, { ...v, edition: e })} index={i} attachments={pieces(v.id)} upload={canUpload(v.requesterId) ? <UploadForm editionId={e.id} kinds={kinds} defaultKind="quote" validationId={v.id} compact /> : undefined} />)}</div>
+          <div className="grid gap-2">{pending.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide={canDecideValidation(me, { ...v, edition: e })} index={i} attachments={pieces(v.id)} upload={canUpload(v.requesterId) ? <Reveal label="Pièce" size="xs" testId={`validation-upload-open-${i}`}><UploadForm editionId={e.id} kinds={kinds} defaultKind="quote" validationId={v.id} compact /></Reveal> : undefined} />)}</div>
         )}
       </Section>
       {done.length > 0 && (

@@ -9,6 +9,7 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   await page.getByRole("tab", { name: "Documents" }).click();
 
   await expect(page.getByTestId("pieces")).toBeVisible();
+  await page.getByTestId("upload-open").click();
   await expect(page.getByTestId("upload-form")).toBeVisible();
   const before = await page.getByTestId("pieces").locator("[data-testid=attachments] li").count();
   await page.getByTestId("upload-kind").selectOption("minutes");
@@ -36,5 +37,6 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   // Les devis seedés sont visibles sur les validations, avec le dépôt possible pour le pilote.
   await page.getByRole("tab", { name: "Validations" }).click();
   await expect(page.getByTestId("validation-0").locator("[data-testid=attachments]")).toContainText("Devis");
+  await page.getByTestId("validation-upload-open-0").click();
   await expect(page.getByTestId("validation-0").getByTestId("upload-form")).toBeVisible();
 });

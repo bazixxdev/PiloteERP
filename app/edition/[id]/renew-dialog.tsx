@@ -9,16 +9,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { renewEdition } from "@/app/actions/edition";
 
 // Reconduction N → N+1 avec relecture avant création (EF-A2).
-export function RenewDialog({ edition, disabled }: { edition: { id: string; year: number; projectName: string; actions: number; fundingLines: number; team: number }; disabled: boolean }) {
-  const [open, setOpen] = useState(false);
+export function RenewDialog({ edition, disabled, open: openProp, onOpenChange, hideTrigger }: { edition: { id: string; year: number; projectName: string; actions: number; fundingLines: number; team: number }; disabled: boolean; open?: boolean; onOpenChange?: (o: boolean) => void; hideTrigger?: boolean }) {
+  const [openState, setOpenState] = useState(false);
+  // Contrôlé depuis le menu « … » de l'édition (revue du 15/09) ou autonome avec son bouton.
+  const open = openProp ?? openState;
+  const setOpen = (o: boolean) => { setOpenState(o); onOpenChange?.(o); };
   const [pending, start] = useTransition();
   const router = useRouter();
   const next = edition.year + 1;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" disabled={disabled} title={disabled ? `L'édition ${next} existe déjà` : undefined} data-testid="renew-open"><CopyPlus />Reconduire en {next}</Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="outline" disabled={disabled} title={disabled ? `L'édition ${next} existe déjà` : undefined} data-testid="renew-open"><CopyPlus />Reconduire en {next}</Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reconduire « {edition.projectName} » en {next}</DialogTitle>

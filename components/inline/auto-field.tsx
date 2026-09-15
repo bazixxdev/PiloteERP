@@ -6,10 +6,10 @@ import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveField } from "@/app/actions/fields";
 import type { Model, FieldType } from "@/lib/fields";
-import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export type Option = { value: string; label: string };
+import { readableValue, type Option } from "@/lib/readable";
+export { readableValue, type Option };
 
 type Props = {
   model: Model;
@@ -45,19 +45,6 @@ function toInput(type: FieldType, v: Props["value"]): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   return String(v);
-}
-
-// Valeur lisible au repos : nombre avec son unité, date en clair, libellé de la liste, texte tel quel.
-export function readableValue(p: Pick<Props, "type" | "value" | "options" | "suffix">): string {
-  const v = p.value;
-  if (v === null || v === undefined || v === "") return "";
-  switch (p.type) {
-    case "number": return `${fmtNumber(Number(v), 2)}${p.suffix ? ` ${p.suffix}` : ""}`;
-    case "date": return dayjs(v instanceof Date ? v : String(v)).format("D MMMM YYYY");
-    case "select": return p.options?.find((o) => o.value === String(v))?.label ?? String(v);
-    case "bool": return v ? "Oui" : "Non";
-    default: return String(v);
-  }
 }
 
 // Champ à sauvegarde automatique : enregistre au blur (texte, nombre) ou au changement (liste, date, case).

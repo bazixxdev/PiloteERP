@@ -24,6 +24,7 @@ test("la RAF tient les contacts d'un financeur ; le contact principal apparaît 
   await page.getByRole("tab", { name: "Financements" }).click();
   const regionLine = page.locator('[data-testid^=funding-line-][data-funder="Région"]').first();
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Vidal");
+  await regionLine.locator("summary", { hasText: "Détail de gestion" }).click();
   const sel = regionLine.getByLabel(/Contact du dossier/); const optVal = await sel.locator("option", { hasText: "Marchand" }).getAttribute("value"); await sel.selectOption(optVal as string);
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Contact du dossier");
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Marchand");

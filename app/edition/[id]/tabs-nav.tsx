@@ -19,7 +19,7 @@ export type TabKey = (typeof TABS)[number]["key"];
 // Onglets V2 : soulignement corail, compteur discret, défilement horizontal si l'écran est étroit.
 export function TabsNav({ editionId, current, counts }: { editionId: string; current: TabKey; counts: Partial<Record<TabKey, number>> }) {
   return (
-    <nav className="-mx-6 mb-5 flex overflow-x-auto border-b px-[14px]" role="tablist" aria-label="Contenu de l'édition" data-testid="edition-tabs">
+    <nav className="-mx-4 mb-5 flex overflow-x-auto border-b px-[6px] md:-mx-6 md:px-[14px]" role="tablist" aria-label="Contenu de l'édition" data-testid="edition-tabs">
       {TABS.map((t) => (
         <Link
           key={t.key}

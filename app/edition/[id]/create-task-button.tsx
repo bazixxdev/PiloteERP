@@ -19,7 +19,7 @@ export function CreateTaskButton({ editionId, actions }: { editionId: string; ac
   const router = useRouter();
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild><Button variant="outline" data-testid="task-from-edition"><ListTodo />Me créer une tâche</Button></PopoverTrigger>
+      <PopoverTrigger asChild><Button variant="outline" data-testid="task-from-edition" title="Une tâche pour moi, rattachée à cette édition"><ListTodo />Tâche</Button></PopoverTrigger>
       <PopoverContent className="w-80" align="end">
         <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addTask({ label, dueDate: due || null, editionId, actionId: actionId || null }); if (!r.ok) { toast.error(r.error); return; } toast.success("Tâche ajoutée à « Ma semaine »"); setOpen(false); setLabel(""); setDue(""); router.refresh(); }); }}>
           <div className="text-sm font-semibold">Une tâche pour moi</div>

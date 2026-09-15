@@ -10,7 +10,7 @@ import { decideChange, proposeChange } from "@/app/actions/proposals";
 import { cn } from "@/lib/utils";
 
 export type ProposalView = { id: string; field: string; fieldLabel: string; proposed: string; reason: string; author: string; authorId: string; createdAt: string; status: string; decidedBy: string | null; decidedAt: string | null; comment: string | null };
-export type ProposableField = { key: string; label: string; current: string; multiline: boolean };
+export type ProposableField = { key: string; label: string; current: string; multiline: boolean; group?: string };
 
 // « Proposer une modification » sur une fiche verrouillée : la rubrique, la nouvelle valeur, et surtout pourquoi.
 export function ProposeChangeDialog({ editionId, fields, layerTitle, compact }: { editionId: string; fields: ProposableField[]; layerTitle: string; compact?: boolean }) {
@@ -31,7 +31,10 @@ export function ProposeChangeDialog({ editionId, fields, layerTitle, compact }: 
           <p className="text-xs text-muted-foreground">La fiche est validée : rien n'y change en silence. Le pilote (ou la direction) accepte, et l'historique garde qui a changé quoi, et pourquoi.</p>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Rubrique</span>
             <select value={field} onChange={(e) => { setField(e.target.value); setProposed(fields.find((f) => f.key === e.target.value)?.current ?? ""); }} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="propose-field">
-              {fields.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+              {/* Un seul bouton pour toute la fiche (revue du 15/09) : les rubriques se choisissent par couche. */}
+              {[...new Set(fields.map((f) => f.group ?? ""))].map((g) => g
+                ? <optgroup key={g} label={g}>{fields.filter((f) => f.group === g).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</optgroup>
+                : fields.filter((f) => !f.group).map((f) => <option key={f.key} value={f.key}>{f.label}</option>))}
             </select>
           </label>
           {current && <div className="rounded-md bg-muted px-2.5 py-1.5 text-[11px] text-muted-foreground"><b>Aujourd'hui :</b> {current.current || "— vide —"}</div>}

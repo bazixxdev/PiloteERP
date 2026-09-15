@@ -2,7 +2,6 @@ import { SectionIcon } from "@/components/shell/section-icon";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shell/person-switcher";
 import { StatusBadge } from "@/components/common/status-badge";
-import { AlertChips } from "@/components/common/alert-chips";
 import { AutoField } from "@/components/inline/auto-field";
 import { loadEdition } from "@/lib/queries";
 import { getCurrentPerson, getRefs, getSettings, getPeople } from "@/lib/session";
@@ -11,7 +10,8 @@ import { computeAlerts } from "@/lib/alerts";
 import { isCodir } from "@/lib/rights";
 import { TabsNav, type TabKey } from "./tabs-nav";
 import { EditionPicker } from "./edition-picker";
-import { RenewDialog } from "./renew-dialog";
+import { EditionMenu } from "./edition-menu";
+import { AlertBar } from "./alert-bar";
 import { RequestValidationDialog } from "./request-validation-dialog";
 import { CreateTaskButton } from "./create-task-button";
 import { FicheTab } from "./fiche";
@@ -24,10 +24,8 @@ import { DocumentsTab } from "./documents";
 import { BilanTab } from "./bilan";
 import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
-import { Eye, Maximize2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string }> }) {
   const { id } = await params;
@@ -45,11 +43,11 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
   const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1" };
 
+  // Compteurs d'onglet (revue du 15/09) : ce qui reste à faire, pas des totaux ; Documents = fichiers et liens seulement.
   const counts = {
-    actions: e.actions.length,
-    financements: e.fundingLines.length,
+    actions: e.actions.filter((a) => a.state !== "done").length,
     validations: e.validations.filter((v) => v.status === "pending").length,
-    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.comments.length + e.attachments.length,
+    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.attachments.length,
   };
 
   const owners = { pilot: e.project.pilot, guarantor: e.project.guarantor };
@@ -66,27 +64,33 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   }
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
+      {/* En-tête en deux lignes (revue du 15/09) : identité et statut ; pôle, code, pilote et garant. Le rare va dans le menu « … ». */}
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-[420px] items-start gap-3">
           <SectionIcon className="mt-[3px] hidden size-9 shrink-0 place-items-center rounded-md bg-info-soft text-primary sm:grid print:hidden" />
           <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{e.project.name}</h1>
-            <EditionPicker currentId={e.id} editions={e.project.editions.map((x) => ({ id: x.id, year: x.year, statusLabel: refLabel(refs, "edition_status", x.status) }))} />
-            {canStatus ? (
-              <AutoField model="edition" id={e.id} field="status" type="select" value={e.status} allowEmpty={false} refreshOnSave testId="edition-status"
-                options={REF_DEFAULTS.edition_status.map((s) => ({ value: s.code, label: refLabel(refs, "edition_status", s.code) }))} className="w-40" />
-            ) : (
-              <StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} />
-            )}
-            {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
-          </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">Projet commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.recurring ? "Projet récurrent" : "Projet ponctuel"} · Code {e.project.analyticCode}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{e.project.name}</h1>
+              <EditionPicker currentId={e.id} editions={e.project.editions.map((x) => ({ id: x.id, year: x.year, statusLabel: refLabel(refs, "edition_status", x.status) }))} />
+              {canStatus ? (
+                <AutoField model="edition" id={e.id} field="status" type="select" value={e.status} allowEmpty={false} refreshOnSave testId="edition-status"
+                  options={REF_DEFAULTS.edition_status.map((s) => ({ value: s.code, label: refLabel(refs, "edition_status", s.code) }))} className="w-32" inputClassName="h-7 rounded-sm bg-info-soft py-0.5 text-[11px] font-semibold text-primary" />
+              ) : (
+                <StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} />
+              )}
+              {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
+            </div>
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+              <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.analyticCode}</span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} role={owners.pilot.role} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1">{owners.guarantor && <Avatar name={owners.guarantor.name} role={owners.guarantor.role} className="size-5 text-[8px]" />} Garant <b className="font-semibold text-foreground">{owners.guarantor?.name ?? "—"}</b></span>
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
-          <RenewDialog edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length }} disabled={nextYearExists} />
           <RequestValidationDialog
             editionId={e.id}
             defaultOpen={validation === "1"}
@@ -96,24 +100,17 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.
             recipients={(() => { const lead = owners.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null; const dir = people.find((p) => p.role === "director")?.name ?? null; return { 1: isPilot ? (lead ?? dir) : owners.pilot.name, 2: lead ?? dir, 3: dir }; })()}
           />
+          <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me.role)} feedback={relecture === "1"} />
         </div>
       </div>
-      <div className="mb-4 flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[11px]">
-        <span className="inline-flex items-center gap-1.5"><Avatar name={owners.pilot.name} role={owners.pilot.role} /> Pilote <b className="font-semibold">{owners.pilot.name}</b></span>
-        <span className="inline-flex items-center gap-1.5">{owners.guarantor && <Avatar name={owners.guarantor.name} role={owners.guarantor.role} />} Responsable de pôle garant <b className="font-semibold">{owners.guarantor?.name ?? "—"}</b></span>
-        <span className="text-muted-foreground">{e.fundingLines.length} ligne{e.fundingLines.length > 1 ? "s" : ""} de financement</span>
-        <AlertChips alerts={alerts} max={5} />
-      </div>
+      <AlertBar editionId={e.id} alerts={alerts} />
 
       {!isTransversal(me) && !inMyScope(me, e.project, e.team.map((t) => t.personId)) && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
           <Eye className="size-4 text-muted-foreground" />Édition du pôle <strong>{e.project.pole.name}</strong>, hors de votre pôle : vous la consultez, vous n'y intervenez pas.
         </div>
       )}
-      <div className="relative">
-        <TabsNav editionId={e.id} current={tab} counts={counts} />
-        {tab === "fiche" && <Button asChild variant="outline" size="icon" className="absolute top-0.5 right-0 size-8 shrink-0" title="Mode focus : rédiger la fiche sans le reste de l'interface"><Link href={`/edition/${e.id}?onglet=fiche&focus=1${relecture === "1" ? "&relecture=1" : ""}`} data-testid="fiche-focus"><Maximize2 /></Link></Button>}
-      </div>
+      <TabsNav editionId={e.id} current={tab} counts={counts} />
 
       {tab === "fiche" && <FicheTab {...ctx} />}
       {tab === "actions" && <ActionsTab {...ctx} />}

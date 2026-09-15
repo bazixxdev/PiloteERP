@@ -45,12 +45,14 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");
   await openEditionByName(page, "Chroniquer la TESS");
   await page.getByRole("tab", { name: "Financements" }).click();
+  await page.getByTestId("add-funding-open").click();
   const opt = page.getByTestId("attach-convention-select").locator("option", { hasText: "ADEME-TEST-2026-2027" });
   await page.getByTestId("attach-convention-select").selectOption(await opt.getAttribute("value") as string);
   await page.getByTestId("attach-convention-submit").click();
   await expect(page.locator("[data-testid^=convention-of-]", { hasText: "notifié 30 000 €" })).toHaveCount(1);
 
   // Reconduction : la ligne 2027 reste rattachée à la convention qui couvre 2027.
+  await page.getByTestId("edition-menu").click();
   await page.getByTestId("renew-open").click();
   await page.getByTestId("renew-confirm").click();
   await expect(page.getByTestId("edition-years").locator('[aria-current="page"]')).toContainText("2027", { timeout: 15_000 });

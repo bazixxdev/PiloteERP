@@ -12,7 +12,7 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await page.getByTestId("cp-pilot").selectOption({ label: "Inès Cabral" });
   await page.getByTestId("cp-submit").click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet recette Alpha", { timeout: 30_000 });
-  await expect(page.getByTestId("edition-years")).toContainText(`Édition ${new Date().getFullYear()}`);
+  await expect(page.getByTestId("edition-years")).toContainText(`${new Date().getFullYear()}`);
 
   // Couche 1 (direction) et statut « en cours ».
   await expect(page.getByTestId("layer-strategic")).toContainText("Manquant");
@@ -30,6 +30,7 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await page.getByTestId("field-operationalObjectives").fill("Trois ateliers et un bilan.");
   await page.getByTestId("field-operationalObjectives").blur();
   await page.getByRole("tab", { name: "Actions" }).click();
+  await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Atelier de lancement");
   await page.getByTestId("add-action-submit").click();
   await expect(page.getByTestId("action-name-0")).toHaveValue("Atelier de lancement");

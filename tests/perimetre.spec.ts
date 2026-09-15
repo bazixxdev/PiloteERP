@@ -34,7 +34,7 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
   await page.goto("/portefeuille");
   await table.getByRole("link", { name: "Sensibilisation des jeunes" }).click();
   await expect(page.getByTestId("outside-scope")).toHaveCount(0);
-  await expect(page.getByText("Projet commun avec")).toBeVisible();
+  await expect(page.getByText("commun avec")).toBeVisible();
   await page.getByRole("tab", { name: "Bilan" }).click();
   await expect(page.getByTestId("field-report")).not.toHaveAttribute("readonly", "");
 

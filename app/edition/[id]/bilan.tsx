@@ -17,12 +17,7 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
       <Section
         title="Bilan de l'édition"
         description="Texte réutilisé tel quel pour le rapport d'activité et les bilans financeurs ; visé par le responsable de pôle."
-        actions={
-          <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=md`)} data-testid="export-md"><FileDown />Exporter .md</a></Button>
-            <Button asChild size="sm" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)} data-testid="export-docx"><FileDown />Exporter .docx</a></Button>
-          </div>
-        }
+        actions={<Button asChild size="sm" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)}><FileDown />Exporter (Word)</a></Button>}
       >
         <div className="grid gap-3">
           <div className="grid gap-1">
@@ -31,7 +26,7 @@ export function BilanTab({ e, me, isPilot, isTeam }: TabCtx) {
           </div>
           <div className="grid gap-1">
             <label className="text-xs font-medium text-muted-foreground">Bilan (texte long)</label>
-            <AutoField model="edition" id={e.id} field="report" type="textarea" rows={14} value={e.report} readOnly={!rw} placeholder="Rédigez le bilan au fil de l'année : il servira tel quel." testId="field-report" />
+            <AutoField model="edition" id={e.id} field="report" type="textarea" rows={e.report ? 14 : 5} value={e.report} readOnly={!rw} placeholder="À rédiger en fin d'année : ce texte servira tel quel dans le rapport d'activité." testId="field-report" />
           </div>
         </div>
       </Section>

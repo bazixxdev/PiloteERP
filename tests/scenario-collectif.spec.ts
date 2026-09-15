@@ -34,11 +34,13 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("field-directExpenseEnvelope").fill("8000");
   await page.getByTestId("field-directExpenseEnvelope").blur();
   await page.getByRole("tab", { name: "Financements" }).click();
+  await page.getByTestId("add-funding-open").click();
   await page.getByTestId("add-funding-funder").selectOption({ label: "Région" });
   await page.getByTestId("add-funding-submit").click();
   await expect(page.getByTestId("funding-line-0")).toBeVisible();
   await page.waitForLoadState("networkidle");
   const line = page.getByTestId("funding-line-0");
+  await line.getByTestId("add-deliverable-open").click();
   await line.getByTestId("add-deliverable-label").fill("Bilan intermédiaire");
   await line.getByTestId("add-deliverable-date").fill(deliverableDue);
   await expect(line.getByTestId("add-deliverable-submit")).toBeEnabled();
@@ -46,6 +48,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(line.locator(`input[value="Bilan intermédiaire"]`)).toBeVisible();
   await expect(line).toContainText("dans 10 j");
   await page.getByRole("tab", { name: "Budget" }).click();
+  await page.getByTestId("budget-budgetEnvelope-edit").click();
   await page.getByTestId("budget-budgetEnvelope").fill("8000");
   await page.getByTestId("budget-budgetEnvelope").blur();
   await expect(page.getByTestId("budget-remaining")).toContainText("8");
@@ -56,13 +59,16 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(page.getByTestId("field-directExpenseEnvelope")).toHaveAttribute("data-readonly", "true");
   await page.getByTestId("field-operationalObjectives").fill("Deux rencontres et une note de plaidoyer.");
   await page.getByTestId("field-operationalObjectives").blur();
+  await page.getByTestId("team-edit").click();
   await page.getByRole("button", { name: "Lucas Perrin" }).click();
   await page.getByRole("tab", { name: "Actions" }).click();
+  await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Cartographie des élus");
   await page.getByTestId("add-action-submit").click();
   const row = page.getByTestId("action-row-0");
   await row.locator("select").first().selectOption({ label: "Lucas Perrin" });
   await row.locator('input[type="date"]').fill(soon);
+  await row.locator("[data-testid^=action-target-edit-]").click();
   await row.locator('input[type="number"]').fill("21");
   await row.locator('input[type="number"]').blur();
   await page.getByRole("tab", { name: "Documents" }).click();

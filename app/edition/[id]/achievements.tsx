@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Reveal } from "@/components/common/reveal";
 import { addAchievement, deleteAchievement } from "@/app/actions/proposals";
 import { dayjs } from "@/lib/format";
 
@@ -53,9 +54,10 @@ export function Achievements({ editionId, items, actions, canWrite, meId, canDel
         ))}
       </ul>
       {canWrite && (
-        <form className="mt-3 grid gap-2 rounded-md border bg-muted/30 p-2.5 text-xs sm:grid-cols-[150px_1fr]" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addAchievement(editionId, { kind, label, value: value ? Number(value.replace(",", ".")) : null, unit: k.unit || null, date, actionId: actionId || null }); if (!r.ok) toast.error(r.error); else { toast.success("Réalisation consignée"); setLabel(""); setValue(""); router.refresh(); } }); }} data-testid="achievement-form">
+        <Reveal label="Consigner une réalisation" size="xs" testId="achievement-open" className="mt-3">
+        <form className="grid flex-1 gap-2 rounded-md border bg-muted/30 p-2.5 text-xs sm:grid-cols-[150px_1fr]" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addAchievement(editionId, { kind, label, value: value ? Number(value.replace(",", ".")) : null, unit: k.unit || null, date, actionId: actionId || null }); if (!r.ok) toast.error(r.error); else { toast.success("Réalisation consignée"); setLabel(""); setValue(""); router.refresh(); } }); }} data-testid="achievement-form">
           <select value={kind} onChange={(e) => setKind(e.target.value)} className="h-8 rounded-md border bg-card px-2" aria-label="Nature" data-testid="achievement-kind">{ACHIEVEMENT_KINDS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex. : inscrits au forum de Tours, note d'opportunité envoyée à l'ADEME…" required className="h-8" data-testid="achievement-label" aria-label="Réalisation" />
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex. : inscrits au forum de Tours" required className="h-8" data-testid="achievement-label" aria-label="Réalisation" />
           <div className="flex items-center gap-1"><Input type="text" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Chiffre" className="h-8 w-24 tabular" data-testid="achievement-value" aria-label="Chiffre" />{k.unit && <span className="text-muted-foreground">{k.unit}</span>}</div>
           <div className="flex flex-wrap items-center gap-2">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8 w-36" aria-label="Date" />
@@ -63,6 +65,7 @@ export function Achievements({ editionId, items, actions, canWrite, meId, canDel
             <Button type="submit" size="sm" disabled={pending || !label.trim()} data-testid="achievement-submit"><Plus />Consigner</Button>
           </div>
         </form>
+        </Reveal>
       )}
     </div>
   );

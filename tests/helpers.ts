@@ -15,7 +15,8 @@ export async function openEditionByName(page: Page, name: string) {
 }
 
 // Fiche validée : les couches sont repliées ; on déplie avant de lire les rubriques.
+// Une couche verrouillée se lit dépliée par défaut (revue du 15/09) ; on ne clique le bouton que si elle est repliée.
 export async function expandLayer(page: Page, layer: "strategic" | "means" | "proposal") {
-  const toggle = page.getByTestId(`layer-toggle-${layer}`);
-  if (await toggle.count()) await toggle.click();
+  const summary = page.getByTestId(`layer-summary-${layer}`);
+  if (await summary.count()) await page.getByTestId(`layer-toggle-${layer}`).click();
 }

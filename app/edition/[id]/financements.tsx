@@ -7,7 +7,8 @@ import { canEditFunding } from "@/lib/rights";
 import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
-import { AddDeliverableForm, AddFundingLineForm, AttachConventionForm } from "./add-forms";
+import { AddDeliverableForm, AddFundingMenu } from "./add-forms";
+import { Reveal } from "@/components/common/reveal";
 import { allocationOf, conventionCovers } from "@/lib/conventions";
 import Link from "next/link";
 import { DeliverableDone } from "./deliverable-done";
@@ -25,6 +26,8 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
   const totalRequested = e.fundingLines.reduce((s, f) => s + (f.amountRequested ?? 0), 0);
   const totalGranted = e.fundingLines.reduce((s, f) => s + (f.amountGranted ?? 0), 0);
 
+  // Dossiers encore ouverts (à déposer, déposé) : dits dans le sous-titre, pour ne pas les chercher ligne par ligne.
+  const pendingLines = e.fundingLines.filter((f) => ["to_submit", "submitted"].includes(f.status));
   const upcoming = e.fundingLines
     .flatMap((f) => f.deliverables.filter((d) => !d.done).map((d) => ({ ...d, funder: f.funder.name })))
     .map((d) => ({ ...d, n: daysFromNow(d.dueDate) }))
@@ -36,8 +39,8 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
       <div className="grid gap-4">
         <Section
           title="Lignes de financement"
-          description={<span>Remplies par la RAF · {fmtEuro(totalGranted)} obtenus sur {fmtEuro(totalRequested)} demandés{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}</span>}
-          actions={rw ? <div className="flex flex-wrap gap-2"><AttachConventionForm editionId={e.id} conventions={covering.filter((c) => !c.lines.some((l) => l.editionId === e.id)).map((c) => ({ id: c.id, label: `${funders.find((f) => f.id === c.funderId)?.name ?? ""} · ${c.reference} (${c.startYear}-${c.endYear})` }))} /><AddFundingLineForm editionId={e.id} funders={funders} /></div> : undefined}
+          description={<span><b className="text-foreground">{fmtEuro(totalGranted)} obtenus</b> / {fmtEuro(totalRequested)} demandés · {e.fundingLines.length} financeur{e.fundingLines.length > 1 ? "s" : ""}{pendingLines.length > 0 && <> · {pendingLines.map((f) => `${f.funder.name} : ${refLabel(refs, "funding_status", f.status).toLowerCase()}`).join(", ")}</>}{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}{rw && " · tenues par la RAF"}</span>}
+          actions={rw ? <AddFundingMenu editionId={e.id} funders={funders} conventions={covering.filter((c) => !c.lines.some((l) => l.editionId === e.id)).map((c) => ({ id: c.id, label: `${funders.find((f) => f.id === c.funderId)?.name ?? ""} · ${c.reference} (${c.startYear}-${c.endYear})` }))} /> : undefined}
         >
           {e.fundingLines.length === 0 ? (
             <EmptyState title="Aucune ligne de financement" hint="La RAF ajoute ici chaque financeur avec son dispositif, ses montants et ses livrables dus." />
@@ -64,7 +67,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                       <p data-testid={`funding-contact-${i}`}><ContactLine c={contact} label={f.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${f.funderId}`} className="text-primary hover:underline">fiche {f.funder.name}</Link></p>
                     </div>
                   ); })()}
-                  <details className="group mt-2 rounded-lg border border-dashed px-2 py-1.5" open={rw}>
+                  <details className="group mt-2 rounded-lg border border-dashed px-2 py-1.5">
                   <summary className="cursor-pointer list-none text-[11px] font-semibold text-muted-foreground">Détail de gestion <span className="font-normal">· dépôt, réponse, convention, code analytique, clé de répartition, pièces · <span className="text-primary group-open:hidden">afficher</span><span className="hidden text-primary group-open:inline">replier</span></span></summary>
                   <div className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]">
                     <Field label="Dépôt"><AutoField model="fundingLine" id={f.id} field="submittedAt" type="date" value={f.submittedAt} readOnly={!rw} /></Field>
@@ -79,7 +82,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-2 py-1.5 text-xs" data-testid={`convention-of-${i}`}>
                     <span className="font-semibold text-primary">Convention</span>
-                    <div className="w-64"><AutoField model="fundingLine" id={f.id} field="conventionId" type="select" value={f.conventionId} readOnly={!rw} placeholder="— financement annuel propre à l'édition —" refreshOnSave
+                    <div className="w-72"><AutoField model="fundingLine" id={f.id} field="conventionId" type="select" value={f.conventionId} readOnly={!rw} placeholder="Financement annuel (sans convention)" refreshOnSave
                       options={conventions.filter((c) => c.funderId === f.funderId && conventionCovers(c, e.year)).map((c) => ({ value: c.id, label: `${c.reference} (${c.startYear}-${c.endYear})` }))} /></div>
                     {f.convention && (() => { const a = allocationOf(f.convention); return (
                       <span className="text-muted-foreground">
@@ -94,7 +97,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                   <div className="mt-3 rounded-lg bg-muted/50 p-2">
                     <div className="mb-1 flex items-center justify-between">
                       <span className="text-[10px] font-semibold text-muted-foreground">Pièces (convention, notification, bilan remis)</span>
-                      {(rw || isPilot) && <UploadForm editionId={e.id} kinds={kinds} defaultKind="contract" fundingLineId={f.id} compact />}
+                      {(rw || isPilot) && <Reveal label="Pièce" size="xs" testId={`upload-open-${i}`}><UploadForm editionId={e.id} kinds={kinds} defaultKind="contract" fundingLineId={f.id} compact /></Reveal>}
                     </div>
                     <AttachmentList items={e.attachments.filter((a) => a.fundingLineId === f.id)} refs={refs} compact />
                   </div>

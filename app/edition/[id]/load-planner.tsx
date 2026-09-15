@@ -39,8 +39,9 @@ export function LoadPlanner({ editionId, personId, personName, year, plannedDays
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px text-[10px] hover:bg-muted", ventilated ? "text-primary" : "border border-dashed text-muted-foreground")} title={ventilated ? "Ventilation mensuelle : modifier" : "Répartir les jours prévus par mois"} data-testid={`load-plan-${personId}`}>
-          <CalendarRange className="size-3" aria-hidden />{ventilated ? "par mois" : readOnly ? "lissé" : "Répartir par mois"}
+        {/* Même bouton sur toutes les lignes (revue du 15/09) : la couleur dit si une répartition est posée, l'infobulle explique. */}
+        <button type="button" className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px text-[10px] hover:bg-muted", ventilated ? "text-primary" : "text-muted-foreground")} title={ventilated ? "Répartition mensuelle posée : voir ou modifier" : readOnly ? "Total annuel lissé sur 12 mois" : "Répartir les jours prévus par mois (sinon, lissé sur 12 mois)"} data-testid={`load-plan-${personId}`}>
+          <CalendarRange className="size-3" aria-hidden />par mois{!ventilated && <span className="text-muted-foreground/70"> · lissé</span>}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[420px]" align="start">

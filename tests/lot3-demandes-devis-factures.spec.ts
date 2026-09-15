@@ -90,6 +90,7 @@ test("un devis approuvé produit un bon pour accord ; la facture est reçue, le 
   await expect(row2).toContainText("Payée le");
   // Règle des documents, écrite dans l'onglet Documents.
   await page.getByRole("tab", { name: /Documents/ }).click();
+  await page.getByTestId("documents-rule-open").click();
   await expect(page.getByTestId("documents-rule")).toContainText("Trois familles");
 });
 

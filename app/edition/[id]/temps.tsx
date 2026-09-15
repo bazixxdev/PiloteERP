@@ -7,6 +7,7 @@ import { fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { LoadPlanner } from "./load-planner";
+import { HelpTip } from "@/components/common/help-tip";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
@@ -25,7 +26,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <Section title={`Temps consommé / objectif · ${e.year}`} description="Le temps saisi sur le projet pendant l'année, par action.">
+      <Section title={`Temps consommé / objectif · ${e.year}`} description="Le temps saisi sur le projet pendant l'année, par action." actions={<Link href="/temps" className="text-xs text-primary hover:underline">Saisir mes temps →</Link>}>
         <div className="mb-4 flex items-center gap-4 rounded-xl bg-muted/50 p-3">
           <div>
             <div className="text-2xl font-bold tabular">{fmtNumber(total, 0)} h</div>
@@ -49,17 +50,22 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
                 </tr>
               );
             })}
-            <tr className="text-muted-foreground">
-              <td className="py-1.5 italic">Sur le projet, sans action</td>
-              <td className="py-1.5 text-right tabular">{fmtNumber(noAction, 1)} h</td>
+            {/* Le temps saisi sur le projet sans action est une information de pilotage, pas une note de bas de page (revue du 15/09). */}
+            <tr className={cn(total > 0 && noAction / total > 0.25 ? "bg-warning-soft/60 text-warning-foreground" : "text-muted-foreground")} data-testid="time-no-action">
+              <td className="rounded-l-md py-1.5 pl-1 font-medium">Sans action{total > 0 && noAction > 0 && <span className="font-normal"> · {Math.round((noAction / total) * 100)} % du temps du projet</span>}</td>
+              <td className="py-1.5 text-right tabular font-semibold">{fmtNumber(noAction, 1)} h</td>
               <td />
-              <td />
+              <td className="rounded-r-md py-1.5 pl-4 text-[11px]">{total > 0 && noAction / total > 0.25 ? "à rattacher aux actions dans la saisie hebdomadaire" : ""}</td>
             </tr>
           </tbody>
         </table>
       </Section>
 
-      <Section title="Ressources humaines de l'édition" description={`Charge en jours, pas en pourcentage ni en euros : les rythmes changent, les % se recalculent. Réalisé = heures saisies ÷ ${hpd} h (coefficient réglable dans l'admin).`}>
+      <Section title="Ressources humaines de l'édition" description={<span className="inline-flex items-center gap-1.5">Charge en jours : prévus, conventionnés, réalisés <HelpTip title="Pourquoi des jours, et d'où viennent les chiffres" testId="hr-help">
+        <p className="mt-1">En jours, pas en pourcentage ni en euros : les rythmes changent, les pourcentages se recalculent. Réalisé = heures saisies ÷ {hpd} h (coefficient réglable dans l'admin).</p>
+        <p className="mt-2">« Par mois » ventile les jours prévus dans le <Link href="/plan-de-charge" className="text-primary hover:underline">plan de charge</Link> ; sans ventilation, le total se lisse sur les douze mois. La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel de la RAF : l'outil fournit les jours réalisés par personne et par édition, elle applique ses coûts.</p>
+        <p className="mt-2">« Part de l'année » = jours prévus ÷ jours disponibles de la personne dans l'année.</p>
+      </HelpTip></span>}>
         <table className="w-full text-sm" data-testid="hr-table">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
@@ -67,7 +73,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
               <th className="py-1.5 text-right" title="Charge de travail prévue sur l'édition (proposée par le pilote), à répartir par mois pour le plan de charge">Prévus · par mois</th>
               <th className="py-1.5 text-right" title="Jours mentionnés dans les conventions : référence financeur, pas une charge">Conventionnés</th>
               <th className="py-1.5 text-right">Réalisés</th>
-              <th className="py-1.5 text-right" title="Prévus ÷ jours disponibles de la personne dans l'année">% dispo.</th>
+              <th className="py-1.5 text-right" title="Jours prévus ÷ jours disponibles de la personne dans l'année">Part de l'année</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -104,7 +110,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
             </tr>
           </tfoot>
         </table>
-        <p className="mt-2 text-xs text-muted-foreground">« Répartir par mois » ventile les jours prévus dans le <Link href="/plan-de-charge" className="text-primary hover:underline">plan de charge</Link> ; sans ventilation, le total se lisse sur les 12 mois de l'année. La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel de la RAF : l'outil fournit les jours réalisés par personne et par édition, elle applique ses coûts. {hidden > 0 && `${hidden} réalisé${hidden > 1 ? "s" : ""} masqué${hidden > 1 ? "s" : ""} selon la visibilité du temps.`}</p>
+        {hidden > 0 && <p className="mt-2 text-xs text-muted-foreground">{hidden} réalisé{hidden > 1 ? "s" : ""} masqué{hidden > 1 ? "s" : ""} selon la visibilité du temps.</p>}
       </Section>
     </div>
   );

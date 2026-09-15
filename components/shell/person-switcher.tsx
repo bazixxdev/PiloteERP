@@ -17,7 +17,7 @@ export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slic
 // Avatar à initiales (V2) ; les rôles CODIR reçoivent la teinte « mousse ».
 export function Avatar({ name, role, className }: { name: string; role?: string; className?: string }) {
   const moss = role === "director" || role === "raf" || role === "pole_lead";
-  return <span className={`inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${moss ? "bg-[#dcecf2] text-mint" : "bg-[#e6ddcf] text-[#574f3f]"} ${className ?? ""}`} aria-hidden>{initials(name)}</span>;
+  return <span className={cn("inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold", moss ? "bg-[#dcecf2] text-mint" : "bg-[#e6ddcf] text-[#574f3f]", className)} aria-hidden>{initials(name)}</span>;
 }
 
 // Menu utilisateur : mon compte, admin (selon les droits), changement d'utilisateur (prototype) et déconnexion.

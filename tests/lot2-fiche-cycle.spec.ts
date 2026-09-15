@@ -9,9 +9,11 @@ test("une fiche validée est verrouillée : la modification passe par une propos
   await iAm(page, "Hugo Lemaire");
   await openEditionByName(page, "Forum régional de l'ESS");
   await expect(page.getByTestId("fiche-locked")).toBeVisible();
-  // Couche repliée, dépliable ; pas de « Modifier cette couche ».
-  await expect(page.getByTestId("layer-summary-proposal")).toBeVisible();
+  // Couche lisible en entier, repliable en liste de rubriques ; pas de « Modifier cette couche » (revue du 15/09).
+  await expect(page.getByTestId("field-quantitativeObjectives")).toBeVisible();
   await expect(page.getByTestId("layer-edit-proposal")).toHaveCount(0);
+  await page.getByTestId("layer-toggle-proposal").click();
+  await expect(page.getByTestId("layer-summary-proposal")).toBeVisible();
   await page.getByTestId("layer-toggle-proposal").click();
   await expect(page.getByTestId("field-quantitativeObjectives")).toBeVisible();
   // La proposition du jeu de démo attend le pilote : il l'accepte, la valeur s'applique.
@@ -51,6 +53,7 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
   await page.getByRole("tab", { name: /Bilan/ }).click();
+  await page.getByTestId("achievement-open").click();
   await expect(page.getByTestId("achievement-totals")).toContainText("55 personnes");
   await page.getByTestId("achievement-label").fill("Inscrits au petit-déjeuner d'octobre");
   await page.getByTestId("achievement-value").fill("27");
@@ -93,9 +96,11 @@ test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et
   // Remarque avec motif, en relecture, sur une fiche ouverte (proposée 2027).
   await page.goto("/portefeuille");
   await openEditionByName(page, "Réseau Femmes et ESS");
-  await page.getByTestId("edition-years").getByText("Édition 2027").click();
-  await expect(page.getByTestId("edition-years").getByText("Édition 2027")).toHaveAttribute("aria-current", "page");
+  await page.getByTestId("edition-years").getByRole("link", { name: "Édition 2027" }).click();
+  await expect(page.getByTestId("edition-years").getByRole("link", { name: "Édition 2027" })).toHaveAttribute("aria-current", "page");
+  await page.getByTestId("edition-menu").click();
   await page.getByTestId("feedback-toggle").click();
+  await expect(page.getByTestId("feedback-bar")).toBeVisible();
   await page.getByTestId("remark-add-stakes").click();
   await page.getByTestId("remark-body-stakes").fill("La Région attend un lien explicite avec le SRESS.");
   await page.getByTestId("remark-reason-select-stakes").selectOption("funder");
