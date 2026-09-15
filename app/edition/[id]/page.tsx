@@ -91,9 +91,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
               <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.analyticCode}</span>
-              <span aria-hidden>·</span>
+              <span aria-hidden className="hidden sm:inline">·</span>
               <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} role={owners.pilot.role} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
-              <span aria-hidden>·</span>
+              <span aria-hidden className="hidden sm:inline">·</span>
               <span className="inline-flex items-center gap-1">{owners.guarantor && <Avatar name={owners.guarantor.name} role={owners.guarantor.role} className="size-5 text-[8px]" />} Garant <b className="font-semibold text-foreground">{owners.guarantor?.name ?? "—"}</b></span>
             </p>
           </div>
