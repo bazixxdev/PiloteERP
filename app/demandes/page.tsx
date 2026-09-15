@@ -7,7 +7,9 @@ import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session
 import { canDecideValidation } from "@/lib/rights";
 import { refLabel } from "@/lib/refs";
 import { ageDays, canSeeValidation, isForMe, kindLabel, loadRequests, statusOf, wideViewLabel } from "@/lib/requests";
-import { loadEditionOpts } from "@/lib/tasks";
+import { loadEditionOpts, loadEditionChoices, loadSuppliers } from "@/lib/tasks";
+import { RequestValidationDialog } from "@/app/edition/[id]/request-validation-dialog";
+import { REF_DEFAULTS } from "@/lib/refs";
 import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NewRequestDialog } from "./new-request";
@@ -22,6 +24,7 @@ type Line = { id: string; family: "request" | "validation"; kind: string; title:
 export default async function DemandesPage({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const { vue } = await searchParams;
   const [me, people, refs, settings] = await Promise.all([getCurrentPerson(), getPeople(), getRefs(), getSettings()]);
+  const [editionChoices, suppliers] = await Promise.all([loadEditionChoices(me, settings), loadSuppliers()]);
   const [requests, validations, poles, editions] = await Promise.all([
     loadRequests(me),
     prisma.validationRequest.findMany({ include: { requester: true, decider: true, edition: { include: { project: { include: { secondaryPoles: true } } } } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] }).then((vs) => vs.filter((v) => canSeeValidation(me, v))),
@@ -73,7 +76,10 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours. Ce qu'on demande à quelqu'un — site, chiffres, logistique, travail à faire — et les validations, décidées ici.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />} />
+      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours. Ce qu'on demande à quelqu'un — site, chiffres, logistique, travail à faire — et les validations, décidées ici.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
+        <RequestValidationDialog editions={editionChoices} suppliers={suppliers} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} afterHref="/demandes?vue=mes" triggerLabel="Nouvelle validation" />
+        <NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />
+      </>} />
       <div className="mb-3 flex flex-wrap gap-1">
         {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>

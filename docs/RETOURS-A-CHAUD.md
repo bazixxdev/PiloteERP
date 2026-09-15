@@ -133,6 +133,9 @@ Ce que Gaël retient de la journée (S12 Saraly, S13 Anne-Sophie, S14 Simon, S15
 - **« Le bouton + Demande devrait être à droite »** — Traité le 15/09 : `PageHeader` garde les actions à droite dès la largeur tablette même avec un long sous-titre.
 - **« Bug de largeur de colonne dans Mon compte »** — Traité le 15/09 : règle globale `.grid > * { min-width: 0 }` (la colonne de droite débordait à cause de l'URL du flux) ; corrige d'un coup toutes les grilles à colonne fixe.
 
+- **« Rien n'empêche de demander une validation depuis Demandes, même modale + choix de l'édition »** — Traité le 15/09 : bouton **Nouvelle validation** à côté de Nouvelle demande ; même formulaire (`RequestValidationDialog` avec `editions`), l'édition en premier, actions et circuit (pilote / responsable / direction) suivent l'édition choisie ; retour sur « Mes demandes ».
+- **« Une petite base fournisseurs unifiée, recherche dans le champ, case à cocher pour ajouter »** — Traité le 15/09 : modèle `Supplier` (nom, mail, téléphone, notes), champ Fournisseur avec suggestions en tapant (l'adresse mail se remplit), case « Ajouter … à la base » cochée par défaut pour un nom inconnu, `ValidationRequest.supplierId` (nom et adresse restent copiés sur la demande). Base tenue dans Admin › Référentiels › Fournisseurs (nom, mail, nombre de devis, ajout). Jeu de démo : 9 fournisseurs.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

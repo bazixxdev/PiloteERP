@@ -434,6 +434,8 @@ model ValidationRequest {
   // Devis : fournisseur et adresse pour le « bon pour accord » envoyé à la validation (lot 3, plus d'impression ni de tampon).
   supplier        String?
   supplierEmail   String?
+  supplierId      String?
+  supplierRef     Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
   attachments     Attachment[]
   expense         Expense?
@@ -795,4 +797,18 @@ model FieldRemark {
   resolvedBy   Person?   @relation("RemarkResolver", fields: [resolvedById], references: [id])
 
   @@index([editionId, resolvedAt])
+}
+
+// Base unifiée des fournisseurs (retour du 15/09) : alimentée depuis les demandes de validation (recherche dans le champ,
+// « ajouter à la base » si inconnu), tenue dans l'admin. Le nom et l'adresse restent copiés sur la demande (trace figée).
+model Supplier {
+  id          String              @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  notes       String?
+  createdAt   DateTime            @default(now())
+  validations ValidationRequest[]
+
+  @@index([name])
 }

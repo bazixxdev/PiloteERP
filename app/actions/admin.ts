@@ -49,11 +49,12 @@ export async function createEdition(projectId: string, year: number): Promise<Re
   return { ok: true, data: { editionId: e.id } };
 }
 
-export async function createRef(kind: "funder" | "mission" | "timeCode", name: string): Promise<Result> {
+export async function createRef(kind: "funder" | "mission" | "timeCode" | "supplier", name: string): Promise<Result> {
   const d = await guard(); if (d) return { ok: false, error: d };
   const n = name.trim();
   if (!n) return { ok: false, error: "Nom vide" };
   if (kind === "funder") await prisma.funder.create({ data: { name: n } });
+  if (kind === "supplier") await prisma.supplier.create({ data: { name: n } });
   if (kind === "mission") await prisma.mission.create({ data: { name: n, order: await prisma.mission.count() } });
   if (kind === "timeCode") await prisma.timeCode.create({ data: { code: n.toUpperCase().replace(/[^A-Z0-9]+/g, "_").slice(0, 12), label: n, kind: "operating", order: await prisma.timeCode.count() } });
   revalidatePath("/", "layout");

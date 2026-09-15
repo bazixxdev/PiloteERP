@@ -51,3 +51,24 @@ export async function loadEditionOpts(me: { id: string; role: string; poleId: st
     .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter((a) => a.state !== "done").map((a) => ({ id: a.id, name: a.name })) }));
 }
 
+
+// Fournisseurs de la base, pour le champ avec recherche du formulaire de validation.
+export async function loadSuppliers(): Promise<{ id: string; name: string; email: string | null }[]> {
+  return prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
+}
+
+// Éditions proposables pour une validation depuis Demandes : les mêmes que pour une tâche, avec le circuit (pilote, responsable, direction) de chacune.
+export async function loadEditionChoices(me: { id: string; role: string; poleId: string | null }, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }) {
+  const opts = await loadEditionOpts(me, settings);
+  const [eds, people] = await Promise.all([
+    prisma.edition.findMany({ where: { id: { in: opts.map((o) => o.id) } }, select: { id: true, project: { select: { pilotId: true, poleId: true, pilot: { select: { name: true } }, guarantor: { select: { name: true } } } } } }),
+    prisma.person.findMany({ where: { active: true }, select: { name: true, role: true, poleId: true } }),
+  ]);
+  const dir = people.find((p) => p.role === "director")?.name ?? null;
+  return opts.map((o) => {
+    const e = eds.find((x) => x.id === o.id)!;
+    const lead = e.project.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null;
+    const isPilot = e.project.pilotId === me.id;
+    return { ...o, recipients: { 1: isPilot ? (lead ?? dir) : e.project.pilot.name, 2: lead ?? dir, 3: dir } };
+  });
+}

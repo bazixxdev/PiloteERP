@@ -23,7 +23,7 @@ function useRun() {
   return { pending, run };
 }
 
-export function AddSimpleForm({ kind, placeholder, compact, family, projectId }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition" | "rhythm"; placeholder: string; compact?: boolean; family?: string; projectId?: string }) {
+export function AddSimpleForm({ kind, placeholder, compact, family, projectId }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition" | "rhythm" | "supplier"; placeholder: string; compact?: boolean; family?: string; projectId?: string }) {
   const [v, setV] = useState(kind === "edition" ? String(new Date().getFullYear() + 1) : "");
   const { pending, run } = useRun();
   const router = useRouter();

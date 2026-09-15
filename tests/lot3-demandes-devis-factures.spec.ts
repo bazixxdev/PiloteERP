@@ -124,3 +124,34 @@ test("chacun ne voit que les demandes qui le concernent : son pôle pour un resp
   await expect(page.getByTestId("requests-view-toutes")).toContainText("Toute la CRESS");
   await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
 });
+
+test("une validation se demande depuis Demandes, en choisissant l'édition ; le fournisseur se cherche dans la base ou s'y ajoute", async ({ page }) => {
+  await page.goto("/demandes");
+  await iAm(page, "Inès Cabral");
+  await page.getByTestId("request-validation-open").click();
+  const edition = page.getByTestId("rv-edition");
+  // Une édition sans devis en attente dans le jeu de démo (les tests des pièces jointes s'appuient sur ceux de l'ORESS).
+  await edition.selectOption((await edition.locator("option", { hasText: "Réseau Femmes et ESS" }).getAttribute("value"))!);
+  await page.getByTestId("rv-label").fill("Devis relecture de la note de conjoncture");
+  await page.getByTestId("rv-amount").fill("250");
+  // Fournisseur connu : la recherche dans le champ le propose, son adresse se remplit.
+  await page.getByTestId("rv-supplier").fill("loiret");
+  await page.locator("[data-testid^=rv-supplier-pick-]", { hasText: "Imprimerie du Loiret" }).click();
+  await expect(page.getByTestId("rv-supplier")).toHaveValue("Imprimerie du Loiret");
+  await expect(page.getByTestId("rv-supplier-email")).toHaveValue("devis@imprimerie-loiret.exemple.fr");
+  await expect(page.getByTestId("rv-supplier-save")).toHaveCount(0);
+  // Fournisseur inconnu : on l'ajoute à la base d'une case à cocher.
+  await page.getByTestId("rv-supplier").fill("Relectures & Co");
+  await expect(page.getByTestId("rv-supplier-save")).toBeChecked();
+  await page.getByTestId("rv-supplier-email").fill("contact@relectures.exemple.fr");
+  await expect(page.getByTestId("rv-recipient")).toContainText("Sera transmis à");
+  await page.getByTestId("rv-submit").click();
+  await expect(page.getByText(/Demande transmise à/)).toBeVisible();
+  await expect(page).toHaveURL(/demandes\?vue=mes/);
+  await expect(page.getByTestId("requests-open")).toContainText("Devis relecture de la note de conjoncture");
+  // La base s'est enrichie : visible dans l'admin, et proposée à la prochaine demande.
+  await iAm(page, "Nadia Ferrand");
+  await page.goto("/admin?section=referentiels");
+  await expect(page.getByTestId("suppliers").locator("input").first()).toBeVisible();
+  expect(await page.getByTestId("suppliers").locator("input").evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))).toContain("Relectures & Co");
+});

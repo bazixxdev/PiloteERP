@@ -84,12 +84,19 @@ export async function setTeam(editionId: string, personIds: string[]): Promise<R
 }
 
 // Demande de validation (EF-F1). Le niveau requis est calculé puis modifiable à la main (EF-F2).
-export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number; supplier?: string | null; supplierEmail?: string | null }): Promise<Result<{ id: string; requiredLevel: number }>> {
+export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number; supplier?: string | null; supplierEmail?: string | null; supplierId?: string | null; saveSupplier?: boolean }): Promise<Result<{ id: string; requiredLevel: number }>> {
   const c = await ctx(input.editionId);
   const settings = await getSettings();
   const remaining = budgetOf(c.e).available;
   const computed = requiredLevelFor(input.amount, settings, remaining);
   const level = input.requiredLevel ?? computed;
+  // Base fournisseurs (15/09) : fournisseur choisi dans la base, ou nouveau nom ajouté si demandé ; le nom et l'adresse restent copiés sur la demande.
+  let supplierId = input.supplierId || null;
+  const supplierName = input.supplier?.trim() || null;
+  if (!supplierId && supplierName && input.saveSupplier) {
+    const existing = (await prisma.supplier.findMany({ where: { name: { contains: supplierName } } })).find((x) => x.name.toLowerCase() === supplierName.toLowerCase());
+    supplierId = (existing ?? (await prisma.supplier.create({ data: { name: supplierName, email: input.supplierEmail?.trim() || null } }))).id;
+  }
   const v = await prisma.validationRequest.create({
     data: {
       editionId: input.editionId,
@@ -101,8 +108,9 @@ export async function requestValidation(input: { editionId: string; actionId?: s
       attachmentUrl: input.attachmentUrl || null,
       requiredLevel: level,
       targetDelayDays: input.targetDelayDays ?? 5,
-      supplier: input.supplier?.trim() || null,
+      supplier: supplierName,
       supplierEmail: input.supplierEmail?.trim() || null,
+      supplierId,
     },
   });
   revalidatePath("/", "layout");

@@ -70,6 +70,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   funder: { name: { type: "text" }, notes: { type: "textarea" } },
   funderContact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
   mission: { name: { type: "text" } },
+  supplier: { name: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
   timeCode: { label: { type: "text" }, kind: { type: "select" } },
   pole: { name: { type: "text" }, leadId: { type: "select" } },
   docLink: { label: { type: "text" }, url: { type: "text" }, codirOnly: { type: "bool" } },

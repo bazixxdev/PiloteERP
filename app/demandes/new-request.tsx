@@ -44,7 +44,7 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
           {kind === "quote" ? (
             // Un achat ou un devis n'est pas une demande interne : c'est une validation, portée par une édition (retour du 15/09 : « je ne trouve pas ce bouton »).
             <div className="grid gap-2 rounded-md border bg-muted/40 p-3 text-xs" data-testid="request-quote-redirect">
-              <p>Un achat ou un devis passe par le <b>circuit de validation</b> : il est engagé sur le budget d'une édition et validé au niveau que son montant impose. Choisissez l'édition, le formulaire s'ouvre sur sa fiche.</p>
+              <p>Un achat ou un devis passe par le <b>circuit de validation</b> : il est engagé sur le budget d'une édition et validé au niveau que son montant impose. Utilisez le bouton <b>Nouvelle validation</b> à côté — ou choisissez l'édition ici, le formulaire s'ouvre sur sa fiche.</p>
               <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="request-quote-edition"><option value="">— l'édition concernée —</option>{editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}</select>
               <div className="flex justify-end"><Button asChild disabled={!editionId} data-testid="request-quote-go"><Link href={editionId ? `/edition/${editionId}?onglet=validations&validation=1` : "#"} aria-disabled={!editionId} onClick={(e) => { if (!editionId) e.preventDefault(); else setOpen(false); }}>Demander la validation sur cette édition →</Link></Button></div>
             </div>

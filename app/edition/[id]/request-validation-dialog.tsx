@@ -17,8 +17,23 @@ const LEVELS = ["1 · pilote", "2 · responsable de pôle", "3 · direction"];
 export type Recipients = { 1: string | null; 2: string | null; 3: string | null };
 const LEVEL_ROLE: Record<number, string> = { 1: "pilote de l'édition", 2: "responsable de pôle", 3: "direction" };
 
-export function RequestValidationDialog({ editionId, actions, kinds, recipients, canOverride, defaultOpen }: { editionId: string; actions: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients: Recipients; canOverride?: boolean; defaultOpen?: boolean }) {
+export type SupplierOpt = { id: string; name: string; email: string | null };
+// Depuis Demandes (retour du 15/09) : le même formulaire, avec le choix de l'édition en premier ; chaque édition apporte ses actions et son circuit.
+export type EditionChoice = { id: string; name: string; year: number; actions: { id: string; name: string }[]; recipients: Recipients };
+
+const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+export function RequestValidationDialog({ editionId: fixedEditionId, actions: fixedActions, kinds, recipients: fixedRecipients, canOverride, defaultOpen, suppliers = [], editions, afterHref, triggerLabel }: { editionId?: string; actions?: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients?: Recipients; canOverride?: boolean; defaultOpen?: boolean; suppliers?: SupplierOpt[]; editions?: EditionChoice[]; afterHref?: string; triggerLabel?: string }) {
   const [open, setOpen] = useState(Boolean(defaultOpen)); // ?validation=1 depuis « Nouvelle demande › Achat / devis »
+  const [chosenEditionId, setChosenEditionId] = useState("");
+  const editionId = fixedEditionId ?? chosenEditionId;
+  const chosen = editions?.find((e) => e.id === chosenEditionId);
+  const actions = fixedActions ?? chosen?.actions ?? [];
+  const recipients: Recipients = fixedRecipients ?? chosen?.recipients ?? { 1: null, 2: null, 3: null };
+  // Fournisseur : recherche dans la base en tapant ; un nom inconnu peut y être ajouté (case cochée par défaut).
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [saveSupplier, setSaveSupplier] = useState(true);
+  const [supplierFocus, setSupplierFocus] = useState(false);
   const [kind, setKind] = useState("quote");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
@@ -35,28 +50,39 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
   const router = useRouter();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !editionId) return;
     const n = amount === "" ? null : Number(amount.replace(",", "."));
     explainRequiredLevel(editionId, n).then((r) => { setComputed(r); setLevel(r.level); });
   }, [amount, editionId, open]);
+  const supplierMatches = supplier.trim() ? suppliers.filter((x) => norm(x.name).includes(norm(supplier.trim()))).slice(0, 6) : suppliers.slice(0, 6);
+  const supplierKnown = suppliers.some((x) => norm(x.name) === norm(supplier.trim()));
 
   const sel = "h-8 w-full rounded-lg border bg-card px-2 text-sm";
   const recipient = recipients[level as 1 | 2 | 3];
   const kindLabel = kinds.find((k) => k.value === kind)?.label ?? kind;
   const amountNumber = amount === "" ? null : Number(amount.replace(",", "."));
-  const reset = () => { setLabel(""); setAmount(""); setUrl(""); setFileName(""); if (fileRef.current) fileRef.current.value = ""; };
+  const reset = () => { setLabel(""); setAmount(""); setUrl(""); setFileName(""); setSupplier(""); setSupplierEmail(""); setSupplierId(null); setActionId(""); if (fileRef.current) fileRef.current.value = ""; };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button data-testid="request-validation-open"><ShieldCheck />Demander une validation</Button>
+        <Button data-testid="request-validation-open" variant={editions ? "outline" : "default"}><ShieldCheck />{triggerLabel ?? "Demander une validation"}</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Demander une validation</DialogTitle>
           <DialogDescription>Dites ce que vous demandez, joignez la pièce ; la demande part au bon valideur selon le montant.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
+          {editions && (
+            <div className="grid gap-1">
+              <Label htmlFor="rv-edition">Édition concernée <span className="font-normal text-muted-foreground">(le montant s'engage sur son budget)</span></Label>
+              <select id="rv-edition" className={sel} value={chosenEditionId} onChange={(e) => { setChosenEditionId(e.target.value); setActionId(""); }} data-testid="rv-edition">
+                <option value="">— choisir l'édition —</option>
+                {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid gap-1">
             <Label htmlFor="rv-label">Objet de la demande</Label>
             <Input id="rv-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Devis traiteur pour la soirée…" data-testid="rv-label" />
@@ -75,9 +101,24 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
           </div>
           {(kind === "quote" || kind === "expense") && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1">
-                <Label htmlFor="rv-supplier">Fournisseur</Label>
-                <Input id="rv-supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Imprimerie Duval…" data-testid="rv-supplier" />
+              <div className="relative grid gap-1">
+                <Label htmlFor="rv-supplier">Fournisseur <span className="font-normal text-muted-foreground">(cherchez dans la base)</span></Label>
+                <Input id="rv-supplier" value={supplier} autoComplete="off" onChange={(e) => { setSupplier(e.target.value); setSupplierId(null); }} onFocus={() => setSupplierFocus(true)} onBlur={() => setTimeout(() => setSupplierFocus(false), 120)} placeholder="Imprimerie Duval…" data-testid="rv-supplier" aria-autocomplete="list" aria-expanded={supplierFocus && supplierMatches.length > 0} />
+                {supplierFocus && supplierMatches.length > 0 && (
+                  <ul className="absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-md border bg-card py-1 shadow-lg" role="listbox" aria-label="Fournisseurs connus" data-testid="rv-supplier-list">
+                    {supplierMatches.map((x) => (
+                      <li key={x.id} role="option" aria-selected={x.id === supplierId}>
+                        <button type="button" onMouseDown={(e) => { e.preventDefault(); setSupplier(x.name); setSupplierEmail(x.email ?? supplierEmail); setSupplierId(x.id); setSupplierFocus(false); }} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs hover:bg-muted" data-testid={`rv-supplier-pick-${x.id}`}>
+                          <span className="truncate">{x.name}</span>{x.email && <span className="shrink-0 truncate text-muted-foreground">{x.email}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {supplier.trim() && !supplierId && !supplierKnown && (
+                  <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"><input type="checkbox" checked={saveSupplier} onChange={(e) => setSaveSupplier(e.target.checked)} className="size-3.5 accent-primary" data-testid="rv-supplier-save" />Ajouter « {supplier.trim()} » à la base des fournisseurs</label>
+                )}
+                {supplierId && <span className="text-[11px] text-mint">Fournisseur de la base.</span>}
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="rv-supplier-email">Son adresse mail <span className="font-normal text-muted-foreground">(pour le bon pour accord)</span></Label>
@@ -144,10 +185,10 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
           <Button
             data-testid="rv-submit"
-            disabled={pending || !label.trim()}
+            disabled={pending || !label.trim() || !editionId}
             onClick={() =>
               start(async () => {
-                const res = await requestValidation({ editionId, actionId, kind, label, amount: amountNumber, attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5, supplier, supplierEmail });
+                const res = await requestValidation({ editionId, actionId, kind, label, amount: amountNumber, attachmentUrl: url, requiredLevel: level, targetDelayDays: Number(delay) || 5, supplier, supplierEmail, supplierId, saveSupplier: saveSupplier && !supplierKnown });
                 if (!res.ok) { toast.error(res.error); return; }
                 const file = fileRef.current?.files?.[0];
                 if (file) {
@@ -158,7 +199,7 @@ export function RequestValidationDialog({ editionId, actions, kinds, recipients,
                 }
                 toast.success(`Demande transmise à ${recipient ?? LEVEL_ROLE[res.data!.requiredLevel]}${file ? ", pièce jointe" : ""}`);
                 setOpen(false); reset();
-                router.push(`/edition/${editionId}?onglet=validations`);
+                router.push(afterHref ?? `/edition/${editionId}?onglet=validations`);
                 router.refresh();
               })
             }

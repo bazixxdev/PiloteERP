@@ -30,6 +30,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const current = SECTIONS.some((s) => s.key === section) ? section! : "personnes";
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
   const rw = canAdmin(me.role);
+  const suppliers = await prisma.supplier.findMany({ include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
@@ -137,6 +138,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div className="grid gap-4 lg:grid-cols-3">
           <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans « Projets et financements ».">
             <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>. Les projets et leurs éditions sont aussi dans <Link href="/projets" className="text-primary hover:underline">Projets et éditions</Link>.</p>
+          </Section>
+          <Section title="Fournisseurs" description="Base unifiée, alimentée depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher)." actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
+            {suppliers.length === 0 ? <p className="text-sm text-muted-foreground">Aucun fournisseur encore.</p> : (
+              <ul className="divide-y text-sm">
+                {suppliers.map((x) => (
+                  <li key={x.id} className="grid gap-1 py-1.5 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                    <AutoField model="supplier" id={x.id} field="name" type="text" value={x.name} readOnly={!rw} />
+                    <AutoField model="supplier" id={x.id} field="email" type="text" value={x.email} readOnly={!rw} placeholder="adresse pour le bon pour accord" />
+                    <span className="text-[11px] text-muted-foreground">{x._count.validations} devis</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Section>
           <Section title="Missions du plan opérationnel" actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle mission" compact /> : undefined}>
             <ul className="divide-y text-sm">{missions.map((m) => <li key={m.id}><AutoField model="mission" id={m.id} field="name" type="text" value={m.name} readOnly={!rw} /></li>)}</ul>

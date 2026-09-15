@@ -34,6 +34,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const { onglet, relecture, focus, validation } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
+  const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
 
   const tab = (["fiche", "actions", "financements", "temps", "budget", "validations", "documents", "bilan"].includes(onglet ?? "") ? onglet : "fiche") as TabKey;
@@ -89,6 +90,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           <RequestValidationDialog
             editionId={e.id}
             defaultOpen={validation === "1"}
+            suppliers={suppliers}
             actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}
             kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))}
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.

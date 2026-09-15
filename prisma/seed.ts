@@ -76,6 +76,7 @@ async function reset() {
   await prisma.docLink.deleteMany();
   await prisma.indicator.deleteMany();
   await prisma.validationRequest.deleteMany();
+  await prisma.supplier.deleteMany();
   await prisma.monthLock.deleteMany();
   await prisma.timeEntry.deleteMany();
   await prisma.deliverable.deleteMany();
@@ -698,6 +699,14 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────────────────────
   // Validations : quatre en attente dans les délais (une seule au-delà de la cible), six décidées avec leur circuit facture.
   // ─────────────────────────────────────────────────────────────────────────────────────────────
+  // Base fournisseurs : un fournisseur par nom rencontré sur les devis (plus quelques habituels sans devis en cours).
+  const supplierIds = new Map<string, string>();
+  const supplierIdFor = async (name?: string, email?: string) => {
+    if (!name) return null;
+    if (!supplierIds.has(name)) supplierIds.set(name, (await prisma.supplier.create({ data: { name, email: email ?? null } })).id);
+    return supplierIds.get(name)!;
+  };
+  for (const [name, email] of [["Traiteur Les Saveurs", "commande@lessaveurs.exemple.fr"], ["Location Salle Beaugency", "resa@salle-beaugency.exemple.fr"], ["Transport Berry", null]] as const) await supplierIdFor(name, email ?? undefined);
   type V = { code: string; kind: string; label: string; amount: number | null; age: number; level: number; supplier?: string; email?: string; by?: { id: string } };
   const pendingV: V[] = [
     { code: "SEN-01", kind: "quote", label: "Devis sonorisation de la soirée de remise", amount: 480, age: 1, level: 3, supplier: "Sono & Lumière 45", email: "contact@sono-lumiere45.exemple.fr" },
@@ -709,7 +718,7 @@ async function main() {
   ];
   for (const v of pendingV) {
     const e = ed(v.code);
-    const r = await prisma.validationRequest.create({ data: { editionId: e.id, actionId: e.actionIds[Math.min(3, e.actionIds.length - 1)], kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "pending", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null } });
+    const r = await prisma.validationRequest.create({ data: { editionId: e.id, actionId: e.actionIds[Math.min(3, e.actionIds.length - 1)], kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "pending", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null, supplierId: await supplierIdFor(v.supplier, v.email) } });
     if (v.amount && v.kind === "quote") { const pdf = storePdf(`${v.label} - ${v.amount} EUR`); await prisma.attachment.create({ data: { editionId: e.id, validationId: r.id, kind: "quote", label: v.label, fileName: `devis-${v.code.toLowerCase()}-${v.amount}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: d(-v.age), ...pdf } }); }
   }
   const decidedV: (V & { decided: number; invoice?: "received" | "paid" | null; service?: boolean })[] = [
@@ -722,7 +731,7 @@ async function main() {
   ];
   for (const v of decidedV) {
     const e = ed(v.code);
-    const r = await prisma.validationRequest.create({ data: { editionId: e.id, kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "approved", deciderId: v.by!.id, decidedAt: d(-v.decided), decisionComment: v.level === 3 ? "OK, dans l'enveloppe validée." : "OK.", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null } });
+    const r = await prisma.validationRequest.create({ data: { editionId: e.id, kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "approved", deciderId: v.by!.id, decidedAt: d(-v.decided), decisionComment: v.level === 3 ? "OK, dans l'enveloppe validée." : "OK.", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null, supplierId: await supplierIdFor(v.supplier, v.email) } });
     if (v.amount) {
       const pdf = storePdf(v.label);
       await prisma.attachment.create({ data: { editionId: e.id, validationId: r.id, kind: "quote", label: v.label, fileName: `devis-${v.code.toLowerCase()}-${v.amount}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: d(-v.age), ...pdf } });
