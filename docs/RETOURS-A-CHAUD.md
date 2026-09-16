@@ -221,6 +221,15 @@ Revue `/design-critique` sur le dev (Claire Vasseur, 1024 px et 375 px) : identi
 
 **Restes traités (même journée)** : `DecideButtons` compact (Approuver · Refuser · Commenter ; le champ s'ouvre à la demande ou au premier clic sur Refuser, qui devient « Confirmer le refus » + Annuler) et actions sur toute la largeur de la ligne dans `/demandes` ; sous-titres d'Échéances et de Demandes qui décrivent l'état (la règle « qui est prévenu » passe dans un `HelpTip`) ; « atteints » accordé au nombre d'indicateurs ; CODIR « séance 00:00 sur 20 min » ; notification de Ma semaine en date relative (l'heure exacte en infobulle) ; liens « Budget → / Temps → / Financeurs → » avec une zone cliquable. À surveiller : `lot2-fiche-cycle` (plan de charge, `load-changed-after`) a échoué une fois dans la suite complète et passe seul 2/2 — même famille (saisie au blur + rafraîchissement) ; un `data-saving` sur la grille du plan de charge réglerait ça. **Non fait, volontairement** : l'échelle de texte (8 tailles → 5) — c'est un chantier transversal, pas à ouvrir à douze jours de la restitution.
 
+### P. Matrice : panneau en place et champ surligné (16/09, matin) — fait
+
+Gaël : « que le panneau s'ouvre sans changer de page, pour revenir tout de suite au tableau et passer à un autre chiffre » et « surligner le champ d'où l'on a cliqué — une pratique à généraliser ».
+
+- **Panneau en place** : `components/common/url-panel.tsx` — un panneau piloté par l'adresse (`?ligne=…&champ=…`), la page reste dessous, fermer retire le paramètre (`router.replace`, sans défilement). Le corps du panneau de ligne de financement est extrait dans `components/funding/line-panel.tsx` (`FundingLinePanelBody`), partagé par l'onglet Budget et la matrice. Une cellule = un lien vers la matrice elle-même (`scroll={false}`), plus un lien « ouvrir l'édition » dans le panneau.
+- **Champ surligné** : `AutoField` gagne `highlight` (bordure corail, fond ocre clair, `autoFocus`, `data-highlight`) ; la cellule envoie `champ=amountGranted` (obtenu), `amountRequested` (demandé) ou `status` (à déposer). Le même paramètre marche sur `/edition/[id]?onglet=budget&ligne=&champ=`.
+- **Règle à généraliser** (`docs/decisions.md`) : quand on arrive sur un panneau depuis un chiffre, ce chiffre est surligné et focalisé ; quand une vue transversale mène à un détail, le détail s'ouvre en panneau sur la vue, pas sur une autre page.
+- Test : `tests/matrice.spec.ts` (obtenu → champ Obtenu focalisé ; Échap → tableau intact, adresse propre ; demandé → champ Demandé). Suite : 45 verts (recette 3 instable sous charge, passe seule).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

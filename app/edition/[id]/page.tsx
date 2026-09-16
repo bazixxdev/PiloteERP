@@ -30,9 +30,9 @@ import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
 
-export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string }> }) {
+export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string; champ?: string }> }) {
   const { id } = await params;
-  const { onglet, relecture, focus, validation, fil, ligne } = await searchParams;
+  const { onglet, relecture, focus, validation, fil, ligne, champ } = await searchParams;
   const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
   if (!e) notFound();
   const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
@@ -51,7 +51,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const myTasks = await prisma.task.findMany({ where: { personId: me.id, editionId: e.id, done: false }, select: { id: true, label: true, dueDate: true, action: { select: { name: true } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] });
   const canStatus = me.role === "director" || me.role === "raf";
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
-  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks, openLine: ligne ?? null };
+  const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks, openLine: ligne ?? null, openField: champ ?? null };
 
   // Compteurs d'onglet (revue du 15/09) : ce qui reste à faire, pas des totaux ; Documents = fichiers et liens seulement.
   const counts = {

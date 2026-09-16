@@ -33,6 +33,8 @@ type Props = {
   // Identifiant DOM, pour associer un <label htmlFor>.
   inputId?: string;
   onSaved?: (value: unknown) => void;
+  // Champ « d'où l'on vient » (clic sur un chiffre d'une autre page) : surligné et focalisé à l'ouverture du panneau.
+  highlight?: boolean;
 };
 
 function toInput(type: FieldType, v: Props["value"]): string {
@@ -98,9 +100,11 @@ export function AutoField(p: Props) {
           "min-h-7 whitespace-pre-line rounded-lg px-2 py-1 text-sm leading-relaxed",
           p.type === "number" && "tabular text-right",
           empty ? "text-muted-foreground italic" : "text-foreground",
+          p.highlight && "bg-warning-soft/60 ring-2 ring-coral/40",
           p.className,
           p.inputClassName,
         )}
+        data-highlight={p.highlight ? "true" : undefined}
       >
         {empty ? (p.placeholder ?? "Non renseigné") : text}
       </div>
@@ -109,6 +113,7 @@ export function AutoField(p: Props) {
 
   const base = cn(
     "w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:border-border focus:border-ring focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/20",
+    p.highlight && "border-coral bg-warning-soft/60 ring-2 ring-coral/40",
     p.inputClassName,
   );
 
@@ -144,6 +149,8 @@ export function AutoField(p: Props) {
         <select
           id={p.inputId}
           data-testid={p.testId}
+          data-highlight={p.highlight ? "true" : undefined}
+          autoFocus={p.highlight}
           aria-label={p.label}
           className={cn(base, "appearance-none pr-6")}
           value={val}
@@ -165,6 +172,8 @@ export function AutoField(p: Props) {
         <textarea
           id={p.inputId}
           data-testid={p.testId}
+          data-highlight={p.highlight ? "true" : undefined}
+          autoFocus={p.highlight}
           aria-label={p.label}
           className={cn(base, "min-h-[2.25rem] resize-y leading-relaxed")}
           rows={p.rows ?? 3}
@@ -183,6 +192,8 @@ export function AutoField(p: Props) {
       <input
         id={p.inputId}
         data-testid={p.testId}
+        data-highlight={p.highlight ? "true" : undefined}
+        autoFocus={p.highlight}
         aria-label={p.label}
         type={p.type === "number" ? "number" : p.type === "date" ? "date" : "text"}
         step={p.type === "number" ? "any" : undefined}

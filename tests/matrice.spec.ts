@@ -23,15 +23,27 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   // Conventions sous-affectées : la FSE a du notifié non affecté.
   await expect(page.getByTestId("matrix-attention")).toContainText("FSE-2026-2028");
 
-  // Une cellule mène à la ligne : onglet Budget de l'édition, panneau « Gérer » déjà ouvert sur ce financeur.
+  // Une cellule ouvre sa ligne en panneau, sur la matrice même ; le chiffre cliqué (obtenu) est surligné et focalisé.
   await row.locator("td[data-kind=granted] a").first().click();
-  await page.waitForURL(/\/edition\/.*ligne=/);
-  // Le panneau est modal : tant qu'il est ouvert, le reste de la page est masqué aux lecteurs d'écran (donc au test).
-  await expect(page.locator("[data-slot=sheet-content]")).toContainText("Cycle de conférences transition 2026");
-  await expect(page.locator("[data-slot=sheet-content]")).toContainText("Ligne tenue par la RAF");
+  await page.waitForURL(/ligne=/);
+  const panel = page.getByTestId("matrix-panel");
+  await expect(panel).toContainText("Cycle de conférences transition 2026");
+  await expect(panel).toContainText("Ligne tenue par la RAF");
+  const focused = panel.locator("input[data-highlight=true]");
+  await expect(focused).toHaveCount(1);
+  await expect(focused).toHaveAttribute("aria-label", /Montant obtenu/);
+  await expect(focused).toBeFocused();
+  // Fermer : le tableau est toujours là, sans rechargement de la page ni perte d'année.
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Cycle de conférences transition");
-  await page.goto("/matrice");
+  await expect(panel).toHaveCount(0);
+  await expect(page).toHaveURL(/\/matrice\?annee=2026$/);
+  await expect(page.getByTestId("matrix-row-TES-02")).toBeVisible();
+  // Un montant demandé (italique) surligne le champ Demandé.
+  await page.locator("td[data-kind=requested] a").first().click();
+  await page.waitForURL(/champ=amountRequested/);
+  await expect(page.getByTestId("matrix-panel").locator("input[data-highlight=true]")).toHaveAttribute("aria-label", /Montant demandé/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("matrix-panel")).toHaveCount(0);
 
   // Année suivante : les dossiers ne sont pas tranchés (à déposer).
   await page.getByTestId("year-picker").getByRole("link", { name: "2027" }).click();
