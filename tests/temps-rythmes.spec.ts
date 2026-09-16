@@ -31,7 +31,7 @@ test("les heures attendues suivent le rythme réel de la personne et de la semai
   const cell = page.getByTestId("cell-0-0");
   await cell.fill("2");
   await cell.blur();
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("time-grid")).toHaveAttribute("data-saving", "0", { timeout: 10_000 });
   await page.reload();
   await expect(page.getByTestId("declare-week")).toBeVisible();
 

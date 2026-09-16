@@ -215,6 +215,10 @@ Revue `/design-critique` sur le dev (Claire Vasseur, 1024 px et 375 px) : identi
 - Puces d'édition 2025 / 2026 / 2027 : 44 px de haut et 13 px sur mobile (elles faisaient 21 px).
 - Résultat à 1024 px : ~200 px de chapeau avant les onglets au lieu de ~250 (un « Tâche » dans l'en-tête est conservé : le test `taches.spec.ts` l'utilise, et il double celui de l'aperçu — à trancher).
 
+**Deux instabilités de tests réglées en passant** :
+- `recette-2-temps` (et `temps-rythmes`) : les sauvegardes de cellules partent **en file** (React 19 sérialise les transitions) et `waitForLoadState("networkidle")` rendait la main tout de suite (l'état est acquis depuis le chargement) → le `reload` avortait la 5ᵉ sauvegarde (statut −1 dans la trace). La grille expose `data-saving`, les tests l'attendent à « 0 ». Règle : ne jamais se fier à `networkidle` après une action serveur.
+- Le repli « une insertion par ligne » du matin sur les notifications d'échéance multipliait les écritures SQLite au premier chargement : remplacé par une relecture + un seul `createMany` du reste.
+
 Restent de la critique : échelle de texte (8 tailles) ; sous-titres qui expliquent (« par mail en V1 ») au lieu de décrire ; « 0/3 indicateurs atteint » ; « 00:00 / 20:00 » sans libellé sur le CODIR ; Demandes = 11 formulaires ouverts en même temps ; liens « Budget → » de 16 px.
 
 ## À chaud (notes brutes, non traitées)

@@ -26,8 +26,9 @@ test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un
   await expect(page.getByTestId("week-total")).toContainText(`${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(expected)} h`, { timeout: 10_000 });
   expect(Date.now() - t0).toBeLessThan(60_000);
 
-  // Le total est persistant après rechargement.
-  await page.waitForLoadState("networkidle");
+  // Le total est persistant après rechargement. Les cinq sauvegardes partent l'une après l'autre : on attend la fin de la
+  // file (« networkidle » ne suffit pas, il est déjà acquis depuis le chargement et rendait la main pendant la dernière).
+  await expect(page.getByTestId("time-grid")).toHaveAttribute("data-saving", "0", { timeout: 10_000 });
   await page.reload();
   await expect(page.getByTestId("cell-0-4")).toHaveValue("7");
 

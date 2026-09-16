@@ -74,8 +74,9 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
       : weekTotal === 0 ? { label: "○ Semaine à répartir", color: "muted" } : { label: "○ Répartition en cours", color: "info" };
   const STATUS: Record<string, string> = { mint: "bg-mint-soft text-mint", warning: "bg-warning-soft text-warning-foreground", muted: "bg-muted text-muted-foreground", info: "bg-info-soft text-primary" };
 
+  // `data-saving` : les sauvegardes partent en file (une transition à la fois) ; les tests l'attendent avant de recharger.
   return (
-    <div data-testid="time-grid">
+    <div data-testid="time-grid" data-saving={pending ? "1" : "0"}>
       {/* Bannière de la semaine : total saisi face au total attendu, informatif seulement. Compacte sur mobile : une ligne, la jauge, l'état. */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-3 py-2.5 md:mb-5 md:gap-5 md:px-[18px] md:py-4">
         <div className="min-w-[160px] md:min-w-[200px]">
