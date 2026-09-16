@@ -75,7 +75,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   return (
     <div className="p-4 md:p-6">
       {/* En-tête en deux lignes (revue du 15/09) : identité et statut ; pôle, code, pilote et garant. Le rare va dans le menu « … ». */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="mb-2.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 flex-1 basis-[420px] items-start gap-3">
           <SectionIcon className="mt-[3px] hidden size-9 shrink-0 place-items-center rounded-md bg-info-soft text-primary sm:grid print:hidden" />
           <div className="min-w-0">
@@ -91,7 +91,8 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
               {e.conditionalStart && <StatusBadge label="Démarrage conditionné à la notification" color="warning" dot={false} />}
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-              <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · {e.project.mission.name} · {e.project.analyticCode}</span>
+              {/* La mission du plan opérationnel se lit dans la fiche (Cadre stratégique) ; ici elle doublait la ligne (critique du 16/09). */}
+              <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · <span title={`Mission : ${e.project.mission.name}`}>{e.project.analyticCode}</span></span>
               <span aria-hidden className="hidden sm:inline">·</span>
               <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} role={owners.pilot.role} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
               <span aria-hidden className="hidden sm:inline">·</span>
@@ -102,8 +103,11 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         <div className="flex flex-wrap items-center gap-2">
           <FilSheet editionId={e.id} defaultOpen={fil === "1"} comments={e.comments.map((c) => ({ id: c.id, author: c.author.name, when: fmtDate(c.createdAt, c.createdAt.getHours() === 0 && c.createdAt.getMinutes() === 0 ? "D MMM YYYY" : "D MMM YYYY HH:mm"), body: c.body }))} />
           <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
+          {/* Bouton plein pour ceux qui demandent (pilote, équipe, contributeurs) ; en contour pour les rôles qui décident
+              (direction, responsable de pôle, RAF) : leur geste premier ici est de lire et d'arbitrer (critique du 16/09). */}
           <RequestValidationDialog
             editionId={e.id}
+            variant={isPilot || isTeam || !isCodir(me.role) ? "default" : "outline"}
             defaultOpen={validation === "1"}
             suppliers={suppliers}
             actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}

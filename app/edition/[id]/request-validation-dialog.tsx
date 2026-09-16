@@ -23,7 +23,7 @@ export type EditionChoice = { id: string; name: string; year: number; actions: {
 
 const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-export function RequestValidationDialog({ editionId: fixedEditionId, actions: fixedActions, kinds, recipients: fixedRecipients, canOverride, defaultOpen, suppliers = [], editions, afterHref, triggerLabel }: { editionId?: string; actions?: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients?: Recipients; canOverride?: boolean; defaultOpen?: boolean; suppliers?: SupplierOpt[]; editions?: EditionChoice[]; afterHref?: string; triggerLabel?: string }) {
+export function RequestValidationDialog({ editionId: fixedEditionId, actions: fixedActions, kinds, recipients: fixedRecipients, canOverride, defaultOpen, suppliers = [], editions, afterHref, triggerLabel, variant }: { editionId?: string; actions?: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients?: Recipients; canOverride?: boolean; defaultOpen?: boolean; suppliers?: SupplierOpt[]; editions?: EditionChoice[]; afterHref?: string; triggerLabel?: string; variant?: "default" | "outline" }) {
   const [open, setOpen] = useState(Boolean(defaultOpen)); // ?validation=1 depuis « Nouvelle demande › Achat / devis »
   const [chosenEditionId, setChosenEditionId] = useState("");
   const editionId = fixedEditionId ?? chosenEditionId;
@@ -66,7 +66,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button data-testid="request-validation-open" variant={editions ? "outline" : "default"}><ShieldCheck />{triggerLabel ?? "Demander une validation"}</Button>
+        <Button data-testid="request-validation-open" variant={variant ?? (editions ? "outline" : "default")}><ShieldCheck />{triggerLabel ?? "Demander une validation"}</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>

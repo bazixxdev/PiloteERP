@@ -207,7 +207,15 @@ Revue `/design-critique` sur le dev (Claire Vasseur, 1024 px et 375 px) : identi
 - **Échéances** : date et badge sur une ligne, Objet 34 % / Projet 22 %.
 - **Vue annuelle** : largeur mini 1400 px, libellé de jalon sur deux lignes (`line-clamp-2`) au lieu de quatre lettres.
 
-Restent de la critique (point 3, non fait) : alléger le chapeau de la page Édition (~250 px avant le contenu à 1024 px) et adapter l'action primaire au rôle (« Demander une validation » pour la direction) ; en mobile, puces d'édition 21 px et badges 24 px sous les 44 px de la charte ; échelle de texte (8 tailles) ; sous-titres qui expliquent (« par mail en V1 ») au lieu de décrire ; « 0/3 indicateurs atteint » ; « 00:00 / 20:00 » sans libellé sur le CODIR ; Demandes = 11 formulaires ouverts en même temps.
+**Point 3 (même matinée) — chapeau de la page Édition et action primaire selon le rôle** :
+
+- Sous-titre sur une ligne : la mission du plan opérationnel sort de l'en-tête (elle est dans la fiche, Cadre stratégique, et en infobulle sur le code analytique) ; pôle · commun avec · code · pilote · garant.
+- Bande d'alertes sur **une seule ligne** dès la tablette (`alert-bar.tsx`) : les puces se partagent la largeur, seules celles de plus de 24 caractères se tronquent (`--shrink` = longueur − 24), « +N » vers l'aperçu. Sur mobile elles s'empilent, à 44 px de haut.
+- « Demander une validation » : bouton plein pour le pilote, l'équipe et les contributeurs ; **en contour pour direction, responsable de pôle et RAF** quand ils ne sont pas dans l'équipe (`variant` sur `RequestValidationDialog`). Le geste premier d'un décideur sur une fiche est de lire et d'arbitrer, pas de demander.
+- Puces d'édition 2025 / 2026 / 2027 : 44 px de haut et 13 px sur mobile (elles faisaient 21 px).
+- Résultat à 1024 px : ~200 px de chapeau avant les onglets au lieu de ~250 (un « Tâche » dans l'en-tête est conservé : le test `taches.spec.ts` l'utilise, et il double celui de l'aperçu — à trancher).
+
+Restent de la critique : échelle de texte (8 tailles) ; sous-titres qui expliquent (« par mail en V1 ») au lieu de décrire ; « 0/3 indicateurs atteint » ; « 00:00 / 20:00 » sans libellé sur le CODIR ; Demandes = 11 formulaires ouverts en même temps ; liens « Budget → » de 16 px.
 
 ## À chaud (notes brutes, non traitées)
 
