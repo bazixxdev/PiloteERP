@@ -107,15 +107,17 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
       {rows.length === 0 ? (
         <EmptyState icon="○" title={codir ? "Rien à signaler" : "Aucune édition pour ces filtres"} hint={codir ? "Aucune alerte ni validation en attente : la revue CODIR peut être courte." : "Changez le filtre pour retrouver les projets."} />
       ) : (
-        <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${rows.length} éditions, défilement horizontal et vertical`}>
-          {/* Les alertes se lisent sous le nom du projet, sans défilement horizontal ; le corps est en 13 px. */}
-          <table className="w-full text-[13px]" style={{ minWidth: 900 }} data-testid="portfolio-table">
+        <div className="scroll-shadow-x overflow-auto rounded-md border" tabIndex={0} aria-label={`Tableau des ${rows.length} éditions, défilement horizontal et vertical`}>
+          {/* Les alertes se lisent sous le nom du projet, sans défilement horizontal ; le corps est en 13 px.
+              Sous 1280 px (portable à 125 %), la colonne Livrable financeur — déjà tronquée — s'efface pour que Temps et
+              Validations restent à l'écran ; le prochain livrable reste lisible sur la fiche. */}
+          <table className="w-full min-w-[760px] text-[13px] xl:min-w-[900px]" data-testid="portfolio-table">
             <thead className="sticky top-0 z-[2] bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
                 <th className="px-3 py-2.5 whitespace-nowrap">Projet / édition · alertes</th>
                 <th className="px-3 py-2.5 whitespace-nowrap">Pôle · pilote</th>
                 <th className="px-3 py-2.5 whitespace-nowrap">Prochain jalon</th>
-                <th className="px-3 py-2.5 whitespace-nowrap">Livrable financeur</th>
+                <th className="hidden px-3 py-2.5 whitespace-nowrap xl:table-cell">Livrable financeur</th>
                 <th className="px-3 py-2.5">Enveloppe</th>
                 <th className="px-3 py-2.5">Temps</th>
                 <th className="px-3 py-2.5">Validations</th>
@@ -150,12 +152,12 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-3">
                       {ms ? (
                         <>
-                          <span className="block max-w-[150px] truncate" title={ms.name}>{ms.name}</span>
+                          <span className="block max-w-[120px] truncate xl:max-w-[150px]" title={ms.name}>{ms.name}</span>
                           <small className={cn("mt-1 block text-[10px]", msDays !== null && msDays < 0 ? "font-semibold text-danger" : "text-muted-foreground")}>{fmtDate(ms.date, "D MMM")}{msDays !== null && msDays < 0 ? ` · dépassé de ${-msDays} j` : ""}</small>
                         </>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="hidden px-3 py-3 xl:table-cell">
                       {dl ? (
                         <>
                           <span className="block max-w-[150px] truncate" title={dl.label}>{dl.label}</span>

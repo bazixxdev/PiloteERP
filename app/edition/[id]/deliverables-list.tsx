@@ -12,17 +12,31 @@ export function DeliverablesList({ e, settings, canTick, canEdit, compact }: Pic
   const todo = all.filter((d) => !d.done).sort((a, b) => a.n - b.n);
   const done = all.filter((d) => d.done).sort((a, b) => (b.doneAt?.getTime() ?? 0) - (a.doneAt?.getTime() ?? 0));
   const late = todo.filter((d) => d.n < 0).length;
-  const row = (d: (typeof all)[number]) => (
+  const status = (d: (typeof all)[number]) => (
+    <span className={cn("shrink-0 text-right text-xs whitespace-nowrap", d.done ? "text-mint" : d.n < 0 ? "font-semibold text-danger" : d.n <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>
+      {d.done ? `remis ${fmtDate(d.doneAt)}` : d.n < 0 ? `${-d.n} j de retard` : d.n === 0 ? "aujourd'hui" : `J-${d.n}`}
+    </span>
+  );
+  // En compact (Aperçu, demi-colonne), le libellé garde toute la largeur et financeur + date passent dessous : tronqué à
+  // « Rapp… », le livrable ne dit plus rien (critique du 16/09).
+  const row = (d: (typeof all)[number]) => compact ? (
+    <li key={d.id} className="flex items-start gap-2 py-1.5 text-sm" data-testid={`deliverable-${d.id}`}>
+      <DeliverableDone id={d.id} done={d.done} readOnly={!canTick} />
+      <div className="min-w-0 flex-1 px-2">
+        <span className={cn("block", d.done && "line-through text-muted-foreground")}>{d.label}</span>
+        <small className="block text-[11px] text-muted-foreground">{d.funder} · {fmtDate(d.dueDate)}</small>
+      </div>
+      {status(d)}
+    </li>
+  ) : (
     <li key={d.id} className="flex items-center gap-2 py-1.5 text-sm" data-testid={`deliverable-${d.id}`}>
       <DeliverableDone id={d.id} done={d.done} readOnly={!canTick} />
       <div className="min-w-0 flex-1">
-        {canEdit && !compact ? <AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} inputClassName={cn(d.done && "line-through text-muted-foreground")} label={`Livrable, ${d.funder}`} /> : <span className={cn("block truncate px-2", d.done && "line-through text-muted-foreground")}>{d.label}</span>}
+        {canEdit ? <AutoField model="deliverable" id={d.id} field="label" type="text" value={d.label} inputClassName={cn(d.done && "line-through text-muted-foreground")} label={`Livrable, ${d.funder}`} /> : <span className={cn("block px-2", d.done && "line-through text-muted-foreground")}>{d.label}</span>}
       </div>
       <span className="w-28 shrink-0 truncate text-xs text-muted-foreground" title={d.funder}>{d.funder}</span>
-      {canEdit && !compact ? <div className="w-36 shrink-0"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} label={`Échéance du livrable ${d.label}`} /></div> : <span className="w-24 shrink-0 text-xs tabular text-muted-foreground">{fmtDate(d.dueDate)}</span>}
-      <span className={cn("w-24 shrink-0 text-right text-xs", d.done ? "text-mint" : d.n < 0 ? "font-semibold text-danger" : d.n <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>
-        {d.done ? `remis ${fmtDate(d.doneAt)}` : d.n < 0 ? `${-d.n} j de retard` : d.n === 0 ? "aujourd'hui" : `J-${d.n}`}
-      </span>
+      {canEdit ? <div className="w-36 shrink-0"><AutoField model="deliverable" id={d.id} field="dueDate" type="date" value={d.dueDate} label={`Échéance du livrable ${d.label}`} /></div> : <span className="w-24 shrink-0 text-xs tabular text-muted-foreground">{fmtDate(d.dueDate)}</span>}
+      <span className="w-24 shrink-0 text-right">{status(d)}</span>
     </li>
   );
   const body = (

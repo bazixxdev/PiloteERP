@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { computeReminders, type Reminder } from "./alerts";
 import { dayjs, fmtDate } from "./format";
@@ -57,7 +58,35 @@ export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder
   const existing = await prisma.notification.findMany({ where: { kind: DEADLINE_KIND, dedupeKey: { in: [...new Set(wanted.map((w) => w.dedupeKey))] } }, select: { personId: true, dedupeKey: true } });
   const have = new Set(existing.map((n) => `${n.personId}|${n.dedupeKey}`));
   const missing = wanted.filter((w) => !have.has(`${w.personId}|${w.dedupeKey}`));
-  if (missing.length > 0) await prisma.notification.createMany({ data: missing });
+  const created = missing.length > 0 ? await createMissing(missing) : 0;
   await stamp;
-  return { reminders, created: missing.length };
+  return { reminders, created };
+}
+
+type Missing = Prisma.NotificationCreateManyInput;
+
+// Deux requêtes du même chargement (layout + page) font cette passe en parallèle : chacune calcule les mêmes manquants et
+// la seconde heurte la contrainte unique (personId, dedupeKey). SQLite n'a pas `skipDuplicates`, donc on retombe sur une
+// insertion une à une en ignorant les doublons — la notification existe déjà, c'est le résultat voulu.
+async function createMissing(missing: Missing[]): Promise<number> {
+  try {
+    await prisma.notification.createMany({ data: missing });
+    return missing.length;
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+  }
+  let created = 0;
+  for (const data of missing) {
+    try {
+      await prisma.notification.create({ data });
+      created += 1;
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+    }
+  }
+  return created;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }

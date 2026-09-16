@@ -196,6 +196,19 @@ Première brique reprise d'`erp-tlst` (analyse dans `CRESS/point-fusion-erp-tlst
 - **Tests** : `tests/realise.spec.ts` (2) — bloc de TES-02 (charges 8 110 €, frais 230 €, produits 6 650 €, écart, pièces, par financement cohérent), ORESS (suggestion), Mois de l'ESS (par action 1 820 €) ; admin : rapprocher FONCT-2026 (ignorer) et TESS-ETUDE (édition), import d'un csv de 3 écritures (remplace le snapshot : 1 300 € de charges), bascule `realizedSource` → le « Réalisé » de l'enveloppe devient la compta, puis retour. 45 tests au total.
 - **Reste ouvert** : « Excel en direct » (Gaël) ; logiciel de compta réel de la CRESS ; Pennylane testé sur données réelles (jeton) ; suggestion « reçu » → bouton qui pré-remplit la réception ; import automatique planifié.
 
+### P. Critique design du 16/09 (matin) — points 1 et 2 appliqués
+
+Revue `/design-critique` sur le dev (Claire Vasseur, 1024 px et 375 px) : identité et écran CODIR solides, mais des mises en page cassées sous 1280 px et une erreur au premier chargement. Corrigé :
+
+- **Course sur les notifications d'échéance** : deux requêtes du même chargement (layout + page) calculaient les mêmes manquants et la seconde heurtait `@@unique(personId, dedupeKey)` → page d'erreur Next. `lib/deadline-notifications.ts` : `createMany` dans un `try`, repli en insertion une à une qui ignore `P2002` (SQLite n'a pas `skipDuplicates`).
+- **`PageHeader`** : le bloc titre était le seul élément rétrécissable (`flex-1 min-w-0` face à des actions `shrink-0`) → « Répartition de mon temps » écrit un mot par ligne à 1024 px, « Portefeuille » sous « Lexique » sur mobile. Désormais `flex-[1_1_18rem]` : les actions restent à droite tant que le titre garde 18 rem, puis passent dessous. Effet de bord bienvenu : la barre de `/temps` ne déborde plus sur mobile.
+- **Aperçu › Livrables financeurs à remettre** : les libellés étaient tronqués à cinq lettres (« Rapp… »). En compact, libellé sur toute la largeur, financeur + date en dessous, échéance à droite (`deliverables-list.tsx`).
+- **Portefeuille** : sous `xl` (1280 px), la colonne « Livrable financeur » — déjà tronquée — s'efface pour que Temps et Validations restent à l'écran ; jalon `max-w` 120 px sous `xl`. Nouvelle utilité `.scroll-shadow-x` (globals.css) : ombre de bord qui n'apparaît que du côté où il reste du contenu (portefeuille, vue annuelle).
+- **Échéances** : date et badge sur une ligne, Objet 34 % / Projet 22 %.
+- **Vue annuelle** : largeur mini 1400 px, libellé de jalon sur deux lignes (`line-clamp-2`) au lieu de quatre lettres.
+
+Restent de la critique (point 3, non fait) : alléger le chapeau de la page Édition (~250 px avant le contenu à 1024 px) et adapter l'action primaire au rôle (« Demander une validation » pour la direction) ; en mobile, puces d'édition 21 px et badges 24 px sous les 44 px de la charte ; échelle de texte (8 tailles) ; sous-titres qui expliquent (« par mail en V1 ») au lieu de décrire ; « 0/3 indicateurs atteint » ; « 00:00 / 20:00 » sans libellé sur le CODIR ; Demandes = 11 formulaires ouverts en même temps.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

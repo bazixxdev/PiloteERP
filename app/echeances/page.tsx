@@ -46,19 +46,19 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
         <div className="overflow-hidden rounded-2xl border bg-card">
           <table className="w-full text-sm" data-testid="reminders">
             <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
-              <tr><th className="px-4 py-2.5">Échéance</th><th className="px-3 py-2.5">Type</th><th className="px-3 py-2.5">Objet</th><th className="px-3 py-2.5">Projet</th><th className="px-3 py-2.5">Prévenus</th></tr>
+              <tr><th className="px-4 py-2.5 whitespace-nowrap">Échéance</th><th className="px-3 py-2.5">Type</th><th className="w-[34%] px-3 py-2.5">Objet</th><th className="w-[22%] px-3 py-2.5">Projet</th><th className="px-3 py-2.5">Prévenus</th></tr>
             </thead>
             <tbody className="divide-y">
               {reminders.map((r, i) => (
                 <tr key={i} className={cn(r.daysLeft < 0 && "bg-danger-soft/30")}>
-                  <td className="px-4 py-2 tabular">
+                  <td className="px-4 py-2 tabular whitespace-nowrap">
                     <div>{fmtDate(r.dueDate)}</div>
                     <div className={cn("text-xs", r.daysLeft < 0 ? "text-danger" : "text-muted-foreground")}>{r.daysLeft < 0 ? `${-r.daysLeft} j de retard` : `J-${r.daysLeft}`}</div>
                   </td>
-                  <td className="px-3 py-2"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : r.kind === "payment" ? "bg-warning-soft text-warning-foreground" : r.kind === "call" ? "bg-coral/10 text-coral" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : r.kind === "payment" ? "Versement attendu" : r.kind === "call" ? "Dépôt d'appel à projets" : "Jalon interne"}</span></td>
+                  <td className="px-3 py-2 whitespace-nowrap"><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", r.kind === "deliverable" ? "bg-secondary text-primary" : r.kind === "payment" ? "bg-warning-soft text-warning-foreground" : r.kind === "call" ? "bg-coral/10 text-coral" : "bg-muted")}>{r.kind === "deliverable" ? "Livrable financeur" : r.kind === "payment" ? "Versement attendu" : r.kind === "call" ? "Dépôt d'appel à projets" : "Jalon interne"}</span></td>
                   <td className="px-3 py-2">{r.label}</td>
                   <td className="px-3 py-2"><Link href={r.kind === "call" ? "/appels?statut=apply" : `/edition/${r.editionId}?onglet=${r.kind === "milestone" ? "actions" : "budget"}`} className="text-primary hover:underline">{r.project}</Link>{!isTransversal(me) && <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{TIER_LABEL[r.tier]}</span>}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{r.who.join(", ")}<span className="ml-1 text-xs">· {r.stage === "retard" ? "retard" : `J-${r.stage}`}</span></td>
+                  <td className="min-w-[10rem] px-3 py-2 text-muted-foreground">{r.who.join(", ")}<span className="ml-1 text-xs">· {r.stage === "retard" ? "retard" : `J-${r.stage}`}</span></td>
                 </tr>
               ))}
             </tbody>

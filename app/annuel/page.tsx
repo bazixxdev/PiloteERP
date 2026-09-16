@@ -59,8 +59,10 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
         </Section>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border bg-card">
-        <table className="w-full table-fixed text-xs" style={{ minWidth: 1100 }} data-testid="annual-table">
+      {/* Douze mois à 67 px tronquaient chaque jalon à quatre lettres (« CA d… ») : colonnes plus larges, libellé sur deux
+          lignes, et la colonne Personne reste collée pendant le défilement horizontal (critique du 16/09). */}
+      <div className="scroll-shadow-x overflow-x-auto rounded-2xl border" tabIndex={0} aria-label="Tableau personnes × mois, défilement horizontal">
+        <table className="w-full table-fixed text-xs" style={{ minWidth: 1400 }} data-testid="annual-table">
           <colgroup><col style={{ width: 170 }} />{MONTHS.map((m) => <col key={m} />)}<col style={{ width: 120 }} /></colgroup>
           <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
@@ -91,9 +93,9 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                       <td key={mi} className="overflow-hidden px-1 py-1.5">
                         <div className="flex min-w-0 flex-col gap-0.5">
                           {cell.slice(0, 3).map((a) => (
-                            <Link key={a.id} href={`/edition/${a.editionId}?onglet=actions`} className="flex min-w-0 items-center gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
-                              <span className={cn("size-1.5 shrink-0 rounded-full", a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[a.state])} />
-                              <span className="truncate">{a.name}</span>
+                            <Link key={a.id} href={`/edition/${a.editionId}?onglet=actions`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
+                              <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[a.state])} />
+                              <span className="line-clamp-2 min-w-0 break-words leading-tight">{a.name}</span>
                             </Link>
                           ))}
                           {cell.length > 3 && <span className="px-1 text-[10px] text-muted-foreground">+{cell.length - 3}</span>}

@@ -145,6 +145,18 @@
 
 /* Petites classes maison */
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* Ombre de bord sur un conteneur qui défile horizontalement : elle n'apparaît que du côté où il reste du contenu à voir
+   (les deux premiers dégradés suivent le défilement et masquent les deux ombres fixes). Le fond des lignes doit rester
+   transparent — la carte porte le fond. */
+.scroll-shadow-x {
+  background:
+    linear-gradient(90deg, var(--card) 40%, transparent) left / 24px 100% no-repeat local,
+    linear-gradient(270deg, var(--card) 40%, transparent) right / 24px 100% no-repeat local,
+    linear-gradient(90deg, rgba(36, 61, 73, 0.14), transparent) left / 12px 100% no-repeat scroll,
+    linear-gradient(270deg, rgba(36, 61, 73, 0.14), transparent) right / 12px 100% no-repeat scroll,
+    var(--card);
+}
 input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .presentation aside, .presentation header { display: none !important; }
