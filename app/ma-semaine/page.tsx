@@ -134,7 +134,7 @@ export default async function MaSemainePage() {
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold"><Bell className="size-4 text-primary" />{unread.length} notification{unread.length > 1 ? "s" : ""} à lire</div>
           <ul className="text-xs">
             {unread.map((n) => (
-              <li key={n.id} className="py-0.5"><Link href={n.link ?? "#"} className="font-semibold text-primary hover:underline">{n.title}</Link>{n.body && <span className="text-muted-foreground"> — {n.body}</span>} <span className="text-muted-foreground">· {fmtDate(n.createdAt, "D MMM à HH:mm")}{n.sender ? ` · ${n.sender.name}` : ""}</span></li>
+              <li key={n.id} className="py-0.5"><Link href={n.link ?? "#"} className="font-semibold text-primary hover:underline">{n.title}</Link>{n.body && <span className="text-muted-foreground"> — {n.body}</span>} <span className="text-muted-foreground" title={fmtDate(n.createdAt, "D MMM YYYY à HH:mm")}>· {dayjs(n.createdAt).fromNow()}</span></li>
             ))}
           </ul>
         </div>

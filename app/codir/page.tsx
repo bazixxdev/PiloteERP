@@ -90,7 +90,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
       <div className="mb-1 text-[11px] font-bold tracking-[1.8px] text-primary uppercase">Réunion de direction · {fmtDate(new Date(), "D MMMM YYYY")}</div>
       <PageHeader
         title="Les sujets à décider."
-        subtitle={<span>{inAlert} édition{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length} éditions · <SessionTimer minutes={20} /></span>}
+        subtitle={<span>{inAlert} édition{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length} éditions · séance <SessionTimer minutes={20} /></span>}
         actions={
           <>
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR <span className="text-muted-foreground">· Échap</span></Link></Button>

@@ -42,7 +42,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
         <Section title="État de l'édition" description={`${e.year} · ${e.actions.filter((a) => a.state === "done").length} action${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} faite${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} sur ${e.actions.length}`} testId="apercu-etat">
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-md bg-muted/40 p-3">
-              <dt className="flex items-baseline justify-between text-xs text-muted-foreground"><span>Budget de dépenses directes</span><Link href={`/edition/${e.id}?onglet=budget`} className="text-primary hover:underline">Budget →</Link></dt>
+              <dt className="flex items-baseline justify-between text-xs text-muted-foreground"><span>Budget de dépenses directes</span><Link href={`/edition/${e.id}?onglet=budget`} className="-my-1 inline-block px-1 py-1 text-primary hover:underline">Budget →</Link></dt>
               <dd className="mt-1.5">
                 {e.budgetEnvelope ? (
                   <>
@@ -54,7 +54,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
               </dd>
             </div>
             <div className="rounded-md bg-muted/40 p-3">
-              <dt className="flex items-baseline justify-between text-xs text-muted-foreground"><span>Temps de l'équipe</span><Link href={`/edition/${e.id}?onglet=temps`} className="text-primary hover:underline">Temps →</Link></dt>
+              <dt className="flex items-baseline justify-between text-xs text-muted-foreground"><span>Temps de l'équipe</span><Link href={`/edition/${e.id}?onglet=temps`} className="-my-1 inline-block px-1 py-1 text-primary hover:underline">Temps →</Link></dt>
               <dd className="mt-1.5">
                 <div className="flex items-baseline justify-between"><b className="tabular text-base">{fmtNumber(timeTotal, 0)} h</b><span className="text-xs text-muted-foreground">{fmtNumber(timeTotal / hpd, 1)} j{timeTarget ? ` · objectif ${fmtNumber(timeTarget, 0)} h` : ""}</span></div>
                 {timeTarget ? <div className="mt-1.5"><Gauge value={timeTotal} max={timeTarget} alertPercent={90} bare className="[&>div]:w-full [&>div]:flex-1" /></div> : <div className="mt-1.5 text-[11px] text-muted-foreground">Objectif non fixé sur les actions.</div>}
@@ -63,7 +63,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
             </div>
           </dl>
           <div className="mt-4">
-            <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground"><span>Livrables financeurs à remettre</span><Link href={`/edition/${e.id}?onglet=budget#recettes`} className="text-primary hover:underline">Financeurs →</Link></div>
+            <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground"><span>Livrables financeurs à remettre</span><Link href={`/edition/${e.id}?onglet=budget#recettes`} className="-my-1 inline-block px-1 py-1 text-primary hover:underline">Financeurs →</Link></div>
             <DeliverablesList e={e} settings={settings} canTick={false} canEdit={false} compact />
           </div>
         </Section>
@@ -134,7 +134,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
           )}
         </Section>
 
-        <Section title="Réalisations et indicateurs" description={<>{e.achievements.length} réalisation{e.achievements.length > 1 ? "s" : ""} consignée{e.achievements.length > 1 ? "s" : ""}{e.indicators.length > 0 && <> · {reached}/{e.indicators.length} indicateur{e.indicators.length > 1 ? "s" : ""} atteint{reached > 1 ? "s" : ""}</>}</>} actions={<Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">Actions →</Link>} testId="apercu-realisations">
+        <Section title="Réalisations et indicateurs" description={<>{e.achievements.length} réalisation{e.achievements.length > 1 ? "s" : ""} consignée{e.achievements.length > 1 ? "s" : ""}{e.indicators.length > 0 && <> · {reached}/{e.indicators.length} indicateur{e.indicators.length > 1 ? "s" : ""} atteint{e.indicators.length > 1 ? "s" : ""}</>}</>} actions={<Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">Actions →</Link>} testId="apercu-realisations">
           {achievements.length > 0 ? (
             <ul className="divide-y text-sm">
               {achievements.map((a) => <li key={a.id} className="flex items-start gap-2 py-1.5"><span className="w-14 shrink-0 text-[11px] tabular text-muted-foreground">{dayjs(a.date).format("D MMM")}</span><span className="min-w-0 flex-1"><b className="tabular">{a.value != null ? `${new Intl.NumberFormat("fr-FR").format(a.value)}${a.unit ? ` ${a.unit}` : ""} · ` : ""}</b>{a.label}<span className="block text-[10px] text-muted-foreground">{kindLabel(a.kind)}</span></span></li>)}

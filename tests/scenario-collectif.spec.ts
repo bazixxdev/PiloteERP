@@ -120,6 +120,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(page.getByRole("link", { name: "Devis impression du plaidoyer" })).toBeVisible();
   await page.goto("/validations");
   const card = page.getByTestId("for-me").locator("[data-testid^=validation-]", { hasText: "Devis impression du plaidoyer" });
+  await card.getByTestId("decide-comment").click(); // le champ s'ouvre à la demande (critique du 16/09)
   await card.getByPlaceholder("Commentaire (facultatif)").fill("OK dans l'enveloppe.");
   await card.getByTestId("approve").click();
   await expect(page.getByText("Approuvée : le montant est engagé")).toBeVisible();

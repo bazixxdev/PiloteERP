@@ -65,18 +65,19 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
           <div className="text-sm font-medium"><Link href={l.href} className="hover:underline">{l.title}</Link></div>
           {l.sub && <div className="truncate text-[11px] text-muted-foreground">{l.sub}</div>}
           <div className="text-[10px] text-muted-foreground">par {l.who} · il y a {l.age === 0 ? "moins d'un jour" : `${l.age} j`}</div>
-          {l.actions}
         </div>
         <div className="text-xs text-muted-foreground">→ {l.to}</div>
         <div className={cn("text-xs", late ? "font-semibold text-danger" : "text-muted-foreground")}>{l.due ? `pour le ${fmtDate(l.due, "D MMM")}` : "—"}</div>
         <div><StatusBadge label={l.status.label} color={l.status.color} /></div>
+        {/* Les actions prennent toute la largeur sous le titre : dans la colonne du titre, elles s'empilaient à 1024 px. */}
+        {l.actions && <div className="min-w-0 sm:col-span-4 sm:col-start-2">{l.actions}</div>}
       </div>
     );
   };
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours. Ce qu'on demande à quelqu'un — site, chiffres, logistique, travail à faire — et les validations, décidées ici.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
+      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours · demandes internes et validations au même endroit.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
         <RequestValidationDialog editions={editionChoices} suppliers={suppliers} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} afterHref="/demandes?vue=mes" triggerLabel="Nouvelle validation" />
         <NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />
       </>} />
