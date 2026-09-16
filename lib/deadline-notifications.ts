@@ -63,11 +63,12 @@ export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder
   return { reminders, created };
 }
 
-type Missing = Prisma.NotificationCreateManyInput;
+type Missing = Prisma.NotificationCreateManyInput & { dedupeKey: string };
 
 // Deux requêtes du même chargement (layout + page) font cette passe en parallèle : chacune calcule les mêmes manquants et
-// la seconde heurte la contrainte unique (personId, dedupeKey). SQLite n'a pas `skipDuplicates`, donc on retombe sur une
-// insertion une à une en ignorant les doublons — la notification existe déjà, c'est le résultat voulu.
+// la seconde heurte la contrainte unique (personId, dedupeKey). SQLite n'a pas `skipDuplicates` et n'aime pas les écritures
+// concurrentes : on relit ce que l'autre a posé, on réinsère le reste en une seule fois, et si ça heurte encore, l'autre a
+// fini le travail — la notification existe, c'est le résultat voulu.
 async function createMissing(missing: Missing[]): Promise<number> {
   try {
     await prisma.notification.createMany({ data: missing });
@@ -75,16 +76,17 @@ async function createMissing(missing: Missing[]): Promise<number> {
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
   }
-  let created = 0;
-  for (const data of missing) {
-    try {
-      await prisma.notification.create({ data });
-      created += 1;
-    } catch (error) {
-      if (!isUniqueViolation(error)) throw error;
-    }
+  const existing = await prisma.notification.findMany({ where: { kind: DEADLINE_KIND, dedupeKey: { in: [...new Set(missing.map((m) => m.dedupeKey))] } }, select: { personId: true, dedupeKey: true } });
+  const have = new Set(existing.map((n) => `${n.personId}|${n.dedupeKey}`));
+  const rest = missing.filter((m) => !have.has(`${m.personId}|${m.dedupeKey}`));
+  if (rest.length === 0) return 0;
+  try {
+    await prisma.notification.createMany({ data: rest });
+    return rest.length;
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    return 0;
   }
-  return created;
 }
 
 function isUniqueViolation(error: unknown): boolean {
