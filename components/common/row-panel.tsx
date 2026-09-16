@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
 
 // Le détail d'une ligne (financement, dépense, action) s'ouvre en panneau latéral (revue du 15/09) :
 // le tableau reste lisible pour qui lit, le panneau est le lieu de saisie pour qui tient la ligne.
-export function RowPanel({ title, description, children, testId, openTestId, label = "Détail", className, wide, hint }: { title: ReactNode; description?: ReactNode; children: ReactNode; testId?: string; openTestId?: string; label?: ReactNode; className?: string; wide?: boolean; hint?: string }) {
-  const [open, setOpen] = useState(false);
+export function RowPanel({ title, description, children, testId, openTestId, label = "Détail", className, wide, hint, defaultOpen = false }: { title: ReactNode; description?: ReactNode; children: ReactNode; testId?: string; openTestId?: string; label?: ReactNode; className?: string; wide?: boolean; hint?: string; defaultOpen?: boolean }) {
+  // `defaultOpen` : ouvert à l'arrivée quand une autre page (la matrice) pointe cette ligne précise.
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

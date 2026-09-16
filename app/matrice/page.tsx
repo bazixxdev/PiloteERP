@@ -39,15 +39,18 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
   const qs = (p: Record<string, string | number | undefined>) => { const q = Object.entries({ annee: year, perimetre: sp.perimetre, ...p }).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => `${k}=${v}`).join("&"); return q ? `/matrice?${q}` : "/matrice"; };
   const statusLabel = (code: string) => refLabel(refs, "edition_status", code);
 
-  const cellNode = (c: Cell | undefined, key: string) => {
+  // Chaque cellule mène à l'endroit où l'on agit : l'onglet Budget de l'édition, panneau de cette ligne déjà ouvert.
+  const cellNode = (c: Cell | undefined, key: string, editionId: string) => {
     if (!c) return <td key={key} className="px-2 py-2 text-center text-muted-foreground/40">·</td>;
     // Vert = obtenu, ocre italique = demandé (dossier parti, pas tranché), ocre clair = à déposer : la couleur dit l'état, pas seulement la graisse.
     const tone = c.kind === "granted" ? "text-mint font-medium" : c.kind === "requested" ? "text-warning-foreground italic" : "text-warning-foreground/70";
     const glyph = c.kind === "granted" ? "●" : c.kind === "requested" ? "◐" : "○";
     return (
-      <td key={key} className={cn("px-2 py-2 text-right tabular whitespace-nowrap", tone)} title={`${c.kind === "granted" ? "obtenu" : c.kind === "requested" ? "demandé, dossier non tranché" : "à déposer"}${c.conventionRef ? ` · convention ${c.conventionRef}` : ""}${c.late ? ` · ${c.late} livrable(s) en retard` : ""}`} data-kind={c.kind}>
+      <td key={key} className={cn("p-0 text-right tabular whitespace-nowrap", tone)} data-kind={c.kind}>
+        <Link href={`/edition/${editionId}?onglet=budget&ligne=${c.lineId}#recettes`} className="block px-2 py-2 hover:bg-muted/60 hover:underline" title={`${c.kind === "granted" ? "obtenu" : c.kind === "requested" ? "demandé, dossier non tranché" : "à déposer"}${c.conventionRef ? ` · convention ${c.conventionRef}` : ""}${c.late ? ` · ${c.late} livrable(s) en retard` : ""} — ouvrir la ligne`} data-testid={`cell-${c.lineId}`}>
         {money ? (c.kind === "to_submit" ? <span className="text-[11px]">à déposer{c.amount !== null && <span className="ml-1 tabular">{fmtEuro(c.amount)}</span>}</span> : c.amount !== null ? fmtEuro(c.amount) : "—") : <span className={cn("text-base", c.kind === "granted" ? "text-mint" : c.kind === "requested" ? "text-primary" : "text-warning-foreground")}>{glyph}</span>}
         {c.late > 0 && <span className="ml-1 text-[10px] font-semibold text-danger" title="livrable en retard">!</span>}
+        </Link>
       </td>
     );
   };
@@ -57,7 +60,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
       <DossiersNav current="matrice" />
       <PageHeader
         title={<span className="inline-flex items-center gap-2">Qui finance quoi <HelpTip title="Lire la matrice" testId="matrix-help"><p>Une ligne par édition de l&apos;année, une colonne par financeur présent. <b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i> = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l&apos;obtenu à l&apos;enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, l&apos;édition est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l&apos;année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s&apos;affichent.</p></HelpTip></span>}
-        subtitle={<>{year} · {m.rows.length} édition{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Les données sont celles des lignes de financement de chaque édition ; on les modifie là-bas, pas ici.</>}
+        subtitle={<>{year} · {m.rows.length} édition{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre la ligne de financement correspondante dans l&apos;onglet Budget de l&apos;édition : c&apos;est là qu&apos;on modifie, pas ici.</>}
         actions={<div className="flex flex-wrap items-center gap-2"><LexiqueDialog />{money && <Button asChild variant="outline" size="sm"><a href={withBase(`/matrice/export?annee=${year}${perimeter === "pole" ? "&perimetre=pole" : ""}`)} data-testid="matrix-export"><Download />CSV</a></Button>}</div>}
       />
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -89,7 +92,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
                     {money && <td className="px-2 py-2 text-right tabular text-muted-foreground whitespace-nowrap">{r.edition.budgetEnvelope ? fmtEuro(r.edition.budgetEnvelope) : "—"}</td>}
                     <td className="px-2 py-2 text-right tabular font-semibold whitespace-nowrap">{money ? fmtEuro(r.granted) : `${r.cells.size}`}{money && r.requested > r.granted && <div className="text-[10px] font-normal text-muted-foreground">{fmtEuro(r.requested)} demandés</div>}</td>
                     {money && <td className="border-r px-2 py-2 text-right tabular whitespace-nowrap"><span className={cn("rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", tone === "mint" ? "bg-mint-soft text-mint" : tone === "warning" ? "bg-warning-soft text-warning-foreground" : "bg-muted text-muted-foreground")} data-testid={`coverage-${r.edition.project.analyticCode}`}>{r.coverage === null ? "—" : `${Math.round(r.coverage * 100)} %`}</span></td>}
-                    {m.columns.map((c) => cellNode(r.cells.get(c.funder.id), c.funder.id))}
+                    {m.columns.map((c) => cellNode(r.cells.get(c.funder.id), c.funder.id, r.edition.id))}
                   </tr>
                 );
               })}

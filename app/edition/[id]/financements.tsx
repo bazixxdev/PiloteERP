@@ -22,7 +22,7 @@ import { paymentSummary } from "@/lib/payments";
 
 // Recettes (revue du 15/09) : un tableau compact des lignes de financement — ce que lit le pilote — et, par ligne, un panneau
 // de gestion — ce que tient la RAF (dates, codes, convention, contact du dossier, notes, pièces, livrables).
-export function FinancementsTab({ e, me, refs, funders, conventions, settings, isPilot }: TabCtx) {
+export function FinancementsTab({ e, me, refs, funders, conventions, settings, isPilot, openLine }: TabCtx) {
   const covering = conventions.filter((c) => conventionCovers(c, e.year));
   const rw = canEditFunding(me.role);
   const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
@@ -77,7 +77,7 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
                       <td className="py-2 pr-2 text-xs">{next ? <><span className="text-foreground">{next.label}</span><div className={cn("text-[11px]", n! < 0 ? "font-semibold text-danger" : n! <= settings.deliverableAlertDays ? "text-warning-foreground" : "text-muted-foreground")}>{fmtDate(next.dueDate)} · {n! < 0 ? `${-n!} j de retard` : n === 0 ? "aujourd'hui" : `J-${n}`}</div></> : <span className="text-muted-foreground">aucun en attente</span>}</td>
                       <td className="py-2 pr-2 text-xs" data-testid={`funding-contact-${i}`}><ContactLine c={contact} label={f.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${f.funderId}`} className="text-primary hover:underline">fiche {f.funder.name}</Link></td>
                       <td className="py-2 text-right">
-                        <RowPanel testId={`funding-panel-${i}`} label={rw ? "Gérer" : "Détail"} title={<>{f.funder.name} · {e.project.name} {e.year}</>} description={rw ? "Ligne tenue par la RAF : montants, dates, convention, contact, pièces, livrables." : "Lecture seule : ligne tenue par la RAF."} wide>
+                        <RowPanel testId={`funding-panel-${i}`} defaultOpen={openLine === f.id} label={rw ? "Gérer" : "Détail"} title={<>{f.funder.name} · {e.project.name} {e.year}</>} description={rw ? "Ligne tenue par la RAF : montants, dates, convention, contact, pièces, livrables." : "Lecture seule : ligne tenue par la RAF."} wide>
                           <div className="grid gap-2 sm:grid-cols-2">
                             <Field label="Financeur"><AutoField model="fundingLine" id={f.id} field="funderId" type="select" value={f.funderId} options={funderOpts} readOnly={!rw} allowEmpty={false} inputClassName="font-semibold" label={`Financeur, ligne ${i + 1}`} /></Field>
                             <Field label="Dispositif"><AutoField model="fundingLine" id={f.id} field="scheme" type="text" value={f.scheme} readOnly={!rw} placeholder="Convention, appel à projets…" /></Field>

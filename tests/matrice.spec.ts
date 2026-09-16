@@ -23,6 +23,16 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   // Conventions sous-affectées : la FSE a du notifié non affecté.
   await expect(page.getByTestId("matrix-attention")).toContainText("FSE-2026-2028");
 
+  // Une cellule mène à la ligne : onglet Budget de l'édition, panneau « Gérer » déjà ouvert sur ce financeur.
+  await row.locator("td[data-kind=granted] a").first().click();
+  await page.waitForURL(/\/edition\/.*ligne=/);
+  // Le panneau est modal : tant qu'il est ouvert, le reste de la page est masqué aux lecteurs d'écran (donc au test).
+  await expect(page.locator("[data-slot=sheet-content]")).toContainText("Cycle de conférences transition 2026");
+  await expect(page.locator("[data-slot=sheet-content]")).toContainText("Ligne tenue par la RAF");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Cycle de conférences transition");
+  await page.goto("/matrice");
+
   // Année suivante : les dossiers ne sont pas tranchés (à déposer).
   await page.getByTestId("year-picker").getByRole("link", { name: "2027" }).click();
   await expect(page.getByTestId("matrix").locator("td[data-kind=to_submit]").first()).toBeVisible();

@@ -17,4 +17,6 @@ export type TabCtx = {
   feedback?: boolean;
   // Mes tâches ouvertes sur cette édition (Aperçu).
   myTasks?: { id: string; label: string; dueDate: Date | null; action: { name: string } | null }[];
+  // Ligne de financement à ouvrir en panneau à l'arrivée (clic sur une cellule de la matrice « Qui finance quoi »).
+  openLine?: string | null;
 };

@@ -16,7 +16,7 @@ export type MatrixConvention = { id: string; reference: string; funderId: string
 
 // Ce que vaut une cellule : confirmé (obtenu), attendu (demandé, dossier non tranché), à déposer, ou rien.
 export type CellKind = "granted" | "requested" | "to_submit";
-export type Cell = { kind: CellKind; amount: number | null; lines: number; late: number; conventionRef?: string };
+export type Cell = { kind: CellKind; amount: number | null; lines: number; late: number; conventionRef?: string; lineId: string };
 
 const PENDING = new Set(["to_submit", "submitted"]);
 
@@ -26,11 +26,12 @@ export function cellOf(lines: MatrixLine[], conventions: Map<string, MatrixConve
   const requested = lines.reduce((s, l) => s + (l.amountRequested ?? 0), 0);
   const late = lines.reduce((s, l) => s + l.deliverables.filter((d) => !d.done && daysFromNow(d.dueDate) < 0).length, 0);
   const conv = lines.map((l) => (l.conventionId ? conventions.get(l.conventionId)?.reference : undefined)).find(Boolean);
+  const lineId = lines[0].id; // la ligne à ouvrir au clic sur la cellule
   // Obtenu dès qu'un montant est accordé ; demandé quand un dossier est parti (déposé, notifié sans montant…) ; sinon à déposer,
   // avec le montant prévu s'il est déjà écrit sur la ligne.
-  if (lines.some((l) => l.amountGranted !== null && l.amountGranted > 0)) return { kind: "granted", amount: granted, lines: lines.length, late, conventionRef: conv };
-  if (lines.some((l) => l.status !== "to_submit")) return { kind: "requested", amount: requested || null, lines: lines.length, late, conventionRef: conv };
-  return { kind: "to_submit", amount: requested || null, lines: lines.length, late, conventionRef: conv };
+  if (lines.some((l) => l.amountGranted !== null && l.amountGranted > 0)) return { kind: "granted", amount: granted, lines: lines.length, late, conventionRef: conv, lineId };
+  if (lines.some((l) => l.status !== "to_submit")) return { kind: "requested", amount: requested || null, lines: lines.length, late, conventionRef: conv, lineId };
+  return { kind: "to_submit", amount: requested || null, lines: lines.length, late, conventionRef: conv, lineId };
 }
 
 export type MatrixRow = {
