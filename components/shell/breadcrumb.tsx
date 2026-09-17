@@ -20,7 +20,7 @@ export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: {
   const section = tree.find((s) => s.id === sectionId);
   const leaf = section?.items.find((l) => l.href === leafHref);
   const outside = OUTSIDE.find(([re]) => re.test(pathname))?.[1];
-  if (!section && !outside) return <span className="text-[11px] text-muted-foreground">Pilote</span>;
+  if (!section && !outside) return <span className="block text-[13px] text-muted-foreground">Pilote</span>;
 
   const parts: string[] = [];
   if (section) parts.push(section.label);
@@ -40,8 +40,8 @@ export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: {
   }
   const last = parts.pop();
   return (
-    <span className="truncate text-[11px] text-muted-foreground" data-testid="breadcrumb">
-      {parts.length > 0 && <>{parts.join(" / ")} / </>}<b className="font-semibold text-foreground">{last}</b>
+    <span className="block truncate text-[13px] text-muted-foreground" data-testid="breadcrumb">
+      {parts.length > 0 && <>{parts.join(" / ")} / </>}<b className="font-medium text-primary">{last}</b>
     </span>
   );
 }

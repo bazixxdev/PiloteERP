@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 import { locate, type NavSection } from "@/lib/navigation";
 import { HelpMenu } from "./help-menu";
+import { PersonSwitcher } from "./person-switcher";
+import type { AccountProps } from "./account-data";
 
 // Barre latérale à deux niveaux (proto validé le 17/09) : une section par icône, la section de la page courante dépliée
 // avec ses feuilles reliées par un trait d'arbre, les autres repliées. Un bouton la réduit en rail d'icônes (choix mémorisé) ;
@@ -25,7 +27,7 @@ const SECTION_ICONS: Record<NavSection["id"], LucideIcon> = {
 
 const STORAGE_KEY = "pilote-sidebar-collapsed";
 
-export function Sidebar({ tree }: { tree: NavSection[] }) {
+export function Sidebar({ tree, account }: { tree: NavSection[]; account: AccountProps }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { section: openId, leaf: activeHref } = locate(tree, pathname, params);
@@ -53,10 +55,11 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
         collapsed ? "w-[60px] px-2 py-3" : "w-[60px] px-2 py-3 lg:w-[244px] lg:px-2.5",
       )}
     >
-      <div className={cn("flex items-center pb-3", collapsed ? "flex-col gap-2" : "flex-col gap-2 lg:flex-row lg:justify-between lg:px-1")}>
+      {/* Logo réduit d'un cinquième et davantage d'air avant la première rubrique (maquette du 17/09). */}
+      <div className={cn("flex items-center pb-6 pt-1", collapsed ? "flex-col gap-2" : "flex-col gap-2 lg:flex-row lg:justify-between lg:px-1")}>
         <Link href="/portefeuille" className="flex items-center justify-center" aria-label="CRESS Centre-Val de Loire · Portefeuille">
           {/* eslint-disable-next-line @next/next/no-img-element -- PNG statique servi tel quel : l'optimiseur d'images ne gère pas le basePath */}
-          <img src={withBase("/logo-cress.png")} alt="CRESS Centre-Val de Loire" width={465} height={187} className={cn("h-auto w-[150px]", collapsed ? "hidden" : "hidden lg:block")} />
+          <img src={withBase("/logo-cress.png")} alt="CRESS Centre-Val de Loire" width={465} height={187} className={cn("h-auto w-[120px]", collapsed ? "hidden" : "hidden lg:block")} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={withBase("/logo-cress-mark.png")} alt="" width={190} height={177} className={cn("h-auto w-8", collapsed ? "block" : "lg:hidden")} />
         </Link>
@@ -65,7 +68,7 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
           onClick={toggle}
           aria-label={collapsed ? "Déployer le menu" : "Réduire le menu"}
           title={collapsed ? "Déployer le menu" : "Réduire le menu"}
-          className="hidden size-7 place-items-center rounded-md text-muted-foreground hover:bg-[#e4eef1] hover:text-primary lg:grid"
+          className="hidden size-7 place-items-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-primary lg:grid"
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
         </button>
@@ -88,10 +91,11 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
                 aria-expanded={open}
                 aria-current={open && collapsed ? "page" : undefined}
                 className={cn(
-                  "relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-[#e4eef1]",
-                  collapsed ? "h-10 w-11 justify-center px-0" : "h-10 w-11 justify-center px-0 lg:h-9 lg:w-full lg:justify-start lg:px-2",
+                  "relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-sidebar-accent",
+                  collapsed ? "h-10 w-11 justify-center px-0" : "h-10 w-11 justify-center px-0 lg:h-10 lg:w-full lg:justify-start lg:px-2.5",
                   open && "font-semibold text-primary",
-                  open && (collapsed ? "bg-sidebar-accent" : "bg-sidebar-accent lg:bg-transparent"),
+                  // En rail, la section ouverte est la seule marque de l'endroit où l'on est : fond pétrole, icône blanche.
+                  open && (collapsed ? "bg-primary text-primary-foreground hover:bg-primary" : "bg-primary text-primary-foreground hover:bg-primary lg:bg-transparent lg:text-primary lg:hover:bg-sidebar-accent"),
                 )}
               >
                 <Icon className={cn("shrink-0", collapsed ? "size-5" : "size-5 lg:size-[18px]")} />
@@ -105,7 +109,7 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
                 <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90", collapsed ? "hidden" : "hidden lg:block")} aria-hidden="true" />
               </Link>
               {open && s.items.length > 0 && (
-                <div className={cn("mb-1 mt-0.5 ml-[19px] grid gap-px border-l border-border pl-3", collapsed ? "hidden" : "hidden lg:grid")}>
+                <div className={cn("mb-1.5 mt-1 ml-[21px] grid gap-0.5 border-l border-sidebar-border pl-3", collapsed ? "hidden" : "hidden lg:grid")}>
                   {s.items.map((l) => {
                     const current = l.href === activeHref;
                     return (
@@ -114,13 +118,14 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
                         href={l.href}
                         aria-current={current ? "page" : undefined}
                         className={cn(
-                          "relative flex h-8 items-center gap-2 rounded-md px-2.5 text-[12.5px] text-foreground transition-colors hover:bg-[#e4eef1]",
-                          "before:absolute before:-left-[13px] before:top-1/2 before:h-px before:w-[9px] before:bg-border",
-                          current && "bg-sidebar-accent font-semibold text-primary before:bg-primary",
+                          "relative flex h-8 items-center gap-2 rounded-md px-3 text-[13px] text-foreground transition-colors hover:bg-sidebar-accent",
+                          "before:absolute before:-left-[13px] before:top-1/2 before:h-px before:w-[9px] before:bg-sidebar-border",
+                          // Feuille courante : fond bleu pétrole, texte blanc (maquette du 17/09).
+                          current && "bg-primary font-semibold text-primary-foreground hover:bg-primary before:bg-primary",
                         )}
                       >
                         <span className="flex-1 truncate">{l.label}</span>
-                        {(l.badge ?? 0) > 0 && <span className="rounded-sm bg-warning-soft px-1.5 text-[10px] font-bold leading-[18px] text-warning-foreground">{l.badge}</span>}
+                        {(l.badge ?? 0) > 0 && <span className={cn("rounded-sm px-1.5 text-[10px] font-bold leading-[18px]", current ? "bg-white/90 text-primary" : "bg-warning-soft text-warning-foreground")}>{l.badge}</span>}
                       </Link>
                     );
                   })}
@@ -130,8 +135,10 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
           );
         })}
       </nav>
-      <div className={cn("mt-2 border-t pt-2", collapsed ? "flex justify-center" : "flex justify-center lg:block")}>
+      {/* Bas de barre, toujours visible : l'aide, puis le compte (menu vers le haut). */}
+      <div className={cn("mt-2 grid gap-1.5 border-t border-sidebar-border pt-2", collapsed ? "justify-items-center" : "justify-items-center lg:justify-items-stretch")}>
         <HelpMenu rail={collapsed} />
+        <PersonSwitcher {...account} variant="sidebar" rail={collapsed} />
       </div>
     </aside>
   );

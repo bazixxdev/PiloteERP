@@ -21,12 +21,12 @@ export function HelpMenu({ rail }: { rail: boolean }) {
           aria-label="Aide"
           data-testid="help-open"
           className={cn(
-            "flex items-center gap-2.5 rounded-md text-[12.5px] text-muted-foreground transition-colors hover:bg-[#e4eef1] hover:text-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 data-[state=open]:bg-[#e4eef1] data-[state=open]:text-primary",
-            rail ? "h-10 w-11 justify-center" : "h-10 w-11 justify-center lg:h-8 lg:w-full lg:justify-start lg:px-2",
+            "flex items-center gap-2.5 rounded-md text-[13px] text-foreground transition-colors hover:bg-sidebar-accent hover:text-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 data-[state=open]:bg-sidebar-accent data-[state=open]:text-primary",
+            rail ? "h-10 w-11 justify-center" : "h-10 w-11 justify-center lg:h-9 lg:w-full lg:justify-start lg:px-2.5",
           )}
         >
           <CircleHelp className="size-[18px] shrink-0" aria-hidden="true" />
-          <span className={cn("flex-1 truncate text-left", rail ? "hidden" : "hidden lg:inline")}>Aide</span>
+          <span className={cn("flex-1 truncate text-left", rail ? "hidden" : "hidden lg:inline")}>Aide et assistance</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" sideOffset={6} className="w-60">
           <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Aide</DropdownMenuLabel>

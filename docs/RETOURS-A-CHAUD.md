@@ -300,6 +300,15 @@ Gaël : « ok c'est bon, go » sur le design proposé (catalogue en code, rôles
 
 Gaël : « j'ai une 404 en ligne c'est normal ? ». Logs nginx : `/outilcli/cress/pilote/outilcli/cress/pilote/connexion` — sous-chemin doublé. `redirect()` de Next ajoute déjà le basePath ; les deux `redirect(withBase(…))` du lot F (page de connexion, `getCurrentPerson`) le doublaient. Invisible en local (basePath vide) et invisible derrière le middleware (qui redirige avant la page) : ça ne sort que quand une session tombe **pendant** la navigation — déconnexion, « déconnecter partout », désactivation. Corrigé (chemins nus), commentaire de `lib/base-path.ts` remis d'aplomb : `redirect()`, `<Link>` et `router.push` gèrent le sous-chemin seuls ; `withBase` sert aux `<a href>`, `<img src>` et URL absolues.
 
+### X. Coquille alignée sur la maquette « Demandes » (17/09, soir) — fait
+
+Maquette de Gaël (capture) : navigation et identité visuelle, sans toucher aux rubriques ni aux tableaux.
+- **Compte en bas de la barre latérale** (`PersonSwitcher` variante `sidebar`) : bloc bleu ciel, avatar, nom, rôle, chevron, menu qui s'ouvre **vers le haut** ; toujours visible (la barre est à hauteur d'écran, seule la navigation défile). En rail : l'avatar seul. Sur mobile (pas de barre latérale), un avatar compact reste dans la barre haute (`person-switcher-mobile`).
+- **Aide et assistance** juste au-dessus du compte. Logo réduit de 150 à 120 px, un peu d'air en plus avant la première rubrique.
+- **Barre haute** : la recherche à gauche (champ plus large, `⌘K` en badge), Notes / Tâches / notifications à droite. Le fil d'Ariane quitte la barre haute pour **au-dessus du titre** de chaque page (`PageBreadcrumb` dans le layout, 13 px, dernier maillon en pétrole).
+- **Couleurs** : menu bleu clair `#e9f3f8`, primaire **bleu pétrole `#1b6a8a`** (bouton principal, rubrique active — feuille courante en fond pétrole et texte blanc, section ouverte en pétrole gras, rail : icône blanche sur pétrole), bleu ciel `#cfe6f2` / `#a9d3e6` pour le bloc du compte et les avatars CODIR. Surfaces blanches, vert / orange fonctionnels inchangés.
+- Données du menu utilisateur et éditions de la recherche factorisées (`components/shell/account-data.ts`, `nav-editions.ts`, une lecture par requête). 51 tests verts sans retouche.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

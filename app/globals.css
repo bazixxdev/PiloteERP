@@ -30,6 +30,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-sky: var(--sky);
+  --color-sky-strong: var(--sky-strong);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -71,10 +73,10 @@
   --card-foreground: #243d49;
   --popover: #ffffff;
   --popover-foreground: #243d49;
-  --primary: #004d6d;
+  --primary: #1b6a8a; /* bleu pétrole (maquette du 17/09) : bouton principal, rubrique active */
   --primary-foreground: #ffffff;
   --secondary: #e6f0f5;
-  --secondary-foreground: #004d6d;
+  --secondary-foreground: #1b6a8a;
   --muted: #efefea;
   --muted-foreground: #5e6c72;
   --accent: #e5f1eb;
@@ -82,7 +84,7 @@
   --destructive: #a24533;
   --border: #dce3e5;
   --input: #b8c1b4;
-  --ring: #004d6d;
+  --ring: #1b6a8a;
   --coral: #ea5427;
   --coral-foreground: #ffffff;
   --mint: #226552;
@@ -95,20 +97,22 @@
   --danger: #a24533;
   --danger-soft: #fae9e2;
   --info-soft: #e6f0f5;
-  --chart-1: #004d6d;
+  --chart-1: #1b6a8a;
   --chart-2: #ea5427;
   --chart-3: #85c8b5;
   --chart-4: #8c601b;
   --chart-5: #5e9bb8;
   --radius: 0.375rem;
-  --sidebar: #eef4f6;
+  --sidebar: #e9f3f8; /* menu bleu clair */
   --sidebar-foreground: #5e6c72;
-  --sidebar-primary: #004d6d;
+  --sidebar-primary: #1b6a8a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #d9e9ef;
-  --sidebar-accent-foreground: #004d6d;
-  --sidebar-border: #dce3e5;
-  --sidebar-ring: #004d6d;
+  --sidebar-accent: #d7e9f2; /* survol */
+  --sidebar-accent-foreground: #1b6a8a;
+  --sidebar-border: #d3e3ea;
+  --sidebar-ring: #1b6a8a;
+  --sky: #cfe6f2; /* bleu ciel : bloc du compte, avatar */
+  --sky-strong: #a9d3e6;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-titles: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
   --font-geist-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;

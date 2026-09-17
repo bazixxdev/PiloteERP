@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Settings, UserCircle, Users, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, LogOut, Settings, UserCircle, Users, Search } from "lucide-react";
 import { switchPerson } from "@/app/actions/session";
 import { authClient } from "@/lib/auth-client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,30 +15,48 @@ type P = { id: string; name: string; role: string; roleLabel: string; poleName: 
 
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? "").join("");
 
-// Avatar à initiales (V2) ; les rôles qui siègent au CODIR reçoivent la teinte « mousse ».
+// Avatar à initiales (V2) ; bleu ciel pour qui siège au CODIR, sable pour les autres (maquette du 17/09).
 export function Avatar({ name, codir, className }: { name: string; codir?: boolean; className?: string }) {
-  const moss = Boolean(codir);
-  return <span className={cn("inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold", moss ? "bg-[#dcecf2] text-mint" : "bg-[#e6ddcf] text-[#574f3f]", className)} aria-hidden>{initials(name)}</span>;
+  return <span className={cn("inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold", codir ? "bg-sky-strong text-primary" : "bg-[#e6ddcf] text-[#574f3f]", className)} aria-hidden>{initials(name)}</span>;
 }
 
 // Menu utilisateur : mon compte, admin (selon les droits), « Changer d'utilisateur » en mode démo seulement, et la déconnexion
 // (lot F : session better-auth ; on revient à la page de connexion).
-export function PersonSwitcher({ people, current, canAdmin, demo, account }: { people: P[]; current: P; canAdmin: boolean; demo: boolean; account: string | null }) {
+// Deux habillages (maquette du 17/09) : `sidebar` = bloc bleu ciel en bas de la barre latérale, menu qui s'ouvre vers le haut
+// (`rail` : l'avatar seul) ; `topbar` = avatar compact dans la barre haute (mobile, où la barre latérale n'existe pas).
+export function PersonSwitcher({ people, current, canAdmin, demo, account, variant = "sidebar", rail = false, testId = "person-switcher" }: { people: P[]; current: P; canAdmin: boolean; demo: boolean; account: string | null; variant?: "sidebar" | "topbar"; rail?: boolean; testId?: string }) {
   const [chooser, setChooser] = useState<"switch" | null>(null);
   const router = useRouter();
   const [pendingOut, startOut] = useTransition();
   const logout = () => startOut(async () => { await authClient.signOut(); router.push("/connexion"); router.refresh(); });
+  const sidebar = variant === "sidebar";
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button type="button" className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-muted" data-testid="person-switcher" title="Menu utilisateur">
-            <span className="hidden sm:inline"><b className="font-semibold text-foreground">{current.name}</b> · {current.roleLabel}</span>
-            <Avatar name={current.name} codir={current.codir} />
-            <ChevronDown className="size-3 opacity-60" />
-          </button>
+          {sidebar ? (
+            <button
+              type="button" data-testid={testId} title="Menu utilisateur"
+              className={cn(
+                "flex items-center gap-2.5 rounded-lg bg-sky text-left transition-colors hover:bg-sky-strong/70 data-[state=open]:bg-sky-strong/70",
+                rail ? "size-11 justify-center p-0" : "size-11 justify-center p-0 lg:h-auto lg:w-full lg:justify-start lg:px-2.5 lg:py-2",
+              )}
+            >
+              <Avatar name={current.name} codir className="size-9 text-[12px]" />
+              <span className={cn("min-w-0 flex-1", rail ? "hidden" : "hidden lg:block")}>
+                <span className="block truncate text-[13px] font-semibold text-foreground">{current.name}</span>
+                <span className="block truncate text-[11.5px] text-muted-foreground">{current.roleLabel}</span>
+              </span>
+              <ChevronUp className={cn("size-4 shrink-0 text-muted-foreground", rail ? "hidden" : "hidden lg:block")} aria-hidden="true" />
+            </button>
+          ) : (
+            <button type="button" className="flex items-center gap-1 rounded-md p-1 hover:bg-muted" data-testid={testId} title="Menu utilisateur">
+              <Avatar name={current.name} codir={current.codir} />
+              <ChevronDown className="size-3 opacity-60" />
+            </button>
+          )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent side={sidebar ? "top" : "bottom"} align={sidebar ? "start" : "end"} sideOffset={8} className="w-64">
           <DropdownMenuLabel className="flex items-center gap-2.5 font-normal">
             <Avatar name={current.name} codir={current.codir} className="size-8 text-[11px]" />
             <span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{current.name}</span><span className="block truncate text-xs text-muted-foreground">{current.roleLabel}{current.poleName ? ` · ${current.poleName}` : ""}</span>{account && account !== current.name && <span className="block truncate text-[10px] text-muted-foreground">connecté·e : {account}</span>}</span>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/shell/sidebar";
-import { Topbar } from "@/components/shell/topbar";
+import { PageBreadcrumb, Topbar } from "@/components/shell/topbar";
+import { getAccountProps } from "@/components/shell/account-data";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Shortcuts } from "@/components/shell/shortcuts";
@@ -77,11 +78,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <div className="flex h-screen overflow-hidden">
           {/* useSearchParams (entrée active selon ?vue=, ?section=…) exige une frontière Suspense dans un layout. */}
           <Suspense fallback={<aside className="hidden h-screen w-[60px] shrink-0 border-r bg-sidebar md:block lg:w-[244px]" />}>
-            <Sidebar tree={c.tree} />
+            <Sidebar tree={c.tree} account={await getAccountProps()} />
           </Suspense>
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar tree={c.tree} />
-            <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
+            <Topbar />
+            <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+              <PageBreadcrumb tree={c.tree} />
+              {children}
+            </main>
           </div>
         </div>
         <MobileNav modules={c.modules} />
