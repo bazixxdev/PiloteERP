@@ -13,8 +13,9 @@ import { fmtDate, dayjs } from "@/lib/format";
 import { hasModule } from "@/lib/modules";
 import { noteColor, NOTE_CONTEXTS } from "@/lib/notes";
 import { QuickMenu, type QuickItem } from "./quick-menus";
+import type { NavSection } from "@/lib/navigation";
 
-export async function Topbar() {
+export async function Topbar({ tree }: { tree: NavSection[] }) {
   const [current, people, refs] = await Promise.all([getCurrentPerson(), getPeople(), getRefs()]);
   const rawEditions = await prisma.edition.findMany({
     where: { status: { not: "closed" } },
@@ -36,7 +37,7 @@ export async function Topbar() {
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {/* useSearchParams exige une frontière Suspense dans un layout. */}
         <Suspense fallback={<span className="text-[11px] text-muted-foreground">Pilote</span>}>
-          <Breadcrumb editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} / ${e.year}` }))} />
+          <Breadcrumb tree={tree} editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} / ${e.year}` }))} />
         </Suspense>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <span className="md:hidden"><img src={withBase("/logo-cress-mark.png")} alt="CRESS" width={190} height={177} className="h-auto w-6" /></span>

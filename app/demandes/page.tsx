@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { canDecideValidation } from "@/lib/rights";
 import { refLabel } from "@/lib/refs";
-import { ageDays, canSeeValidation, isForMe, kindLabel, loadRequests, statusOf, wideViewLabel } from "@/lib/requests";
+import { ageDays, canSeeValidation, canTreatRequest, kindLabel, loadRequests, statusOf, wideViewLabel } from "@/lib/requests";
 import { loadEditionOpts, loadEditionChoices, loadSuppliers } from "@/lib/tasks";
 import { RequestValidationDialog } from "@/app/edition/[id]/request-validation-dialog";
 import { REF_DEFAULTS } from "@/lib/refs";
@@ -32,7 +32,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
     loadEditionOpts(me, settings),
   ]);
   const peopleOpts = people.map((p) => ({ id: p.id, name: p.name }));
-  const canTreat = (r: (typeof requests)[number]) => isForMe(me, r) || me.role === "director" || (Boolean(r.poleId) && me.role === "pole_lead" && me.poleId === r.poleId);
+  const canTreat = (r: (typeof requests)[number]) => canTreatRequest(me, r);
 
   const lines: Line[] = [
     ...requests.map((r): Line => ({
@@ -81,7 +81,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
         <RequestValidationDialog editions={editionChoices} suppliers={suppliers} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} afterHref="/demandes?vue=mes" triggerLabel="Nouvelle validation" />
         <NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />
       </>} />
-      <div className="mb-3 flex flex-wrap gap-1">
+      <div className="subnav mb-3 flex flex-wrap gap-1">
         {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
         ))}

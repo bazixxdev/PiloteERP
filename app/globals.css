@@ -186,3 +186,9 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .prose-note ul[data-type="taskList"] > li > label input { accent-color: var(--primary); }
 .prose-note ul[data-type="taskList"] > li > div { flex: 1 1 auto; }
 .prose-note ul[data-type="taskList"] > li[data-checked="true"] > div { color: var(--muted-foreground); text-decoration: line-through; }
+/* Sous-onglets en page (Temps, Projets et financements, Admin, Demandes) : doublon du niveau 2 de la barre latérale dès
+   qu'elle est déployée (≥ lg et pas réduite) ; on les garde en rail, sur tablette et sur mobile, où ils sont la seule sous-navigation.
+   L'attribut est posé par la barre après hydratation : par défaut on considère la barre déployée (le cas courant). */
+@media (min-width: 1024px) {
+  html:not([data-sidebar="rail"]) .subnav { display: none; }
+}

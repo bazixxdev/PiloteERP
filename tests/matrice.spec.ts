@@ -7,7 +7,7 @@ import { iAm } from "./helpers";
 test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et export CSV", async ({ page }) => {
   await page.goto("/conventions");
   await iAm(page, "Nadia Ferrand");
-  await page.getByTestId("dossiers-nav-matrice").click();
+  await page.locator("aside").getByRole("link", { name: "Qui finance quoi" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Qui finance quoi");
   const matrix = page.getByTestId("matrix");
   await expect(matrix).toHaveAttribute("data-money", "1");

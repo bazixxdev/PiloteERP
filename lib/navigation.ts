@@ -28,6 +28,7 @@ export type NavContext = {
   modules: string[]; // modules de la personne (Mon compte)
   veille: boolean; // module d'instance « appels à projets »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
+  wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
 };
 
@@ -67,8 +68,9 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       label: "Demandes",
       badge: ctx.badges.requests,
       items: [
-        { label: "À traiter par moi", href: "/demandes", badge: ctx.badges.requests, path: "/demandes", param: { key: "vue", oneOf: ["moi", null, "toutes"] } },
+        { label: "À traiter par moi", href: "/demandes", badge: ctx.badges.requests, path: "/demandes", param: { key: "vue", oneOf: ["moi", null] } },
         { label: "Mes demandes", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
+        ...(ctx.wide ? [{ label: ctx.wide, href: "/demandes?vue=toutes", path: "/demandes", param: { key: "vue", oneOf: ["toutes"] } }] : []),
         ...(codir ? [{ label: "Validations par niveau", href: "/validations", path: "/validations" }] : []),
       ],
     },

@@ -11,6 +11,7 @@ import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { canDecideValidation, canSeeTimeOf } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
 import { navTreeFor } from "@/lib/navigation";
+import { canTreatRequest, wideViewLabel } from "@/lib/requests";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -33,7 +34,8 @@ async function counters() {
     getSettings(),
   ]);
   const modules = me.modules.split(",").map((x) => x.trim()).filter(Boolean);
-  const requestsForMe = requests.filter((r) => (r.assigneeId ? r.assigneeId === me.id : r.poleId ? me.poleId === r.poleId || me.role === "director" : false)).length;
+  // Même règle que la vue « À traiter par moi » de /demandes (traiter implique voir : pas besoin de canSeeRequest ici).
+  const requestsForMe = requests.filter((r) => canTreatRequest(me, r)).length;
   const badges = {
     // Demandes et validations fusionnées (15/09) : un seul badge = ce que j'ai à traiter, des deux côtés.
     requests: requestsForMe + pending.filter((v) => canDecideValidation(me, v)).length,
@@ -47,6 +49,7 @@ async function counters() {
       modules,
       veille: instanceHas(settings, "veille"),
       showTeam: people.some((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)),
+      wide: wideViewLabel(me.role),
       badges,
     }),
   };
@@ -63,7 +66,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <Sidebar tree={c.tree} />
           </Suspense>
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar />
+            <Topbar tree={c.tree} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
           </div>
         </div>

@@ -11,7 +11,7 @@ export async function DossiersNav({ current }: { current: "projets" | "conventio
     <Link key={key} href={href} data-testid={`dossiers-nav-${key}`} aria-current={current === key ? "page" : undefined} className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", current === key ? "border-coral text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>{label}</Link>
   );
   return (
-    <nav className="mb-4 flex flex-wrap gap-1 border-b" data-testid="dossiers-nav" aria-label="Projets et financements">
+    <nav className="subnav mb-4 flex flex-wrap gap-1 border-b" data-testid="dossiers-nav" aria-label="Projets et financements">
       {tab("projets", "Projets et éditions", "/projets")}
       {tab("conventions", "Conventions", "/conventions")}
       {tab("financeurs", "Financeurs", "/financeurs")}

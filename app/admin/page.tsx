@@ -73,7 +73,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   return (
     <div className="p-4 md:p-6">
       <PageHeader title="Admin" subtitle={rw ? "Référentiels, seuils, personnes : paramétrable par le référent CRESS sans prestataire." : "Lecture seule : l'administration est réservée à la direction et à la RAF."} />
-      <nav className="mb-5 flex flex-wrap gap-1 border-b" data-testid="admin-tabs">
+      <nav className="subnav mb-5 flex flex-wrap gap-1 border-b" data-testid="admin-tabs">
         {SECTIONS.map((s) => (
           <Link key={s.key} href={`/admin?section=${s.key}`} className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", s.key === current ? "border-coral" : "border-transparent text-muted-foreground hover:text-foreground")}>{s.label}</Link>
         ))}

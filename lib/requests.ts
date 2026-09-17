@@ -68,4 +68,10 @@ export function isForMe(me: { id: string; role: string; poleId: string | null },
   return false;
 }
 
+// « À traiter par moi » : ce qui me concerne, plus tout pour la direction et les demandes du pôle pour son responsable.
+// Même règle pour la vue de la page et le badge de la barre latérale : les deux nombres doivent être identiques.
+export function canTreatRequest(me: { id: string; role: string; poleId: string | null }, r: { assigneeId: string | null; poleId: string | null }): boolean {
+  return isForMe(me, r) || me.role === "director" || (Boolean(r.poleId) && me.role === "pole_lead" && me.poleId === r.poleId);
+}
+
 export const ageDays = (d: Date) => dayjs().diff(dayjs(d), "day");

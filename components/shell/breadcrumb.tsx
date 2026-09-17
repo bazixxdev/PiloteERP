@@ -1,72 +1,47 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
+import { locate, type NavSection } from "@/lib/navigation";
 
-// Fil d'Ariane de la barre haute : section / écran / onglet courant, lu dans l'URL (chemin + paramètres).
-const SECTIONS: [RegExp, string, string][] = [
-  [/^\/portefeuille/, "Pilotage", "Portefeuille"],
-  [/^\/edition/, "Projets", "Édition"],
-  [/^\/ma-semaine/, "Mon travail", "Ma semaine"],
-  [/^\/temps/, "Mon travail", "Temps"],
-  [/^\/taches/, "Mon travail", "Tâches"],
-  [/^\/notes/, "Mon travail", "Notes"],
-  [/^\/demandes/, "Mon travail", "Demandes"],
-  [/^\/cloture/, "Mon travail", "Temps"],
-  [/^\/annuel/, "Pilotage", "Vue annuelle"],
-  [/^\/plan-de-charge/, "Pilotage", "Plan de charge"],
-  [/^\/validations/, "Mon travail", "Demandes · file des validations"],
-  [/^\/cafe/, "Collectif", "Écran café"],
-  [/^\/codir/, "Collectif", "Écran CODIR"],
-  [/^\/seminaire/, "Collectif", "Séminaire"],
-  [/^\/(rappels|echeances)/, "Collectif", "Échéances"],
-  [/^\/notifications/, "Mon travail", "Notifications"],
-  [/^\/projets/, "Projets et financements", "Projets et éditions"],
-  [/^\/conventions/, "Projets et financements", "Conventions"],
-  [/^\/financeurs/, "Projets et financements", "Financeurs"],
-  [/^\/matrice/, "Projets et financements", "Qui finance quoi"],
-  [/^\/appels/, "Projets et financements", "Appels à projets"],
-  [/^\/admin/, "Réglages", "Admin"],
-  [/^\/compte/, "Réglages", "Mon compte"],
+// Fil d'Ariane de la barre haute : section / feuille de la barre latérale (même arbre, lib/navigation.ts), puis le
+// dernier maillon qui suit l'onglet ou la vue affichée. Les pages hors arbre (Mon compte, Proposer un projet…) ont leur libellé ici.
+const EDITION_TABS: Record<string, string> = { apercu: "Aperçu", fiche: "Fiche", actions: "Actions", financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };
+const OUTSIDE: [RegExp, string][] = [
+  [/^\/compte/, "Mon compte"],
+  [/^\/projets\/proposer/, "Proposer un projet"],
+  [/^\/validations/, "Validations par niveau"],
+  [/^\/cafe/, "Écran café"],
 ];
 
-const EDITION_TABS: Record<string, string> = { fiche: "Fiche", actions: "Actions", financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };
-const ADMIN_SECTIONS: Record<string, string> = { personnes: "Personnes", projets: "Projets et éditions", referentiels: "Référentiels", parametres: "Paramètres", donnees: "Import / export" };
-
-export function Breadcrumb({ editions }: { editions: { id: string; label: string }[] }) {
+export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: { id: string; label: string }[] }) {
   const pathname = usePathname();
   const sp = useSearchParams();
-  const hit = SECTIONS.find(([re]) => re.test(pathname));
-  if (!hit) return <span className="text-[11px] text-muted-foreground">Pilote</span>;
-  const [, section, page] = hit;
+  const { section: sectionId, leaf: leafHref } = locate(tree, pathname, sp);
+  const section = tree.find((s) => s.id === sectionId);
+  const leaf = section?.items.find((l) => l.href === leafHref);
+  const outside = OUTSIDE.find(([re]) => re.test(pathname))?.[1];
+  if (!section && !outside) return <span className="text-[11px] text-muted-foreground">Pilote</span>;
 
-  // Le dernier maillon suit l'onglet ou la vue affichée.
   const parts: string[] = [];
+  if (section) parts.push(section.label);
   if (pathname.startsWith("/edition")) {
     const id = pathname.match(/^\/edition\/([^/?]+)/)?.[1];
     const label = id ? editions.find((e) => e.id === id)?.label : null;
-    if (label) parts.push(...label.split(" / "));
-    parts.push(EDITION_TABS[sp.get("onglet") ?? "fiche"] ?? "Fiche");
-  } else if (/^\/conventions\/./.test(pathname)) {
-    parts.push(page, "Convention");
-  } else if (/^\/financeurs\/./.test(pathname)) {
-    parts.push(page, "Financeur");
-  } else if (pathname.startsWith("/cloture")) {
-    parts.push(page, "Clôture mensuelle");
-  } else if (pathname.startsWith("/temps")) {
-    parts.push(page, sp.get("personne") || sp.get("equipe") ? "Temps de l'équipe" : "Ma répartition");
-  } else if (pathname.startsWith("/admin")) {
-    parts.push(page, ADMIN_SECTIONS[sp.get("section") ?? "personnes"] ?? "Personnes");
-  } else if (pathname.startsWith("/portefeuille") && sp.get("mode") === "codir") {
-    parts.push(page, "Mode CODIR");
-  } else if ((pathname.startsWith("/codir") || pathname.startsWith("/cafe")) && sp.get("plein") === "1") {
-    parts.push(page, "Projection");
+    parts.push(...(label ? label.split(" / ") : ["Édition"]), EDITION_TABS[sp.get("onglet") ?? "apercu"] ?? "Aperçu");
+  } else if (/^\/projets\/proposer/.test(pathname)) {
+    parts.push("Projets et éditions", "Proposer un projet");
   } else {
-    parts.push(page);
+    if (leaf && leaf.label !== section?.label) parts.push(leaf.label);
+    else if (!leaf && outside) parts.push(outside);
+    if (/^\/conventions\/./.test(pathname)) parts.push("Convention");
+    else if (/^\/financeurs\/./.test(pathname)) parts.push("Financeur");
+    else if (pathname.startsWith("/portefeuille") && sp.get("mode") === "codir") parts.push("Mode CODIR");
+    else if ((pathname.startsWith("/codir") || pathname.startsWith("/cafe")) && sp.get("plein") === "1") parts.push("Projection");
   }
   const last = parts.pop();
   return (
     <span className="truncate text-[11px] text-muted-foreground" data-testid="breadcrumb">
-      {[section, ...parts].join(" / ")} / <b className="font-semibold text-foreground">{last}</b>
+      {parts.length > 0 && <>{parts.join(" / ")} / </>}<b className="font-semibold text-foreground">{last}</b>
     </span>
   );
 }
