@@ -6,9 +6,12 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson } from "@/lib/session";
+import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
-import { canDecideValidation } from "@/lib/rights";
+import { canDecideValidation, canSeeTimeOf } from "@/lib/rights";
+import { instanceHas } from "@/lib/modules";
+import { navTreeFor } from "@/lib/navigation";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Pilote · CRESS Centre-Val de Loire",
@@ -22,17 +25,30 @@ export const dynamic = "force-dynamic";
 // La passerelle échéances → notifications tourne ici, à chaque chargement : c'est le cron quotidien du prototype.
 async function counters() {
   const me = await getCurrentPerson();
-  const [pending, { reminders }, requests] = await Promise.all([
+  const [pending, { reminders }, requests, people, settings] = await Promise.all([
     prisma.validationRequest.findMany({ where: { status: "pending" }, select: { requesterId: true, requiredLevel: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } } } } } }),
     syncDeadlineNotifications(),
     prisma.request.findMany({ where: { status: { in: ["open", "doing"] } }, select: { assigneeId: true, poleId: true } }),
+    getPeople(),
+    getSettings(),
   ]);
-  return {
-    pending: pending.filter((v) => canDecideValidation(me, v)).length,
+  const modules = me.modules.split(",").map((x) => x.trim()).filter(Boolean);
+  const requestsForMe = requests.filter((r) => (r.assigneeId ? r.assigneeId === me.id : r.poleId ? me.poleId === r.poleId || me.role === "director" : false)).length;
+  const badges = {
+    // Demandes et validations fusionnées (15/09) : un seul badge = ce que j'ai à traiter, des deux côtés.
+    requests: requestsForMe + pending.filter((v) => canDecideValidation(me, v)).length,
     reminders: reminders.filter((r) => r.whoIds.includes(me.id)).length,
+  };
+  return {
     role: me.role,
-    requests: requests.filter((r) => (r.assigneeId ? r.assigneeId === me.id : r.poleId ? me.poleId === r.poleId || me.role === "director" : false)).length,
-    modules: me.modules.split(",").map((x) => x.trim()).filter(Boolean),
+    modules,
+    tree: navTreeFor({
+      role: me.role,
+      modules,
+      veille: instanceHas(settings, "veille"),
+      showTeam: people.some((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)),
+      badges,
+    }),
   };
 }
 
@@ -42,7 +58,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="fr">
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
-          <Sidebar pendingCount={c.pending} remindersCount={c.reminders} requestsCount={c.requests} role={c.role} />
+          {/* useSearchParams (entrée active selon ?vue=, ?section=…) exige une frontière Suspense dans un layout. */}
+          <Suspense fallback={<aside className="hidden h-screen w-[60px] shrink-0 border-r bg-sidebar md:block lg:w-[244px]" />}>
+            <Sidebar tree={c.tree} />
+          </Suspense>
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>

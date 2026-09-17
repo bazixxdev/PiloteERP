@@ -230,6 +230,15 @@ Gaël : « que le panneau s'ouvre sans changer de page, pour revenir tout de sui
 - **Règle à généraliser** (`docs/decisions.md`) : quand on arrive sur un panneau depuis un chiffre, ce chiffre est surligné et focalisé ; quand une vue transversale mène à un détail, le détail s'ouvre en panneau sur la vue, pas sur une autre page.
 - Test : `tests/matrice.spec.ts` (obtenu → champ Obtenu focalisé ; Échap → tableau intact, adresse propre ; demandé → champ Demandé). Suite : 45 verts (recette 3 instable sous charge, passe seule).
 
+### Q. Barre latérale à deux niveaux (17/09) — fait
+
+Gaël (16/09) : « un système de menu de gauche double niveau » ; exemples déposés dans `CRESS/MAQUETTE MENU/` (rail d'icônes + panneau, arbre déplié). Proto retenu le 17/09 : l'**arbre déplié** en une colonne (artefact « Menu Pilote · arbre déplié »).
+
+- **Arbre** : `lib/navigation.ts` (`navTreeFor`, `locate`), module pur calculé dans le layout à partir du rôle, des modules de la personne, du module d'instance « veille », de la visibilité du temps (Temps de l'équipe n'apparaît que si une autre personne est visible) et des badges. Sections : Mon travail (Ma semaine, Tâches, Notes), Temps (Ma répartition, Temps de l'équipe, Clôture mensuelle), Portefeuille / Mes projets (Portefeuille, Vue annuelle, Plan de charge), Demandes (À traiter par moi, Mes demandes, Validations par niveau — CODIR), Projets et financements (Projets et éditions, Conventions, Financeurs, Qui finance quoi, Appels à projets), Échéances (Échéances, Notifications), Direction (Écran CODIR, Séminaire, Écran café — CODIR), Admin (Personnes, Référentiels, Paramètres, Import / export — direction, RAF).
+- **Barre** : `components/shell/sidebar.tsx` réécrite. Niveau 1 = lien vers la feuille courante (section ouverte) ou la première feuille ; la section s'ouvre d'après l'adresse (`usePathname` + `useSearchParams`, d'où le `Suspense` dans le layout). Trait d'arbre en CSS (`before:`), feuille active en `sidebar-accent` + trait bleu. Bouton Réduire (`localStorage` `pilote-sidebar-collapsed`) → rail de 60 px, pastilles ocre sur les sections à badge, infobulles natives ; cliquer une icône du rail navigue **et** redéploie la barre. Sous `lg` : rail imposé, bouton masqué. Tagline « Piloter ensemble · Prototype » retirée (le proto ne l'a pas).
+- **Non fait, volontairement** : les sous-onglets en page (TimeNav, DossiersNav, onglets Admin, pastilles Demandes) restent — le mobile en dépend ; à décider en live. Navigation basse mobile inchangée.
+- Vérifié en live : direction (toutes les sections), contributeur (Mes projets, Temps à une feuille, pas de Direction/Admin/Validations), `?vue=mes`, `?section=…`, rail, tablette. Tests : suite complète relancée après la réécriture (voir le message de session).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
