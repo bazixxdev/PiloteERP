@@ -37,7 +37,7 @@ Une édition a **0, 1 ou n lignes de financement**, donc 0, 1 ou n financeurs. C
 | Brevo | la CRESS est Microsoft |
 | RH contrats, ETP, masse salariale | GRH hors outil ; sensibilité S4.97 ; le Pilote a déjà rythmes et jours disponibles |
 | Matériel & prêts | spécifique tiers-lieu |
-| Postgres | 0,5 j au go V1 (`integrations.md`) ; SQLite suffit à la démo |
+| ~~Postgres~~ | **fait le 17/09** (lot P, RETOURS-A-CHAUD §R) |
 
 ## Lot 0 — Modules activables par instance (prérequis, petit) — **FAIT le 15/09** (RETOURS-A-CHAUD §M)
 

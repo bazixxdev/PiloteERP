@@ -35,7 +35,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
     prisma.person.findMany({ include: { rhythmPeriods: { include: { rhythm: true } } } }),
     prisma.weekDeclaration.findMany(),
   ]);
-  const reminders = await prisma.notification.findMany({ where: { kind: "time_reminder", title: { contains: monthLabel(month).toLowerCase() } }, include: { sender: true }, orderBy: { createdAt: "desc" } });
+  const reminders = await prisma.notification.findMany({ where: { kind: "time_reminder", title: { contains: monthLabel(month), mode: "insensitive" } }, include: { sender: true }, orderBy: { createdAt: "desc" } });
   const weeksOfMonth = [...new Set(workingDaysOfMonth(month).map((d) => weekKey(d)))];
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);

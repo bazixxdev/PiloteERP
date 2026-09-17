@@ -1,12 +1,12 @@
-// Schéma du prototype « Pilote ». SQLite pour la démo, portable vers Postgres
-// (aucun type spécifique SQLite ; les listes de valeurs sont des tables).
+// Schéma du Pilote. PostgreSQL depuis le 17/09/2026 (SQLite jusque-là ; migrations SQLite dans l'historique git avant `41fd2af`)
+// (aucun type propre au moteur ; les listes de valeurs sont des tables).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

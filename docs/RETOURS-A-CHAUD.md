@@ -262,6 +262,15 @@ Retours de Gaël en direct sur la démo :
 
 Gaël : « tu n'as pas passé tous les déroulants » (la liste native de macOS s'ouvrait encore sur le contexte d'une note). Plus aucun `<select>` natif à l'écran : `Select` (dans `components/common/searchable-select.tsx`) reprend l'API du `<select>` (`value` / `defaultValue`, `onChange` avec `e.target.value`, enfants `<option>` / `<optgroup>`) et affiche notre liste — les 47 restants ont été convertis sans réécrire les écrans, y compris `AutoField` (champs en ligne des tableaux), les filtres en pastille (déclencheur compact sans bordure) et le formulaire GET des notes (champ caché `name`). Recherche dès 8 entrées, comme avant. Tests : `pick()` accepte un Locator et `{ value }`, réessaie si le clic tombe avant l'hydratation, cible `[data-slot=select-list]` (la liste des suggestions `@édition` est aussi un listbox) ; les `toHaveValue` sur ces champs lisent `data-value`. Le CSS d'habillage des `<select>` natifs reste dans `globals.css` au cas où.
 
+### R. Lot P « PostgreSQL » (17/09) — fait sur la branche `postgres` (worktree), fusionné ensuite
+
+- `prisma/schema.prisma` : `provider = "postgresql"` ; `prisma/migrations` = une migration initiale unique (1 134 lignes générées, `migration_lock.toml` postgresql). Vérifié : `migrate diff` ne détecte aucune différence entre migrations et schéma (la dérive « Redefined table » de SQLite a disparu).
+- Code métier : deux `contains` en `mode: "insensitive"` (`app/actions/edition.ts` fournisseurs, `app/cloture/page.tsx` relances). Rien d'autre.
+- Tests : `playwright.config.ts` pose `DATABASE_URL = TEST_DATABASE_URL` (défaut `pilote_test`) et `PW_PORT` ; la commande du serveur de test commence par `prisma migrate deploy` ; l'adresse de contrôle est `/matrice/export` (401 sans toucher à la base — Playwright n'accepte pas un 404 comme « prêt ») ; `global-setup` reseed ; pièces dans `uploads-test/` (ignoré). 45 tests verts sur Postgres.
+- Local : rôle `pilote`, bases `pilote_dev` / `pilote_test` (Homebrew postgresql@18) ; `docker-compose.yml` fourni.
+- Serveur : `deploy.sh` crée rôle + base (`cress_pilote`), bascule le `.env` de `file:` vers Postgres, `pg_dump` avant migration, comptage des personnes par `psql`. Le SQLite de prod reste en sauvegarde dans `/var/backups/cress/prototype-*.db`.
+- Leçons : une base utilisée comme shadow par `migrate diff` garde ses tables (P3005 au `migrate deploy` suivant) → la recréer ; le serveur de test démarre **avant** le `globalSetup` de Playwright, donc la migration doit être dans la commande du serveur.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

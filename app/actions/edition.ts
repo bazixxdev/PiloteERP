@@ -96,7 +96,7 @@ export async function requestValidation(input: { editionId: string; actionId?: s
   let supplierId = input.supplierId || null;
   const supplierName = input.supplier?.trim() || null;
   if (!supplierId && supplierName && input.saveSupplier) {
-    const existing = (await prisma.supplier.findMany({ where: { name: { contains: supplierName } } })).find((x) => x.name.toLowerCase() === supplierName.toLowerCase());
+    const existing = (await prisma.supplier.findMany({ where: { name: { contains: supplierName, mode: "insensitive" } } })).find((x) => x.name.toLowerCase() === supplierName.toLowerCase());
     supplierId = (existing ?? (await prisma.supplier.create({ data: { name: supplierName, email: input.supplierEmail?.trim() || null } }))).id;
   }
   const v = await prisma.validationRequest.create({

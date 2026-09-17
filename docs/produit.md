@@ -45,8 +45,9 @@ Rien d'autre : jamais de patch d'instance.
 
 ## Déjà en place (15/09)
 
+- **PostgreSQL** (17/09) : un moteur pour toutes les instances ; une base par instance (`cress_pilote`, demain `tlst_pilote`), sauvegarde `pg_dump` par déploiement, base de test séparée.
 - `Settings.modules` + admin › Paramètres › Modules de l'installation (lot 0) : premier module activable, la veille des appels à projets. Le mécanisme est générique (`INSTANCE_MODULES`, `instanceHas`) ; chaque nouveau module ajoute une entrée et garde sa page derrière `instanceHas`.
 
 ## Ce qui sera fait quand le produit sera lancé (pas avant)
 
-Postgres → auth better-auth (+ Entra ID) → permissions par module en base (matrice) au-dessus des droits contextuels → `Person` → `Personne` élargie (externes, contacts) → modules activables par instance → `config/clients/` → `deploy.sh` paramétré par instance → portage des modules TLST (Adhérents/HelloAsso, Pennylane, Trésorerie, Matériel) → archivage d'`erp-tlst`.
+auth better-auth (+ Entra ID) → permissions par module en base (matrice) au-dessus des droits contextuels → `Person` → `Personne` élargie (externes, contacts) → modules activables par instance → `config/clients/` → `deploy.sh` paramétré par instance → portage des modules TLST (Adhérents/HelloAsso, Pennylane, Trésorerie, Matériel) → archivage d'`erp-tlst`.
