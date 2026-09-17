@@ -941,6 +941,7 @@ model Task {
   personId  String
   person    Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
   label     String
+  description String? // quelques lignes sous le libellé (redesign du 18/09, inspiration Todoist)
   dueDate   DateTime?
   done      Boolean    @default(false)
   doneAt    DateTime?

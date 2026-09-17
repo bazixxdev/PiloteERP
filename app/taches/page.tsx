@@ -11,11 +11,13 @@ import { ListHeader, NewListDialog } from "./list-card";
 import { visibilityIcon } from "@/components/common/visibility-icon";
 import { cn } from "@/lib/utils";
 import { ListDropLink } from "@/components/tasks/list-drop-link";
+import { TaskKanban } from "@/components/tasks/kanban";
+import { DisplayToggle } from "./display-toggle";
 
 // Espace Tâches (revue UX du 15/09, même structure que les notes) : à gauche les vues (À faire, À trier, Terminées), mes listes
 // et celles qu'on partage avec moi ; à droite une seule liste de tâches, une seule zone d'ajout, les lignes groupées par échéance.
-export default async function TachesPage({ searchParams }: { searchParams: Promise<{ ajouter?: string; vue?: string; liste?: string; partagee?: string }> }) {
-  const { ajouter, vue, liste, partagee } = await searchParams;
+export default async function TachesPage({ searchParams }: { searchParams: Promise<{ ajouter?: string; vue?: string; liste?: string; partagee?: string; affichage?: string }> }) {
+  const { ajouter, vue, liste, partagee, affichage } = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!hasModule(me, "tasks")) {
     return (
@@ -35,6 +37,8 @@ export default async function TachesPage({ searchParams }: { searchParams: Promi
   const currentShared = partagee ? shared.find((s) => s.list.id === partagee) : null;
   const view = currentList ? "liste" : currentShared ? "partagee" : vue === "trier" ? "trier" : vue === "terminees" ? "terminees" : "afaire";
   const late = open.filter((t) => t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10)).length;
+  // Affichage (redesign du 18/09) : liste ou kanban, mémorisé dans l'adresse ; le kanban n'a de sens que sur mes tâches en cours.
+  const kanban = view === "afaire" && affichage === "kanban";
 
   const navClass = (active: boolean) => cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-xs hover:bg-muted", active && "bg-info-soft font-semibold text-primary");
   const NavLink = ({ href, active, children, testId, name }: { href: string; active: boolean; children: React.ReactNode; testId?: string; name?: string }) => (
@@ -44,7 +48,7 @@ export default async function TachesPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Mes tâches" subtitle={<>{open.length ? `${open.length} en cours` : "Rien en cours"}{late ? ` · ${late} en retard` : ""} · une liste peut suivre un projet ou rester une catégorie à vous ; vous choisissez qui la lit.</>} actions={<NewListDialog editions={editions} />} />
+      <PageHeader title="Mes tâches" subtitle={<>{open.length ? `${open.length} en cours` : "Rien en cours"}{late ? ` · ${late} en retard` : ""} · une liste peut suivre un projet ou rester une catégorie à vous ; vous choisissez qui la lit.</>} actions={<>{view === "afaire" && <DisplayToggle current={kanban ? "kanban" : "liste"} />}<NewListDialog editions={editions} /></>} />
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="grid min-w-0 content-start gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <nav className="rounded-md border bg-card p-1.5" aria-label="Vues" data-testid="tasks-views">
@@ -73,22 +77,23 @@ export default async function TachesPage({ searchParams }: { searchParams: Promi
           )}
         </div>
 
-        <div className="min-w-0 overflow-hidden rounded-md border bg-card" data-testid="tasks-main" data-view={view} data-name={currentList?.name ?? currentShared?.list.name}>
-          {view === "afaire" && (
+        <div className={cn("min-w-0", !kanban && "rounded-md border bg-card")} data-testid="tasks-main" data-view={kanban ? "kanban" : view} data-name={currentList?.name ?? currentShared?.list.name}>
+          {kanban && <TaskKanban tasks={open} lists={lists.map((l) => ({ id: l.id, name: l.name, color: l.color, editionName: l.edition ? `${l.edition.name} · ${l.edition.year}` : null }))} editions={editions} />}
+          {view === "afaire" && !kanban && (
             <>
-              <div className="px-4 py-3"><h2 className="text-[15px] font-bold">À faire</h2><p className="text-[11px] text-muted-foreground">Toutes vos tâches en cours, ce qui presse d'abord. Une nouvelle tâche va dans « À trier » ; rangez-la en cliquant sa pastille de liste, ou en la glissant sur une liste à gauche.</p></div>
+              <div className="px-4 pb-1 pt-3"><h2 className="text-[19px] font-bold">À faire</h2><p className="text-[11px] text-muted-foreground">Toutes vos tâches en cours, ce qui presse d'abord.</p></div>
               <TaskList tasks={open} editions={editions} lists={listOpts} autoFocus={ajouter === "1"} grouped showList emptyText="Rien en cours. Ajoutez une tâche ci-dessus : c'est à vous, ce n'est ni une action du projet, ni un jalon." />
             </>
           )}
           {view === "trier" && (
             <>
-              <div className="px-4 py-3"><h2 className="text-[15px] font-bold">À trier</h2><p className="text-[11px] text-muted-foreground">Les tâches sans liste, privées. Rangez-les en cliquant « À trier » sur la ligne, ou en les glissant sur une liste à gauche — ou laissez-les là : ça marche aussi.</p></div>
+              <div className="px-4 pb-1 pt-3"><h2 className="text-[19px] font-bold">À trier</h2><p className="text-[11px] text-muted-foreground">Les tâches sans liste, privées. Rangez-les en cliquant « À trier » sur la ligne, ou en les glissant sur une liste à gauche — ou laissez-les là : ça marche aussi.</p></div>
               <TaskList tasks={unlisted} editions={editions} lists={listOpts} autoFocus={ajouter === "1"} grouped emptyText="Rien à trier." />
             </>
           )}
           {view === "terminees" && (
             <>
-              <div className="px-4 py-3"><h2 className="text-[15px] font-bold">Terminées</h2><p className="text-[11px] text-muted-foreground">Les 14 derniers jours. Décochez pour rouvrir.</p></div>
+              <div className="px-4 pb-1 pt-3"><h2 className="text-[19px] font-bold">Terminées</h2><p className="text-[11px] text-muted-foreground">Les 14 derniers jours. Décochez pour rouvrir.</p></div>
               <TaskList tasks={doneTasks} editions={editions} lists={listOpts} showList hideAdd emptyText="Rien de terminé ces 14 derniers jours." />
             </>
           )}

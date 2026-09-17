@@ -5,8 +5,8 @@ import { dayjs } from "./format";
 import { canReadShared } from "./modules";
 import type { EditionOpt, TaskView } from "@/components/tasks/task-list";
 
-const toView = (t: { id: string; label: string; dueDate: Date | null; done: boolean; listId: string | null; requestId: string | null; list: { id: string; name: string; color: string | null } | null; edition: { id: string; year: number; project: { name: string } } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
-  id: t.id, label: t.label, dueDate: t.dueDate ? dayjs(t.dueDate).format("YYYY-MM-DD") : null, done: t.done, listId: t.listId, requestId: t.requestId, list: t.list ? { id: t.list.id, name: t.list.name, color: t.list.color } : null,
+const toView = (t: { id: string; label: string; description: string | null; dueDate: Date | null; done: boolean; listId: string | null; requestId: string | null; list: { id: string; name: string; color: string | null } | null; edition: { id: string; year: number; project: { name: string } } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
+  id: t.id, label: t.label, description: t.description, dueDate: t.dueDate ? dayjs(t.dueDate).format("YYYY-MM-DD") : null, done: t.done, listId: t.listId, requestId: t.requestId, list: t.list ? { id: t.list.id, name: t.list.name, color: t.list.color } : null,
   edition: t.edition ? { id: t.edition.id, name: t.edition.project.name, year: t.edition.year } : null,
   action: t.action ? { id: t.action.id, name: t.action.name } : null,
   slots: t.slots.map((s) => ({ id: s.id, startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString(), allDay: s.allDay })),

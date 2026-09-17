@@ -34,7 +34,7 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
   return { ok: true, data: { id: t.id } };
 }
 
-export async function updateTask(id: string, patch: { label?: string; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result> {
+export async function updateTask(id: string, patch: { label?: string; description?: string | null; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result> {
   const t = await mine(id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
   if (patch.listId) {
@@ -62,6 +62,7 @@ export async function updateTask(id: string, patch: { label?: string; dueDate?: 
     where: { id },
     data: {
       ...(patch.label !== undefined ? { label: patch.label.trim() || t.label } : {}),
+      ...(patch.description !== undefined ? { description: patch.description?.trim() || null } : {}),
       ...(patch.dueDate !== undefined ? { dueDate: day(patch.dueDate) } : {}),
       ...(patch.done !== undefined ? { done: patch.done, doneAt: patch.done ? new Date() : null } : {}),
       ...(patch.listId !== undefined ? { listId: patch.listId || null } : {}),
@@ -145,4 +146,13 @@ export async function deleteList(id: string): Promise<Result> {
   await prisma.taskList.delete({ where: { id } });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// « Reporter à aujourd'hui » (vue À faire, groupe En retard) : toutes mes tâches en retard passent à la date du jour.
+export async function postponeLate(ids: string[]): Promise<Result<{ moved: number }>> {
+  const me = await getCurrentPerson();
+  const today = dayjs().startOf("day").toDate();
+  const r = await prisma.task.updateMany({ where: { id: { in: ids }, personId: me.id, done: false, dueDate: { lt: today } }, data: { dueDate: today } });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { moved: r.count } };
 }

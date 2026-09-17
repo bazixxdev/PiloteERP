@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AtSign, CalendarClock, CalendarDays, Plus, Trash2, X, GripVertical, ChevronDown, Inbox } from "lucide-react";
+import { AtSign, CalendarClock, CalendarDays, Plus, Trash2, X, GripVertical, ChevronDown, Inbox, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { postponeLate } from "@/app/actions/tasks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,7 @@ export type EditionOpt = { id: string; name: string; year: number; actions: { id
 const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export type TaskView = {
-  id: string; label: string; dueDate: string | null; done: boolean; listId?: string | null; requestId?: string | null; list?: { id: string; name: string; color: string | null } | null;
+  id: string; label: string; description?: string | null; dueDate: string | null; done: boolean; listId?: string | null; requestId?: string | null; list?: { id: string; name: string; color: string | null } | null;
   edition: { id: string; name: string; year: number } | null; action: { id: string; name: string } | null;
   slots: { id: string; startAt: string; endAt: string; allDay: boolean }[];
 };
@@ -93,7 +95,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
       {!hideAdd && (
         <form className="relative border-b px-4 py-2.5" onSubmit={(e) => { e.preventDefault(); if (at && suggestions[cursor]) { pick(suggestions[cursor]); return; } submit(); }}>
           <div className="flex items-center gap-2">
-            <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Plus className="size-4 shrink-0 text-coral" aria-hidden />
             <Input
               ref={inputRef} value={label} onChange={(e) => { setLabel(e.target.value); setCursor(0); }}
               onKeyDown={(e) => { if (!at || suggestions.length === 0) return; if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => (c + 1) % suggestions.length); } else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => (c - 1 + suggestions.length) % suggestions.length); } else if (e.key === "Escape") { setLabel(label.replace(/@[^@]*$/, "")); } }}
@@ -110,7 +112,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
             {label.trim() && !at && <Button type="submit" size="xs" disabled={pending} data-testid="task-submit">Ajouter</Button>}
           </div>
           {at && suggestions.length > 0 && (
-            <ul className="absolute top-full left-8 z-20 mt-1 w-[min(420px,calc(100%-2rem))] overflow-hidden rounded-md border bg-card py-1 shadow-lg" role="listbox" aria-label="Éditions" data-testid="task-suggestions">
+            <ul className="absolute top-full left-8 z-40 mt-1 w-[min(420px,calc(100%-2rem))] overflow-hidden rounded-md border bg-card py-1 shadow-lg" role="listbox" aria-label="Éditions" data-testid="task-suggestions">
               {suggestions.map((e, i) => (
                 <li key={e.id} role="option" aria-selected={i === cursor}>
                   <button type="button" onMouseDown={(ev) => { ev.preventDefault(); pick(e); }} onMouseEnter={() => setCursor(i)} className={cn("flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs", i === cursor && "bg-info-soft")}>
@@ -127,7 +129,10 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
       {grouped ? (
         groupByDue(open).map((g) => (
           <section key={g.key} data-testid={`due-group-${g.key}`}>
-            <h5 className={cn("flex items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[.5px]", g.key === "late" ? "text-danger" : g.key === "today" ? "text-primary" : "text-muted-foreground")}>{g.label}<span className="font-normal normal-case tracking-normal">· {g.tasks.length}</span></h5>
+            <h5 className={cn("flex items-center gap-2 border-b px-4 py-2 text-[13px] font-bold", g.key === "late" ? "text-danger" : "text-foreground")}>
+              {g.label}<span className="text-[11px] font-normal text-muted-foreground">{g.tasks.length}</span>
+              {g.key === "late" && <button type="button" disabled={pending} onClick={() => run(() => postponeLate(g.tasks.map((t) => t.id)), () => toast.success("Reportées à aujourd'hui"))} className="ml-auto text-[12px] font-medium text-warning-foreground hover:underline" data-testid="postpone-late">Reporter à aujourd'hui</button>}
+            </h5>
             {rows(g.tasks)}
           </section>
         ))
@@ -159,55 +164,119 @@ function ReadRow({ t }: { t: TaskView }) {
   );
 }
 
-// Ma ligne : calme par défaut. Ce qui est renseigné se voit (et se change d'un clic) ; le reste apparaît au survol.
-function TaskRow({ t, pending, run, compact, editions, lists = [], showList }: { t: TaskView; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void; compact?: boolean; editions: EditionOpt[]; lists?: ListOpt[]; showList?: boolean }) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(t.label);
-  // Coche immédiate (optimiste), confirmée par le rafraîchissement.
-  const [checked, setChecked] = useState(t.done);
-  useEffect(() => setChecked(t.done), [t.done]);
+// Ma ligne (redesign du 18/09, inspiration Todoist) : un rond à cocher, le libellé, une ligne de description, puis les repères
+// (échéance en rouge si en retard, créneaux, demande) ; à droite « Liste / Édition ». Le libellé ouvre la fiche de la tâche.
+type Run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void;
+
+export function dueMeta(t: TaskView) {
   const due = t.dueDate ? dayjs(t.dueDate) : null;
   const n = due ? due.startOf("day").diff(dayjs().startOf("day"), "day") : null;
-  const dueText = n === null ? null : n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : due!.format("ddd D MMM");
+  const text = n === null ? null : n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : due!.format("ddd D MMM");
+  return { due, n, text, late: n !== null && n < 0, today: n === 0 };
+}
+
+// Rond à cocher : rouge en retard, pétrole aujourd'hui, gris sinon ; rempli une fois fait.
+export function CheckCircle({ t, checked, pending, onChange }: { t: TaskView; checked: boolean; pending: boolean; onChange: (v: boolean) => void }) {
+  const { late, today } = dueMeta(t);
+  return (
+    <label className="relative mt-0.5 inline-flex size-[18px] shrink-0 cursor-pointer items-center justify-center" title={checked ? "Rouvrir" : "Terminer"}>
+      <input type="checkbox" checked={checked} disabled={pending} aria-label={`${checked ? "Rouvrir" : "Terminer"} la tâche ${t.label}`} className="peer absolute inset-0 z-[1] size-full cursor-pointer opacity-0" onChange={(e) => onChange(e.target.checked)} data-testid={`task-done-${t.id}`} />
+      <span className={cn("size-[18px] rounded-full border-2 transition-colors peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary/20", checked ? "border-mint bg-mint" : late ? "border-danger hover:bg-danger-soft" : today ? "border-primary hover:bg-info-soft" : "border-[#b9c4c9] hover:bg-muted")} aria-hidden />
+      {checked && <svg viewBox="0 0 12 12" className="pointer-events-none absolute size-2.5 text-white" aria-hidden><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+    </label>
+  );
+}
+
+function TaskRow({ t, pending, run, compact, editions, lists = [], showList }: { t: TaskView; pending: boolean; run: Run; compact?: boolean; editions: EditionOpt[]; lists?: ListOpt[]; showList?: boolean }) {
+  const [checked, setChecked] = useState(t.done);
+  useEffect(() => setChecked(t.done), [t.done]);
+  const [detail, setDetail] = useState(false);
+  const { text: dueText, late, today } = dueMeta(t);
   const listColor = noteColor(t.list?.color)?.hex;
   const hover = "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100";
   return (
     <li
-      className={cn("group relative flex items-center gap-2.5 px-4 py-2", t.done && "opacity-60", !t.done && "cursor-grab active:cursor-grabbing")} data-testid={`task-${t.id}`}
+      className={cn("group relative flex items-start gap-2.5 px-4 py-2.5", t.done && "opacity-60", !t.done && "cursor-grab active:cursor-grabbing")} data-testid={`task-${t.id}`}
       draggable={!t.done} onDragStart={(e) => { e.dataTransfer.setData("text/task", t.id); e.dataTransfer.effectAllowed = "move"; }}
       title={t.done ? undefined : "Glissez la ligne sur une liste de la colonne de gauche pour la ranger"}
     >
-      {!t.done && <GripVertical className={cn("absolute left-0.5 size-3.5 text-muted-foreground/50", hover)} aria-hidden />}
-      <input type="checkbox" checked={checked} disabled={pending} aria-label={`${t.done ? "Rouvrir" : "Terminer"} la tâche ${t.label}`} className="size-4 shrink-0 rounded border-border accent-primary" onChange={(e) => { setChecked(e.target.checked); run(() => updateTask(t.id, { done: e.target.checked })); }} data-testid={`task-done-${t.id}`} />
+      {!t.done && <GripVertical className={cn("absolute left-0.5 top-3 size-3.5 text-muted-foreground/50", hover)} aria-hidden />}
+      <CheckCircle t={t} checked={checked} pending={pending} onChange={(v) => { setChecked(v); run(() => updateTask(t.id, { done: v })); }} />
       <div className="min-w-0 flex-1">
-        {editing ? (
-          <form onSubmit={(e) => { e.preventDefault(); run(() => updateTask(t.id, { label: text }), () => setEditing(false)); }}>
-            <Input autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={() => { if (text.trim() && text !== t.label) run(() => updateTask(t.id, { label: text })); setEditing(false); }} className="h-7 text-xs" aria-label="Libellé de la tâche" />
-          </form>
-        ) : (
-          <button type="button" onClick={() => { if (!t.done) setEditing(true); }} className={cn("max-w-full text-left text-xs font-medium hover:underline", t.done && "line-through")} title={t.done ? undefined : "Modifier le libellé"}>{t.label}</button>
+        <button type="button" onClick={() => setDetail(true)} className={cn("block max-w-full text-left text-[13px] font-medium leading-snug hover:text-primary", t.done && "line-through")} title="Ouvrir la tâche" data-testid={`task-open-${t.id}`}>{t.label}</button>
+        {t.description && <p className="mt-0.5 truncate text-xs text-muted-foreground" title={t.description}>{t.description.split("\n")[0]}</p>}
+        {!compact && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            {!t.done && <span className={cn(!dueText && hover)}><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></span>}
+            {!t.done && t.slots.map((s) => (
+              <span key={s.id} className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px", dayjs(s.endAt).isBefore(dayjs()) ? "bg-muted" : "bg-info-soft text-primary")} title="Créneau posé dans votre agenda" data-testid={`slot-${s.id}`}>
+                <CalendarClock className="size-3" aria-hidden />{slotLabel(s)}
+                <button type="button" aria-label="Retirer ce créneau" disabled={pending} onClick={() => run(() => deleteSlot(s.id))} className="rounded hover:bg-black/10"><X className="size-3" /></button>
+              </span>
+            ))}
+            {!t.done && <span className={hover}><SlotPicker t={t} pending={pending} run={run} /></span>}
+            {t.requestId && <Link href="/demandes" className="inline-flex items-center gap-1 rounded-sm bg-info-soft px-1.5 py-px text-primary hover:underline" title="Née d'une demande : la cocher fait la demande, le demandeur est prévenu" data-testid={`task-request-${t.id}`}><Inbox className="size-3" aria-hidden />Demande</Link>}
+          </div>
         )}
+        {compact && dueText && !t.done && <span className={cn("mt-0.5 inline-block text-[11px]", late ? "font-semibold text-danger" : "text-muted-foreground")} data-testid={`task-due-${t.id}`}>Pour {dueText}</span>}
       </div>
-      <div className="flex max-w-[58%] shrink-0 flex-wrap items-center justify-end gap-1 text-[10px] text-muted-foreground">
-        {t.requestId && <Link href="/demandes" className="inline-flex items-center gap-1 rounded-sm bg-info-soft px-1.5 py-px text-primary hover:underline" title="Née d'une demande : la cocher fait la demande, le demandeur est prévenu" data-testid={`task-request-${t.id}`}><Inbox className="size-3" aria-hidden />demande</Link>}
-        {!t.done && lists.length > 0 && <span className={cn(!showList && hover)}><ListChip t={t} pending={pending} run={run} lists={lists} /></span>}
-        {t.done && showList && t.list && <span className="inline-flex max-w-[140px] items-center gap-1 px-1.5"><span className="size-2 shrink-0 rounded-full" style={{ background: listColor ?? "var(--border)" }} aria-hidden /><span className="truncate">{t.list.name}</span></span>}
-        {t.done || editions.length === 0 ? (
-          t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="max-w-[180px] truncate rounded-full bg-secondary px-1.5 py-px text-primary hover:underline">{t.edition.name}{t.action ? ` · ${t.action.name}` : ""}</Link>
-        ) : (
-          <span className={cn(!t.edition && hover)}><TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /></span>
-        )}
-        {!t.done && t.slots.map((s) => (
-          <span key={s.id} className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px", dayjs(s.endAt).isBefore(dayjs()) ? "bg-muted" : "bg-info-soft text-primary")} title="Créneau posé dans votre agenda" data-testid={`slot-${s.id}`}>
-            <CalendarClock className="size-3" aria-hidden />{slotLabel(s)}
-            <button type="button" aria-label="Retirer ce créneau" disabled={pending} onClick={() => run(() => deleteSlot(s.id))} className="rounded hover:bg-black/10"><X className="size-3" /></button>
-          </span>
-        ))}
-        {!t.done && <span className={cn(!due && hover)}><DuePicker t={t} pending={pending} run={run} label={dueText} late={n !== null && n < 0} /></span>}
-        {!t.done && !compact && <span className={hover}><SlotPicker t={t} pending={pending} run={run} /></span>}
-        <button type="button" aria-label={`Supprimer la tâche ${t.label}`} disabled={pending} onClick={() => run(() => deleteTask(t.id))} className={cn("rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger", hover)}><Trash2 className="size-3.5" /></button>
+      <div className="flex max-w-[42%] shrink-0 flex-col items-end gap-1 text-[11px] text-muted-foreground">
+        <span className="flex max-w-full flex-col items-end gap-0.5">
+          {!t.done && editions.length > 0 ? <span className={cn(!t.edition && hover)}><TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /></span> : t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="max-w-[180px] truncate hover:underline">{t.edition.name}{t.action ? ` · ${t.action.name}` : ""}</Link>}
+          {!t.done && lists.length > 0 ? <span className={cn(!showList && !t.list && hover)}><ListChip t={t} pending={pending} run={run} lists={lists} /></span> : t.list && <span className="inline-flex max-w-[140px] items-center gap-1"><span className="truncate">{t.list.name}</span><span className="font-bold" style={{ color: listColor ?? "var(--border)" }} aria-hidden>#</span></span>}
+        </span>
+        <span className={cn("flex items-center gap-0.5", hover)}>
+          <button type="button" aria-label={`Ouvrir la tâche ${t.label}`} onClick={() => setDetail(true)} className="rounded p-1 text-muted-foreground/70 hover:bg-muted hover:text-foreground"><Pencil className="size-3.5" /></button>
+          <button type="button" aria-label={`Supprimer la tâche ${t.label}`} disabled={pending} onClick={() => run(() => deleteTask(t.id))} className="rounded p-1 text-muted-foreground/70 hover:bg-muted hover:text-danger"><Trash2 className="size-3.5" /></button>
+        </span>
       </div>
+      {detail && <TaskDetail t={t} open={detail} onOpenChange={setDetail} pending={pending} run={run} editions={editions} lists={lists} />}
     </li>
+  );
+}
+
+// Fiche de la tâche (inspiration Todoist) : à gauche le libellé et la description, à droite ce qui la situe — liste, édition,
+// échéance, créneaux, demande d'origine.
+export function TaskDetail({ t, open, onOpenChange, pending, run, editions, lists = [] }: { t: TaskView; open: boolean; onOpenChange: (o: boolean) => void; pending: boolean; run: Run; editions: EditionOpt[]; lists?: ListOpt[] }) {
+  const [label, setLabel] = useState(t.label);
+  const [description, setDescription] = useState(t.description ?? "");
+  useEffect(() => { setLabel(t.label); setDescription(t.description ?? ""); }, [t.label, t.description]);
+  const { text: dueText, late, today } = dueMeta(t);
+  const [checked, setChecked] = useState(t.done);
+  useEffect(() => setChecked(t.done), [t.done]);
+  const Field = ({ label: l, children }: { label: string; children: React.ReactNode }) => <div className="grid gap-1 border-b border-border/60 py-2.5 last:border-0"><span className="text-[11px] font-semibold text-muted-foreground">{l}</span><div className="text-xs">{children}</div></div>;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl gap-0 p-0 sm:max-w-3xl" data-testid={`task-detail-${t.id}`}>
+        <DialogHeader className="border-b px-4 py-2.5 text-[11px] text-muted-foreground">
+          <DialogTitle className="flex items-center gap-1.5 text-[11px] font-normal">{t.list ? <><span className="font-bold" style={{ color: noteColor(t.list.color)?.hex ?? "var(--border)" }}>#</span>{t.list.name}</> : <><Inbox className="size-3" aria-hidden />À trier</>}{t.edition && <span className="text-muted-foreground/70"> / {t.edition.name} · {t.edition.year}</span>}</DialogTitle>
+        </DialogHeader>
+        <div className="grid md:grid-cols-[minmax(0,1fr)_240px]">
+          <div className="grid content-start gap-3 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle t={t} checked={checked} pending={pending} onChange={(v) => { setChecked(v); run(() => updateTask(t.id, { done: v })); }} />
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} onBlur={() => { if (label.trim() && label !== t.label) run(() => updateTask(t.id, { label })); }} className={cn("h-8 border-0 px-0 text-base font-semibold shadow-none focus-visible:ring-0", checked && "line-through opacity-60")} aria-label="Libellé de la tâche" data-testid="task-detail-label" />
+            </div>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { if (description.trim() !== (t.description ?? "").trim()) run(() => updateTask(t.id, { description })); }} placeholder="Description : le contexte, le lien, ce qu'il faut ne pas oublier…" rows={4} className="w-full resize-y rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm placeholder:text-muted-foreground/70 hover:border-border focus:border-border focus:outline-none" aria-label="Description de la tâche" data-testid="task-detail-description" />
+            <div className="grid gap-1">
+              <span className="text-[11px] font-semibold text-muted-foreground">Créneaux dans mon agenda</span>
+              <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                {t.slots.map((s) => <span key={s.id} className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px", dayjs(s.endAt).isBefore(dayjs()) ? "bg-muted" : "bg-info-soft text-primary")}><CalendarClock className="size-3" aria-hidden />{slotLabel(s)}<button type="button" aria-label="Retirer ce créneau" disabled={pending} onClick={() => run(() => deleteSlot(s.id))} className="rounded hover:bg-black/10"><X className="size-3" /></button></span>)}
+                {!t.done && <SlotPicker t={t} pending={pending} run={run} />}
+                {t.slots.length === 0 && t.done && <span className="text-muted-foreground">—</span>}
+              </div>
+            </div>
+          </div>
+          <aside className="border-t bg-muted/30 px-4 py-2 md:border-l md:border-t-0">
+            <Field label="Liste">{lists.length > 0 ? <ListChip t={t} pending={pending} run={run} lists={lists} /> : t.list?.name ?? "À trier"}</Field>
+            <Field label="Édition">{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
+            <Field label="Échéance"><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></Field>
+            {t.requestId && <Field label="Demande d'origine"><Link href="/demandes" className="text-primary hover:underline">Ouvrir la demande</Link> · la cocher fait la demande</Field>}
+            <Field label="Actions"><button type="button" disabled={pending} onClick={() => run(() => deleteTask(t.id), () => onOpenChange(false))} className="inline-flex items-center gap-1 text-danger hover:underline"><Trash2 className="size-3" />Supprimer la tâche</button></Field>
+          </aside>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -232,14 +301,14 @@ function ListChip({ t, pending, run, lists }: { t: TaskView; pending: boolean; r
 }
 
 // Échéance : « pour quand ». Raccourcis aujourd'hui / demain / lundi, date libre, ou aucune.
-function DuePicker({ t, pending, run, label, late }: { t: TaskView; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void; label: string | null; late: boolean }) {
+function DuePicker({ t, pending, run, label, late, today }: { t: TaskView; pending: boolean; run: Run; label: string | null; late: boolean; today?: boolean }) {
   const [open, setOpen] = useState(false);
   const set = (d: string | null) => run(() => updateTask(t.id, { dueDate: d }), () => setOpen(false));
   const monday = dayjs().add(1, "week").startOf("isoWeek").format("YYYY-MM-DD");
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" title={label ? "Changer l'échéance" : "Échéance : pour quand ?"} aria-label={label ? `Échéance : ${label}` : "Poser une échéance"} className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px hover:bg-muted", late ? "bg-danger-soft font-semibold text-danger" : label ? "bg-warning-soft text-warning-foreground" : "text-muted-foreground/70")} data-testid={`task-due-${t.id}`}>
+        <button type="button" title={label ? "Changer l'échéance" : "Échéance : pour quand ?"} aria-label={label ? `Échéance : ${label}` : "Poser une échéance"} className={cn("inline-flex items-center gap-1 rounded-sm px-1 py-px hover:bg-muted", late ? "font-semibold text-danger" : today ? "font-medium text-primary" : label ? "text-mint" : "text-muted-foreground/70")} data-testid={`task-due-${t.id}`}>
           <CalendarDays className="size-3" aria-hidden />{label ? `Pour ${label}` : null}
         </button>
       </PopoverTrigger>
@@ -317,7 +386,7 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
             type="button" data-testid={`task-edition-${t.id}`}
             title={t.edition ? "Changer l'édition rattachée, choisir une action, ou détacher" : "Rattacher une édition"}
             aria-label={t.edition ? `Édition : ${t.edition.name}` : "Rattacher une édition"}
-            className={cn("inline-flex max-w-[220px] items-center gap-1 px-1.5 py-px hover:bg-muted", t.edition ? "rounded-l-full bg-secondary text-primary" : "rounded-sm text-muted-foreground/70")}
+            className={cn("inline-flex max-w-[220px] items-center gap-1 px-1.5 py-px hover:bg-muted", t.edition ? "rounded-l-full bg-secondary text-primary" : "rounded-sm text-muted-foreground/70")} style={{ maxWidth: "100%" }}
           >
             <AtSign className="size-3 shrink-0" aria-hidden />
             {t.edition && <span className="truncate">{t.edition.name} · {t.edition.year}{t.action ? ` · ${t.action.name}` : ""}</span>}

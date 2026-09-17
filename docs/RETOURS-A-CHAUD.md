@@ -337,6 +337,14 @@ Gaël : « ok go pour E2 ». Un seul annuaire pour tout ce qui n'est pas l'équi
 
 Gaël (maquette) : « Projets et financements » en H1 avec son icône, les onglets dessous (actif souligné en bleu pétrole), plus de titre répété ni de paragraphe descriptif, une ligne compacte — compteur réel à gauche, action principale à droite — alignée sur le tableau, 12 px au-dessus du tableau et davantage d'air sous les onglets. `DossiersHeader` (`components/common/dossiers-nav.tsx`) : `summary` (compteur), `tools` (filtres, choix d'année, périmètre, aide de la matrice — à gauche), `actions` (une seule action colorée, les autres en contour). Appliqué aux six onglets ; le tableau des projets perd son titre-doublon. Les onglets restent visibles même barre déployée (plus de classe `subnav` ici : ils sont la navigation de la page). Rail : l'info-bulle se ferme au clic et à chaque changement d'adresse (elle restait plantée une fois arrivé sur la page).
 
+### AC. Tâches : redesign inspiré de Todoist, vue liste et vue kanban (18/09) — fait
+
+Gaël (captures Todoist) : « sous de z-index » sur les suggestions « @ », et « redesign de cette partie avec une inspiration de Todoist, vue liste et vue kanban ».
+- **Ligne** : rond à cocher (rouge en retard, pétrole aujourd'hui, gris sinon, rempli une fois fait), libellé, **description** sous le libellé (nouveau champ `Task.description`), échéance en texte coloré (rouge / pétrole / vert), créneaux, demande d'origine ; à droite, édition et liste empilées. Le libellé ouvre la **fiche de la tâche** (`TaskDetail`) : libellé, description, créneaux à gauche ; liste, édition, échéance, demande, suppression à droite. Groupes « En retard · Aujourd'hui · Cette semaine · Plus tard · Sans date » en titres gras ; **« Reporter à aujourd'hui »** sur le groupe En retard (`postponeLate`).
+- **Kanban** (`?affichage=kanban`, commutateur Liste / Kanban en tête, sur « À faire ») : une colonne par liste, « À trier » en tête, cartes (rond, libellé, description sur deux lignes, échéance, créneaux, édition), glisser une carte dans une colonne la range (même mécanique que le glisser vers la colonne de gauche), « + Ajouter une tâche » au pied de chaque colonne (avec `!demain`), menu de colonne → la liste.
+- Z-index : les suggestions « @ » étaient coupées par l'`overflow-hidden` du cadre (pas un z-index) — cadre sans overflow, liste en `z-40`.
+- Les repères des tests sont conservés (`task-input`, `task-done-*`, `task-due-*`, `task-list-*`, `tasks-main` `data-view`…) ; la case à cocher reste un vrai `<input>` posé en transparent sur le rond, pour Playwright comme pour le clavier. 1 test de plus dans `tests/taches.spec.ts`. 57 tests.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

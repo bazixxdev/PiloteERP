@@ -87,3 +87,37 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await iAm(page, "Lucas Perrin");
   await expect(page.getByTestId("my-tasks")).not.toContainText("Relancer le financeur");
 });
+
+// Redesign du 18/09 (inspiration Todoist) : fiche de la tâche avec description, vue kanban par liste, « Reporter » les retards.
+test("la fiche d'une tâche porte une description ; le kanban range par liste ; les retards se reportent à aujourd'hui", async ({ page }) => {
+  await page.goto("/taches");
+  await iAm(page, "Léa Morin");
+  await page.goto("/taches");
+  // Une tâche en retard, puis « Reporter à aujourd'hui ».
+  await page.getByTestId("task-input").fill("Relancer le traiteur !01/01/2020");
+  await page.getByTestId("task-input").press("Enter");
+  const late = page.getByTestId("tasks-main").locator("li", { hasText: "Relancer le traiteur" });
+  await expect(page.getByTestId("due-group-late")).toContainText("Relancer le traiteur");
+  await page.getByTestId("postpone-late").click();
+  await expect(page.getByTestId("due-group-today")).toContainText("Relancer le traiteur");
+  // La fiche : description enregistrée en quittant le champ, reprise sous le libellé.
+  await late.locator("[data-testid^=task-open-]").click();
+  const detail = page.locator("[role=dialog][data-testid^=task-detail-]");
+  await expect(detail).toBeVisible();
+  await detail.getByTestId("task-detail-description").fill("Devis reçu le 12, relance téléphonique si rien vendredi.");
+  await detail.getByTestId("task-detail-description").blur();
+  await page.keyboard.press("Escape");
+  await expect(late).toContainText("Devis reçu le 12");
+  // Kanban : une colonne par liste, « À trier » en tête, la nouvelle tâche s'y trouve ; un ajout au pied d'une colonne.
+  await page.getByTestId("tasks-display-kanban").click();
+  await expect(page.getByTestId("tasks-main")).toHaveAttribute("data-view", "kanban");
+  await expect(page.getByTestId("kanban-col-none")).toContainText("Relancer le traiteur");
+  const vie = page.getByTestId("tasks-kanban").locator('[data-name="Vie statutaire"]');
+  await expect(vie).toContainText("Envoyer la convocation");
+  await vie.locator("[data-testid^=kanban-add-]").click();
+  await vie.locator("[data-testid^=kanban-input-]").fill("Imprimer les feuilles d'émargement");
+  await vie.locator("[data-testid^=kanban-input-]").press("Enter");
+  await expect(vie).toContainText("Imprimer les feuilles d'émargement");
+  await page.getByTestId("tasks-display-liste").click();
+  await expect(page.getByTestId("tasks-main")).toHaveAttribute("data-view", "afaire");
+});
