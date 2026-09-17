@@ -244,7 +244,7 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
   const { text: dueText, late, today } = dueMeta(t);
   const [checked, setChecked] = useState(t.done);
   useEffect(() => setChecked(t.done), [t.done]);
-  const Field = ({ label: l, children }: { label: string; children: React.ReactNode }) => <div className="grid gap-1 border-b border-border/60 py-2.5 last:border-0"><span className="text-[11px] font-semibold text-muted-foreground">{l}</span><div className="text-xs">{children}</div></div>;
+  const Field = ({ label: l, children }: { label: string; children: React.ReactNode }) => <div className="grid min-w-0 gap-1 border-b border-border/60 py-2.5 last:border-0"><span className="text-[11px] font-semibold text-muted-foreground">{l}</span><div className="min-w-0 text-xs [&_button]:max-w-full [&_span]:max-w-full">{children}</div></div>;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl gap-0 p-0 sm:max-w-3xl" data-testid={`task-detail-${t.id}`}>
@@ -267,7 +267,7 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
               </div>
             </div>
           </div>
-          <aside className="border-t bg-muted/30 px-4 py-2 md:border-l md:border-t-0">
+          <aside className="min-w-0 border-t bg-muted/30 px-4 py-2 md:border-l md:border-t-0">
             <Field label="Liste">{lists.length > 0 ? <ListChip t={t} pending={pending} run={run} lists={lists} /> : t.list?.name ?? "À trier"}</Field>
             <Field label="Édition">{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
             <Field label="Échéance"><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></Field>
@@ -379,7 +379,7 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
   const current = editions.find((e) => e.id === t.edition?.id);
   const set = (editionId: string | null, actionId: string | null = null) => run(() => updateTask(t.id, { editionId, actionId }), () => { setOpen(false); setQ(""); });
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex min-w-0 max-w-full items-center">
       <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ(""); }}>
         <PopoverTrigger asChild>
           <button
