@@ -8,6 +8,7 @@ import { locate, type NavSection } from "@/lib/navigation";
 const EDITION_TABS: Record<string, string> = { apercu: "Aperçu", fiche: "Fiche", actions: "Actions", financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };
 const OUTSIDE: [RegExp, string][] = [
   [/^\/compte/, "Mon compte"],
+  [/^\/admin\/depart/, "Préparer un départ"],
   [/^\/projets\/proposer/, "Proposer un projet"],
   [/^\/validations/, "Validations par niveau"],
   [/^\/cafe/, "Écran café"],

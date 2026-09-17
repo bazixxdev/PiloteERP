@@ -23,6 +23,8 @@ import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
 import { SOURCE_LABEL } from "@/lib/ledger";
 import { AccountActions, OutboxRow } from "./account-forms";
+import { PersonPanelBody, personPanelTitle } from "./person-panel";
+import { UrlPanel } from "@/components/common/url-panel";
 import { DEMO_MODE } from "@/lib/auth";
 
 const SECTIONS = [
@@ -36,8 +38,8 @@ const SECTIONS = [
 
 const COLOR_OPTS = ["primary", "info", "mint", "warning", "danger", "coral", "muted"].map((c) => ({ value: c, label: c }));
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
-  const { section } = await searchParams;
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ section?: string; personne?: string }> }) {
+  const { section, personne } = await searchParams;
   if (section === "projets") redirect("/projets");
   const current = SECTIONS.some((s) => s.key === section) ? section! : "personnes";
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
@@ -99,12 +101,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Personnes" description="Rôle, pôle, rythme de travail et jours disponibles dans l'année." actions={rw ? <AddSimpleForm kind="person" placeholder="Prénom Nom" /> : undefined}>
             <table className="w-full text-sm" data-testid="people-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5">Nom</th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme · en vigueur depuis</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
+                <tr><th className="py-1.5">Nom</th><th className="py-1.5"></th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme · en vigueur depuis</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
               </thead>
               <tbody className="divide-y">
                 {people.map((p) => (
                   <tr key={p.id} className={cn(!p.active && "opacity-50")}>
                     <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="name" type="text" value={p.name} readOnly={!rw} inputClassName="font-medium" /></td>
+                    {/* La fiche (lot E1) s'ouvre en panneau sur la page, comme les lignes de la matrice. */}
+                    <td className="w-14 py-0.5"><Link href={`/admin?section=personnes&personne=${p.id}`} scroll={false} className="text-xs text-primary underline-offset-2 hover:underline" data-testid={`person-open-${p.id}`}>Fiche</Link></td>
                     <td className="min-w-[200px] py-0.5"><AutoField model="person" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} readOnly={!rw} placeholder="— transversal —" /></td>
                     <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="role" type="select" value={p.role} options={refOpt("role")} allowEmpty={false} readOnly={!rw} testId={`role-${p.id}`} /></td>
                     <td className="min-w-[260px] py-0.5">
@@ -223,6 +227,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           ))}
         </div>
       )}
+
+      {current === "personnes" && personne && (() => {
+        const p = people.find((x) => x.id === personne);
+        if (!p) return null;
+        const head = personPanelTitle({ ...p, pole: poles.find((x) => x.id === p.poleId) ?? null }, refs);
+        return (
+          <UrlPanel title={head.title} description={head.description} closeHref="/admin?section=personnes" testId="person-panel-sheet">
+            <PersonPanelBody id={p.id} refs={refs} rw={rw} poles={poles} rhythms={rhythms} />
+          </UrlPanel>
+        );
+      })()}
 
       {current === "roles" && (
         <div className="grid gap-4">

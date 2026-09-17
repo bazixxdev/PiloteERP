@@ -59,7 +59,11 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   call: { label: { type: "text" }, scheme: { type: "text" }, deadline: { type: "date" }, rolling: { type: "bool" }, recurring: { type: "bool" }, amountHint: { type: "text" }, link: { type: "text" }, note: { type: "textarea" } },
   convention: { reference: { type: "text" }, scheme: { type: "text" }, label: { type: "text" }, startYear: { type: "number" }, endYear: { type: "number" }, status: { type: "select" }, amountRequested: { type: "number" }, amountNotified: { type: "number" }, submittedAt: { type: "date" }, notifiedAt: { type: "date" }, signedAt: { type: "date" }, notes: { type: "textarea" }, contactId: { type: "select" } },
   indicator: { label: { type: "text" }, target: { type: "text" }, actual: { type: "text" }, imposed: { type: "bool" } },
-  person: { name: { type: "text" }, role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" }, email: { type: "text" } },
+  person: {
+    name: { type: "text" }, firstName: { type: "text", label: "Prénom" }, lastName: { type: "text", label: "Nom" }, jobTitle: { type: "text", label: "Fonction" }, phone: { type: "text", label: "Téléphone" },
+    arrivedAt: { type: "date", label: "Arrivée" }, leftAt: { type: "date", label: "Départ" }, note: { type: "textarea", label: "Note" },
+    role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" }, email: { type: "text" },
+  },
   project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" } },
   editionPersonDays: { soldDays: { type: "number" }, plannedDays: { type: "number" }, availableDays: { type: "number" } },
   expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" } },

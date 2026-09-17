@@ -189,6 +189,24 @@ async function main() {
   );
 
   type P = { name: string; role: string; rhythm: string; pole: number | null; days: number };
+  // Fiche (lot E1) : fonction, téléphone et date d'arrivée fictifs.
+  const FICHES: Record<string, [string, string, string]> = {
+    "Claire Vasseur": ["Directrice", "02 38 00 00 01", "2019-03-01"],
+    "Nadia Ferrand": ["Responsable administrative et financière", "02 38 00 00 02", "2020-09-01"],
+    "Léa Morin": ["Assistante de direction", "02 38 00 00 03", "2022-01-10"],
+    "Julien Barbot": ["Responsable du pôle Représentation et observation", "06 00 00 00 04", "2017-06-01"],
+    "Sophie Delaunay": ["Responsable du pôle Transition et coopération territoriale", "06 00 00 00 05", "2018-11-05"],
+    "Maxime Roussel": ["Chargé de mission observation de l'ESS", "06 00 00 00 06", "2021-04-12"],
+    "Inès Cabral": ["Chargée de mission plaidoyer et représentation", "06 00 00 00 07", "2023-02-01"],
+    "Thomas Guérin": ["Chargé de mission transition écologique", "06 00 00 00 08", "2020-01-06"],
+    "Camille Aubert": ["Chargée de mission coopération territoriale", "06 00 00 00 09", "2022-09-01"],
+    "Yasmine Benali": ["Chargée de mission emploi et formation", "06 00 00 00 10", "2021-10-04"],
+    "Hugo Lemaire": ["Chargé de mission sensibilisation", "06 00 00 00 11", "2019-09-02"],
+    "Élise Fontaine": ["Chargée de communication", "06 00 00 00 12", "2023-05-15"],
+    "Romain Tessier": ["Chargé de mission événements", "06 00 00 00 13", "2022-03-01"],
+    "Lucas Perrin": ["Alternant communication", "06 00 00 00 14", "2025-09-01"],
+    "Manon Girard": ["Alternante coopération territoriale", "06 00 00 00 15", "2025-09-01"],
+  };
   const peopleDefs: P[] = [
     { name: "Claire Vasseur", role: "director", rhythm: "option_b", pole: null, days: 205 },
     { name: "Nadia Ferrand", role: "raf", rhythm: "option_a", pole: null, days: 200 },
@@ -220,7 +238,11 @@ async function main() {
     await prisma.account.create({ data: { userId: user.id, accountId: user.id, providerId: "credential", password: passwordHash } });
     people.push(
       await prisma.person.create({
-        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i, icsToken: randomBytes(18).toString("base64url"), email, userId: user.id },
+        data: {
+          name: p.name, firstName: p.name.split(" ")[0], lastName: p.name.split(" ").slice(1).join(" "),
+          jobTitle: FICHES[p.name]?.[0] ?? null, phone: FICHES[p.name]?.[1] ?? null, arrivedAt: FICHES[p.name] ? new Date(FICHES[p.name][2]) : null,
+          role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i, icsToken: randomBytes(18).toString("base64url"), email, userId: user.id,
+        },
       }),
     );
   }

@@ -36,7 +36,15 @@ model Role {
 
 model Person {
   id            String   @id @default(cuid())
-  name          String
+  name          String // « Prénom Nom », affiché partout ; tenu en cohérence avec firstName / lastName (lot E1)
+  // Fiche (lot E1) : identité, poste, dates de présence. `leftAt` est posé par « Préparer un départ » ; rien n'est effacé.
+  firstName     String   @default("")
+  lastName      String   @default("")
+  jobTitle      String? // fonction affichée : « chargée de mission ESS et emploi »
+  phone         String?
+  arrivedAt     DateTime?
+  leftAt        DateTime?
+  note          String?
   poleId        String?
   pole          Pole?    @relation("PoleMembers", fields: [poleId], references: [id])
   role          String // code d'un Role (pilot | contributor | pole_lead | director | raf | assistant | rôles créés dans l'admin)

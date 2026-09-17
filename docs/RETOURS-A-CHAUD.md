@@ -309,6 +309,17 @@ Maquette de Gaël (capture) : navigation et identité visuelle, sans toucher aux
 - **Couleurs** : menu bleu clair `#e9f3f8`, primaire **bleu pétrole `#1b6a8a`** (bouton principal, rubrique active — feuille courante en fond pétrole et texte blanc, section ouverte en pétrole gras, rail : icône blanche sur pétrole), bleu ciel `#cfe6f2` / `#a9d3e6` pour le bloc du compte et les avatars CODIR. Surfaces blanches, vert / orange fonctionnels inchangés.
 - Données du menu utilisateur et éditions de la recherche factorisées (`components/shell/account-data.ts`, `nav-editions.ts`, une lecture par requête). 51 tests verts sans retouche.
 
+### Y. Lot E1 « Fiche personne » et menu (17/09, soir) — fait
+
+Gaël : « go pour E1, juste tu peux mettre Temps après Échéances dans le menu et Demandes après Projets et financements ».
+- Menu : Mon travail, Portefeuille, Projets et financements, Demandes, Échéances, Temps, Direction, Admin (`lib/navigation.ts`).
+- `Person` : `firstName` / `lastName` (migration : le nom se découpe au premier espace), `jobTitle`, `phone`, `arrivedAt` / `leftAt`, `note`. Le `name` affiché partout reste et se tient en cohérence dans les deux sens (`app/actions/fields.ts`) ; le compte better-auth suit le nom.
+- Admin › Personnes : colonne « Fiche » → panneau sur la page (`?personne=`, `app/admin/person-panel.tsx`) : identité, fonction, e-mail, téléphone, rôle, pôle, présence, note, état du compte, **ce qu'elle porte** (`lib/people.ts` : projets pilotés, garant, pôle, sponsor, actions à faire, demandes ouvertes, tâches, équipes en cours) et le bouton « Préparer un départ ».
+- **Préparer un départ** (`/admin/depart/<id>`, `app/actions/people.ts`) : un bloc par nature avec un repreneur (collègues du même pôle d'abord), retrait des équipes des éditions en cours, date, désactivation (sessions fermées) — le tout en une transaction, les repreneurs notifiés, l'historique intact. Garde-fous : pas soi-même, une direction active au moins, repreneur actif ≠ partant.
+- Mon compte : fonction et téléphone modifiables par la personne (règle dans `allowed()`), e-mail et date d'arrivée affichés. Seed : fonctions, téléphones et dates d'arrivée fictifs.
+- Piège rejoué : après une migration, le serveur de dev garde l'ancien client Prisma — champs vides tant qu'on ne le redémarre pas.
+- 2 tests `tests/personnes.spec.ts` (fiche + cohérence du nom + Mon compte ; départ de Manon avec un projet qu'elle vient de proposer, repris par Lucas, connexion refusée, notification, réactivation). 53 tests.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/common/page-header";
 import { isCodir } from "@/lib/rights";
 import { Section } from "@/components/common/section";
+import { fmtDate } from "@/lib/format";
+import { AutoField } from "@/components/inline/auto-field";
 import { Avatar } from "@/components/shell/person-switcher";
 import { IcsCard } from "@/components/common/ics-card";
 import { prisma } from "@/lib/db";
@@ -30,7 +32,7 @@ export default async function ComptePage() {
   );
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Mon compte" subtitle="Ce que l'outil sait de vous. Les réglages se font dans l'admin ; en V1, l'identité viendra du compte Microsoft." />
+      <PageHeader title="Mon compte" subtitle="Ce que l'outil sait de vous. Fonction et téléphone sont à vous ; le reste se règle dans l'admin." />
       <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
         <Section title="Identité et poste">
           <div className="mb-4 flex items-center gap-3">
@@ -38,6 +40,11 @@ export default async function ComptePage() {
             <div><div className="text-base font-semibold">{me.name}</div><div className="text-xs text-muted-foreground">{refLabel(refs, "role", me.role)}{me.pole ? ` · ${me.pole.name}` : " · transversal"}</div></div>
           </div>
           <dl className="grid gap-3">
+            {/* Lot E1 : chacun tient sa fonction et son téléphone ; le reste est à l'administration. */}
+            {row("Fonction", <AutoField model="person" id={me.id} field="jobTitle" type="text" value={me.jobTitle} label="Fonction" placeholder="Votre fonction, telle qu'elle s'affiche" testId="me-jobTitle" />)}
+            {row("Téléphone", <AutoField model="person" id={me.id} field="phone" type="text" value={me.phone} label="Téléphone" placeholder="06 …" testId="me-phone" />)}
+            {row("E-mail", me.email ?? "—")}
+            {me.arrivedAt && row("Dans l'équipe depuis", fmtDate(me.arrivedAt))}
             {row("Rôle", refLabel(refs, "role", me.role))}
             {row("Pôle", me.pole?.name ?? "Fonction transversale")}
             {row("Rythme de travail", rhythm ? rhythm.label : "Non configuré")}

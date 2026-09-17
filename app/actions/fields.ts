@@ -61,6 +61,8 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const ctx = await editionContext(d.editionId, personId);
     return canWriteLayer(me, "year", ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous ne pouvez pas modifier ce lien.";
   }
+  // Chacun tient sa propre fonction et son téléphone (Mon compte) ; le reste de la fiche est à l'administration.
+  if (model === "person" && id === personId && ["jobTitle", "phone"].includes(field)) return null;
   return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
 }
 
@@ -106,6 +108,18 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       // Désactiver = plus d'accès : les sessions ouvertes du compte tombent tout de suite (lot F).
       await prisma.person.update({ where: { id }, data: { active: false } });
       if (target?.userId) await prisma.session.deleteMany({ where: { userId: target.userId } });
+    } else if (model === "person" && (field === "name" || field === "firstName" || field === "lastName")) {
+      // Le nom affiché et le couple prénom / nom restent cohérents dans les deux sens : « Prénom Nom » se découpe au premier espace.
+      const p = await prisma.person.findUnique({ where: { id } });
+      if (!p) return { ok: false, error: "Personne introuvable." };
+      const v = String(value ?? "").trim();
+      let firstName = p.firstName, lastName = p.lastName;
+      if (field === "name") { if (!v) return { ok: false, error: "Le nom est obligatoire." }; const i = v.indexOf(" "); firstName = i > 0 ? v.slice(0, i) : v; lastName = i > 0 ? v.slice(i + 1).trim() : ""; }
+      else if (field === "firstName") firstName = v; else lastName = v;
+      const name = `${firstName} ${lastName}`.trim();
+      if (!name) return { ok: false, error: "Le nom est obligatoire." };
+      await prisma.person.update({ where: { id }, data: { firstName, lastName, name } });
+      if (p.userId) await prisma.user.update({ where: { id: p.userId }, data: { name } });
     } else if (model === "person" && field === "role") {
       // Même garde-fou qu'à la désactivation : il reste toujours une direction active (le rôle qui garde l'administration).
       const target = await prisma.person.findUnique({ where: { id } });

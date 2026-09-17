@@ -95,7 +95,11 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 - Tests : import idempotent (rejouer = même résultat), purge d'un exercice, deux sources sur un même code, édition sans code.
 **Taille** : 2 sessions (1 = snapshot + import fichier + lectures ; 2 = Pennylane + correspondances + rapprochement). Anticipe la V2 du cahier des charges (EF-E1b) : à lancer sur ton accord.
 
-## Lot E — Organisations unifiées (optionnel)
+## Lot E1 — Fiche personne et « Préparer un départ » — **FAIT (17/09)**
+
+`Person` gagne prénom / nom (le `name` reste et suit dans les deux sens), fonction, téléphone, arrivée / départ, note ; fiche en **panneau** sur Admin › Personnes (`?personne=`) avec ce que la personne porte ; chacun tient sa fonction et son téléphone dans Mon compte ; **« Préparer un départ »** (`/admin/depart/<id>`, EF-K3) : projets pilotés, garanties, responsabilité de pôle, sponsor, actions à faire, demandes ouvertes → un repreneur par bloc (même pôle proposé d'abord, repreneurs prévenus), retrait des équipes en cours, date de départ, désactivation ; rien n'est effacé. Les contacts externes ne sont **pas** des `Person` (parti pris validé le 17/09) : ils viendront avec les organisations (E2).
+
+## Lot E2 — Organisations unifiées (à faire, après E1)
 
 `Funder` + `Supplier` + `FunderContact` → `Organisation` (`kinds` : financeur / fournisseur / partenaire / réseau / collectivité) + `OrganisationContact` ; `Edition.partners` (texte) → liens, texte conservé en repli ; admin › Référentiels. Repris de TLST : `Partenaire` unique + `estFinanceur`, contact détaché ≠ supprimé. Migration de données à la main. **Après** A-D ; se justifie surtout par `produit.md`.
 **Taille** : 1-2 sessions.
