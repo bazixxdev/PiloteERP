@@ -296,6 +296,10 @@ Gaël : « ok c'est bon, go » sur le design proposé (catalogue en code, rôles
 - Deux cohérences gagnées en passant : la RAF traite les demandes partout (elle l'était dans deux actions sur trois) ; la teinte « mousse » des avatars suit `codir.access` et non trois codes de rôle.
 - 2 tests `tests/droits.spec.ts` (un droit donné / retiré change l'écran tout de suite ; création par copie, attribution, suppression refusée puis acceptée, garde-fou Direction) ; les 49 autres inchangés et verts = les droits par défaut sont bien ceux d'avant. 51 tests.
 
+### W. 404 en ligne après déconnexion (17/09, soir) — corrigé
+
+Gaël : « j'ai une 404 en ligne c'est normal ? ». Logs nginx : `/outilcli/cress/pilote/outilcli/cress/pilote/connexion` — sous-chemin doublé. `redirect()` de Next ajoute déjà le basePath ; les deux `redirect(withBase(…))` du lot F (page de connexion, `getCurrentPerson`) le doublaient. Invisible en local (basePath vide) et invisible derrière le middleware (qui redirige avant la page) : ça ne sort que quand une session tombe **pendant** la navigation — déconnexion, « déconnecter partout », désactivation. Corrigé (chemins nus), commentaire de `lib/base-path.ts` remis d'aplomb : `redirect()`, `<Link>` et `router.push` gèrent le sous-chemin seuls ; `withBase` sert aux `<a href>`, `<img src>` et URL absolues.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

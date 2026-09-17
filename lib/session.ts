@@ -2,7 +2,6 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { auth, DEMO_MODE } from "./auth";
-import { withBase } from "./base-path";
 import { prisma } from "./db";
 import { buildRefMap, type RefMap } from "./refs";
 import { actorOf, codirRole, getRoleMap, getRoles, withActor } from "./roles";
@@ -45,7 +44,7 @@ export const getCurrentPersonOrNull = cache(async () => {
 // Personne courante, sinon page de connexion. Une seule porte d'entrée pour tout l'outil.
 export const getCurrentPerson = cache(async () => {
   const p = await getCurrentPersonOrNull();
-  if (!p) redirect(withBase("/connexion"));
+  if (!p) redirect("/connexion"); // redirect() ajoute le basePath lui-même (le doubler = 404 en ligne)
   return p;
 });
 
