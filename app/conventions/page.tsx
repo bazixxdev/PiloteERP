@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { listFunders } from "@/lib/organisations";
-import { PageHeader } from "@/components/common/page-header";
-import { DossiersNav } from "@/components/common/dossiers-nav";
+import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { prisma } from "@/lib/db";
@@ -43,10 +42,9 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
 
   return (
     <div className="p-4 md:p-6">
-      <DossiersNav current="conventions" />
-      <PageHeader
-        title="Conventions"
-        subtitle={`${all.length} convention${all.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}. Une convention existe une fois, même sur plusieurs années et plusieurs projets ; la somme des affectations ne dépasse pas le notifié.`}
+      <DossiersHeader
+        current="conventions"
+        summary={`${all.length} convention${all.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}. Une convention existe une fois, même sur plusieurs années et plusieurs projets ; la somme des affectations ne dépasse pas le notifié.`}
         actions={rw ? <CreateConventionDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined}
       />
 

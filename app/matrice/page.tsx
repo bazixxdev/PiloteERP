@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { listFunders } from "@/lib/organisations";
 import { Download } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { DossiersNav } from "@/components/common/dossiers-nav";
+import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { HelpTip } from "@/components/common/help-tip";
@@ -69,16 +68,12 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="p-4 md:p-6">
-      <DossiersNav current="matrice" />
-      <PageHeader
-        title={<span className="inline-flex items-center gap-2">Qui finance quoi <HelpTip title="Lire la matrice" testId="matrix-help"><p>Une ligne par édition de l&apos;année, une colonne par financeur présent. <b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i> = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l&apos;obtenu à l&apos;enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, l&apos;édition est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l&apos;année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s&apos;affichent.</p></HelpTip></span>}
-        subtitle={<>{year} · {m.rows.length} édition{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre sa ligne de financement en panneau, sans quitter le tableau ; le chiffre cliqué y est surligné.</>}
+      <DossiersHeader
+        current="matrice"
+        summary=<>{year} · {m.rows.length} édition{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre sa ligne de financement en panneau, sans quitter le tableau ; le chiffre cliqué y est surligné.</>
+        tools={<><YearPicker years={[...new Set([...years.map((y) => y.year), currentYear])].sort()} current={year} hrefFor={(y) => qs({ annee: y })} />{!isTransversal(me) && <PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => qs({ perimetre: p })} />}<HelpTip title="Lire la matrice" testId="matrix-help"><p>Une ligne par édition de l&apos;année, une colonne par financeur présent. <b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i> = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l&apos;obtenu à l&apos;enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, l&apos;édition est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l&apos;année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s&apos;affichent.</p></HelpTip></>}
         actions={<div className="flex flex-wrap items-center gap-2">{money && <Button asChild variant="outline" size="sm"><a href={withBase(`/matrice/export?annee=${year}${perimeter === "pole" ? "&perimetre=pole" : ""}`)} data-testid="matrix-export"><Download />CSV</a></Button>}</div>}
       />
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <YearPicker years={[...new Set([...years.map((y) => y.year), currentYear])].sort()} current={year} hrefFor={(y) => qs({ annee: y })} />
-        {!isTransversal(me) && <PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => qs({ perimetre: p })} />}
-      </div>
 
       {m.rows.length === 0 ? <EmptyState title={`Aucune édition en ${year}`} hint="Changez d'année ou de périmètre." /> : (
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Matrice ${year} : ${m.rows.length} éditions × ${m.columns.length} financeurs`}>

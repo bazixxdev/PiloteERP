@@ -2,8 +2,7 @@ import Link from "next/link";
 import { listFunders } from "@/lib/organisations";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { DossiersNav } from "@/components/common/dossiers-nav";
+import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
@@ -43,10 +42,9 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 md:p-6">
-      <DossiersNav current="appels" />
-      <PageHeader
-        title="Appels à projets"
-        subtitle={<>{active.length} appel{active.length > 1 ? "s" : ""} en veille · {toStudy} à regarder ou à étudier · {applying} « on dépose » sans convention encore{soon > 0 && <span className="text-warning-foreground"> · {soon} à échéance dans les {settings.deliverableAlertDays} j</span>}. Le CODIR pose le statut ; « Étudier » crée la convention à déposer, pré-remplie, une seule fois.</>}
+      <DossiersHeader
+        current="appels"
+        summary={<>{active.length} appel{active.length > 1 ? "s" : ""} en veille · {toStudy} à regarder ou à étudier · {applying} « on dépose » sans convention encore{soon > 0 && <span className="text-warning-foreground"> · {soon} à échéance dans les {settings.deliverableAlertDays} j</span>}. Le CODIR pose le statut ; « Étudier » crée la convention à déposer, pré-remplie, une seule fois.</>}
         actions={rw ? <AddCallDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} defaultFunderId={sp.financeur} /> : undefined}
       />
       <CallFilters funders={funders.map((f) => ({ value: f.id, label: f.name }))} current={{ financeur: sp.financeur ?? "", statut: sp.statut ?? "", vue: sp.vue ?? "" }} />

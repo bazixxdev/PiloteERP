@@ -333,6 +333,10 @@ Gaël : « ok go pour E2 ». Un seul annuaire pour tout ce qui n'est pas l'équi
 - Non fait, volontairement : pas d'écran « fournisseur » à part (l'annuaire filtré suffit), pas de fusion manuelle de deux organisations (à voir à l'usage), le texte libre `Edition.partners` reste.
 - 2 tests `tests/organisations.spec.ts` ; les tests financeurs / devis / conventions existants passent sur la nouvelle table. 56 tests.
 
+### AB. En-tête des onglets « Projets et financements » + info-bulle du rail (18/09) — fait
+
+Gaël (maquette) : « Projets et financements » en H1 avec son icône, les onglets dessous (actif souligné en bleu pétrole), plus de titre répété ni de paragraphe descriptif, une ligne compacte — compteur réel à gauche, action principale à droite — alignée sur le tableau, 12 px au-dessus du tableau et davantage d'air sous les onglets. `DossiersHeader` (`components/common/dossiers-nav.tsx`) : `summary` (compteur), `tools` (filtres, choix d'année, périmètre, aide de la matrice — à gauche), `actions` (une seule action colorée, les autres en contour). Appliqué aux six onglets ; le tableau des projets perd son titre-doublon. Les onglets restent visibles même barre déployée (plus de classe `subnav` ici : ils sont la navigation de la page). Rail : l'info-bulle se ferme au clic et à chaque changement d'adresse (elle restait plantée une fois arrivé sur la page).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

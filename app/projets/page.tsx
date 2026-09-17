@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/common/page-header";
 import { Section } from "@/components/common/section";
 import { AutoField } from "@/components/inline/auto-field";
-import { DossiersNav } from "@/components/common/dossiers-nav";
+import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
@@ -25,10 +24,9 @@ export default async function ProjetsPage() {
   const currentYear = new Date().getFullYear();
   return (
     <div className="p-4 md:p-6">
-      <DossiersNav current="projets" />
-      <PageHeader
-        title="Projets et éditions"
-        subtitle={`${projects.length} projets · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions.${rw ? "" : " Lecture seule : la direction et la RAF créent les projets ; vous pouvez en proposer un."}`}
+      <DossiersHeader
+        current="projets"
+        summary={`${projects.length} projet${projects.length > 1 ? "s" : ""} · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions`}
         actions={
           <>
             <Button asChild variant="outline" size="sm" title="Toutes les fiches de l'année en un seul Word, par pôle puis mission — à la place du copier-coller"><a href={withBase(`/plan-operationnel/export?annee=${currentYear}`)} data-testid="export-plan-operationnel"><FileDown />Plan opérationnel {currentYear} (Word)</a></Button>
@@ -38,7 +36,8 @@ export default async function ProjetsPage() {
         }
       />
       <div className="overflow-x-auto">
-        <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre.">
+        {/* Le tableau directement sous la ligne compacte (maquette du 18/09) : l'explication vit dans le lexique (Projet, Édition). */}
+        <Section>
           <table className="w-full text-sm" data-testid="projects-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5" title="Pôle principal, puis pôles associés pour un projet commun">Pôles</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>

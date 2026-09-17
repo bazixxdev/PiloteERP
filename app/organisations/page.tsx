@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/common/page-header";
-import { DossiersNav } from "@/components/common/dossiers-nav";
+import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { UrlPanel } from "@/components/common/url-panel";
 import { prisma } from "@/lib/db";
@@ -30,9 +29,7 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
   const closeHref = `/organisations${kind || q ? `?${new URLSearchParams({ ...(kind ? { genre: kind } : {}), ...(q ? { q } : {}) }).toString()}` : ""}`;
   return (
     <div className="p-4 md:p-6">
-      <DossiersNav current="organisations" />
-      <PageHeader title="Organisations" subtitle={`${all.length} organisations · financeurs, fournisseurs, partenaires, réseaux et collectivités dans un seul annuaire ; une organisation peut être plusieurs choses à la fois.`} actions={rw ? <CreateOrganisationForm /> : undefined} />
-      <KindFilter current={kind} q={q} counts={counts} />
+      <DossiersHeader current="organisations" summary={`${rows.length} organisation${rows.length > 1 ? "s" : ""}${kind || q ? ` sur ${all.length}` : ""}`} tools={<KindFilter current={kind} q={q} counts={counts} />} actions={rw ? <CreateOrganisationForm /> : undefined} />
       {rows.length === 0 ? <EmptyState title="Aucune organisation" hint={q ? "Rien ne correspond à cette recherche." : "Ajoutez-en une, ou changez de genre."} /> : (
         <div className="overflow-auto rounded-md border bg-card">
           <table className="w-full text-[13px]" data-testid="organisations-table">

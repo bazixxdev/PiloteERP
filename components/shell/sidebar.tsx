@@ -35,6 +35,10 @@ const STORAGE_KEY = "pilote-sidebar-collapsed";
 // sur l'icône). Au survol, une info-bulle donne le nom, sauf quand le panneau est ouvert. La barre ne se déplie pas.
 function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSection; Icon: LucideIcon; activeHref: string | null; isOpen: boolean; onOpenChange: (o: boolean) => void }) {
   const badge = s.badge ?? 0;
+  // L'info-bulle se ferme au clic et à chaque changement de page : sinon elle reste plantée sur l'icône une fois arrivé.
+  const [tip, setTip] = useState(false);
+  const pathname = usePathname();
+  useEffect(() => { setTip(false); }, [pathname]);
   const within = s.items.some((l) => l.href === activeHref);
   const iconClass = cn(
     "relative grid h-10 w-11 place-items-center rounded-md text-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20",
@@ -45,9 +49,9 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
   if (s.items.length <= 1) {
     // Une rubrique sans sous-menu (ou à une seule feuille) mène directement à sa page.
     return (
-      <Tooltip>
+      <Tooltip open={tip} onOpenChange={setTip}>
         <TooltipTrigger asChild>
-          <Link href={s.items[0]?.href ?? "/portefeuille"} aria-label={s.label} aria-current={within ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`}><Icon className="size-5" />{dot}</Link>
+          <Link href={s.items[0]?.href ?? "/portefeuille"} aria-label={s.label} aria-current={within ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => setTip(false)}><Icon className="size-5" />{dot}</Link>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
       </Tooltip>
@@ -55,11 +59,11 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
   }
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange}>
-      <Tooltip open={isOpen ? false : undefined}>
+      <Tooltip open={isOpen ? false : tip} onOpenChange={setTip}>
         <TooltipTrigger asChild>
           <PopoverAnchor asChild>
             {/* Ouverture pilotée à la main : un second clic sur l'icône ferme (le déclencheur Radix, pris entre le clic « dehors » et le sien, rouvrait). */}
-            <button type="button" aria-label={s.label} aria-haspopup="menu" aria-expanded={isOpen} aria-current={within && !isOpen ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => onOpenChange(!isOpen)}><Icon className="size-5" />{dot}</button>
+            <button type="button" aria-label={s.label} aria-haspopup="menu" aria-expanded={isOpen} aria-current={within && !isOpen ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => { setTip(false); onOpenChange(!isOpen); }}><Icon className="size-5" />{dot}</button>
           </PopoverAnchor>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
