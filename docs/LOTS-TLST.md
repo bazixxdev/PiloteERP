@@ -133,3 +133,19 @@ better-auth (hachage scrypt, sessions 7 jours, anti-force brute, désactivation 
 6. E puis F selon le 28/09.
 
 A + B + C tiennent en trois sessions et ne touchent pas aux écrans en recette : on ajoute des onglets et des blocs, on ne refait rien.
+
+## Reste à faire — consigné le 18/09 (échange avec Gaël)
+
+Tout le plan côté Pilote est livré (A, 0, B, C, D, P, F, F2, E1, E2, G-import). Ce qui vient d'erp-tlst et n'est **pas** dans le Pilote :
+
+| Quoi | Décision | Comment le faire proprement, le jour venu |
+|---|---|---|
+| **Brevo** (import des contacts) | à faire, module activable | **Pas seulement des contacts d'organisation** : l'import ramène tous les contacts avec leurs attributs (listes → tags, `brevoContactId`, statut RGPD désinscrit / supprimé), rattachés ou non à une structure. Modèle cible : table `Contact` avec organisation *facultative*, tags, identifiant et statut Brevo, rapprochement par e-mail, sens unique Brevo → outil ; `OrganisationContact` en devient le cas rattaché (`organisationId` nullable, une migration). Écran : annuaire des contacts à côté des organisations, filtre par tag. Reprendre le client Brevo d'erp-tlst (`src/lib/brevo`). |
+| **Adhérents + HelloAsso** | à faire, module activable | Adhésion portée par une organisation ou une personne de l'annuaire (E2) ; synchronisation HelloAsso à sens unique ; reprendre `src/lib/helloasso` et `members` d'erp-tlst. |
+| **Trésorerie** | à faire, module activable | Reprendre le module d'erp-tlst (commité, jamais déployé) sur le grand livre du lot D. |
+| **Matériel & prêts** | à faire, module activable | Brief décidé côté TLST, jamais codé. |
+| **Notes de frais natives (G)** | **à décider plus tard** | Le mode import (compte 625 dans le réalisé) couvre la CRESS en V1. Le module natif (saisie, circuit de validation existant, barème km, export paie) n'a de sens que si un client sort de son outil de paie / compta pour ça. |
+| **Entra ID** | plus tard | Second fournisseur better-auth sur le même `User` (1-2 j). |
+| **Multi-instance (lot I)** | **attendre la revue du projet** lancée par Gaël | `config/clients/<client>.ts` (nom, logo, palette, vocabulaire — 31 fichiers citent encore « CRESS »), `deploy.sh` paramétré par instance (serveur, base, sous-chemin), un seed par client, modules TLST derrière `instanceHas`. Règle inchangée : un code, une branche `main`, jamais de `if (client === …)` ni de branche par client. |
+
+**Mises à jour à plusieurs instances** : oui, chaque évolution du code se déploie sur **chaque** serveur (même commit, `deploy.sh` par instance ou une boucle), et les migrations tournent sur chaque base. C'est le prix d'« une instance par client » — et la raison pour laquelle rien ne doit dépendre du client dans le code : sinon les deux déploiements divergent.
