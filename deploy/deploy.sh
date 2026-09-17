@@ -7,6 +7,7 @@
 # Principes (hérités de MCA) : on construit AVANT d'arrêter ; sauvegarde de la base (pg_dump) avant migration ;
 # migrations avant démarrage ; healthcheck ; retour à l'ancienne version si l'app ne répond pas.
 # Base : PostgreSQL local du VPS (rôle et base créés une fois par ce script, mot de passe généré et gardé dans le .env serveur).
+# Comptes (lot F) : BETTER_AUTH_SECRET généré une fois dans le .env serveur ; mot de passe de démo commun « pilote-demo-2026 ».
 set -euo pipefail
 
 HOST=bazixx-vps
@@ -15,7 +16,7 @@ DATA=/var/www/cress-pilote-data   # ancien emplacement SQLite ; garde les sauveg
 MEDIAS=/var/www/cress-pilote-medias
 DBNAME=cress_pilote
 DBUSER=cress_pilote
-HEALTH="http://127.0.0.1:3002/outilcli/cress/pilote/portefeuille"
+HEALTH="http://127.0.0.1:3002/outilcli/cress/pilote/connexion" # page publique (le reste renvoie à la connexion, lot F)
 SEED="${1:-none}" # « none » plutôt que vide : ssh perd un argument vide et $6 devenait « unbound »
 STAMP="$(date +%Y%m%d-%H%M%S)"
 LOCAL="$(cd "$(dirname "$0")/.." && pwd)"
@@ -54,6 +55,10 @@ elif grep -q '^DATABASE_URL="file:' "$DIR/.env"; then
   [ -f "$DIR.dburl" ] || { echo "✖ .env encore en SQLite et mot de passe Postgres inconnu ($DIR.dburl absent) : corrigez DATABASE_URL à la main" >&2; exit 1; }
   sed -i "s|^DATABASE_URL=.*|$(cat "$DIR.dburl")|" "$DIR/.env"
 fi
+# Comptes et sessions (lot F) : secret de signature généré une fois, adresse publique de l'API d'auth, mode démo.
+grep -q '^BETTER_AUTH_SECRET=' "$DIR/.env" || echo "BETTER_AUTH_SECRET=\"$(openssl rand -hex 32)\"" >> "$DIR/.env"
+grep -q '^BETTER_AUTH_URL=' "$DIR/.env" || echo 'BETTER_AUTH_URL="https://cress.bazixx.fr/outilcli/cress/pilote/api/auth"' >> "$DIR/.env"
+grep -q '^PILOTE_DEMO=' "$DIR/.env" || echo 'PILOTE_DEMO=1' >> "$DIR/.env"
 cp "$DIR/.env" "$NEW/.env"
 cd "$NEW"
 echo "→ dépendances"; npm ci --no-audit --no-fund >/dev/null

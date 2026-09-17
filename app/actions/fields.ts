@@ -103,7 +103,18 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       if (id === me.id) return { ok: false, error: "Vous ne pouvez pas vous désactiver vous-même." };
       const target = await prisma.person.findUnique({ where: { id } });
       if (target?.role === "director" && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+      // Désactiver = plus d'accès : les sessions ouvertes du compte tombent tout de suite (lot F).
       await prisma.person.update({ where: { id }, data: { active: false } });
+      if (target?.userId) await prisma.session.deleteMany({ where: { userId: target.userId } });
+    } else if (model === "person" && field === "email") {
+      // L'adresse est aussi l'identifiant de connexion : on la normalise et on la propage au compte.
+      const email = value ? String(value).trim().toLowerCase() : null;
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "Adresse e-mail invalide." };
+      const target = await prisma.person.findUnique({ where: { id } });
+      if (email && (await prisma.person.findFirst({ where: { email, id: { not: id } } }))) return { ok: false, error: "Cette adresse est déjà celle d'une autre personne." };
+      if (email && target?.userId && (await prisma.user.findFirst({ where: { email, id: { not: target.userId } } }))) return { ok: false, error: "Cette adresse est déjà celle d'un autre compte." };
+      await prisma.person.update({ where: { id }, data: { email } });
+      if (target?.userId && email) await prisma.user.update({ where: { id: target.userId }, data: { email } });
     } else if (model === "settings") {
       await prisma.settings.update({ where: { id: 1 }, data: { [field]: value } });
     } else {

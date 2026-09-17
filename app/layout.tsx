@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
+import { getCurrentPerson, getCurrentPersonOrNull, getPeople, getSettings } from "@/lib/session";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { canDecideValidation, canSeeTimeOf } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
@@ -56,6 +56,18 @@ async function counters() {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Sans session (page de connexion, réinitialisation) : pas de barre ni de menus, juste la page. Le middleware a déjà
+  // renvoyé tout le reste vers /connexion ; ici on ne fait que choisir l'habillage.
+  if (!(await getCurrentPersonOrNull())) {
+    return (
+      <html lang="fr">
+        <body className="antialiased">
+          <main className="min-h-screen">{children}</main>
+          <Toaster position="bottom-right" richColors />
+        </body>
+      </html>
+    );
+  }
   const c = await counters();
   return (
     <html lang="fr">

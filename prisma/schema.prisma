@@ -32,6 +32,11 @@ model Person {
   active        Boolean  @default(true)
   order         Int      @default(0)
   icsToken      String?  @unique // jeton du flux agenda personnel (.ics)
+  // Compte de connexion (lot F) : l'identité d'accès est le User (better-auth), l'identité métier reste la Person.
+  // Une Person sans compte existe (contact, personne partie) ; un User sans Person ne peut rien faire.
+  email         String?  @unique
+  userId        String?  @unique
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   // Modules activés par la personne (Mon compte) : tasks | notes | split. Un module coupé disparaît de la navigation.
   modules       String   @default("tasks,notes,split")
   // Part fixe (lettre de mission FSE, art. 55 §5 du règlement 2021/1060) : aucune répartition hebdomadaire attendue.
@@ -74,6 +79,81 @@ model Person {
   remarksResolved    FieldRemark[]      @relation("RemarkResolver")
   notifications      Notification[]     @relation("NotificationRecipient")
   notificationsSent  Notification[]     @relation("NotificationSender")
+}
+
+// ---- Comptes et sessions (lot F) : tables attendues par better-auth (adaptateur Prisma). Ne pas renommer les champs. ----
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime? // posé à chaque ouverture de session (journal des connexions, EF-K4)
+  sessions      Session[]
+  accounts      Account[]
+  person        Person?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String // "credential" pour e-mail / mot de passe ; demain "microsoft" (Entra ID)
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String? // hachage (scrypt, better-auth) — jamais le mot de passe
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// Boîte d'envoi (lot F) : tant que les mails ne sont pas branchés (V1), tout courrier sortant est déposé ici — lien de
+// réinitialisation, invitation — et l'admin le remet à la personne. En V1, un envoi SMTP / Graph vide cette boîte.
+model MailOutbox {
+  id        String    @id @default(cuid())
+  kind      String // password_reset | invitation | other
+  to        String
+  subject   String
+  body      String
+  link      String?
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+  handedAt  DateTime? // remis à la main par l'admin (copié / transmis)
+
+  @@index([to])
 }
 
 model TimeCode {

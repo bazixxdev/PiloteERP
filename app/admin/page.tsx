@@ -20,9 +20,12 @@ import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, Dele
 import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
 import { SOURCE_LABEL } from "@/lib/ledger";
+import { AccountActions, OutboxRow } from "./account-forms";
+import { DEMO_MODE } from "@/lib/auth";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
+  { key: "comptes", label: "Comptes" },
   { key: "referentiels", label: "Référentiels" },
   { key: "parametres", label: "Paramètres" },
   { key: "donnees", label: "Import / export" },
@@ -48,6 +51,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
   const refOpt = (fam: RefFamily) => REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) }));
+  // Comptes (lot F) : qui a un compte, dernière connexion, sessions ouvertes ; courriers à remettre (liens de mot de passe).
+  const accounts = current === "comptes" ? await (async () => {
+    const [persons, outbox] = await Promise.all([
+      prisma.person.findMany({ include: { pole: true, user: { include: { _count: { select: { sessions: true } } } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
+      prisma.mailOutbox.findMany({ where: { handedAt: null }, orderBy: { createdAt: "desc" } }),
+    ]);
+    return { persons, outbox };
+  })() : null;
   // Réalisé comptable (lot D) : journal des imports, snapshots présents, codes à rapprocher, cibles possibles.
   const ledger = current === "donnees" ? await (async () => {
     const [imports, snapshots, unknown, tags, editions, actions, projects, lines] = await Promise.all([
@@ -206,6 +217,42 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </ul>
             </Section>
           ))}
+        </div>
+      )}
+
+      {current === "comptes" && accounts && (
+        <div className="grid gap-4">
+          <Section title="Comptes de connexion" description={<>Une personne se connecte avec son adresse e-mail et son mot de passe. Créer le compte prépare un <b>lien d&apos;accès</b> (la personne choisit son mot de passe) ; désactiver une personne ferme ses sessions. Les liens sont dans la boîte d&apos;envoi ci-dessous tant que les mails ne sont pas branchés (V1).{DEMO_MODE && <> · <b>Mode démo</b> : « Changer d&apos;utilisateur » est ouvert aux personnes connectées.</>}</>} testId="accounts">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="accounts-table">
+                <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">Personne</th><th className="py-1.5 pr-2">Adresse e-mail (identifiant)</th><th className="py-1.5 pr-2">Compte</th><th className="py-1.5 pr-2">Dernière connexion</th><th className="py-1.5 pr-2">Sessions</th><th className="py-1.5" /></tr></thead>
+                <tbody className="divide-y">
+                  {accounts.persons.map((p) => (
+                    <tr key={p.id} className={cn(!p.active && "text-muted-foreground")} data-testid={`account-row-${p.name}`}>
+                      <td className="py-1.5 pr-2 whitespace-nowrap">{p.name}{!p.active && <span className="ml-1 rounded-sm bg-muted px-1 text-[10px]">désactivée</span>}<div className="text-[10px] text-muted-foreground">{refLabel(refs, "role", p.role)}{p.pole ? ` · ${p.pole.name}` : ""}</div></td>
+                      <td className="min-w-[220px] py-1.5 pr-2"><AutoField model="person" id={p.id} field="email" type="text" value={p.email} readOnly={!rw} placeholder="prenom.nom@…" label={`Adresse e-mail de ${p.name}`} testId={`email-${p.id}`} /></td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap">{p.user ? <span className={cn("rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", p.active ? "bg-mint-soft text-mint" : "bg-muted")}>{p.active ? "actif" : "fermé"}</span> : <span className="text-xs text-muted-foreground">aucun</span>}</td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap text-xs text-muted-foreground">{p.user?.lastLoginAt ? fmtDate(p.user.lastLoginAt, "D MMM YYYY à HH:mm") : "—"}</td>
+                      <td className="py-1.5 pr-2 text-xs tabular">{p.user?._count.sessions ?? 0}</td>
+                      <td className="py-1.5 text-right">{rw && <AccountActions personId={p.id} hasAccount={!!p.user} hasEmail={!!p.email} active={p.active} sessions={p.user?._count.sessions ?? 0} />}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+          <Section title="Boîte d'envoi" description="Courriers que l'outil aurait envoyés : liens d'accès et de nouveau mot de passe, valables une heure. Copiez le lien, remettez-le à la personne, marquez « remis ». En V1, un envoi de mail vide cette boîte tout seul." testId="outbox">
+            {accounts.outbox.length === 0 ? <p className="text-sm text-muted-foreground">Rien à remettre.</p> : (
+              <ul className="divide-y text-sm" data-testid="outbox-list">
+                {accounts.outbox.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2" data-testid={`mail-${m.id}`} data-kind={m.kind}>
+                    <div className="min-w-0"><div className="font-medium">{m.subject} <span className="font-normal text-muted-foreground">→ {m.to}</span></div><div className="text-[11px] text-muted-foreground">{fmtDate(m.createdAt, "D MMM YYYY à HH:mm")} · {m.kind === "invitation" ? "lien d'accès" : "nouveau mot de passe"}{m.link && <> · <a href={m.link} className="break-all font-mono text-[10px] text-primary hover:underline" data-testid={`mail-link-${m.id}`}>{m.link.length > 90 ? `${m.link.slice(0, 90)}…` : m.link}</a></>}</div></div>
+                    {rw && <OutboxRow id={m.id} link={m.link} />}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
         </div>
       )}
 

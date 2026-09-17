@@ -20,6 +20,8 @@ export default defineConfig({
     locale: "fr-FR",
     viewport: { width: 1440, height: 900 },
     trace: "retain-on-failure",
+    // Session ouverte par le globalSetup (lot F) : les tests ne repassent pas par la page de connexion.
+    storageState: "tests/.auth/state.json",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Le serveur démarre avant le globalSetup : on migre la base de test dans la commande, et l'adresse de contrôle ne dépend pas
@@ -29,6 +31,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/matrice/export`,
     reuseExistingServer: true,
     timeout: 120_000,
-    env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test" },
+    env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0" },
   },
 });

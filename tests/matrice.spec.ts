@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { FRESH, iAm } from "./helpers";
 
 // Lot C — « Qui finance quoi » : la matrice éditions × financeurs de l'année, montants pour le CODIR, pastilles pour les autres,
 // zones d'attention, export CSV par le jeton, lexique partagé.
@@ -69,7 +69,7 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   await expect(page.getByTestId("lexique")).toContainText("Édition");
 });
 
-test("un contributeur voit la matrice en pastilles, sans montants ni export", async ({ page, request }) => {
+test("un contributeur voit la matrice en pastilles, sans montants ni export", async ({ page, playwright }) => {
   await page.goto("/matrice");
   await iAm(page, "Lucas Perrin");
   await page.goto("/matrice");
@@ -79,6 +79,7 @@ test("un contributeur voit la matrice en pastilles, sans montants ni export", as
   await expect(page.getByTestId("matrix-export")).toHaveCount(0);
   await expect(page.locator("[data-testid^=coverage-]")).toHaveCount(0);
   // Export refusé sans cookie ni jeton (contexte de requête vierge).
-  const anon = await request.get("/matrice/export?annee=2026");
+  const anonCtx = await playwright.request.newContext({ baseURL: new URL(page.url()).origin, storageState: FRESH });
+  const anon = await anonCtx.get("/matrice/export?annee=2026");
   expect(anon.status()).toBe(401);
 });

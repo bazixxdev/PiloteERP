@@ -271,6 +271,20 @@ Gaël : « tu n'as pas passé tous les déroulants » (la liste native de macOS 
 - Serveur : `deploy.sh` crée rôle + base (`cress_pilote`), bascule le `.env` de `file:` vers Postgres, `pg_dump` avant migration, comptage des personnes par `psql`. Le SQLite de prod reste en sauvegarde dans `/var/backups/cress/prototype-*.db`.
 - Leçons : une base utilisée comme shadow par `migrate diff` garde ses tables (P3005 au `migrate deploy` suivant) → la recréer ; le serveur de test démarre **avant** le `globalSetup` de Playwright, donc la migration doit être dans la commande du serveur.
 
+### U. Lot F « Comptes et connexion » — e-mail / mot de passe (17/09, après-midi) — fait
+
+Gaël : « ok on part sur F, email / mot de passe d'abord ». Deux lots suivent (F2 droits par module, E personnes) ; Entra ID viendra comme second fournisseur sur le même `User`.
+- **better-auth** (1.7) sur Prisma : `User`, `Session`, `Account` (fournisseur `credential`, hachage scrypt), `Verification`. `Person.userId` et `Person.email` (unique, éditable dans l'admin) relient l'identité d'accès à l'identité métier — deux objets, comme prévu au point de convergence.
+- **Entrée unique inchangée** : `getCurrentPerson` lit la session (`lib/session.ts`) ; sans session → `/connexion?suite=…` (le `middleware.ts` ne laisse passer que les pages d'auth, l'API d'auth, l'agenda ICS et les exports à jeton). Le `layout` devient une page nue sans session. `getCurrentPersonOrNull` sert aux routes qui répondent 401 plutôt que rediriger (pièces, export).
+- **Mode démo** (`PILOTE_DEMO=1`, posé par `deploy.sh`) : « Changer d'utilisateur » reste ouvert aux personnes connectées (cookie `pilote_person` = prendre la place d'une autre personne active). Sans le drapeau, on est la personne rattachée à son compte, point.
+- **Pas de mail dans le prototype** : mot de passe oublié et création de compte déposent un courrier dans la **boîte d'envoi** (admin › Comptes, `MailOutbox`) ; l'admin copie le lien (valable une heure, à usage unique) et le remet à la personne. Le jour où un SMTP est branché, `sendResetPassword` envoie au lieu de déposer.
+- **Admin › Comptes** : e-mail, compte (aucun / actif), dernière connexion, sessions ouvertes ; créer le compte (mot de passe aléatoire inconnu de tous + lien d'accès), lien de nouveau mot de passe, « Déconnecter partout ». Désactiver une personne (admin › Personnes) **supprime ses sessions** et la connexion lui est refusée (« Ce compte est désactivé ») même avec le bon mot de passe — hook `session.create.before`.
+- **Mon compte** : changement de mot de passe (ancien vérifié), qui ferme les autres sessions du compte mais garde la courante.
+- Sessions 7 jours, prolongées une fois par jour, **sans cache dans le cookie** (une désactivation coupe à la requête suivante). Anti-force brute : 5 connexions / minute / adresse IP (`AUTH_RATE_LIMIT=0` pour les tests).
+- Démo : chaque personne du seed a `prenom.nom@exemple.fr` et le mot de passe commun `pilote-demo-2026` (`DEMO_PASSWORD` au seed). Le README le dit.
+- Serveur : `deploy.sh` ajoute une fois `BETTER_AUTH_SECRET` (généré), `BETTER_AUTH_URL` (adresse publique **sous-chemin compris**) et `PILOTE_DEMO=1` au `.env` ; le contrôle de santé vise `/connexion` (le reste redirige).
+- **Leçons** (une après-midi de débogage) : (1) better-auth cherche le compte `credential` par `accountId = id du User` — pas l'e-mail — sinon « User not found » alors que tout est en base ; (2) `changePassword({ revokeOtherSessions: true })` remplace aussi la session courante : dans une action serveur, la page se rejoue avec l'ancien cookie déjà révoqué → on ferme les autres sessions nous-mêmes ; (3) dans Playwright, `browser.newContext()` **hérite du `storageState` du projet** (la session de Claire) : un contexte « vierge » se demande explicitement ; (4) les tests qui enchaînent les connexions déclenchent l'anti-force brute ; (5) un test qui change le mot de passe ou ferme les sessions de Claire casse toute la suite après lui — tester ça sur une autre personne. 49 tests verts.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

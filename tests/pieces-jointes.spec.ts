@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName, pick } from "./helpers";
+import { FRESH, iAm, openEditionByName, pick } from "./helpers";
 
 // Pièces jointes légères : dépôt par le pilote, visible sur l'édition, téléchargement réservé aux personnes connectées.
-test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge ; sans connexion, refus", async ({ page, request }) => {
+test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge ; sans connexion, refus", async ({ page, playwright }) => {
   await page.goto("/portefeuille");
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
@@ -26,7 +26,8 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   const ok = await page.request.get(href!);
   expect(ok.status()).toBe(200);
   expect(ok.headers()["content-type"]).toContain("application/pdf");
-  const anon = await request.get(href!);
+  const anonCtx = await playwright.request.newContext({ baseURL: new URL(page.url()).origin, storageState: FRESH });
+  const anon = await anonCtx.get(href!);
   expect(anon.status()).toBe(401);
 
   // Une pièce trop lourde est refusée.

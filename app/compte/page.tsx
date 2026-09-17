@@ -9,13 +9,18 @@ import { dayjs } from "@/lib/format";
 import { loadRhythms, rhythmAt } from "@/lib/time";
 import { modulesOf } from "@/lib/modules";
 import { ModulesForm } from "./modules-form";
+import { PasswordForm } from "./password-form";
+import { getSessionUser } from "@/lib/session";
 
 // Mon compte : ce que l'outil sait de moi (rôle, pôle, rythme, codes de temps) et mon flux agenda. Rien ne se modifie ici :
-// les personnes et leurs rythmes se règlent dans l'admin ; en V1, l'identité viendra du compte Microsoft.
+// les personnes et leurs rythmes se règlent dans l'admin. Le compte de connexion (mot de passe) se gère ici (lot F).
 export default async function ComptePage() {
   const [me, refs, rhythms] = await Promise.all([getCurrentPerson(), getRefs(), loadRhythms()]);
   const full = await prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } }, timeCodes: { include: { timeCode: true }, orderBy: { timeCode: { order: "asc" } } }, pole: true, pilotedProjects: { select: { id: true, name: true }, orderBy: { name: "asc" } } } });
   const rhythm = full ? rhythmAt(full, dayjs(), rhythms) : null;
+  // Le compte affiché est celui de la session ; en mode démo, si je « suis » quelqu'un d'autre, ce n'est pas le sien.
+  const sessionUser = await getSessionUser();
+  const account = sessionUser && full?.userId === sessionUser.id ? await prisma.user.findUnique({ where: { id: sessionUser.id }, select: { email: true, lastLoginAt: true } }) : null;
   const row = (label: string, value: React.ReactNode) => (
     <div className="grid gap-0.5 sm:grid-cols-[180px_1fr] sm:gap-4">
       <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -42,6 +47,9 @@ export default async function ComptePage() {
           </dl>
         </Section>
         <div className="grid content-start gap-4">
+          <Section title="Mon compte de connexion" description={<>{account ? <>Identifiant : <b>{account.email}</b>{account.lastLoginAt ? ` · dernière connexion ${dayjs(account.lastLoginAt).format("D MMM YYYY à HH:mm")}` : ""}.</> : "Vous êtes connecté·e avec un autre compte (mode démo)."} Changer le mot de passe ferme vos autres sessions.</>} testId="account-section">
+            <PasswordForm />
+          </Section>
           <Section title="Mes modules" description="Ce que l'outil vous montre. Désactivez ce qui ne vous sert pas : rien n'est perdu, tout revient en réactivant.">
             <ModulesForm enabled={[...modulesOf(me)]} />
           </Section>

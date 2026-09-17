@@ -1,4 +1,5 @@
-import { getCurrentPerson, getPeople, getRefs } from "@/lib/session";
+import { getCurrentPerson, getPeople, getRefs, getSessionUser } from "@/lib/session";
+import { DEMO_MODE } from "@/lib/auth";
 import { refLabel } from "@/lib/refs";
 import { PersonSwitcher } from "./person-switcher";
 import { QuickSearch } from "./quick-search";
@@ -16,7 +17,7 @@ import { QuickMenu, type QuickItem } from "./quick-menus";
 import type { NavSection } from "@/lib/navigation";
 
 export async function Topbar({ tree }: { tree: NavSection[] }) {
-  const [current, people, refs] = await Promise.all([getCurrentPerson(), getPeople(), getRefs()]);
+  const [current, people, refs, sessionUser] = await Promise.all([getCurrentPerson(), getPeople(), getRefs(), getSessionUser()]);
   const rawEditions = await prisma.edition.findMany({
     where: { status: { not: "closed" } },
     select: { id: true, year: true, project: { select: { name: true, poleId: true, pilotId: true, guarantorId: true, secondaryPoles: { select: { poleId: true } } } }, team: { select: { personId: true } } },
@@ -47,7 +48,7 @@ export async function Topbar({ tree }: { tree: NavSection[] }) {
         {noteItems && <QuickMenu kind="notes" label="Notes" items={noteItems} allHref="/notes" addHref="/notes?note=nouvelle" addLabel="Nouvelle note" emptyText="Aucune note encore." />}
         {taskItems && <QuickMenu kind="tasks" label="Tâches" items={taskItems} allHref="/taches" addHref="/taches?ajouter=1" addLabel="Nouvelle tâche" emptyText="Rien à faire pour l'instant." />}
         <NotificationsBell items={notifications.map((n) => ({ id: n.id, title: n.title, body: n.body, link: n.link, createdAt: fmtDate(n.createdAt, "D MMM à HH:mm"), readAt: n.readAt ? n.readAt.toISOString() : null, sender: n.sender?.name ?? null }))} />
-        <PersonSwitcher people={people.map(map)} current={map(current)} canAdmin={canAdmin(current.role)} />
+        <PersonSwitcher people={people.map(map)} current={map(current)} canAdmin={canAdmin(current.role)} demo={DEMO_MODE} account={sessionUser?.name ?? null} />
       </div>
     </header>
   );

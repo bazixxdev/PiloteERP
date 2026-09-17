@@ -4,6 +4,7 @@ import { REF_DEFAULTS } from "../lib/refs";
 import { dayjs } from "../lib/format";
 import { DEFAULT_RHYTHMS, expectedHoursOn, rhythmAt } from "../lib/time";
 import { syncDeadlineNotifications, DEADLINE_KIND } from "../lib/deadline-notifications";
+import { hashPassword } from "better-auth/crypto";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -53,6 +54,10 @@ function storePdf(title: string): { storedName: string; size: number } {
 }
 
 async function reset() {
+  await prisma.mailOutbox.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.verification.deleteMany();
   await prisma.ledgerLine.deleteMany();
   await prisma.ledgerImport.deleteMany();
   await prisma.analyticTag.deleteMany();
@@ -97,6 +102,7 @@ async function reset() {
   await prisma.projectPole.deleteMany();
   await prisma.pole.updateMany({ data: { leadId: null } });
   await prisma.person.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.pole.deleteMany();
   await prisma.timeCode.deleteMany();
   await prisma.mission.deleteMany();
@@ -196,12 +202,21 @@ async function main() {
     { name: "Lucas Perrin", role: "contributor", rhythm: "apprentice", pole: 2, days: 120 },
     { name: "Manon Girard", role: "contributor", rhythm: "apprentice", pole: 1, days: 120 },
   ];
+  // Comptes de connexion (lot F) : une adresse prenom.nom@exemple.fr et le même mot de passe de démo pour tout le monde
+  // (DEMO_PASSWORD, « pilote-demo-2026 » par défaut). Le hachage est celui de better-auth ; aucun mot de passe en clair en base.
+  const demoPassword = process.env.DEMO_PASSWORD ?? "pilote-demo-2026";
+  const passwordHash = await hashPassword(demoPassword);
+  const emailOf = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]+/g, ".").replace(/^\.|\.$/g, "") + "@exemple.fr";
   const people: Awaited<ReturnType<typeof prisma.person.create>>[] = [];
   for (let i = 0; i < peopleDefs.length; i++) {
     const p = peopleDefs[i];
+    const email = emailOf(p.name);
+    // Compte « credential » : better-auth exige accountId = id du User (pas l'e-mail), d'où la création en deux temps.
+    const user = await prisma.user.create({ data: { name: p.name, email, emailVerified: true } });
+    await prisma.account.create({ data: { userId: user.id, accountId: user.id, providerId: "credential", password: passwordHash } });
     people.push(
       await prisma.person.create({
-        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i, icsToken: randomBytes(18).toString("base64url") },
+        data: { name: p.name, role: p.role, workRhythm: p.rhythm, availableDays: p.days, poleId: p.pole === null ? null : poles[p.pole].id, order: i, icsToken: randomBytes(18).toString("base64url"), email, userId: user.id },
       }),
     );
   }

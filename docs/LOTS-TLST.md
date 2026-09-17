@@ -100,10 +100,9 @@ Aujourd'hui les modules sont **par personne** (`Person.modules` : tâches, notes
 `Funder` + `Supplier` + `FunderContact` → `Organisation` (`kinds` : financeur / fournisseur / partenaire / réseau / collectivité) + `OrganisationContact` ; `Edition.partners` (texte) → liens, texte conservé en repli ; admin › Référentiels. Repris de TLST : `Partenaire` unique + `estFinanceur`, contact détaché ≠ supprimé. Migration de données à la main. **Après** A-D ; se justifie surtout par `produit.md`.
 **Taille** : 1-2 sessions.
 
-## Lot F — Comptes et connexion (sur go explicite)
+## Lot F — Comptes et connexion — **FAIT (17/09, e-mail / mot de passe)**
 
-better-auth (argon2id, sessions, anti-bruteforce, désactivation = sessions révoquées, mot de passe oublié sans mail tant que les mails ne sont pas branchés), `User` ↔ `Person.userId`, admin des comptes ; `getCurrentPerson` lit la session ; « Je suis… » derrière un drapeau démo ; Entra ID plus tard. Pas de permissions par module en base dans ce lot.
-**Taille** : 2 sessions. Consigne 8 du brief : pas sans go.
+better-auth (hachage scrypt, sessions 7 jours, anti-force brute, désactivation = sessions fermées, mot de passe oublié par boîte d'envoi tant que les mails ne sont pas branchés), `User` ↔ `Person.userId`, admin › Comptes, Mon compte ; `getCurrentPerson` lit la session ; « Je suis… » derrière le drapeau `PILOTE_DEMO` ; Entra ID = second fournisseur sur le même `User`, plus tard. Pas de permissions par module en base dans ce lot → **lot F2** (droits par module en base, rôles éditables), puis **lot E** (personnes et organisations).
 
 ## Lot G — Notes de frais (module activable) — **mode import FAIT avec D** (comptes 625 dans le bloc Réalisé) ; module natif à faire
 

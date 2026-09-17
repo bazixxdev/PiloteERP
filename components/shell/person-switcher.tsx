@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, UserCircle, Users, Search } from "lucide-react";
 import { switchPerson } from "@/app/actions/session";
+import { authClient } from "@/lib/auth-client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,10 +21,13 @@ export function Avatar({ name, role, className }: { name: string; role?: string;
   return <span className={cn("inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold", moss ? "bg-[#dcecf2] text-mint" : "bg-[#e6ddcf] text-[#574f3f]", className)} aria-hidden>{initials(name)}</span>;
 }
 
-// Menu utilisateur : mon compte, admin (selon les droits), changement d'utilisateur (prototype) et déconnexion.
-// Sans authentification réelle, la déconnexion ramène au choix de la personne ; en V1, ce sera le compte Microsoft.
-export function PersonSwitcher({ people, current, canAdmin }: { people: P[]; current: P; canAdmin: boolean }) {
-  const [chooser, setChooser] = useState<"switch" | "logout" | null>(null);
+// Menu utilisateur : mon compte, admin (selon les droits), « Changer d'utilisateur » en mode démo seulement, et la déconnexion
+// (lot F : session better-auth ; on revient à la page de connexion).
+export function PersonSwitcher({ people, current, canAdmin, demo, account }: { people: P[]; current: P; canAdmin: boolean; demo: boolean; account: string | null }) {
+  const [chooser, setChooser] = useState<"switch" | null>(null);
+  const router = useRouter();
+  const [pendingOut, startOut] = useTransition();
+  const logout = () => startOut(async () => { await authClient.signOut(); router.push("/connexion"); router.refresh(); });
   return (
     <>
       <DropdownMenu>
@@ -37,23 +41,23 @@ export function PersonSwitcher({ people, current, canAdmin }: { people: P[]; cur
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="flex items-center gap-2.5 font-normal">
             <Avatar name={current.name} role={current.role} className="size-8 text-[11px]" />
-            <span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{current.name}</span><span className="block truncate text-xs text-muted-foreground">{current.roleLabel}{current.poleName ? ` · ${current.poleName}` : ""}</span></span>
+            <span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{current.name}</span><span className="block truncate text-xs text-muted-foreground">{current.roleLabel}{current.poleName ? ` · ${current.poleName}` : ""}</span>{account && account !== current.name && <span className="block truncate text-[10px] text-muted-foreground">connecté·e : {account}</span>}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild><Link href="/compte" data-testid="menu-account"><UserCircle />Mon compte</Link></DropdownMenuItem>
           {canAdmin && <DropdownMenuItem asChild><Link href="/admin" data-testid="menu-admin"><Settings />Admin</Link></DropdownMenuItem>}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setChooser("switch")} data-testid="menu-switch"><Users />Changer d'utilisateur<span className="ml-auto rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">proto</span></DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setChooser("logout")} data-testid="menu-logout"><LogOut />Se déconnecter</DropdownMenuItem>
+          {demo && <DropdownMenuItem onSelect={() => setChooser("switch")} data-testid="menu-switch"><Users />Changer d'utilisateur<span className="ml-auto rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">démo</span></DropdownMenuItem>}
+          <DropdownMenuItem onSelect={logout} disabled={pendingOut} data-testid="menu-logout"><LogOut />Se déconnecter</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <PersonChooser open={chooser !== null} mode={chooser ?? "switch"} onOpenChange={(o) => { if (!o) setChooser(null); }} people={people} current={current} />
+      {demo && <PersonChooser open={chooser !== null} onOpenChange={(o) => { if (!o) setChooser(null); }} people={people} current={current} />}
     </>
   );
 }
 
 // Modale « Je suis… » : recherche par nom, rôle ou pôle ; un clic change la personne et ses droits.
-function PersonChooser({ open, mode, onOpenChange, people, current }: { open: boolean; mode: "switch" | "logout"; onOpenChange: (o: boolean) => void; people: P[]; current: P }) {
+function PersonChooser({ open, onOpenChange, people, current }: { open: boolean; onOpenChange: (o: boolean) => void; people: P[]; current: P }) {
   const [q, setQ] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -64,12 +68,8 @@ function PersonChooser({ open, mode, onOpenChange, people, current }: { open: bo
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setQ(""); }}>
       <DialogContent className="sm:max-w-md" data-testid="person-chooser">
         <DialogHeader>
-          <DialogTitle>{mode === "logout" ? "Se déconnecter" : "Changer d'utilisateur"}</DialogTitle>
-          <DialogDescription>
-            {mode === "logout"
-              ? "Le prototype n'a pas de compte : en V1, la déconnexion ramène à la page de connexion Microsoft. Ici, choisissez simplement qui vous êtes."
-              : "Mode prototype : choisissez la personne dont vous prenez la place, avec ses droits."}
-          </DialogDescription>
+          <DialogTitle>Changer d&apos;utilisateur</DialogTitle>
+          <DialogDescription>Mode démo : choisissez la personne dont vous prenez la place, avec ses droits. Hors démo, chacun se connecte avec son compte.</DialogDescription>
         </DialogHeader>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />

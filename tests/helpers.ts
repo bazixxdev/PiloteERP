@@ -26,6 +26,18 @@ export async function pick(page: Page, target: string | Locator, what: string | 
   await expect(list).toBeHidden();
 }
 
+// Lot F : mot de passe de démo commun, contexte vierge (« browser.newContext() » hérite sinon du storageState du projet, la
+// session de Claire — qu'aucun test ne doit fermer : toute la suite s'en sert), connexion par le formulaire.
+export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "pilote-demo-2026";
+export const FRESH = { cookies: [], origins: [] };
+export async function login(page: Page, email: string, password = DEMO_PASSWORD, expectOk = true) {
+  await page.goto("/connexion");
+  await page.getByTestId("login-email").fill(email);
+  await page.getByTestId("login-password").fill(password);
+  await page.getByTestId("login-submit").click();
+  await expect(page.getByTestId(expectOk ? "person-switcher" : "login-error")).toBeVisible();
+}
+
 export async function iAm(page: Page, name: string) {
   await page.getByTestId("person-switcher").click();
   await page.getByTestId("menu-switch").click();

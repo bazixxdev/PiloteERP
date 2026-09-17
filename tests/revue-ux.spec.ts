@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { FRESH, iAm, login, openEditionByName } from "./helpers";
 
 // Revue UI/UX du 13/09 : les valeurs lues sont fiables (P1) et le travail à traiter ressort (P2).
 test("le budget écrit le dépassement, la validation CA se lit en clair, la clôture dit ce qui manque", async ({ page }) => {
@@ -86,9 +86,13 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   await expect(page.getByTestId("codir-all")).toHaveAttribute("open", "");
 });
 
-test("le menu utilisateur donne accès au compte, à l'admin selon les droits, au changement d'utilisateur et à la déconnexion", async ({ page }) => {
+test.describe("menu utilisateur", () => {
+  // Contexte vierge : la déconnexion fermerait sinon la session partagée de Claire (storageState) dont dépend toute la suite.
+  test.use({ storageState: FRESH });
+
+  test("le menu utilisateur donne accès au compte, à l'admin selon les droits, au changement d'utilisateur et à la déconnexion", async ({ page }) => {
+  await login(page, "claire.vasseur@exemple.fr");
   await page.goto("/portefeuille");
-  await iAm(page, "Claire Vasseur");
   await page.getByTestId("person-switcher").click();
   await expect(page.getByTestId("menu-admin")).toBeVisible();
   await page.getByTestId("menu-account").click();
@@ -104,11 +108,12 @@ test("le menu utilisateur donne accès au compte, à l'admin selon les droits, a
   await options.filter({ hasText: "Lucas Perrin" }).click();
   await expect(page.getByTestId("person-switcher")).toContainText("Lucas Perrin");
 
-  // Un contributeur n'a ni Admin dans le menu, ni dans la barre latérale ; la déconnexion ouvre le choix de personne.
+  // Un contributeur n'a ni Admin dans le menu, ni dans la barre latérale ; la déconnexion ramène à la page de connexion (lot F).
+  await expect(page.locator("aside").getByRole("link", { name: "Admin" })).toHaveCount(0);
   await page.getByTestId("person-switcher").click();
   await expect(page.getByTestId("menu-admin")).toHaveCount(0);
   await page.getByTestId("menu-logout").click();
-  await expect(page.getByTestId("person-chooser")).toContainText("Se déconnecter");
-  await page.keyboard.press("Escape");
-  await expect(page.locator("aside").getByRole("link", { name: "Admin" })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/connexion/);
+  await expect(page.getByTestId("login-form")).toBeVisible();
+  });
 });
