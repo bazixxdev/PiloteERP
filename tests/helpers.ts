@@ -1,19 +1,26 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 // Sélecteur « Je suis… » : change la personne courante (et ses droits).
-// Choisit une entrée dans une liste avec recherche (components/common/searchable-select.tsx) : ouvre, filtre si le champ existe, clique.
-// `what` = texte de l'entrée (sous-chaîne) ou son rang (0 = première entrée réelle, l'option « aucun » exclue).
-export async function pick(page: Page, testId: string, what: string | number) {
-  await page.getByTestId(testId).click();
-  const list = page.getByRole("listbox");
-  await expect(list).toBeVisible();
-  if (typeof what === "string") {
-    const search = page.getByTestId(`${testId}-search`);
+// Choisit une entrée dans une liste déroulante de l'outil (components/common/searchable-select.tsx) : ouvre, filtre si le
+// champ de recherche existe, clique. `target` = testid du déclencheur ou son Locator ; `what` = texte de l'entrée (sous-chaîne),
+// `{ value }` pour sa valeur, ou son rang (0 = première entrée réelle, l'option « aucun » exclue).
+export async function pick(page: Page, target: string | Locator, what: string | number | { value: string }) {
+  const trigger = typeof target === "string" ? page.getByTestId(target) : target;
+  const list = page.locator("[data-slot=select-list]");
+  // Un clic peut tomber avant l'hydratation (page qui vient de se recharger) : on réessaie jusqu'à ce que la liste s'ouvre.
+  await expect(async () => {
+    if (!(await list.isVisible())) await trigger.click();
+    await expect(list).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 15_000 });
+  if (typeof what === "object") {
+    await list.locator(`[role=option][data-value="${what.value}"]`).click();
+  } else if (typeof what === "string") {
+    const search = page.getByLabel("Rechercher dans la liste");
     if (await search.count()) await search.fill(what);
     await list.getByRole("option", { name: new RegExp(what.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
   } else {
     const options = list.getByRole("option");
-    const first = (await options.first().getAttribute("id")) && (await options.first().innerText()).match(/^(Sans projet|Transverse|Personne|—)/) ? 1 : 0;
+    const first = (await options.first().innerText()).match(/^(Sans projet|Transverse|Personne|—|Tous|Toutes)/) ? 1 : 0;
     await options.nth(first + what).click();
   }
   await expect(list).toBeHidden();

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { explainRequiredLevel, requestValidation } from "@/app/actions/edition";
 import { uploadAttachment } from "@/app/actions/attachments";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 const LEVELS = ["1 · pilote", "2 · responsable de pôle", "3 · direction"];
 
@@ -88,9 +88,9 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1">
               <Label htmlFor="rv-kind">Nature</Label>
-              <select id="rv-kind" className={sel} value={kind} onChange={(e) => setKind(e.target.value)} data-testid="rv-kind">
+              <Select id="rv-kind" className={sel} value={kind} onChange={(e) => setKind(e.target.value)} data-testid="rv-kind">
                 {kinds.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="grid gap-1">
               <Label htmlFor="rv-amount">Montant (€)</Label>
@@ -126,10 +126,10 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
           )}
           <div className="grid gap-1">
             <Label htmlFor="rv-action">Action concernée</Label>
-            <select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
+            <Select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
               <option value="">— l'édition entière —</option>
               {actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+            </Select>
           </div>
 
           {/* La pièce se joint avant l'envoi ; le lien vers le serveur ou Teams reste possible en alternative. */}
@@ -161,9 +161,9 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
                   <Label htmlFor="rv-level">Niveau requis <span className="text-xs text-muted-foreground">(calculé : {computed.level})</span></Label>
-                  <select id="rv-level" className={sel} value={level} onChange={(e) => setLevel(Number(e.target.value))} data-testid="rv-level">
+                  <Select id="rv-level" className={sel} value={level} onChange={(e) => setLevel(Number(e.target.value))} data-testid="rv-level">
                     {LEVELS.map((l, i) => <option key={i} value={i + 1}>{l}</option>)}
-                  </select>
+                  </Select>
                 </div>
                 <div className="grid gap-1">
                   <Label htmlFor="rv-delay">Délai cible (jours)</Label>

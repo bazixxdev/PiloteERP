@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/common/reveal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -58,10 +58,10 @@ export function AddFundingMenu({ editionId, funders, conventions }: { editionId:
           {conventions.length > 0 && (
             <>
               <div className="mt-1 border-t pt-2 text-xs font-semibold">Rattacher une convention existante</div>
-              <select className={sel} value={conventionId} onChange={(e) => setConventionId(e.target.value)} data-testid="attach-convention-select" aria-label="Convention">
+              <Select className={sel} value={conventionId} onChange={(e) => setConventionId(e.target.value)} data-testid="attach-convention-select" aria-label="Convention">
                 <option value="">Choisir une convention…</option>
                 {conventions.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
+              </Select>
               <Button size="sm" variant="outline" disabled={pending || !conventionId} onClick={() => run(() => addFundingLineFromConvention(editionId, conventionId), () => { setConventionId(""); setOpen(false); })} data-testid="attach-convention-submit"><Plus />Rattacher</Button>
             </>
           )}

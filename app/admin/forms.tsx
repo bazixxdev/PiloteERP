@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod, toggleProjectPole } from "@/app/actions/admin";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -99,10 +99,10 @@ export function CreateProjectDialog({ poles, people, missions }: { poles: Opt[];
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className={field}><span className="font-semibold">Pilote</span><SearchableSelect options={people} value={pilotId} onChange={setPilotId} aria-label="Pilote" data-testid="cp-pilot" className="w-full" /></label>
-            <label className={field}><span className="font-semibold">Pôle principal</span><select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+            <label className={field}><span className="font-semibold">Pôle principal</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
           </div>
           <div className="grid grid-cols-[1fr_6rem] gap-3">
-            <label className={field}><span className="font-semibold">Mission du plan opérationnel</span><select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+            <label className={field}><span className="font-semibold">Mission du plan opérationnel</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
             <label className={field}><span className="font-semibold">Première édition</span><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8" aria-label="Année" /></label>
           </div>
           <DialogFooter>
@@ -127,9 +127,9 @@ export function ImportForm() {
   return (
     <div className="grid gap-2">
       <div className="flex gap-2">
-        <select className="h-8 rounded-lg border bg-card px-2 text-sm" value={table} onChange={(e) => setTable(e.target.value as typeof table)}>
+        <Select className="h-8 rounded-lg border bg-card px-2 text-sm" value={table} onChange={(e) => setTable(e.target.value as typeof table)}>
           <option value="financeurs">financeurs</option><option value="personnes">personnes</option><option value="projets">projets</option>
-        </select>
+        </Select>
         <input type="file" accept=".csv,text/csv" className="text-sm" onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then(setText); }} />
       </div>
       <textarea className="min-h-24 rounded-lg border bg-card p-2 font-mono text-xs" value={text} onChange={(e) => setText(e.target.value)} placeholder={"nom\nNouveau financeur"} />
@@ -146,9 +146,9 @@ export function RhythmPeriodForm({ personId, rhythms }: { personId: string; rhyt
   const { pending, run } = useRun();
   return (
     <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); if (!from) return; run(() => addRhythmPeriod(personId, rhythmId, from), () => setFrom("")); }}>
-      <select className="h-7 max-w-[160px] rounded-lg border bg-card px-1 text-xs" value={rhythmId} onChange={(e) => setRhythmId(e.target.value)} aria-label="Rythme">
+      <Select className="h-7 max-w-[160px] rounded-lg border bg-card px-1 text-xs" value={rhythmId} onChange={(e) => setRhythmId(e.target.value)} aria-label="Rythme">
         {rhythms.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-      </select>
+      </Select>
       <span className="text-[10px] text-muted-foreground">à partir du</span>
       <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 w-32 text-xs" aria-label="Nouveau rythme à partir du" title="Date à laquelle ce rythme commence ; le précédent s'arrête la veille" />
       <Button type="submit" size="xs" variant="outline" disabled={pending || !from} title="Ajouter ce rythme à partir de cette date"><Plus /></Button>

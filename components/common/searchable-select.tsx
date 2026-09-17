@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Children, isValidElement, useEffect, useId, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Liste déroulante habillée avec recherche intégrée (retour de Gaël, 17/09 : « prévoir une search intégrée quand y a beaucoup
-// d'éléments »). Pour les listes longues — personnes, projets et éditions, financeurs. Les petites listes (statuts, natures…)
-// restent des <select> natifs, habillés en CSS (globals.css). Le déclencheur a le même dessin qu'un <select> ; le champ de
-// recherche n'apparaît qu'au-delà de `searchFrom` éléments. Avec `name`, la valeur part dans le formulaire (champ caché).
+// Liste déroulante de l'outil (retours de Gaël, 17/09 : « skiner les menus déroulants », « une search intégrée quand il y a
+// beaucoup d'éléments », « tu n'as pas passé tous les déroulants ») : plus aucun <select> natif à l'écran. Le déclencheur a le
+// dessin d'un champ ; la liste est la nôtre ; le champ de recherche n'apparaît qu'au-delà de `searchFrom` éléments (accents
+// ignorés). Avec `name`, la valeur part dans le formulaire (champ caché). `Select`, plus bas, garde l'API du <select> natif.
 export type SelectOption = { value: string; label: string; hint?: string; group?: string };
 
-const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export function SearchableSelect({
-  options, value, onChange, placeholder = "—", emptyOption, name, id, className, contentClassName, searchFrom = 8, disabled, align = "start",
-  "aria-label": ariaLabel, "data-testid": testId,
+  options, value, onChange, placeholder = "—", emptyOption, name, id, className, contentClassName, searchFrom = 8, disabled, align = "start", autoFocus,
+  "aria-label": ariaLabel, "data-testid": testId, "data-highlight": highlight,
 }: {
   options: SelectOption[];
   value: string;
@@ -29,8 +29,10 @@ export function SearchableSelect({
   searchFrom?: number;
   disabled?: boolean;
   align?: "start" | "end";
+  autoFocus?: boolean;
   "aria-label"?: string;
   "data-testid"?: string;
+  "data-highlight"?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -80,6 +82,8 @@ export function SearchableSelect({
         aria-label={ariaLabel}
         data-testid={testId}
         data-value={value}
+        data-highlight={highlight}
+        autoFocus={autoFocus}
         disabled={disabled}
         className={cn(
           "inline-flex h-8 max-w-full items-center justify-between gap-2 rounded-lg border bg-card px-2 text-left text-sm text-foreground transition-colors hover:border-[#b8c6cc] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-55",
@@ -112,7 +116,7 @@ export function SearchableSelect({
               {query && <span className="shrink-0 text-[11px] text-muted-foreground">{shown.length}</span>}
             </div>
           )}
-          <div ref={listRef} id={listId} role="listbox" tabIndex={-1} onKeyDown={searchable ? undefined : onKey} className="max-h-64 overflow-y-auto outline-none" aria-activedescendant={shown[active] ? `${listId}-${active}` : undefined}>
+          <div ref={listRef} id={listId} role="listbox" data-slot="select-list" tabIndex={-1} onKeyDown={searchable ? undefined : onKey} className="max-h-64 overflow-y-auto outline-none" aria-activedescendant={shown[active] ? `${listId}-${active}` : undefined}>
             {shown.length === 0 && <p className="px-2 py-3 text-center text-xs text-muted-foreground">Aucun résultat.</p>}
             {shown.map((o, i) => {
               const header = o.group && o.group !== lastGroup ? o.group : null;
@@ -125,6 +129,7 @@ export function SearchableSelect({
                     role="option"
                     aria-selected={o.value === value}
                     data-index={i}
+                    data-value={o.value}
                     data-active={i === active || undefined}
                     onMouseEnter={() => setActive(i)}
                     onMouseDown={(e) => e.preventDefault()}
@@ -141,5 +146,73 @@ export function SearchableSelect({
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>
+  );
+}
+
+// Remplaçant direct du <select> natif (retour de Gaël, 17/09 : « tu n'as pas passé tous les déroulants ») : même API —
+// `value` / `defaultValue`, `onChange` avec `e.target.value`, enfants <option> et <optgroup> — mais notre liste à l'écran.
+// Sert à convertir les écrans existants sans les réécrire ; pour un nouveau composant, préférer SearchableSelect.
+type OptionEl = ReactElement<{ value?: string | number; children?: ReactNode; disabled?: boolean }>;
+type GroupEl = ReactElement<{ label?: string; children?: ReactNode }>;
+
+function textOf(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (isValidElement(node)) return textOf((node.props as { children?: ReactNode }).children);
+  return "";
+}
+
+function optionsFrom(children: ReactNode, group?: string): SelectOption[] {
+  const out: SelectOption[] = [];
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return;
+    if (child.type === "optgroup") { out.push(...optionsFrom((child as GroupEl).props.children, (child as GroupEl).props.label)); return; }
+    if (child.type === "option") { const o = child as OptionEl; out.push({ value: String(o.props.value ?? textOf(o.props.children)), label: textOf(o.props.children), group }); return; }
+    if (Array.isArray((child.props as { children?: ReactNode }).children)) out.push(...optionsFrom((child.props as { children?: ReactNode }).children, group));
+  });
+  return out;
+}
+
+export function Select({
+  value, defaultValue, onChange, children, className, name, id, disabled, searchFrom, align, placeholder, autoFocus,
+  "aria-label": ariaLabel, "data-testid": testId, "data-highlight": highlight,
+}: {
+  value?: string | number;
+  defaultValue?: string | number;
+  onChange?: (e: { target: { value: string } }) => void;
+  children: ReactNode;
+  className?: string;
+  name?: string;
+  id?: string;
+  disabled?: boolean;
+  searchFrom?: number;
+  align?: "start" | "end";
+  placeholder?: string;
+  autoFocus?: boolean;
+  "aria-label"?: string;
+  "data-testid"?: string;
+  "data-highlight"?: string;
+}) {
+  const options = useMemo(() => optionsFrom(children), [children]);
+  const [inner, setInner] = useState(String(defaultValue ?? options[0]?.value ?? ""));
+  const current = value !== undefined ? String(value) : inner;
+  return (
+    <SearchableSelect
+      options={options}
+      value={current}
+      onChange={(v) => { setInner(v); onChange?.({ target: { value: v } }); }}
+      name={name}
+      id={id}
+      disabled={disabled}
+      searchFrom={searchFrom}
+      align={align}
+      placeholder={placeholder ?? options[0]?.label ?? "—"}
+      className={className}
+      autoFocus={autoFocus}
+      aria-label={ariaLabel}
+      data-testid={testId}
+      data-highlight={highlight}
+    />
   );
 }

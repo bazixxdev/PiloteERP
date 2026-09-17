@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 
@@ -17,27 +18,27 @@ export function ConventionFilters({ funders, statuses, current }: { funders: Opt
     const qs = Object.entries(next).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
-  const sel = "max-w-[175px] border-0 bg-transparent text-[11px] focus:outline-none";
+  const sel = "max-w-[175px] h-5 gap-1 border-0 bg-transparent px-0 text-[11px] focus:outline-none focus-visible:ring-0";
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="convention-filters">
       <Filter label="Financeur">
-        <select className={sel} value={current.financeur} onChange={(e) => set("financeur", e.target.value)} aria-label="Filtrer par financeur">
+        <Select className={sel} value={current.financeur} onChange={(e) => set("financeur", e.target.value)} aria-label="Filtrer par financeur">
           <option value="">Tous les financeurs</option>
           {funders.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
+        </Select>
       </Filter>
       <Filter label="Statut">
-        <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
+        <Select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
           <option value="">Tous les statuts</option>
           {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+        </Select>
       </Filter>
       <Filter label="Type">
-        <select className={sel} value={current.type} onChange={(e) => set("type", e.target.value)} aria-label="Filtrer par type">
+        <Select className={sel} value={current.type} onChange={(e) => set("type", e.target.value)} aria-label="Filtrer par type">
           <option value="">Toutes</option>
           <option value="pluri">Pluriannuelles ou partagées</option>
           <option value="annuelle">Annuelles</option>
-        </select>
+        </Select>
       </Filter>
     </div>
   );

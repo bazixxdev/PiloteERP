@@ -6,6 +6,7 @@ import { Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { uploadAttachment } from "@/app/actions/attachments";
+import { Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 
@@ -40,9 +41,9 @@ export function UploadForm({ editionId, kinds, defaultKind, fundingLineId, deliv
         });
       }}
     >
-      <select className={sel} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Nature de la pièce" data-testid="upload-kind">
+      <Select className={sel} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Nature de la pièce" data-testid="upload-kind">
         {kinds.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-      </select>
+      </Select>
       {!compact && <input className={sel + " w-44"} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Libellé (facultatif)" aria-label="Libellé" />}
       <label className={"inline-flex cursor-pointer items-center gap-1 rounded-lg border bg-card px-2 " + (compact ? "h-7 text-xs" : "h-8 text-sm")}>
         <Paperclip className="size-3.5" />{fileName || "Choisir un fichier"}

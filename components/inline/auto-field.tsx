@@ -9,6 +9,7 @@ import type { Model, FieldType } from "@/lib/fields";
 import { cn } from "@/lib/utils";
 
 import { readableValue, type Option } from "@/lib/readable";
+import { Select } from "@/components/common/searchable-select";
 export { readableValue, type Option };
 
 type Props = {
@@ -146,13 +147,13 @@ export function AutoField(p: Props) {
   if (p.type === "select") {
     return (
       <div className={cn("relative", p.className)}>
-        <select
+        <Select
           id={p.inputId}
           data-testid={p.testId}
           data-highlight={p.highlight ? "true" : undefined}
           autoFocus={p.highlight}
           aria-label={p.label}
-          className={cn(base, "appearance-none pr-6")}
+          className={cn(base, "h-auto justify-between py-1 pr-6 text-foreground data-[state=open]:border-border")}
           value={val}
           onChange={(e) => { setVal(e.target.value); send(e.target.value); }}
         >
@@ -160,7 +161,7 @@ export function AutoField(p: Props) {
           {(p.options ?? []).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </select>
+        </Select>
         {status}
       </div>
     );

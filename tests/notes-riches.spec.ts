@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { iAm, pick } from "./helpers";
 
 // Retour de Gaël (14/09, soir) : éditeur riche pour les notes, liste groupée par mois, recherche et filtres — et une colonne qui ne déborde plus.
 
@@ -42,13 +42,13 @@ test("une note se met en forme (titre, liste, cases à cocher), se retrouve par 
   await page.getByTestId("notes-filter-clear").click();
   await expect(page.getByTestId("my-notes")).toContainText("Comité de pilotage Forum");
   // Filtre par type de note.
-  await page.getByTestId("notes-filter-context").selectOption("cafe");
+  await pick(page, "notes-filter-context", { value: "cafe" });
   await page.getByTestId("notes-filter").getByRole("button", { name: "Filtrer" }).click();
   await expect(page.getByTestId("my-notes")).not.toContainText("Comité de pilotage Forum");
   // Partagée au pôle : le responsable la lit mise en forme, sans barre d'outils ni droit d'écrire.
   await page.goto("/notes");
   await page.getByTestId("my-notes").getByRole("link", { name: /Comité de pilotage Forum/ }).click();
-  await page.getByTestId("note-visibility").selectOption("pole");
+  await pick(page, "note-visibility", { value: "pole" });
   await expect(page.getByTestId("note-saved")).toBeVisible();
   const url = page.url();
   await iAm(page, "Julien Barbot");

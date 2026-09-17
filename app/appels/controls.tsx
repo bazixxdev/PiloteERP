@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { addCall, promoteCall, renewCall, setCallActive, setCallStatus } from "@/app/actions/calls";
 import { CALL_STATUSES } from "@/lib/calls";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 type R = { ok: true } | { ok: false; error: string };
@@ -72,11 +72,11 @@ export function CallStatusSelect({ id, value, readOnly }: { id: string; value: s
   const tone = current?.color === "mint" ? "border-mint/50 bg-mint-soft text-mint" : current?.color === "warning" ? "border-warning/50 bg-warning-soft text-warning-foreground" : current ? "bg-muted text-muted-foreground" : "bg-card";
   if (readOnly) return <span className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium ${tone}`}>{current?.label ?? "Pas encore regardé"}</span>;
   return (
-    <select className={`h-7 rounded-md border px-1.5 text-xs font-medium ${tone}`} value={v} disabled={pending} aria-label="Statut d'équipe" data-testid={`call-status-${id}`}
+    <Select className={`h-7 rounded-md border px-1.5 text-xs font-medium ${tone}`} value={v} disabled={pending} aria-label="Statut d'équipe" data-testid={`call-status-${id}`}
       onChange={(e) => { const next = e.target.value; setV(next); run(() => setCallStatus(id, next || null), () => toast.success(next ? `Statut posé : ${CALL_STATUSES.find((s) => s.value === next)?.label}` : "Statut retiré")); }}>
       <option value="">Pas encore regardé</option>
       {CALL_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-    </select>
+    </Select>
   );
 }
 
@@ -113,27 +113,27 @@ export function CallFilters({ funders, current }: { funders: Opt[]; current: { f
     const qs = Object.entries(next).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
-  const sel = "max-w-[175px] border-0 bg-transparent text-[11px] focus:outline-none";
+  const sel = "max-w-[175px] h-5 gap-1 border-0 bg-transparent px-0 text-[11px] focus:outline-none focus-visible:ring-0";
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="call-filters">
       <Filter label="Financeur">
-        <select className={sel} value={current.financeur} onChange={(e) => set("financeur", e.target.value)} aria-label="Filtrer par financeur">
+        <Select className={sel} value={current.financeur} onChange={(e) => set("financeur", e.target.value)} aria-label="Filtrer par financeur">
           <option value="">Tous les financeurs</option>
           {funders.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
+        </Select>
       </Filter>
       <Filter label="Statut d'équipe">
-        <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut d'équipe">
+        <Select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut d'équipe">
           <option value="">Tous</option>
           <option value="none">Pas encore regardés</option>
           {CALL_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+        </Select>
       </Filter>
       <Filter label="Vue">
-        <select className={sel} value={current.vue} onChange={(e) => set("vue", e.target.value)} aria-label="Vue">
+        <Select className={sel} value={current.vue} onChange={(e) => set("vue", e.target.value)} aria-label="Vue">
           <option value="">Actifs (écartés masqués)</option>
           <option value="tous">Tous, écartés et retirés compris</option>
-        </select>
+        </Select>
       </Filter>
     </div>
   );

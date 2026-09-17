@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Pièces jointes légères : dépôt par le pilote, visible sur l'édition, téléchargement réservé aux personnes connectées.
 test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge ; sans connexion, refus", async ({ page, request }) => {
@@ -12,7 +12,7 @@ test("le pilote dépose un compte rendu, la pièce apparaît et se télécharge 
   await page.getByTestId("upload-open").click();
   await expect(page.getByTestId("upload-form")).toBeVisible();
   const before = await page.getByTestId("pieces").locator("[data-testid=attachments] li").count();
-  await page.getByTestId("upload-kind").selectOption("minutes");
+  await pick(page, "upload-kind", { value: "minutes" });
   await page.getByTestId("upload-file").setInputFiles({ name: "cr-copil.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% compte rendu fictif\n%%EOF\n") });
   await page.getByTestId("upload-submit").click();
   await expect(page.getByText("Pièce déposée")).toBeVisible();

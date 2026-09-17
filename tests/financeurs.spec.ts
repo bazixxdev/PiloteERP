@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Financeurs : liste, page avec contacts (RAF), contact principal repris sur les lignes de financement et les conventions.
 test("la RAF tient les contacts d'un financeur ; le contact principal apparaît sur les lignes et les conventions", async ({ page }) => {
@@ -26,7 +26,7 @@ test("la RAF tient les contacts d'un financeur ; le contact principal apparaît 
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Vidal");
   await regionLine.locator("[data-testid$=-open]").click();
   const panel = page.locator("[data-slot=sheet-content]");
-  const sel = panel.getByLabel(/Contact du dossier/); const optVal = await sel.locator("option", { hasText: "Marchand" }).getAttribute("value"); await sel.selectOption(optVal as string);
+  await pick(page, panel.getByLabel(/Contact du dossier/), "Marchand");
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Contact du dossier");
   await expect(regionLine.locator("[data-testid^=funding-contact-]")).toContainText("Marchand");
   await page.keyboard.press("Escape");

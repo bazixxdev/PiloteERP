@@ -16,7 +16,7 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   await page.getByTestId("request-validation-open").click();
   await page.getByTestId("rv-amount").fill("1800");
   await page.getByTestId("rv-label").fill("Devis recette prestataire");
-  await expect(page.getByTestId("rv-level")).toHaveValue("2", { timeout: 10_000 });
+  await expect(page.getByTestId("rv-level")).toHaveAttribute("data-value", "2", { timeout: 10_000 });
   await page.getByTestId("rv-submit").click();
   await expect(page.getByTestId("validation-0")).toContainText("Devis recette prestataire");
 

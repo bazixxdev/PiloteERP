@@ -14,7 +14,7 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   await page.keyboard.press("Escape");
 
   // Vue par projet.
-  await page.getByTestId("load-view").selectOption("projets");
+  await pick(page, "load-view", { value: "projets" });
   await expect(page.getByTestId("load-by-project")).toBeVisible();
 
   // Ventilation depuis l'édition : le pilote lisse 24 j de septembre à décembre.
@@ -24,8 +24,8 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   const row = page.getByTestId("hr-table").locator("tr", { hasText: "Romain Tessier" });
   await row.locator("[data-testid^=load-plan-]").click();
   await page.getByTestId("load-total").fill("24");
-  await page.getByLabel("Premier mois").selectOption("2026-09");
-  await page.getByLabel("Dernier mois").selectOption("2026-12");
+  await pick(page, page.getByLabel("Premier mois"), { value: "2026-09" });
+  await pick(page, page.getByLabel("Dernier mois"), { value: "2026-12" });
   await page.getByTestId("load-spread").click();
   await expect(page.getByTestId("load-month-2026-10")).toHaveValue("6");
   await expect(page.getByTestId("load-sum")).toContainText("24");

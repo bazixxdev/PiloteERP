@@ -28,7 +28,7 @@ test("la RAF repère, le CODIR statue, « Étudier » crée la convention une se
   // Statut d'équipe sur le FDVA.
   await page.goto("/appels");
   const fdvaId = (await page.getByTestId("calls-table").locator(FDVA).getAttribute("data-testid"))!.replace("call-", "");
-  await page.getByTestId(`call-status-${fdvaId}`).selectOption("study");
+  await pick(page, page.getByTestId(`call-status-${fdvaId}`), { value: "study" });
   await expect(page.getByText("Statut posé : À étudier")).toBeVisible();
   await expect(page.getByTestId("calls-table").locator(FDVA)).toHaveAttribute("data-status", "study");
 

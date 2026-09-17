@@ -258,6 +258,10 @@ Retours de Gaël en direct sur la démo :
 - **Texte pas centré dans les pastilles** (filtres des notifications, périmètre, années de la matrice, vues des demandes et validations, choix du type de demande, équipe) : `inline-flex items-center` partout, plus de `leading-8`.
 - **Le menu perdait son gras dans une édition** : `locate()` marque la première feuille de la section rattachée (« Portefeuille ») quand l'adresse n'est pas une feuille (`also`).
 
+### T. Tous les déroulants (17/09, midi) — fait
+
+Gaël : « tu n'as pas passé tous les déroulants » (la liste native de macOS s'ouvrait encore sur le contexte d'une note). Plus aucun `<select>` natif à l'écran : `Select` (dans `components/common/searchable-select.tsx`) reprend l'API du `<select>` (`value` / `defaultValue`, `onChange` avec `e.target.value`, enfants `<option>` / `<optgroup>`) et affiche notre liste — les 47 restants ont été convertis sans réécrire les écrans, y compris `AutoField` (champs en ligne des tableaux), les filtres en pastille (déclencheur compact sans bordure) et le formulaire GET des notes (champ caché `name`). Recherche dès 8 entrées, comme avant. Tests : `pick()` accepte un Locator et `{ value }`, réessaie si le clic tombe avant l'hydratation, cible `[data-slot=select-list]` (la liste des suggestions `@édition` est aussi un listbox) ; les `toHaveValue` sur ces champs lisent `data-value`. Le CSS d'habillage des `<select>` natifs reste dans `globals.css` au cas où.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

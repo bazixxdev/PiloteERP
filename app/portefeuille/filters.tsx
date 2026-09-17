@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 
@@ -17,37 +18,37 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, 
     const qs = Object.entries(next).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
-  const sel = "max-w-[175px] border-0 bg-transparent text-[11px] focus:outline-none";
+  const sel = "max-w-[175px] h-5 gap-1 border-0 bg-transparent px-0 text-[11px] focus:outline-none focus-visible:ring-0";
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3" data-testid="portfolio-filters">
       <div className="flex flex-wrap items-center gap-2">
         {showPole && (
           <Filter label="Pôle">
-            <select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
+            <Select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
               <option value="">Tous les pôles</option>
               {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
+            </Select>
           </Filter>
         )}
         <Filter label="Statut">
-          <select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
+          <Select className={sel} value={current.statut} onChange={(e) => set("statut", e.target.value)} aria-label="Filtrer par statut">
             <option value="">Tous les statuts</option>
             {statuses.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          </Select>
         </Filter>
         <Filter label="Afficher">
-          <select className={sel} value={current.alerte} onChange={(e) => set("alerte", e.target.value)} aria-label="Filtrer le portefeuille par alerte">
+          <Select className={sel} value={current.alerte} onChange={(e) => set("alerte", e.target.value)} aria-label="Filtrer le portefeuille par alerte">
             <option value="">Toutes les éditions</option>
             <option value="oui">Avec une alerte</option>
             <option value="danger">Avec une alerte forte</option>
             <option value="calme">Sans alerte</option>
-          </select>
+          </Select>
         </Filter>
         <Filter label="Période">
-          <select className={sel} value={current.trimestre} onChange={(e) => set("trimestre", e.target.value)} aria-label="Filtrer par trimestre">
+          <Select className={sel} value={current.trimestre} onChange={(e) => set("trimestre", e.target.value)} aria-label="Filtrer par trimestre">
             <option value="">Toute l'année</option>
             <option value={thisQuarter}>Ce trimestre ({thisQuarter.replace("-", " ")})</option>
-          </select>
+          </Select>
         </Filter>
       </div>
       <span className="text-[11px] text-muted-foreground">Vue tableau · Année {year}</span>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/common/searchable-select";
 
 type Ed = { id: string; year: number; statusLabel: string };
 
@@ -25,9 +26,9 @@ export function EditionPicker({ editions, currentId }: { editions: Ed[]; current
   return (
     <label className="inline-flex items-center gap-1.5 rounded-[5px] border bg-card px-2 py-1 text-[11px]" data-testid="edition-years">
       <span className="text-muted-foreground">{sorted.length} éditions</span>
-      <select className="border-0 bg-transparent text-[11px] font-semibold text-primary focus:outline-none" value={currentId} onChange={(ev) => router.push(`/edition/${ev.target.value}`)} aria-label="Choisir l'édition">
+      <Select className="h-6 gap-1 border-0 bg-transparent px-0 text-[11px] font-semibold text-primary focus:outline-none focus-visible:ring-0" value={currentId} onChange={(ev) => router.push(`/edition/${ev.target.value}`)} aria-label="Choisir l'édition">
         {sorted.map((x) => <option key={x.id} value={x.id}>Édition {x.year} · {x.statusLabel}</option>)}
-      </select>
+      </Select>
     </label>
   );
 }

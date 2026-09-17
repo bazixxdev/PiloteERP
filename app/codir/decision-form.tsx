@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { recordDecision } from "@/app/actions/edition";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 
@@ -31,13 +31,13 @@ export function DecisionForm({ editionId, label, people, instances, defaultInsta
       <PopoverContent className="w-80" align="end">
         <div className="grid gap-2">
           <div className="text-sm font-semibold">Consigner une décision</div>
-          <select className={sel} value={instance} onChange={(e) => setInstance(e.target.value)} aria-label="Instance">{instances.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}</select>
+          <Select className={sel} value={instance} onChange={(e) => setInstance(e.target.value)} aria-label="Instance">{instances.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}</Select>
           <textarea className="min-h-20 rounded-lg border bg-card p-2 text-sm" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Décision prise, motif si utile…" data-testid="decision-body" />
           {alerts.length > 0 && (
-            <select className={sel} value={alertKind} onChange={(e) => setAlertKind(e.target.value)} aria-label="Alerte réglée par cette décision" data-testid="decision-alert">
+            <Select className={sel} value={alertKind} onChange={(e) => setAlertKind(e.target.value)} aria-label="Alerte réglée par cette décision" data-testid="decision-alert">
               <option value="">Ne règle aucune alerte</option>
               {alerts.map((a) => <option key={a.value} value={a.value}>Règle : {a.label}</option>)}
-            </select>
+            </Select>
           )}
           <div className="grid grid-cols-2 gap-2">
             <SearchableSelect options={people.map((p) => ({ value: p.id, label: p.name }))} value={followUp} onChange={setFollowUp} emptyOption="Suite : personne" aria-label="Suite confiée à" className="w-full" />

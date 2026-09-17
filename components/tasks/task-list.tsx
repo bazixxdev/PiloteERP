@@ -14,6 +14,7 @@ import { dayjs, slotLabel } from "@/lib/format";
 import { noteColor } from "@/lib/notes";
 import { groupByDue } from "@/lib/tasks-group";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/common/searchable-select";
 
 // Éditions proposables (« @ » dans la saisie, chip « Édition ») : les plus pertinentes pour la personne d'abord.
 export type EditionOpt = { id: string; name: string; year: number; actions: { id: string; name: string }[] };
@@ -330,10 +331,10 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
           {current && current.actions.length > 0 && (
             <div className="mb-2 border-b pb-2">
               <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>Action de cette édition (facultatif)</label>
-              <select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
+              <Select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
                 <option value="">— l'édition entière —</option>
                 {current.actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              </Select>
             </div>
           )}
           <div className="text-[10px] text-muted-foreground">{t.edition ? "Changer pour une autre édition" : "Choisir l'édition"}</div>

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // To-do personnelle : une tâche privée, son échéance (pour quand) et ses créneaux (quand je m'y mets), visibles dans Ma semaine et dans l'agenda.
 test("une tâche personnelle se crée, se date, se planifie en créneau et sort dans le flux agenda", async ({ page }) => {
@@ -77,7 +77,7 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await page.getByRole("option", { name: /Mois de l'ESS et Prix ESS/ }).first().click();
   await expect(relire).toContainText("Mois de l'ESS et Prix ESS · 2026");
   await relire.locator("[data-testid^=task-edition-]").click();
-  await page.locator("[id^=task-action-]").selectOption({ label: "Communication" });
+  await pick(page, page.locator("[id^=task-action-]"), "Communication");
   await expect(relire).toContainText("· Communication");
   await relire.locator("[data-testid^=task-detach-]").click();
   await expect(relire).not.toContainText("Mois de l'ESS");

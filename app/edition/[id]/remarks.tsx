@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addRemark, deleteRemark, resolveRemark } from "@/app/actions/remarks";
+import { Select } from "@/components/common/searchable-select";
 
 export type RemarkView = { id: string; field: string; body: string; reason?: string; author: string; authorId: string; createdAt: string; resolvedAt: string | null; resolvedBy: string | null };
 
@@ -71,9 +72,9 @@ function AddRemark({ editionId, field, fieldLabel, pending, run }: { editionId: 
           <p className="text-[11px] text-muted-foreground">Le pilote la verra ici, en place, et la marquera traitée. Une notification lui est envoyée.</p>
           <textarea autoFocus value={body} onChange={(e) => setBody(e.target.value)} rows={3} className="rounded-lg border bg-card p-2 text-sm" placeholder="À compléter : les dates jalons a minima…" aria-label="Remarque" data-testid={`remark-body-${field}`} />
           <label className="grid gap-1 text-[11px]"><span className="font-semibold">Pourquoi ? <span className="font-normal text-muted-foreground">le pilote saura d'où ça vient</span></span>
-            <select value={reason} onChange={(e) => setReason(e.target.value)} className="h-8 rounded-md border bg-card px-2 text-xs" aria-label="Motif de la remarque" data-testid={`remark-reason-select-${field}`}>
+            <Select value={reason} onChange={(e) => setReason(e.target.value)} className="h-8 rounded-md border bg-card px-2 text-xs" aria-label="Motif de la remarque" data-testid={`remark-reason-select-${field}`}>
               {REMARK_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}{r.hint ? ` — ${r.hint}` : ""}</option>)}
-            </select>
+            </Select>
           </label>
           <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" size="sm" disabled={pending || !body.trim()} data-testid={`remark-submit-${field}`}>Poser la remarque</Button></div>
         </form>

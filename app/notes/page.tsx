@@ -11,6 +11,7 @@ import { hasModule } from "@/lib/modules";
 import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NoteEditor } from "./editor";
+import { Select } from "@/components/common/searchable-select";
 
 // Notes (retour du 14/09) : prise de notes propre, rattachée à un projet ou transverse, privée ou partagée. Remplace le OneNote « défouloir ».
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string; vue?: string }> }) {
@@ -79,14 +80,14 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                 <input type="search" name="q" defaultValue={q ?? ""} placeholder="Rechercher dans mes notes…" aria-label="Rechercher" className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" data-testid="notes-search" />
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                <select name="projet" defaultValue={projet ?? ""} aria-label="Projet" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-project">
+                <Select name="projet" defaultValue={projet ?? ""} aria-label="Projet" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-project">
                   <option value="">Tous les projets</option>
                   {projectOpts.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
-                </select>
-                <select name="contexte" defaultValue={contexte ?? ""} aria-label="Type de note" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-context">
+                </Select>
+                <Select name="contexte" defaultValue={contexte ?? ""} aria-label="Type de note" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-context">
                   <option value="">Tous les types</option>
                   {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="flex items-center gap-1 px-0.5" data-testid="notes-filter-colors">
                 {NOTE_COLORS.map((k) => (
@@ -95,10 +96,10 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                 <span className="ml-1 text-[10px] text-muted-foreground">{couleur ? noteColor(couleur)?.label : "Par couleur"}</span>
               </div>
               {authorOpts.length > 0 && (
-                <select name="auteur" defaultValue={auteur ?? ""} aria-label="Auteur" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-author">
+                <Select name="auteur" defaultValue={auteur ?? ""} aria-label="Auteur" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-author">
                   <option value="">Moi et mes collègues</option>
                   {authorOpts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                </Select>
               )}
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                 <button type="submit" className="rounded border px-2 py-0.5 hover:bg-muted">Filtrer</button>

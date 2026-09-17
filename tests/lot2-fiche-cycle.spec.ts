@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Lot 2 « La fiche et son cycle » : fiche validée verrouillée et propositions de modification, proposition de projet,
 // réalisations au fil de l'année, export assemblé, plan de charge figé, motif des remarques, occurrences d'action.
@@ -104,7 +104,7 @@ test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et
   await expect(page.getByTestId("feedback-bar")).toBeVisible();
   await page.getByTestId("remark-add-stakes").click();
   await page.getByTestId("remark-body-stakes").fill("La Région attend un lien explicite avec le SRESS.");
-  await page.getByTestId("remark-reason-select-stakes").selectOption("funder");
+  await pick(page, "remark-reason-select-stakes", { value: "funder" });
   await page.getByTestId("remark-submit-stakes").click();
   await expect(page.locator("[data-testid^=remark-reason-]").filter({ hasText: "Financeur" }).first()).toBeVisible();
 });

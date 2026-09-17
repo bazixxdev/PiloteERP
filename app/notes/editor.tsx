@@ -14,7 +14,7 @@ import type { EditionOpt } from "@/components/tasks/task-list";
 import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { SearchableSelect } from "@/components/common/searchable-select";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 const VIS = [
   { value: "private", label: "Privée", icon: Lock },
@@ -87,18 +87,18 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
           </span>
         ) : (<>
         <Input type="date" value={date} disabled={pending} onChange={(e) => { setDate(e.target.value); save({ date: e.target.value }); }} aria-label="Date de la note" className="h-7 w-36 text-[11px]" />
-        <select value={context} disabled={pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
+        <Select value={context} disabled={pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
           {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
+        </Select>
         <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={editionId} disabled={pending} onChange={(v) => { setEditionId(v); save({ editionId: v || null }); }} emptyOption="Transverse — sans projet" aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md px-1.5 text-[11px]" data-testid="note-edition" />
         </>)}
         {readOnly ? (
           <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return note!.sharedWithMe ? <><UserPlus className="size-3" />Partagée avec vous · note de {note!.author.name}</> : <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-md border px-1.5 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return <V.icon className="size-3" aria-hidden />; })()}
-            <select value={visibility} disabled={pending} onChange={(e) => { setVisibility(e.target.value); save({ visibility: e.target.value }); }} aria-label="Visibilité de la note" className="h-7 bg-transparent text-[11px]" data-testid="note-visibility">
+            <Select value={visibility} disabled={pending} onChange={(e) => { setVisibility(e.target.value); save({ visibility: e.target.value }); }} aria-label="Visibilité de la note" className="h-7 bg-transparent text-[11px]" data-testid="note-visibility">
               {VIS.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-            </select>
+            </Select>
           </span>
         )}
         {!readOnly && <ColorPicker value={color} disabled={pending} onChange={(v) => { setColor(v); save({ color: v }); }} />}

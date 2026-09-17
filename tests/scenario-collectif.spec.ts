@@ -25,8 +25,8 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("field-stakes").blur();
   await page.getByTestId("field-expectedOutcome").fill("Un plaidoyer repris par trois collectivités.");
   await page.getByTestId("field-expectedOutcome").blur();
-  await page.getByTestId("edition-status").selectOption("in_progress");
-  await expect(page.getByTestId("edition-status")).toHaveValue("in_progress");
+  await pick(page, "edition-status", { value: "in_progress" });
+  await expect(page.getByTestId("edition-status")).toHaveAttribute("data-value", "in_progress");
 
   // 2. La RAF pose le cadre de moyens, une ligne de financement avec un livrable à J+10, et l'enveloppe.
   await iAm(page, "Nadia Ferrand");
@@ -70,7 +70,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("add-action-input").fill("Cartographie des élus");
   await page.getByTestId("add-action-submit").click();
   const row = page.getByTestId("action-row-0");
-  await row.locator("select").first().selectOption({ label: "Lucas Perrin" });
+  await pick(page, row.getByRole("combobox").first(), "Lucas Perrin");
   await row.locator('input[type="date"]').fill(soon);
   await row.locator("[data-testid^=action-target-edit-]").click();
   await row.locator('input[type="number"]').fill("21");
@@ -111,7 +111,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("request-validation-open").click();
   await page.getByTestId("rv-amount").fill("2500");
   await page.getByTestId("rv-label").fill("Devis impression du plaidoyer");
-  await expect(page.getByTestId("rv-level")).toHaveValue("2");
+  await expect(page.getByTestId("rv-level")).toHaveAttribute("data-value", "2");
   await page.getByTestId("rv-submit").click();
   await expect(page.getByTestId("validation-0")).toContainText("En attente d'un valideur");
 

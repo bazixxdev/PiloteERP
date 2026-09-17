@@ -50,8 +50,7 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await openEditionByName(page, "Chroniquer la TESS");
   await page.getByRole("tab", { name: "Budget" }).click();
   await page.getByTestId("add-funding-open").click();
-  const opt = page.getByTestId("attach-convention-select").locator("option", { hasText: "ADEME-TEST-2026-2027" });
-  await page.getByTestId("attach-convention-select").selectOption(await opt.getAttribute("value") as string);
+  await pick(page, "attach-convention-select", "ADEME-TEST-2026-2027");
   await page.getByTestId("attach-convention-submit").click();
   await expect(page.locator("[data-testid^=funding-line-]", { hasText: "ADEME-TEST-2026-2027" })).toHaveCount(1);
 

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Lot D — Réalisé comptable : le grand livre analytique importé (fichier), rapproché des éditions par le code analytique ;
 // charges par poste, frais de déplacement, produits face aux versements ; codes inconnus rapprochés dans l'admin ;
@@ -42,11 +42,11 @@ test("l'admin importe un fichier, rapproche les codes inconnus, et choisit la so
   await expect(unknown).toContainText("FONCT-2026");
   await expect(unknown).toContainText("TESS-ETUDE");
   // Le loyer, c'est du fonctionnement : à ignorer. L'étude mobilité : une édition.
-  await page.getByTestId("tag-kind-FONCT-2026").selectOption("ignore");
+  await pick(page, "tag-kind-FONCT-2026", { value: "ignore" });
   await page.getByTestId("tag-submit-FONCT-2026").click();
   await expect(page.getByText("Code FONCT-2026 rapproché")).toBeVisible();
-  await page.getByTestId("tag-kind-TESS-ETUDE").selectOption("edition");
-  await page.getByTestId("tag-target-TESS-ETUDE").selectOption({ label: "Carte et ressource TESS · 2026" });
+  await pick(page, "tag-kind-TESS-ETUDE", { value: "edition" });
+  await pick(page, "tag-target-TESS-ETUDE", "Carte et ressource TESS · 2026");
   await page.getByTestId("tag-submit-TESS-ETUDE").click();
   await expect(page.getByText("Code TESS-ETUDE rapproché")).toBeVisible();
   await expect(page.getByTestId("ledger-unknown")).toHaveCount(0);
@@ -67,15 +67,15 @@ test("l'admin importe un fichier, rapproche les codes inconnus, et choisit la so
 
   // La source qui compte : la compta remplace la saisie RAF dans le « Réalisé » de l'enveloppe, puis retour.
   await page.goto("/admin?section=parametres");
-  await page.getByTestId("realized-source-select").selectOption("ledger");
+  await pick(page, "realized-source-select", { value: "ledger" });
   await page.waitForTimeout(800);
   await openEditionByName(page, "Cycle de conférences transition");
   await page.getByRole("tab", { name: "Budget" }).click();
   await expect(page.getByTestId("budget-realized")).toHaveText(/1.300/);
   await expect(page.getByTestId("ledger-block")).toContainText("compte dans les alertes d'enveloppe");
   await page.goto("/admin?section=parametres");
-  await page.getByTestId("realized-source-select").selectOption("raf");
+  await pick(page, "realized-source-select", { value: "raf" });
   await page.waitForTimeout(800);
   await page.reload();
-  await expect(page.getByTestId("realized-source-select")).toHaveValue("raf");
+  await expect(page.getByTestId("realized-source-select")).toHaveAttribute("data-value", "raf");
 });

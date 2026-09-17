@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { setPlannedLoad } from "@/app/actions/load";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/common/searchable-select";
 
 // Répartir par mois les jours prévus d'une personne sur l'édition : un total et une période (l'outil lisse), puis mois par mois.
 export function LoadPlanner({ editionId, personId, personName, year, plannedDays, loads, readOnly }: { editionId: string; personId: string; personName: string; year: number; plannedDays: number; loads: Record<string, number>; readOnly: boolean }) {
@@ -51,9 +52,9 @@ export function LoadPlanner({ editionId, personId, personName, year, plannedDays
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md bg-muted/50 p-2 text-[11px]">
             <span>Répartir</span><Input value={total} onChange={(e) => setTotal(e.target.value)} className="h-7 w-16 text-xs" aria-label="Total de jours" inputMode="decimal" data-testid="load-total" /><span>j de</span>
-            <select value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 rounded border bg-card px-1 text-xs" aria-label="Premier mois">{months.map((m) => <option key={m} value={m}>{dayjs(m + "-01").format("MMM")}</option>)}</select>
+            <Select value={from} onChange={(e) => setFrom(e.target.value)} className="h-7 rounded border bg-card px-1 text-xs" aria-label="Premier mois">{months.map((m) => <option key={m} value={m}>{dayjs(m + "-01").format("MMM")}</option>)}</Select>
             <span>à</span>
-            <select value={to} onChange={(e) => setTo(e.target.value)} className="h-7 rounded border bg-card px-1 text-xs" aria-label="Dernier mois">{months.map((m) => <option key={m} value={m}>{dayjs(m + "-01").format("MMM")}</option>)}</select>
+            <Select value={to} onChange={(e) => setTo(e.target.value)} className="h-7 rounded border bg-card px-1 text-xs" aria-label="Dernier mois">{months.map((m) => <option key={m} value={m}>{dayjs(m + "-01").format("MMM")}</option>)}</Select>
             <Button type="button" size="xs" variant="outline" onClick={spread} data-testid="load-spread">Lisser</Button>
           </div>
         )}
