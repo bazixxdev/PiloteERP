@@ -7,6 +7,8 @@ import { Briefcase, CalendarDays, CalendarClock, Clock, FileSignature, Inbox, La
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 import { locate, type NavSection } from "@/lib/navigation";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpMenu } from "./help-menu";
 import { PersonSwitcher } from "./person-switcher";
 import type { AccountProps } from "./account-data";
@@ -27,14 +29,87 @@ const SECTION_ICONS: Record<NavSection["id"], LucideIcon> = {
 
 const STORAGE_KEY = "pilote-sidebar-collapsed";
 
+// Sous-menu flottant du rail (retour de Gaël, 17/09) : au clic sur l'icône d'une section qui a des sous-rubriques, un panneau
+// à droite (8 px), fond blanc, coins arrondis, ombre légère, sans flèche — le nom de la section, ses feuilles et leurs compteurs.
+// Un seul ouvert à la fois ; il se ferme après un choix, un clic dehors, un second clic sur l'icône ou Échap (le focus revient
+// sur l'icône). Au survol, une info-bulle donne le nom, sauf quand le panneau est ouvert. La barre ne se déplie pas.
+function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSection; Icon: LucideIcon; activeHref: string | null; isOpen: boolean; onOpenChange: (o: boolean) => void }) {
+  const badge = s.badge ?? 0;
+  const within = s.items.some((l) => l.href === activeHref);
+  const iconClass = cn(
+    "relative grid h-10 w-11 place-items-center rounded-md text-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20",
+    within && !isOpen && "bg-primary text-primary-foreground hover:bg-primary",
+    isOpen && "bg-sidebar-accent text-primary",
+  );
+  const dot = badge > 0 && <span className="absolute right-1 top-1 min-w-[15px] rounded-full bg-warning px-1 text-center text-[9px] font-bold leading-[15px] text-white" aria-hidden="true">{badge}</span>;
+  if (s.items.length <= 1) {
+    // Une rubrique sans sous-menu (ou à une seule feuille) mène directement à sa page.
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href={s.items[0]?.href ?? "/portefeuille"} aria-label={s.label} aria-current={within ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`}><Icon className="size-5" />{dot}</Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <Popover open={isOpen} onOpenChange={onOpenChange}>
+      <Tooltip open={isOpen ? false : undefined}>
+        <TooltipTrigger asChild>
+          <PopoverAnchor asChild>
+            {/* Ouverture pilotée à la main : un second clic sur l'icône ferme (le déclencheur Radix, pris entre le clic « dehors » et le sien, rouvrait). */}
+            <button type="button" aria-label={s.label} aria-haspopup="menu" aria-expanded={isOpen} aria-current={within && !isOpen ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => onOpenChange(!isOpen)}><Icon className="size-5" />{dot}</button>
+          </PopoverAnchor>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        side="right" align="start" sideOffset={8} collisionPadding={8} className="w-64 gap-0 p-1.5 shadow-lg ring-border" data-testid={`rail-panel-${s.id}`}
+        onInteractOutside={(e) => { if ((e.detail.originalEvent.target as Element | null)?.closest?.(`[data-testid="rail-${s.id}"]`)) e.preventDefault(); }}
+        onCloseAutoFocus={(e) => { e.preventDefault(); (document.querySelector(`[data-testid="rail-${s.id}"]`) as HTMLElement | null)?.focus(); }}
+      >
+        <div className="flex items-center gap-2.5 px-2 pb-1.5 pt-1">
+          <Icon className="size-[18px] shrink-0 text-foreground" aria-hidden="true" />
+          <span className="flex-1 truncate text-[15px] font-semibold text-foreground">{s.label}</span>
+          {badge > 0 && <span className="rounded-sm bg-warning-soft px-1.5 text-[11px] font-bold leading-[20px] text-warning-foreground" aria-label={`${badge} à traiter par moi`}>{badge}</span>}
+        </div>
+        <ul className="grid gap-0.5" role="list">
+          {s.items.map((l) => {
+            const current = l.href === activeHref;
+            return (
+              <li key={l.href}>
+                <Link href={l.href} onClick={() => onOpenChange(false)} aria-current={current ? "page" : undefined} className={cn("flex h-9 items-center gap-2 rounded-md px-2.5 text-[13.5px] text-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20", current && "bg-sidebar-accent font-semibold text-primary")}>
+                  <span className="flex-1 truncate">{l.label}</span>
+                  {(l.badge ?? 0) > 0 && <span className="rounded-sm bg-warning-soft px-1.5 text-[11px] font-bold leading-[20px] text-warning-foreground">{l.badge}</span>}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function Sidebar({ tree, account }: { tree: NavSection[]; account: AccountProps }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { section: openId, leaf: activeHref } = locate(tree, pathname, params);
   const [collapsed, setCollapsed] = useState(false);
+  // Le rail vaut aussi sous `lg` (pas la place) : on le sait seulement dans le navigateur, d'où l'état après montage.
+  const [narrow, setNarrow] = useState<boolean | null>(null);
+  const [flyout, setFlyout] = useState<NavSection["id"] | null>(null);
   useEffect(() => {
     try { setCollapsed(localStorage.getItem(STORAGE_KEY) === "1"); } catch { /* stockage indisponible : barre déployée */ }
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
   }, []);
+  const rail = narrow !== null && (collapsed || narrow);
+  useEffect(() => { if (!rail) setFlyout(null); }, [rail]);
   // Les sous-onglets en page (classe `subnav`) se cachent quand la barre montre déjà le niveau 2 : voir globals.css.
   useEffect(() => {
     document.documentElement.dataset.sidebar = collapsed ? "rail" : "open";
@@ -74,9 +149,11 @@ export function Sidebar({ tree, account }: { tree: NavSection[]; account: Accoun
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden" aria-label="Navigation principale">
+      <nav className={cn("flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden", rail && "items-center")} aria-label="Navigation principale">
+        <TooltipProvider delayDuration={300}>
         {tree.map((s) => {
           const Icon = SECTION_ICONS[s.id];
+          if (rail) return <RailSection key={s.id} s={s} Icon={Icon} activeHref={activeHref} isOpen={flyout === s.id} onOpenChange={(o) => setFlyout(o ? s.id : null)} />;
           const open = s.id === openId;
           const active = s.items.find((l) => l.href === activeHref);
           // Le niveau 1 mène à la feuille courante si la section est ouverte, sinon à sa première feuille.
@@ -134,6 +211,7 @@ export function Sidebar({ tree, account }: { tree: NavSection[]; account: Accoun
             </div>
           );
         })}
+        </TooltipProvider>
       </nav>
       {/* Bas de barre, toujours visible : l'aide, puis le compte (menu vers le haut). */}
       <div className={cn("mt-2 grid gap-1.5 border-t border-sidebar-border pt-2", collapsed ? "justify-items-center" : "justify-items-center lg:justify-items-stretch")}>

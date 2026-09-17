@@ -320,6 +320,10 @@ Gaël : « go pour E1, juste tu peux mettre Temps après Échéances dans le men
 - Piège rejoué : après une migration, le serveur de dev garde l'ancien client Prisma — champs vides tant qu'on ne le redémarre pas.
 - 2 tests `tests/personnes.spec.ts` (fiche + cohérence du nom + Mon compte ; départ de Manon avec un projet qu'elle vient de proposer, repris par Lucas, connexion refusée, notification, réactivation). 53 tests.
 
+### Z. Sous-menu flottant du rail (18/09, nuit) — fait
+
+Gaël (maquette) : barre repliée → un clic sur l'icône d'une section ouvre un panneau à droite. `RailSection` dans `components/shell/sidebar.tsx` : Popover Radix ancré sur l'icône (8 px, fond blanc, coins arrondis, ombre légère, pas de flèche), nom de la section, feuilles et compteurs ; page active (fond bleu clair, gras, pétrole), survol, icône du panneau ouvert (bleu clair) et icône de la section courante (pétrole) distincts ; un seul panneau ; fermeture après un choix, un clic dehors, un second clic sur l'icône ou Échap (focus rendu à l'icône) ; info-bulle au survol sauf panneau ouvert ; une section à une seule feuille mène directement à sa page ; `collisionPadding` garde le panneau à l'écran. Le rail vaut aussi sous `lg` (media query après montage). Leçon : le déclencheur Radix pris entre le « clic dehors » et son propre clic rouvrait au second clic → ouverture pilotée à la main (`PopoverAnchor`, `onInteractOutside` sur l'événement d'origine). Test `tests/rail.spec.ts`. Au passage, `tests/realise.spec.ts` ne compare plus des montants qui dépendent de la date du jour (le seed « paie » les dépenses décidées il y a plus de 45 jours). 54 tests.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
