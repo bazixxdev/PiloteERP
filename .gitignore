@@ -47,8 +47,7 @@ prisma/prototype.db-journal
 /test-results
 /playwright-report
 
-# la .env ne contient que le chemin SQLite
-!.env
+# .env reste hors dépôt (revue du 18/09) ; le gabarit versionné est env.example
 
 # pièces jointes déposées dans le prototype
 /uploads/*
