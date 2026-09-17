@@ -33,6 +33,7 @@ export type NavContext = Actor & {
 
 export function navTreeFor(ctx: NavContext): NavSection[] {
   const codir = isCodir(ctx);
+  // Ordre demandé par Gaël (17/09) : Mon travail, Portefeuille, Projets et financements, Demandes, Échéances, Temps.
   const sections: NavSection[] = [
     {
       id: "travail",
@@ -44,15 +45,6 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       ],
     },
     {
-      id: "temps",
-      label: "Temps",
-      items: [
-        { label: "Ma répartition", href: "/temps", path: "/temps", absent: ["equipe", "personne"] },
-        ...(ctx.showTeam ? [{ label: "Temps de l'équipe", href: "/temps?equipe=1", path: "/temps", present: ["equipe", "personne"] }] : []),
-        ...(canLockMonths(ctx) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
-      ],
-    },
-    {
       id: "portefeuille",
       label: codir ? "Portefeuille" : "Mes projets",
       also: ["/edition"],
@@ -60,17 +52,6 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         { label: codir ? "Portefeuille" : "Mes projets", href: "/portefeuille", path: "/portefeuille" },
         { label: "Vue annuelle", href: "/annuel", path: "/annuel" },
         { label: "Plan de charge", href: "/plan-de-charge", path: "/plan-de-charge" },
-      ],
-    },
-    {
-      id: "demandes",
-      label: "Demandes",
-      badge: ctx.badges.requests,
-      items: [
-        { label: "À traiter par moi", href: "/demandes", badge: ctx.badges.requests, path: "/demandes", param: { key: "vue", oneOf: ["moi", null] } },
-        { label: "Mes demandes", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
-        ...(ctx.wide ? [{ label: ctx.wide, href: "/demandes?vue=toutes", path: "/demandes", param: { key: "vue", oneOf: ["toutes"] } }] : []),
-        ...(codir ? [{ label: "Validations par niveau", href: "/validations", path: "/validations" }] : []),
       ],
     },
     {
@@ -85,12 +66,32 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       ],
     },
     {
+      id: "demandes",
+      label: "Demandes",
+      badge: ctx.badges.requests,
+      items: [
+        { label: "À traiter par moi", href: "/demandes", badge: ctx.badges.requests, path: "/demandes", param: { key: "vue", oneOf: ["moi", null] } },
+        { label: "Mes demandes", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
+        ...(ctx.wide ? [{ label: ctx.wide, href: "/demandes?vue=toutes", path: "/demandes", param: { key: "vue", oneOf: ["toutes"] } }] : []),
+        ...(codir ? [{ label: "Validations par niveau", href: "/validations", path: "/validations" }] : []),
+      ],
+    },
+    {
       id: "echeances",
       label: "Échéances",
       badge: ctx.badges.reminders,
       items: [
         { label: "Échéances", href: "/echeances", badge: ctx.badges.reminders, path: ["/echeances", "/rappels"] },
         { label: "Notifications", href: "/notifications", path: "/notifications" },
+      ],
+    },
+    {
+      id: "temps",
+      label: "Temps",
+      items: [
+        { label: "Ma répartition", href: "/temps", path: "/temps", absent: ["equipe", "personne"] },
+        ...(ctx.showTeam ? [{ label: "Temps de l'équipe", href: "/temps?equipe=1", path: "/temps", present: ["equipe", "personne"] }] : []),
+        ...(canLockMonths(ctx) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
       ],
     },
   ];
