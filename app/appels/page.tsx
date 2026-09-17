@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listFunders } from "@/lib/organisations";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -24,7 +25,7 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
   const [settings, me, sp] = await Promise.all([getSettings(), getCurrentPerson(), searchParams]);
   if (!instanceHas(settings, "veille")) notFound();
   const [funders, all, people] = await Promise.all([
-    prisma.funder.findMany({ orderBy: { name: "asc" } }),
+    listFunders(),
     prisma.call.findMany({ include: { funder: true, convention: { select: { id: true, reference: true, status: true } } } }),
     prisma.person.findMany({ select: { id: true, name: true } }),
   ]);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { kindFilter } from "@/lib/organisations";
 import { PageHeader } from "@/components/common/page-header";
 import { DossiersNav } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
@@ -15,7 +16,8 @@ export default async function FinanceursPage() {
   const year = new Date().getFullYear();
   const [me, funders] = await Promise.all([
     getCurrentPerson(),
-    prisma.funder.findMany({
+    prisma.organisation.findMany({
+      where: { active: true, ...kindFilter("funder") },
       include: {
         contacts: true,
         conventions: { include: { lines: true, payments: true } },

@@ -204,34 +204,61 @@ model Mission {
   projects Project[]
 }
 
-model Funder {
+// Organisations (lot E2, ex-Funder + Supplier) : un seul annuaire, des genres cumulables (`kinds`, séparés par des virgules :
+// funder | supplier | partner | network | authority). Les relations gardent leur nom de rôle — le `funder` d'une ligne, d'une
+// convention ou d'un appel est l'organisation qui finance ; le `supplierRef` d'une validation est celle qui fournit.
+model Organisation {
   id          String          @id @default(cuid())
   name        String          @unique
+  kinds       String          @default("partner")
+  siret       String?
+  website     String?
+  address     String?
+  email       String? // adresse générique (fournisseur : où envoyer le bon pour accord)
+  phone       String?
   notes       String? // périmètre, habitudes, calendrier d'appels à projets…
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
   lines       FundingLine[]
   conventions Convention[]
-  contacts    FunderContact[]
+  contacts    OrganisationContact[]
   calls       Call[]
+  validations ValidationRequest[]
+  editions    EditionPartner[]
 }
 
-// Interlocuteurs d'un financeur (instructeur, gestionnaire, élu référent…). Données personnelles de tiers : le minimum utile,
-// tenu par la RAF ; le contact principal sert par défaut, une ligne ou une convention peut désigner son propre contact du dossier.
-model FunderContact {
-  id        String        @id @default(cuid())
-  funderId  String
-  funder    Funder        @relation(fields: [funderId], references: [id], onDelete: Cascade)
-  firstName String?
-  lastName  String
-  role      String? // fonction
-  email     String?
-  phone     String?
-  notes     String?
-  primary   Boolean       @default(false)
-  createdAt DateTime      @default(now())
-  lines     FundingLine[]
-  conventions Convention[]
+// Interlocuteurs d'une organisation (instructeur, gestionnaire, élu référent, commercial…). Données personnelles de tiers : le
+// minimum utile, tenu par la RAF ; le contact principal sert par défaut, une ligne ou une convention peut désigner son propre
+// contact du dossier. Un contact parti est détaché (`leftAt`), jamais supprimé tant qu'un dossier le cite.
+model OrganisationContact {
+  id             String        @id @default(cuid())
+  organisationId String
+  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  firstName      String?
+  lastName       String
+  role           String? // fonction
+  email          String?
+  phone          String?
+  notes          String?
+  primary        Boolean       @default(false)
+  leftAt         DateTime?
+  createdAt      DateTime      @default(now())
+  lines          FundingLine[]
+  conventions    Convention[]
 
-  @@index([funderId])
+  @@index([organisationId])
+}
+
+// Partenaires d'une édition (lot E2) : des organisations liées, en plus du texte libre `Edition.partners` qui reste le repli.
+model EditionPartner {
+  editionId      String
+  edition        Edition      @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  role           String? // ce que fait le partenaire sur cette édition
+  createdAt      DateTime     @default(now())
+
+  @@id([editionId, organisationId])
 }
 
 // Convention : objet unique par financeur et dispositif, pouvant couvrir plusieurs années et plusieurs projets (EF-C3).
@@ -239,7 +266,7 @@ model FunderContact {
 model Convention {
   id              String        @id @default(cuid())
   funderId        String
-  funder          Funder        @relation(fields: [funderId], references: [id])
+  funder          Organisation        @relation(fields: [funderId], references: [id])
   reference       String // référence interne unique, ex. FSE-2026-2028
   scheme          String?
   label           String?
@@ -253,7 +280,7 @@ model Convention {
   signedAt        DateTime?
   notes           String?
   contactId       String? // contact du dossier ; sinon le contact principal du financeur
-  contact         FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact         OrganisationContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
   payments        Payment[]
   call            Call?
@@ -338,6 +365,7 @@ model Edition {
   calendar              String?
   deliveryDate          DateTime? // date de rendu
   partners              String?
+  partnerLinks          EditionPartner[]
   method                String?
   governance            String?
   ownIndicators         String?
@@ -455,7 +483,7 @@ model FundingLine {
   editionId        String
   edition          Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
   funderId         String
-  funder           Funder        @relation(fields: [funderId], references: [id])
+  funder           Organisation        @relation(fields: [funderId], references: [id])
   conventionId     String? // affectation d'une convention partagée ; sinon financement annuel propre à l'édition
   convention       Convention?   @relation(fields: [conventionId], references: [id])
   scheme           String?
@@ -470,7 +498,7 @@ model FundingLine {
   multiYear        Boolean       @default(false)
   notes            String?
   contactId        String? // contact du dossier ; sinon le contact principal du financeur
-  contact          FunderContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact          OrganisationContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deliverables     Deliverable[]
   actions          Action[]
   attachments      Attachment[]
@@ -563,7 +591,7 @@ model ValidationRequest {
   supplier        String?
   supplierEmail   String?
   supplierId      String?
-  supplierRef     Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierRef     Organisation? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
   attachments     Attachment[]
   expense         Expense?
@@ -676,7 +704,7 @@ model LedgerImport {
 model Call {
   id           String      @id @default(cuid())
   funderId     String
-  funder       Funder      @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  funder       Organisation      @relation(fields: [funderId], references: [id], onDelete: Cascade)
   label        String
   scheme       String? // dispositif, axe
   deadline     DateTime? // date limite de dépôt ; null si au fil de l'eau
@@ -1015,16 +1043,3 @@ model FieldRemark {
   @@index([editionId, resolvedAt])
 }
 
-// Base unifiée des fournisseurs (retour du 15/09) : alimentée depuis les demandes de validation (recherche dans le champ,
-// « ajouter à la base » si inconnu), tenue dans l'admin. Le nom et l'adresse restent copiés sur la demande (trace figée).
-model Supplier {
-  id          String              @id @default(cuid())
-  name        String
-  email       String?
-  phone       String?
-  notes       String?
-  createdAt   DateTime            @default(now())
-  validations ValidationRequest[]
-
-  @@index([name])
-}

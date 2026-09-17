@@ -22,7 +22,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
   const year = new Date().getFullYear();
   const [me, refs, settings, f] = await Promise.all([
     getCurrentPerson(), getRefs(), getSettings(),
-    prisma.funder.findUnique({
+    prisma.organisation.findUnique({
       where: { id },
       include: {
         contacts: { orderBy: { createdAt: "asc" } },

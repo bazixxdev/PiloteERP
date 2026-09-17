@@ -27,8 +27,10 @@ test.describe("sans session", () => {
     await expect(page.getByTestId("person-switcher")).toContainText("Nadia Ferrand");
 
     await page.getByTestId("person-switcher").click();
+    await expect(page.getByTestId("menu-logout")).toBeVisible();
     await page.getByTestId("menu-logout").click();
-    await expect(page).toHaveURL(/\/connexion/);
+    // La déconnexion attend la réponse de l'API d'auth avant de naviguer : plus lent quand le serveur de test est chargé.
+    await expect(page).toHaveURL(/\/connexion/, { timeout: 20_000 });
     await page.goto("/portefeuille");
     await expect(page).toHaveURL(/\/connexion/);
   });

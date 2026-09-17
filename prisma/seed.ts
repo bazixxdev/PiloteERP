@@ -2,6 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
 import { DEFAULT_ROLES, serializePermissions } from "../lib/permissions";
+import { findOrCreateOrganisation } from "../lib/organisations";
 import { dayjs } from "../lib/format";
 import { DEFAULT_RHYTHMS, expectedHoursOn, rhythmAt } from "../lib/time";
 import { syncDeadlineNotifications, DEADLINE_KIND } from "../lib/deadline-notifications";
@@ -74,7 +75,8 @@ async function reset() {
   await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
-  await prisma.funderContact.deleteMany();
+  await prisma.organisationContact.deleteMany();
+  await prisma.editionPartner.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.decision.deleteMany();
@@ -88,7 +90,6 @@ async function reset() {
   await prisma.docLink.deleteMany();
   await prisma.indicator.deleteMany();
   await prisma.validationRequest.deleteMany();
-  await prisma.supplier.deleteMany();
   await prisma.monthLock.deleteMany();
   await prisma.timeEntry.deleteMany();
   await prisma.deliverable.deleteMany();
@@ -108,7 +109,7 @@ async function reset() {
   await prisma.pole.deleteMany();
   await prisma.timeCode.deleteMany();
   await prisma.mission.deleteMany();
-  await prisma.funder.deleteMany();
+  await prisma.organisation.deleteMany();
   await prisma.refValue.deleteMany();
   await prisma.settings.deleteMany();
 }
@@ -136,7 +137,16 @@ async function main() {
   const rhythmByCode = (code: string) => rhythms.find((r) => r.code === code)!;
 
   const funderNames = ["Région", "État", "FSE", "ADEME", "Banque des Territoires", "DREETS", "Cap'Asso", "ESS France", "Cotisations"];
-  const funders = await Promise.all(funderNames.map((name) => prisma.funder.create({ data: { name } })));
+  // Genres cumulables (lot E2) : les collectivités et l'État financent ; ESS France est aussi un réseau.
+  const funderKinds: Record<string, string> = { "Région": "funder,authority", "État": "funder,authority", "ESS France": "funder,network", "Banque des Territoires": "funder", "DREETS": "funder,authority" };
+  const funders = await Promise.all(funderNames.map((name) => prisma.organisation.create({ data: { name, kinds: funderKinds[name] ?? "funder", website: name === "ESS France" ? "https://www.ess-france.org" : null } })));
+  // Partenaires et réseaux sans financement, pour l'annuaire.
+  const partnerOrgs = await Promise.all([
+    { name: "France Active Centre-Val de Loire", kinds: "partner,network", website: "https://www.franceactive-cvl.org" },
+    { name: "Université de Tours", kinds: "partner" },
+    { name: "Mouvement associatif Centre-Val de Loire", kinds: "network" },
+    { name: "Tours Métropole Val de Loire", kinds: "authority,partner" },
+  ].map((o) => prisma.organisation.create({ data: o })));
 
   // Contacts des financeurs : personnes inventées, adresses en @exemple.fr ; le premier de chaque financeur est le contact principal.
   const contactsSeed: Record<number, { firstName: string; lastName: string; role: string; email: string; phone?: string }[]> = {
@@ -149,7 +159,7 @@ async function main() {
     7: [{ firstName: "Nora", lastName: "Achour", role: "Responsable réseau", email: "n.achour@exemple.fr" }],
   };
   for (const [idx, list] of Object.entries(contactsSeed)) {
-    for (const [i, c] of list.entries()) await prisma.funderContact.create({ data: { funderId: funders[Number(idx)].id, ...c, primary: i === 0 } });
+    for (const [i, c] of list.entries()) await prisma.organisationContact.create({ data: { organisationId: funders[Number(idx)].id, ...c, primary: i === 0 } });
   }
 
   // Conventions partagées : FSE 2026-2028 (DLA + sensibilisation) ; CPO Région 2025-2027 pour les projets Région pluriannuels.
@@ -777,7 +787,7 @@ async function main() {
   const supplierIds = new Map<string, string>();
   const supplierIdFor = async (name?: string, email?: string) => {
     if (!name) return null;
-    if (!supplierIds.has(name)) supplierIds.set(name, (await prisma.supplier.create({ data: { name, email: email ?? null } })).id);
+    if (!supplierIds.has(name)) supplierIds.set(name, (await findOrCreateOrganisation(name, "supplier", { email: email ?? null })).id);
     return supplierIds.get(name)!;
   };
   for (const [name, email] of [["Traiteur Les Saveurs", "commande@lessaveurs.exemple.fr"], ["Location Salle Beaugency", "resa@salle-beaugency.exemple.fr"], ["Transport Berry", null]] as const) await supplierIdFor(name, email ?? undefined);
@@ -1017,6 +1027,12 @@ async function main() {
   ] });
 
   await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille" } });
+
+  // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
+  const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
+  for (const [code, name, role] of [["TES-02", "Université de Tours", "Co-organise le cycle, accueille deux conférences"], ["TES-05", "France Active Centre-Val de Loire", "Intervient sur le financement des coopérations"], ["SEN-03", "Tours Métropole Val de Loire", "Accueille le forum"], ["OBS-01", "Mouvement associatif Centre-Val de Loire", "Partage ses données associatives"], ["SEN-03", "ESS France", "Relaie le forum au niveau national"]] as const) {
+    await prisma.editionPartner.create({ data: { editionId: ed(code).id, organisationId: org(name), role } });
+  }
 
   // Appels à projets (lot B, module veille) : ce que la CRESS a repéré chez ses financeurs. Un « nouveau » pas encore regardé,
   // un « on dépose » à échéance proche, un promu en convention (à déposer), un écarté, un au fil de l'eau, un annuel clôturé.

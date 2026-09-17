@@ -1,4 +1,5 @@
 import { type Viewer } from "./scope";
+import { listSuppliers } from "./organisations";
 import { prisma } from "./db";
 import { dayjs } from "./format";
 import { canReadShared } from "./modules";
@@ -55,7 +56,7 @@ export async function loadEditionOpts(me: Viewer, settings: { envelopeAlertPerce
 
 // Fournisseurs de la base, pour le champ avec recherche du formulaire de validation.
 export async function loadSuppliers(): Promise<{ id: string; name: string; email: string | null }[]> {
-  return prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
+  return listSuppliers();
 }
 
 // Éditions proposables pour une validation depuis Demandes : les mêmes que pour une tâche, avec le circuit (pilote, responsable, direction) de chacune.

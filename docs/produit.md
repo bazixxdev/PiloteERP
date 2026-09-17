@@ -46,6 +46,7 @@ Rien d'autre : jamais de patch d'instance.
 ## Déjà en place (15/09)
 
 - **PostgreSQL** (17/09) : un moteur pour toutes les instances ; une base par instance (`cress_pilote`, demain `tlst_pilote`), sauvegarde `pg_dump` par déploiement, base de test séparée.
+- **Organisations** (18/09, lot E2) : un annuaire par instance, genres cumulables (financeur, fournisseur, partenaire, réseau, collectivité) — le module Adhérents de TLST viendra s'y greffer (une organisation ou une personne adhérente).
 - **Rôles et droits** (17/09, lot F2) : catalogue de permissions en code, rôles en base par instance (chaque structure règle ses droits, crée ses rôles), contexte en code.
 - **Comptes et sessions** (17/09, lot F) : better-auth, `User` distinct de `Person` ; par instance, le fournisseur (mot de passe, demain Entra ID pour la CRESS, autre chose pour TLST) est un réglage, pas du code.
 - `Settings.modules` + admin › Paramètres › Modules de l'installation (lot 0) : premier module activable, la veille des appels à projets. Le mécanisme est générique (`INSTANCE_MODULES`, `instanceHas`) ; chaque nouveau module ajoute une entrée et garde sa page derrière `instanceHas`.

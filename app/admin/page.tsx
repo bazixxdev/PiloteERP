@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { kindFilter, listFunders } from "@/lib/organisations";
 import { redirect } from "next/navigation";
 import { withBase } from "@/lib/base-path";
 import { Download } from "lucide-react";
@@ -45,11 +46,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
   const rw = canAdmin(me);
   const roles = await getRoles();
-  const suppliers = await prisma.supplier.findMany({ include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
+  const suppliers = await prisma.organisation.findMany({ where: { active: true, ...kindFilter("supplier") }, include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
-    prisma.funder.findMany({ orderBy: { name: "asc" } }),
+    listFunders(),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
     prisma.timeCode.findMany({ orderBy: { order: "asc" } }),
     prisma.refValue.findMany({ orderBy: [{ family: "asc" }, { order: "asc" }] }),
@@ -185,13 +186,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans « Projets et financements ».">
             <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>. Les projets et leurs éditions sont aussi dans <Link href="/projets" className="text-primary hover:underline">Projets et éditions</Link>.</p>
           </Section>
-          <Section title="Fournisseurs" description="Base unifiée, alimentée depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher)." actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
+          <Section title="Fournisseurs" description={<>Organisations de genre « fournisseur » (lot E2) : alimentées depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher), tenues dans l'<Link href="/organisations" className="text-primary hover:underline">annuaire des organisations</Link>.</>} actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
             {suppliers.length === 0 ? <p className="text-sm text-muted-foreground">Aucun fournisseur encore.</p> : (
               <ul className="divide-y text-sm">
                 {suppliers.map((x) => (
                   <li key={x.id} className="grid gap-1 py-1.5 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
-                    <AutoField model="supplier" id={x.id} field="name" type="text" value={x.name} readOnly={!rw} />
-                    <AutoField model="supplier" id={x.id} field="email" type="text" value={x.email} readOnly={!rw} placeholder="adresse pour le bon pour accord" />
+                    <AutoField model="organisation" id={x.id} field="name" type="text" value={x.name} readOnly={!rw} />
+                    <AutoField model="organisation" id={x.id} field="email" type="text" value={x.email} readOnly={!rw} placeholder="adresse pour le bon pour accord" />
                     <span className="text-[11px] text-muted-foreground">{x._count.validations} devis</span>
                   </li>
                 ))}

@@ -73,10 +73,10 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     deliverableAlertDays: { type: "number" }, timeVisibility: { type: "select" }, horizonDays: { type: "number" }, timeRules: { type: "textarea" }, serverPathTemplate: { type: "text" }, apiToken: { type: "text" }, hoursPerDay: { type: "number" }, operatingDaysPerMonth: { type: "number" }, billingEmail: { type: "text" }, billingNote: { type: "textarea" }, realizedSource: { type: "select" }, pennylaneAxes: { type: "text" },
   },
   refValue: { label: { type: "text" }, color: { type: "select" } },
-  funder: { name: { type: "text" }, notes: { type: "textarea" } },
-  funderContact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
+  funder: { name: { type: "text" }, notes: { type: "textarea" } }, // alias historique d'organisation (écran Financeurs)
+  organisation: { name: { type: "text" }, notes: { type: "textarea" }, siret: { type: "text" }, website: { type: "text" }, address: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, active: { type: "bool" } },
+  organisationContact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
   mission: { name: { type: "text" } },
-  supplier: { name: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
   timeCode: { label: { type: "text" }, kind: { type: "select" } },
   pole: { name: { type: "text" }, leadId: { type: "select" } },
   docLink: { label: { type: "text" }, url: { type: "text" }, codirOnly: { type: "bool" } },

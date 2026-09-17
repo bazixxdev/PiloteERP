@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listFunders } from "@/lib/organisations";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { DossiersNav } from "@/components/common/dossiers-nav";
@@ -32,7 +33,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
   const perimeter = perimeterFrom(me, sp.perimetre);
   const [editions, funders, conventions, years] = await Promise.all([
     prisma.edition.findMany({ where: { year }, include: { project: { include: { pole: true, pilot: true, secondaryPoles: true } }, team: true, fundingLines: { include: { deliverables: true } } } }),
-    prisma.funder.findMany({ orderBy: { name: "asc" } }),
+    listFunders(),
     prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } } }),
     prisma.edition.findMany({ select: { year: true }, distinct: ["year"], orderBy: { year: "asc" } }),
   ]);

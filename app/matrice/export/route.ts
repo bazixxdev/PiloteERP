@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { listFunders } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
 import { exportAllowed } from "@/lib/export-auth";
 import { buildMatrix, matrixToCsv } from "@/lib/matrix";
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
   const year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
   const [editions, funders, conventions] = await Promise.all([
     prisma.edition.findMany({ where: { year }, include: { project: { include: { pole: true, pilot: true } }, fundingLines: { include: { deliverables: true } } } }),
-    prisma.funder.findMany({ orderBy: { name: "asc" } }),
+    listFunders(),
     prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, editionId: true } } } }),
   ]);
   const csv = matrixToCsv(buildMatrix(year, editions, funders, conventions));

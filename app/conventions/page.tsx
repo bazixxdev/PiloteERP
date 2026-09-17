@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listFunders } from "@/lib/organisations";
 import { PageHeader } from "@/components/common/page-header";
 import { DossiersNav } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
@@ -21,7 +22,7 @@ type Search = { financeur?: string; statut?: string; type?: string };
 export default async function ConventionsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
   const [me, refs, funders, all] = await Promise.all([
-    getCurrentPerson(), getRefs(), prisma.funder.findMany({ orderBy: { name: "asc" } }),
+    getCurrentPerson(), getRefs(), listFunders(),
     prisma.convention.findMany({ include: { funder: true, payments: true, lines: { include: { edition: { include: { project: true } }, deliverables: { where: { done: false }, orderBy: { dueDate: "asc" } }, payments: true } } }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] }),
   ]);
   const rw = canEditFunding(me);

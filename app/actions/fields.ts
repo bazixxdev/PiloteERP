@@ -38,7 +38,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
     return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
   if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
-  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "funderContact") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
+  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation" || model === "organisationContact") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
   if (model === "expense") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
@@ -139,7 +139,8 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       await prisma.settings.update({ where: { id: 1 }, data: { [field]: value } });
     } else {
       // Les autres modèles : mise à jour directe.
-      const delegate = (prisma as unknown as Record<string, { update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown> }>)[model];
+      // « funder » reste le nom du modèle dans les écrans Financeurs ; en base c'est une organisation (lot E2).
+      const delegate = (prisma as unknown as Record<string, { update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown> }>)[model === "funder" ? "organisation" : model];
       await delegate.update({ where: { id }, data: { [field]: value } });
     }
 

@@ -13,6 +13,7 @@ import { fmtDate } from "@/lib/format";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { TeamSection } from "./team-section";
+import { PartnersSection } from "./partners-section";
 import { FicheLayer, type LayerField } from "./fiche-layer";
 import { ProposalsPanel, ProposeChangeDialog, type ProposableField, type ProposalView } from "./proposals";
 import { readableValue } from "@/lib/readable";
@@ -35,7 +36,7 @@ const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && v 
 
 // La fiche = le document de l'édition, en chapitres : une ligne d'état, les couches lisibles en entier, l'équipe, l'historique.
 // Sommaire collant à gauche ; le rare (export, plein écran, relecture) est dans le menu « … » de l'en-tête (revue du 15/09).
-export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, settings }: TabCtx) {
+export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, feedback, settings }: TabCtx) {
   const alerts = computeAlerts(e, settings);
   const row = e as unknown as Record<string, unknown>;
   const canStatus = canSetEditionStatus(me);
@@ -176,6 +177,8 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, setti
         })}
 
         <TeamSection editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role, codir: p.codir }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me, "proposal", isPilot, isTeam)} />
+
+        <PartnersSection editionId={e.id} partners={e.partnerLinks.map((p) => ({ organisationId: p.organisationId, name: p.organisation.name, role: p.role, kinds: p.organisation.kinds }))} organisations={organisations} canEdit={canYear} />
 
         <details id="historique" className="group scroll-mt-20 rounded-md border bg-card px-[18px] py-3" data-testid="history">
           <summary className="cursor-pointer list-none text-sm font-bold text-foreground">

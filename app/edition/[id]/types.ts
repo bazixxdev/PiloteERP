@@ -1,7 +1,7 @@
 import type { EditionFull } from "@/lib/queries";
 import type { CurrentPerson } from "@/lib/session";
 import type { RefMap } from "@/lib/refs";
-import type { Settings, Funder, Convention } from "@prisma/client";
+import type { Settings, Organisation as Funder, Convention } from "@prisma/client";
 
 export type TabCtx = {
   e: EditionFull;
@@ -10,6 +10,7 @@ export type TabCtx = {
   settings: Settings;
   people: Awaited<ReturnType<typeof import("@/lib/session").getPeople>>;
   funders: Funder[];
+  organisations: { id: string; name: string }[]; // annuaire (lot E2), pour lier des partenaires
   conventions: (Convention & { lines: { id: string; amountGranted: number | null; amountRequested: number | null; editionId: string }[] })[];
   isPilot: boolean;
   isTeam: boolean;

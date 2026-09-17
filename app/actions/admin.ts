@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findOrCreateOrganisation } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
@@ -66,8 +67,8 @@ export async function createRef(kind: "funder" | "mission" | "timeCode" | "suppl
   const d = await guard(); if (d) return { ok: false, error: d };
   const n = name.trim();
   if (!n) return { ok: false, error: "Nom vide" };
-  if (kind === "funder") await prisma.funder.create({ data: { name: n } });
-  if (kind === "supplier") await prisma.supplier.create({ data: { name: n } });
+  if (kind === "funder") await findOrCreateOrganisation(n, "funder");
+  if (kind === "supplier") await findOrCreateOrganisation(n, "supplier");
   if (kind === "mission") await prisma.mission.create({ data: { name: n, order: await prisma.mission.count() } });
   if (kind === "timeCode") await prisma.timeCode.create({ data: { code: n.toUpperCase().replace(/[^A-Z0-9]+/g, "_").slice(0, 12), label: n, kind: "operating", order: await prisma.timeCode.count() } });
   revalidatePath("/", "layout");
@@ -119,9 +120,9 @@ export async function importCsv(table: "personnes" | "financeurs" | "projets", t
   if (table === "financeurs") {
     for (const r of rows) {
       const name = r.nom ?? r.name; if (!name) { skipped.push("(sans nom)"); continue; }
-      const ex = await prisma.funder.findUnique({ where: { name } });
+      const ex = (await prisma.organisation.findMany({ where: { name: { equals: name, mode: "insensitive" } } }))[0];
       if (ex) { skipped.push(name); continue; }
-      await prisma.funder.create({ data: { name } }); created++;
+      await findOrCreateOrganisation(name, "funder"); created++;
     }
   } else if (table === "personnes") {
     const poles = await prisma.pole.findMany();

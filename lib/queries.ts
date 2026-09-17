@@ -58,6 +58,7 @@ export const editionFullInclude = {
   actions: { include: { timeEntries: { select: { hours: true, personId: true } }, owner: true, fundingLine: { include: { funder: true } }, tasks: { where: { done: false }, select: { id: true, label: true, dueDate: true, person: { select: { name: true } } }, orderBy: { dueDate: "asc" as const } } }, orderBy: { order: "asc" as const } },
   fundingLines: { include: { funder: { include: { contacts: true } }, contact: true, convention: { include: { contact: true, lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } }, payments: true } }, deliverables: { orderBy: { dueDate: "asc" as const } }, payments: { orderBy: { expectedAt: "asc" as const } } }, orderBy: { id: "asc" as const } },
   validations: { include: { requester: true, decider: true, action: true }, orderBy: { createdAt: "desc" as const } },
+  partnerLinks: { include: { organisation: true }, orderBy: { createdAt: "asc" as const } },
   team: { include: { person: true } },
   personDays: { include: { person: true } },
   plannedLoads: true,

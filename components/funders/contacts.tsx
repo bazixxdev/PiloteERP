@@ -35,7 +35,7 @@ export function FunderContacts({ funderId, contacts, readOnly }: { funderId: str
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => start(async () => { const r = await fn(); if (!r.ok) { toast.error(r.error ?? "Erreur"); return; } after?.(); router.refresh(); });
   const sorted = [...contacts].sort((a, b) => Number(b.primary) - Number(a.primary) || a.lastName.localeCompare(b.lastName, "fr"));
   const F = ({ id, field, value, placeholder, cls, label }: { id: string; field: string; value: string | null; placeholder: string; cls?: string; label: string }) => (
-    <AutoField model="funderContact" id={id} field={field} type="text" value={value} readOnly={readOnly} placeholder={placeholder} inputClassName={cn("text-xs", cls)} label={label} />
+    <AutoField model="organisationContact" id={id} field={field} type="text" value={value} readOnly={readOnly} placeholder={placeholder} inputClassName={cn("text-xs", cls)} label={label} />
   );
   return (
     <div data-testid="funder-contacts">
@@ -57,7 +57,7 @@ export function FunderContacts({ funderId, contacts, readOnly }: { funderId: str
             {!readOnly ? (
               <button type="button" disabled={pending} onClick={() => { if (confirm(`Supprimer le contact ${contactName(c)} ?`)) run(() => deleteFunderContact(c.id)); }} aria-label={`Supprimer ${contactName(c)}`} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-delete-${c.id}`}><Trash2 className="size-3.5" /></button>
             ) : <span />}
-            <div className="md:col-span-7 md:pl-8"><AutoField model="funderContact" id={c.id} field="notes" type="text" value={c.notes} readOnly={readOnly} placeholder={readOnly ? "" : "Note : créneaux, habitudes, sujets suivis…"} inputClassName="text-[11px] text-muted-foreground" label={`Note, ${c.lastName}`} /></div>
+            <div className="md:col-span-7 md:pl-8"><AutoField model="organisationContact" id={c.id} field="notes" type="text" value={c.notes} readOnly={readOnly} placeholder={readOnly ? "" : "Note : créneaux, habitudes, sujets suivis…"} inputClassName="text-[11px] text-muted-foreground" label={`Note, ${c.lastName}`} /></div>
           </li>
         ))}
       </ul>
