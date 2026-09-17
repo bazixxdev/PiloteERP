@@ -50,9 +50,9 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
 
       <div className="mb-3 flex flex-wrap items-center gap-1">
         {!isTransversal(me) && <><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/validations?perimetre=${p}`} /><span className="mx-1 h-5 w-px bg-border" /></>}
-        <Link href={`/validations?perimetre=${perimeter}`} className={cn("rounded-full border px-3 py-1 text-sm", !levelFilter ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>Toute la file ({pending.length})</Link>
+        <Link href={`/validations?perimetre=${perimeter}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", !levelFilter ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>Toute la file ({pending.length})</Link>
         {LEVELS.map((l) => (
-          <Link key={l.level} href={`/validations?niveau=${l.level}&perimetre=${perimeter}`} className={cn("rounded-full border px-3 py-1 text-sm", levelFilter === l.level ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
+          <Link key={l.level} href={`/validations?niveau=${l.level}&perimetre=${perimeter}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", levelFilter === l.level ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
             {l.label} ({pending.filter((v) => v.requiredLevel === l.level).length})
           </Link>
         ))}

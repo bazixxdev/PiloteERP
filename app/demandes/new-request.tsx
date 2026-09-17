@@ -39,8 +39,8 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
         <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <div className="grid gap-1 text-xs"><span className="font-semibold">Quel type ?</span>
             <div className="flex flex-wrap gap-1">
-              {REQUEST_KINDS.map((k) => <button key={k.value} type="button" onClick={() => setKind(k.value)} className={`rounded-full border px-2.5 py-1 text-xs ${kind === k.value ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted"}`} title={k.hint} data-testid={`request-kind-${k.value}`}>{k.label}</button>)}
-              <button type="button" onClick={() => setKind("quote")} className={`rounded-full border px-2.5 py-1 text-xs ${kind === "quote" ? "border-primary bg-primary text-white" : "border-dashed bg-card hover:bg-muted"}`} title="Un achat ou un devis passe par le circuit de validation (niveau selon le montant)" data-testid="request-kind-quote">Achat / devis</button>
+              {REQUEST_KINDS.map((k) => <button key={k.value} type="button" onClick={() => setKind(k.value)} className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${kind === k.value ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted"}`} title={k.hint} data-testid={`request-kind-${k.value}`}>{k.label}</button>)}
+              <button type="button" onClick={() => setKind("quote")} className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${kind === "quote" ? "border-primary bg-primary text-white" : "border-dashed bg-card hover:bg-muted"}`} title="Un achat ou un devis passe par le circuit de validation (niveau selon le montant)" data-testid="request-kind-quote">Achat / devis</button>
             </div>
           </div>
           {kind === "quote" ? (

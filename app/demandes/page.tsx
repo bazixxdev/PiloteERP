@@ -83,7 +83,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
       </>} />
       <div className="subnav mb-3 flex flex-wrap gap-1">
         {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
-          <Link key={k} href={`/demandes?vue=${k}`} className={cn("rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
+          <Link key={k} href={`/demandes?vue=${k}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
         ))}
       </div>
       <Section title={view === "moi" ? "À traiter par moi" : view === "mes" ? "Mes demandes" : `En cours · ${wide}`} description={view === "toutes" ? "Ce que vous pouvez suivre au-delà de vos propres demandes : vos projets, votre pôle, ou toute la CRESS selon votre rôle." : "Demandes internes et validations dans le même tableau, les plus urgentes en premier."} className="mb-4" testId="requests-open">

@@ -30,7 +30,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     if (last && last.day === label) last.items.push(r); else groups.push({ day: label, items: [r] });
   }
   const chip = (f: Filter, label: string, count?: number) => (
-    <Link key={f} href={f === "toutes" ? "/notifications" : `/notifications?filtre=${f}`} aria-current={current === f ? "page" : undefined} data-testid={`filtre-${f}`} className={cn("h-8 rounded-full border px-3 text-sm leading-8 transition-colors", current === f ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
+    <Link key={f} href={f === "toutes" ? "/notifications" : `/notifications?filtre=${f}`} aria-current={current === f ? "page" : undefined} data-testid={`filtre-${f}`} className={cn("inline-flex h-8 items-center gap-1 rounded-full border px-3 text-sm transition-colors", current === f ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>
       {label}{count !== undefined && count > 0 && <span className="ml-1 opacity-70">{count}</span>}
     </Link>
   );

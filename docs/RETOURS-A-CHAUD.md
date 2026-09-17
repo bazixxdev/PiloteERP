@@ -250,6 +250,14 @@ Retours de Gaël en direct sur la démo :
 - **« Le lexique est transverse : un petit bouton Aide en bas à gauche »** : `components/shell/help-menu.tsx` au pied de la barre latérale (icône seule en rail), menu vers le haut : Lexique (dialogue contrôlé, `LexiqueDialog` n'a plus de bouton), Raccourcis clavier (événement `pilote:aide-raccourcis` écouté par `Shortcuts`). Les boutons Lexique des en-têtes (portefeuille, projets, matrice) sont retirés. D'autres entrées viendront (prise en main, contact).
 - **Doublons** « ← Toutes les conventions » + « Retour à la liste » (convention, financeur) : le bouton de droite est retiré, le lien de retour reste. Vérifié sur les autres pages : pas d'autre en-tête à double sortie.
 
+### S. Alignements, ajouts en panneau, gras du menu (17/09, fin de matinée) — fait
+
+- **Listes déroulantes désalignées** (filtres en pastille des conventions, rangée « rythme » de l'admin) : c'était l'habillage `appearance: base-select` de Chrome, qui impose sa propre hauteur et sa taille de texte. Bloc retiré ; on garde l'habillage simple (`appearance: none` + chevron), la liste ouverte reste celle du navigateur.
+- **Sous-titre de page trop long, actions calées en haut** : `PageHeader` borne le sous-titre à 64 caractères de large et centre verticalement les actions de droite.
+- **Ajouts « en direct » dans les en-têtes** (Nouveau financeur…, Ajouter une personne, un pôle, une valeur, une année d'édition) : même règle que les projets — un bouton, puis un petit panneau (`Popover`) avec le champ. `AddSimpleForm` et `AddFunderForm` réécrits ; testids `add-<kind>-open` ajoutés, `-input` / `-submit` conservés.
+- **Texte pas centré dans les pastilles** (filtres des notifications, périmètre, années de la matrice, vues des demandes et validations, choix du type de demande, équipe) : `inline-flex items-center` partout, plus de `leading-8`.
+- **Le menu perdait son gras dans une édition** : `locate()` marque la première feuille de la section rattachée (« Portefeuille ») quand l'adresse n'est pas une feuille (`also`).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

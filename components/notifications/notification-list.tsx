@@ -49,7 +49,7 @@ export function MarkAllRead({ disabled }: { disabled: boolean }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
-    <button type="button" data-testid="mark-all-read" disabled={disabled || pending} className="h-8 rounded-full border bg-card px-3 text-sm hover:bg-muted disabled:opacity-50" onClick={() => start(async () => { await markNotificationsRead(); router.refresh(); })}>
+    <button type="button" data-testid="mark-all-read" disabled={disabled || pending} className="inline-flex h-8 items-center rounded-full border bg-card px-3 text-sm hover:bg-muted disabled:opacity-50" onClick={() => start(async () => { await markNotificationsRead(); router.refresh(); })}>
       Tout marquer comme lu
     </button>
   );

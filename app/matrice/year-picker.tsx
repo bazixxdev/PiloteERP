@@ -6,7 +6,7 @@ export function YearPicker({ years, current, hrefFor }: { years: number[]; curre
   return (
     <div className="flex items-center gap-1" data-testid="year-picker" aria-label="Année">
       {years.map((y) => (
-        <Link key={y} href={hrefFor(y)} aria-current={y === current ? "page" : undefined} className={cn("h-8 rounded-full border px-3 text-sm leading-8 transition-colors", y === current ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>{y}</Link>
+        <Link key={y} href={hrefFor(y)} aria-current={y === current ? "page" : undefined} className={cn("inline-flex h-8 items-center rounded-full border px-3 text-sm transition-colors", y === current ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")}>{y}</Link>
       ))}
     </div>
   );

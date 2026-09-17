@@ -30,7 +30,7 @@ export function TeamPicker({ editionId, people, selected, readOnly }: { editionI
           disabled={readOnly}
           onClick={() => toggle(p.id)}
           className={cn(
-            "rounded-full border px-2.5 py-1 text-xs transition-colors",
+            "inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors",
             sel.has(p.id) ? "border-primary bg-primary text-white" : "bg-card text-muted-foreground hover:bg-muted",
             readOnly && !sel.has(p.id) && "hidden",
           )}

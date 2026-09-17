@@ -140,6 +140,8 @@ export function locate(tree: NavSection[], pathname: string, params: URLSearchPa
     const leaf = s.items.find((l) => leafMatches(l, pathname, params));
     if (leaf) return { section: s.id, leaf: leaf.href };
   }
+  // Adresse rattachée à une section sans être une feuille (la page Édition) : la première feuille reste marquée active,
+  // sinon le menu perd son gras dès qu'on ouvre une édition (retour de Gaël, 17/09).
   const s = tree.find((s) => s.also?.some((p) => underPath(pathname, p)));
-  return { section: s?.id ?? null, leaf: null };
+  return { section: s?.id ?? null, leaf: s?.items[0]?.href ?? null };
 }

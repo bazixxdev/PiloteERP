@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod, toggleProjectPole } from "@/app/actions/admin";
 import { SearchableSelect } from "@/components/common/searchable-select";
 
@@ -25,7 +26,10 @@ function useRun() {
   return { pending, run };
 }
 
-export function AddSimpleForm({ kind, placeholder, compact, family, projectId }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition" | "rhythm" | "supplier"; placeholder: string; compact?: boolean; family?: string; projectId?: string }) {
+// Ajout d'un objet simple (une personne, un pôle, une mission, une année d'édition…) : un bouton, puis un petit panneau
+// avec le champ — jamais un champ à nu dans l'en-tête (règle de Gaël, 17/09 : « l'ajout doit être via un bouton »).
+export function AddSimpleForm({ kind, placeholder, compact, family, projectId, label = "Ajouter" }: { kind: "person" | "pole" | "funder" | "mission" | "timeCode" | "refValue" | "edition" | "rhythm" | "supplier"; placeholder: string; compact?: boolean; family?: string; projectId?: string; label?: string }) {
+  const [open, setOpen] = useState(false);
   const [v, setV] = useState(kind === "edition" ? String(new Date().getFullYear() + 1) : "");
   const { pending, run } = useRun();
   const router = useRouter();
@@ -42,15 +46,26 @@ export function AddSimpleForm({ kind, placeholder, compact, family, projectId }:
       }
     };
     run(fn, (r) => {
+      setOpen(false);
       if (kind === "edition" && r.ok && r.data) router.push(`/edition/${(r.data as { editionId: string }).editionId}`);
       else setV("");
     });
   };
   return (
-    <form className="flex gap-1" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-      <Input value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} className={compact ? "h-7 w-28 text-xs" : "h-8 w-48"} type={kind === "edition" ? "number" : "text"} data-testid={`add-${kind}-input`} />
-      <Button type="submit" size={compact ? "xs" : "sm"} variant="outline" disabled={pending || !v.trim()} data-testid={`add-${kind}-submit`}><Plus />{compact ? "" : "Ajouter"}</Button>
-    </form>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size={compact ? "xs" : "sm"} variant="outline" title={placeholder} aria-label={compact ? placeholder : undefined} data-testid={`add-${kind}-open`}><Plus />{compact ? "" : label}</Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-2.5">
+        <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <label className="grid gap-1 text-xs"><span className="font-semibold">{placeholder}</span><Input autoFocus value={v} onChange={(e) => setV(e.target.value)} className="h-8" type={kind === "edition" ? "number" : "text"} data-testid={`add-${kind}-input`} /></label>
+          <div className="flex justify-end gap-1.5">
+            <Button type="button" size="xs" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button type="submit" size="xs" disabled={pending || !v.trim()} data-testid={`add-${kind}-submit`}><Plus />Ajouter</Button>
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
   );
 }
 

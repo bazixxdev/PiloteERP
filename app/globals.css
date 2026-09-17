@@ -213,23 +213,3 @@ select:not([multiple]):not([size]):focus-visible { outline: none; border-color: 
 select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.55; }
 /* Le sélecteur sans bordure (texte bleu en gras) garde son chevron mais collé au texte. */
 select.border-0 { padding-right: 1.15rem; background-position: right 0 center; background-size: 12px; }
-/* Navigateurs qui savent habiller la liste elle-même (Chrome / Edge 135+) : fond blanc, coins arrondis, ligne survolée bleutée. */
-@supports (appearance: base-select) {
-  select:not([multiple]):not([size]) { appearance: base-select; }
-  select:not([multiple]):not([size])::picker-icon { display: none; }
-  select:not([multiple]):not([size])::picker(select) {
-    appearance: base-select;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px;
-    margin-top: 4px;
-    background: var(--popover);
-    color: var(--popover-foreground);
-    box-shadow: 0 8px 24px rgba(36, 61, 73, 0.12);
-    font-size: 13px;
-  }
-  select:not([multiple]):not([size]) option { padding: 6px 8px; border-radius: 5px; }
-  select:not([multiple]):not([size]) option:hover, select:not([multiple]):not([size]) option:focus-visible { background: var(--secondary); color: var(--primary); outline: none; }
-  select:not([multiple]):not([size]) option:checked { background: var(--sidebar-accent); color: var(--primary); font-weight: 600; }
-  select:not([multiple]):not([size]) option::checkmark { display: none; }
-}
