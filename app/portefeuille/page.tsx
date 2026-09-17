@@ -23,7 +23,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const [settings, refs, poles, me] = await Promise.all([getSettings(), getRefs(), prisma.pole.findMany({ orderBy: { name: "asc" } }), getCurrentPerson()]);
   // Le mode CODIR n'existe que pour les rôles CODIR : ni bouton, ni vue filtrée pour les autres.
-  const codir = sp.mode === "codir" && isCodir(me.role);
+  const codir = sp.mode === "codir" && isCodir(me);
   const everything = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
   const perimeter = perimeterFrom(me, sp.perimetre);
   const all = perimeter === "pole" ? everything.filter((r) => inMyScope(me, r.project, r.team.map((t) => t.personId))) : everything;
@@ -72,7 +72,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         actions={
           codir ? (
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR</Link></Button>
-          ) : isCodir(me.role) ? (
+          ) : isCodir(me) ? (
             <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode CODIR</Link></Button></>
           ) : (
             <><Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button></>

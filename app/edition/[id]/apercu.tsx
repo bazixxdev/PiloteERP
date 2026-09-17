@@ -4,7 +4,7 @@ import { Gauge } from "@/components/common/gauge";
 import { StatusBadge } from "@/components/common/status-badge";
 import { ValidationCard } from "@/components/common/validation-card";
 import { budgetOf } from "@/lib/budget";
-import { canDecideValidation, canEditFunding } from "@/lib/rights";
+import { canDecideValidation, canEditFunding, has } from "@/lib/rights";
 import { UploadForm } from "@/components/attachments/upload-form";
 import { Reveal } from "@/components/common/reveal";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
@@ -34,7 +34,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
   const reached = e.indicators.filter((i) => i.target && i.actual && Number(String(i.actual).replace(",", ".")) >= Number(String(i.target).replace(",", "."))).length;
   const pieces = (id: string) => e.attachments.filter((a) => a.validationId === id);
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
-  const canUpload = (requesterId: string) => requesterId === me.id || isPilot || canEditFunding(me.role) || me.role === "pole_lead";
+  const canUpload = (requesterId: string) => requesterId === me.id || isPilot || canEditFunding(me) || has(me, "pole.manage");
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">

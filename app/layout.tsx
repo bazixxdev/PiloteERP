@@ -46,10 +46,12 @@ async function counters() {
     modules,
     tree: navTreeFor({
       role: me.role,
+      permissions: me.permissions,
+      validationLevel: me.validationLevel,
       modules,
       veille: instanceHas(settings, "veille"),
       showTeam: people.some((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)),
-      wide: wideViewLabel(me.role),
+      wide: wideViewLabel(me),
       badges,
     }),
   };

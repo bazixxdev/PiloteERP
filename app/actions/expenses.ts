@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
-import { canEditFunding } from "@/lib/rights";
+import { canActAsPilot, canEditFunding, canTrackExpenses } from "@/lib/rights";
 import { fmtEuro } from "@/lib/format";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -16,7 +16,7 @@ async function load(id: string) {
 
 export async function markInvoice(id: string, step: "received" | "paid", undo = false): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role) && me.role !== "assistant") return { ok: false, error: "La RAF, la direction ou l'assistante suivent les factures." };
+  if (!canEditFunding(me) && !canTrackExpenses(me)) return { ok: false, error: "La RAF, la direction ou l'assistante suivent les factures." };
   const x = await load(id);
   if (!x) return { ok: false, error: "Dépense introuvable." };
   if (step === "paid" && !x.invoiceReceivedAt && !undo) return { ok: false, error: "Marquez d'abord la facture reçue." };
@@ -37,7 +37,7 @@ export async function markServiceDone(id: string, done: boolean): Promise<Result
   const me = await getCurrentPerson();
   const x = await load(id);
   if (!x) return { ok: false, error: "Dépense introuvable." };
-  const allowed = me.role === "director" || x.edition.project.pilotId === me.id || x.edition.team.some((t) => t.personId === me.id);
+  const allowed = canActAsPilot(me, x.edition.project.pilotId === me.id, x.edition.team.some((t) => t.personId === me.id));
   if (!allowed) return { ok: false, error: "Le pilote ou l'équipe confirme le service fait." };
   await prisma.expense.update({ where: { id }, data: { serviceDoneAt: done ? new Date() : null, serviceDoneById: done ? me.id : null } });
   revalidatePath("/", "layout");

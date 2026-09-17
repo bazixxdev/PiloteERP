@@ -1,15 +1,17 @@
 // Périmètre d'une personne : son pôle d'abord (EF-G6). Les fonctions transversales (direction, RAF, assistante) voient tout.
 // Un projet appartient à un pôle principal (celui du pilote) et, s'il est commun, à des pôles secondaires.
 
+import { has, type Actor } from "./rights";
+
 export type ProjectPoles = { poleId: string; secondaryPoles?: { poleId: string }[] };
-export type Viewer = { id: string; role: string; poleId: string | null };
+export type Viewer = Actor & { id: string; poleId: string | null };
 
 export function projectPoleIds(p: ProjectPoles): string[] {
   return [p.poleId, ...(p.secondaryPoles ?? []).map((x) => x.poleId)];
 }
 
 export function isTransversal(me: Viewer): boolean {
-  return me.poleId === null || me.role === "director" || me.role === "raf" || me.role === "assistant";
+  return me.poleId === null || has(me, "scope.all");
 }
 
 // Le projet est-il dans le pôle de la personne (principal ou secondaire) ?

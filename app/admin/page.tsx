@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib/refs";
-import { canAdmin } from "@/lib/rights";
+import { canAdmin, canManageRoles } from "@/lib/rights";
+import { getRoles } from "@/lib/roles";
+import { CreateRoleButton, RoleCard, RolesMatrix } from "./roles-forms";
 import { cn } from "@/lib/utils";
 import { AddSimpleForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./forms";
 import { fmtDate } from "@/lib/format";
@@ -26,6 +28,7 @@ import { DEMO_MODE } from "@/lib/auth";
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
   { key: "comptes", label: "Comptes" },
+  { key: "roles", label: "Rôles et droits" },
   { key: "referentiels", label: "Référentiels" },
   { key: "parametres", label: "Paramètres" },
   { key: "donnees", label: "Import / export" },
@@ -38,7 +41,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   if (section === "projets") redirect("/projets");
   const current = SECTIONS.some((s) => s.key === section) ? section! : "personnes";
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
-  const rw = canAdmin(me.role);
+  const rw = canAdmin(me);
+  const roles = await getRoles();
   const suppliers = await prisma.supplier.findMany({ include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
@@ -50,7 +54,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     prisma.rhythm.findMany({ orderBy: { order: "asc" } }),
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
-  const refOpt = (fam: RefFamily) => REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) }));
+  const refOpt = (fam: RefFamily) => (fam === "role" ? roles.map((r) => ({ value: r.code, label: r.label })) : REF_DEFAULTS[fam].map((r) => ({ value: r.code, label: refLabel(refs, fam, r.code) })));
   // Comptes (lot F) : qui a un compte, dernière connexion, sessions ouvertes ; courriers à remettre (liens de mot de passe).
   const accounts = current === "comptes" ? await (async () => {
     const [persons, outbox] = await Promise.all([
@@ -102,7 +106,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <tr key={p.id} className={cn(!p.active && "opacity-50")}>
                     <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="name" type="text" value={p.name} readOnly={!rw} inputClassName="font-medium" /></td>
                     <td className="min-w-[200px] py-0.5"><AutoField model="person" id={p.id} field="poleId" type="select" value={p.poleId} options={opt(poles)} readOnly={!rw} placeholder="— transversal —" /></td>
-                    <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="role" type="select" value={p.role} options={refOpt("role")} allowEmpty={false} readOnly={!rw} /></td>
+                    <td className="min-w-[180px] py-0.5"><AutoField model="person" id={p.id} field="role" type="select" value={p.role} options={refOpt("role")} allowEmpty={false} readOnly={!rw} testId={`role-${p.id}`} /></td>
                     <td className="min-w-[260px] py-0.5">
                       <div className="text-xs">
                         {p.rhythmPeriods.length === 0 ? <span className="text-muted-foreground">{rhythms.find((r) => r.code === p.workRhythm)?.label ?? "Référence non configurée"}</span> : p.rhythmPeriods.slice(0, 2).map((rp) => (
@@ -204,7 +208,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               ))}
             </ul>
           </Section>
-          {(Object.keys(REF_FAMILY_LABELS) as RefFamily[]).map((fam) => (
+          {(Object.keys(REF_FAMILY_LABELS) as RefFamily[]).filter((fam) => fam !== "role").map((fam) => (
             <Section key={fam} title={REF_FAMILY_LABELS[fam]} description="Le code reste stable ; le libellé et la couleur se modifient." actions={rw ? <AddSimpleForm kind="refValue" family={fam} placeholder="Nouvelle valeur" compact /> : undefined}>
               <ul className="divide-y text-sm">
                 {refValues.filter((r) => r.family === fam).map((r) => (
@@ -217,6 +221,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </ul>
             </Section>
           ))}
+        </div>
+      )}
+
+      {current === "roles" && (
+        <div className="grid gap-4">
+          <Section title="Rôles" description="Chaque personne a un rôle ; un rôle porte des droits (ci-dessous) et un niveau de validation. Les six rôles d'origine sont fixes, on peut en créer d'autres." actions={canManageRoles(me) ? <CreateRoleButton /> : undefined}>
+            <div className="grid gap-2 lg:grid-cols-2" data-testid="roles-list">
+              {roles.map((r) => <RoleCard key={r.code} role={r} readOnly={!canManageRoles(me)} />)}
+            </div>
+          </Section>
+          <Section title="Droits par rôle" description="Ce qu'un rôle peut faire au-delà de son propre périmètre. Ce qui dépend du contexte — je pilote cette édition, j'en suis l'équipe, c'est mon pôle — est toujours accordé, quel que soit le rôle. Enregistré à chaque case.">
+            <RolesMatrix roles={roles} readOnly={!canManageRoles(me)} />
+          </Section>
         </div>
       )}
 

@@ -95,7 +95,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   if (person.fixedShare) {
     return (
       <div className="p-4 md:p-6">
-        <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me.role)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
+        <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
         <PageHeader title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"} />
         <div className="rounded-md border bg-mint-soft px-4 py-4 text-sm" data-testid="fixed-share-banner">
           <b>Part fixe.</b> {person.fixedShareNote || "Pourcentage déclaré sur lettre de mission"} : aucune répartition hebdomadaire n'est attendue {readOnly ? "de cette personne" : "de vous"}. Le pourcentage est porté par la lettre de mission et par la couche « moyens » des éditions concernées ; la RAF l'applique dans son export.
@@ -108,7 +108,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   return (
     <div className={cn("p-4 md:p-6", inFocus && "mx-auto max-w-5xl")}>
       <FocusMode on={inFocus} exitHref={qs(weekKey(start)).replace("&focus=1", "")} />
-      {!inFocus && <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me.role)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />}
+      {!inFocus && <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />}
       {/* En-tête compact : titre, puis la navigation de semaine sur une seule ligne (cibles de 44 px sur mobile), le rythme en retrait. */}
       <PageHeader
         title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"}

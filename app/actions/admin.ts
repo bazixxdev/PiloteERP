@@ -10,7 +10,7 @@ type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string
 
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
-  return canAdmin(me.role) ? null : "Réservé à l'administration (direction, RAF).";
+  return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
 }
 
 // Modules de l'installation (lot 0) : allumer ou éteindre, rien ne se perd.

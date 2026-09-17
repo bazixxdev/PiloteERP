@@ -14,8 +14,8 @@ import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
-  const writable = canEditActions(me.role, isPilot, isTeam, inMyPole(me, e.project));
-  const yearRw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
+  const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
+  const yearRw = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project));
   const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
   const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));

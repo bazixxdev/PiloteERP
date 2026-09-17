@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { LoadGrid } from "./grid";
 import { LoadFilters } from "./filters";
 import { FreezeControl } from "./freeze";
-import { canEditFunding } from "@/lib/rights";
+import { canEditFunding, canPlanLoad } from "@/lib/rights";
 import { fmtDate } from "@/lib/format";
 
 type Search = { debut?: string; horizon?: string; pole?: string; vue?: string; avenir?: string };
@@ -34,7 +34,7 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
   // Éditions proposables dans une cellule, avec le droit de la personne courante (pilote de l'édition, RAF, direction, responsable de pôle).
   const years = [...new Set(months.map((m) => Number(m.slice(0, 4))))];
   const allEditions = await prisma.edition.findMany({ where: { status: { in: future }, year: { in: years } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] });
-  const canEditAll = me.role === "director" || me.role === "raf" || me.role === "pole_lead";
+  const canEditAll = canPlanLoad(me);
   const editionOpts = allEditions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}`, year: e.year, editable: canEditAll || e.project.pilotId === me.id }));
   const today = dayjs().format("YYYY-MM");
   const over = rows.filter((r) => months.some((m) => r.months[m].capacity > 0 && r.months[m].planned > r.months[m].capacity));
@@ -58,7 +58,7 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
       />
       <LoadFilters poles={poles.map((p) => ({ value: p.id, label: p.name }))} current={{ debut: start, horizon: String(horizon), pole: sp.pole ?? "", vue: sp.vue ?? "personnes", avenir: sp.avenir ?? "" }} allValue={isTransversal(me) ? "" : "tous"} />
 
-      <FreezeControl year={focusYear} frozen={freeze ? { at: fmtDate(freeze.frozenAt), by: freeze.frozenBy.name, note: freeze.note } : null} canFreeze={canEditFunding(me.role)} />
+      <FreezeControl year={focusYear} frozen={freeze ? { at: fmtDate(freeze.frozenAt), by: freeze.frozenBy.name, note: freeze.note } : null} canFreeze={canEditFunding(me)} />
       {changedAfter.length > 0 && (
         <details className="mb-3 rounded-md border border-l-4 border-l-warning bg-card px-3.5 py-2 text-xs" data-testid="load-changed-after">
           <summary className="cursor-pointer list-none"><b>{changedAfter.length} modification{changedAfter.length > 1 ? "s" : ""} après validation</b> · {[...changedPeople].length} personne{changedPeople.size > 1 ? "s" : ""} concernée{changedPeople.size > 1 ? "s" : ""}</summary>

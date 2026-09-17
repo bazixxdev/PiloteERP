@@ -1,3 +1,4 @@
+import { type Viewer } from "./scope";
 import { prisma } from "./db";
 import { dayjs } from "./format";
 import { canReadShared } from "./modules";
@@ -31,7 +32,7 @@ export async function loadMyLists(personId: string): Promise<ListView[]> {
 }
 
 // Listes que d'autres ont partagées avec moi (visibilité pole_lead / pole / all), avec leurs tâches en cours : lecture seule.
-export async function loadSharedLists(me: { id: string; role: string; poleId: string | null }): Promise<{ list: ListView; tasks: TaskView[] }[]> {
+export async function loadSharedLists(me: Viewer): Promise<{ list: ListView; tasks: TaskView[] }[]> {
   const rows = await prisma.taskList.findMany({
     where: { personId: { not: me.id }, visibility: { not: "private" }, person: { active: true } },
     include: { edition: { include: { project: true } }, person: true, tasks: { where: { OR: [{ done: false }, { doneAt: { gte: dayjs().subtract(14, "day").toDate() } }] }, include, orderBy: [{ done: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }] } },
@@ -43,7 +44,7 @@ export async function loadSharedLists(me: { id: string; role: string; poleId: st
 }
 
 // Éditions proposables dans la saisie (« @ ») : les plus pertinentes pour la personne d'abord (je pilote, je contribue, mon pôle…).
-export async function loadEditionOpts(me: { id: string; role: string; poleId: string | null }, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }): Promise<EditionOpt[]> {
+export async function loadEditionOpts(me: Viewer, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }): Promise<EditionOpt[]> {
   const { loadPortfolio } = await import("./queries");
   const { byRelevance } = await import("./scope");
   const portfolio = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
@@ -58,7 +59,7 @@ export async function loadSuppliers(): Promise<{ id: string; name: string; email
 }
 
 // Éditions proposables pour une validation depuis Demandes : les mêmes que pour une tâche, avec le circuit (pilote, responsable, direction) de chacune.
-export async function loadEditionChoices(me: { id: string; role: string; poleId: string | null }, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }) {
+export async function loadEditionChoices(me: Viewer, settings: { envelopeAlertPercent: number; deliverableAlertDays: number }) {
   const opts = await loadEditionOpts(me, settings);
   const [eds, people] = await Promise.all([
     prisma.edition.findMany({ where: { id: { in: opts.map((o) => o.id) } }, select: { id: true, project: { select: { pilotId: true, poleId: true, pilot: { select: { name: true } }, guarantor: { select: { name: true } } } } } }),

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { loadPortfolio } from "@/lib/queries";
-import { canDecideValidation, isCodir } from "@/lib/rights";
+import { canDecideValidation, has, isCodir } from "@/lib/rights";
 import { attachmentInclude } from "@/lib/attachments";
 import { daysFromNow, dayjs, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,8 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   const raw = await searchParams;
   const [me, settings, refs, people] = await Promise.all([getCurrentPerson(), getSettings(), getRefs(), getPeople()]);
   // Un responsable de pôle ouvre l'écran sur son pôle ; « pole=tous » donne la vue CODIR complète.
-  const sp = { ...raw, pole: raw.pole === "tous" ? "" : raw.pole ?? (me.role === "pole_lead" ? me.poleId ?? "" : "") };
-  if (!isCodir(me.role)) {
+  const sp = { ...raw, pole: raw.pole === "tous" ? "" : raw.pole ?? (has(me, "pole.manage") ? me.poleId ?? "" : "") };
+  if (!isCodir(me)) {
     return (
       <div className="p-4 md:p-6">
         <PageHeader title="Écran CODIR" />

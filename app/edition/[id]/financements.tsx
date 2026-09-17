@@ -20,7 +20,7 @@ import { FundingLinePanelBody, fundingPanelTitle, FUNDING_PANEL_DESCRIPTION } fr
 // de gestion — ce que tient la RAF (dates, codes, convention, contact du dossier, notes, pièces, livrables).
 export function FinancementsTab({ e, me, refs, funders, conventions, settings, isPilot, openLine, openField }: TabCtx) {
   const covering = conventions.filter((c) => conventionCovers(c, e.year));
-  const rw = canEditFunding(me.role);
+  const rw = canEditFunding(me);
   const totalRequested = e.fundingLines.reduce((s, f) => s + (f.amountRequested ?? 0), 0);
   const totalGranted = e.fundingLines.reduce((s, f) => s + (f.amountGranted ?? 0), 0);
   // Versé : reçu sur les lignes de l'édition (les tranches d'une convention partagée se lisent sur la convention).

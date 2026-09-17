@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getRoleMap, withActor } from "@/lib/roles";
+import { canPlanLoad, declaresTime, isCodir } from "@/lib/rights";
 import { PageHeader } from "@/components/common/page-header";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -15,7 +17,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const target = Number(sp.annee) || dayjs().year() + 1;
   const [me, refs] = await Promise.all([getCurrentPerson(), getRefs()]);
-  const codir = ["director", "raf", "pole_lead"].includes(me.role);
+  const codir = isCodir(me);
   const projects = await prisma.project.findMany({
     include: { pole: true, pilot: true, editions: { orderBy: { year: "desc" } } },
     orderBy: [{ pole: { name: "asc" } }, { name: "asc" }],
@@ -25,14 +27,15 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
     const source = p.editions.find((e) => e.year === target - 1) ?? p.editions.find((e) => e.year < target);
     return { project: p, next, source };
   });
-  const people = await prisma.person.findMany({
+  const roles = await getRoleMap();
+  const people = (await prisma.person.findMany({
     where: { active: true },
     include: { pole: true, personDays: { where: { edition: { year: target } }, include: { edition: { include: { project: true } } } } },
     orderBy: [{ pole: { name: "asc" } }, { order: "asc" }],
-  });
-  const load = people.map((p) => ({ p, planned: p.personDays.reduce((s, d) => s + d.plannedDays, 0), sold: p.personDays.reduce((s, d) => s + d.soldDays, 0) })).filter((x) => x.planned > 0 || x.sold > 0 || x.p.role !== "assistant");
+  })).map((p) => withActor(roles, p));
+  const load = people.map((p) => ({ p, planned: p.personDays.reduce((s, d) => s + d.plannedDays, 0), sold: p.personDays.reduce((s, d) => s + d.soldDays, 0) })).filter((x) => x.planned > 0 || x.sold > 0 || declaresTime(x.p));
   const over = load.filter((x) => x.planned > x.p.availableDays);
-  const canDays = ["raf", "director", "pole_lead"].includes(me.role);
+  const canDays = canPlanLoad(me);
 
   return (
     <div className="p-4 md:p-6">

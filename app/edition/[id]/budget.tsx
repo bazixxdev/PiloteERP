@@ -1,6 +1,6 @@
 import { AutoField } from "@/components/inline/auto-field";
 import { Section } from "@/components/common/section";
-import { canWriteLayer } from "@/lib/rights";
+import { canActAsPilot, canTrackExpenses, canWriteLayer } from "@/lib/rights";
 import { budgetOf } from "@/lib/budget";
 import { fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,14 +14,14 @@ import Link from "next/link";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
 export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
-  const rw = canWriteLayer(me.role, "budget", isPilot, isTeam);
+  const rw = canWriteLayer(me, "budget", isPilot, isTeam);
   const b = budgetOf(e);
   const lastUpdate = e.expenses.reduce<Date | null>((m, x) => (!m || x.updatedAt > m ? x.updatedAt : m), null);
   const statusOpts = [{ value: "open", label: "En cours" }, { value: "closed", label: "Soldée" }];
   const natureOpts = [{ value: "purchase", label: "Achat" }, { value: "investment", label: "Investissement" }, { value: "service", label: "Prestation" }];
   // Circuit facture : la RAF, la direction ou l'assistante suivent ; le pilote et l'équipe confirment le service fait.
-  const canTrack = rw || me.role === "assistant";
-  const canConfirm = me.role === "director" || isPilot || isTeam;
+  const canTrack = rw || canTrackExpenses(me);
+  const canConfirm = canActAsPilot(me, isPilot, isTeam);
   // Cellules de budget V2 : libellé discret, montant en grand, lecture en dessous.
   const card = (label: string, value: string, hint?: string, cls?: string, testId?: string) => (
     <div className={cn("rounded-md border bg-card px-3 py-4", cls)}>

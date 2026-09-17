@@ -25,7 +25,7 @@ async function writeSnapshot(source: string, year: number, agg: Aggregated[], me
 // Import d'un fichier xlsx / csv du grand livre analytique (la base : marche avec n'importe quel logiciel de compta).
 export async function importLedgerFile(form: FormData): Promise<Result<{ lines: number; rows: number; skipped: number; ignoredYears: number }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: DENIED };
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
   const year = Number(form.get("year"));
   const file = form.get("file");
   if (!year || !(file instanceof File)) return { ok: false, error: "Indiquez l'exercice et choisissez un fichier." };
@@ -64,7 +64,7 @@ const colLabel = (f: string) => ({ analyticCode: "code analytique", accountNumbe
 // Synchronisation Pennylane d'un exercice : même snapshot, source « pennylane ». Sans jeton : message clair, rien ne casse.
 export async function syncPennylane(year: number): Promise<Result<{ lines: number; rows: number }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: DENIED };
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
   const cfg = pennylaneConfig();
   if (!cfg) return { ok: false, error: "Pennylane n'est pas configuré (PENNYLANE_API_TOKEN absent) : importez le fichier exporté depuis le logiciel de compta." };
   try {
@@ -83,7 +83,7 @@ export async function syncPennylane(year: number): Promise<Result<{ lines: numbe
 // Correspondance d'un code inconnu : vers une édition, une action, un projet, une ligne… ou « à ignorer » (fonctionnement).
 export async function setAnalyticTag(code: string, targetKind: string, targetId: string | null, note?: string | null): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: DENIED };
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
   if (!["project", "edition", "action", "fundingLine", "ignore"].includes(targetKind)) return { ok: false, error: "Cible inconnue." };
   if (targetKind !== "ignore" && !targetId) return { ok: false, error: "Choisissez la cible." };
   await prisma.analyticTag.upsert({ where: { code }, create: { code, targetKind, targetId: targetKind === "ignore" ? null : targetId, note: note ?? null }, update: { targetKind, targetId: targetKind === "ignore" ? null : targetId, note: note ?? null } });
@@ -93,7 +93,7 @@ export async function setAnalyticTag(code: string, targetKind: string, targetId:
 
 export async function deleteAnalyticTag(code: string): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: DENIED };
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
   await prisma.analyticTag.delete({ where: { code } }).catch(() => null);
   revalidatePath("/", "layout");
   return { ok: true };
@@ -102,7 +102,7 @@ export async function deleteAnalyticTag(code: string): Promise<Result> {
 // Effacer le snapshot d'une source pour un exercice (réimport propre).
 export async function clearLedger(source: string, year: number): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: DENIED };
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
   await prisma.ledgerLine.deleteMany({ where: { source, year } });
   revalidatePath("/", "layout");
   return { ok: true };

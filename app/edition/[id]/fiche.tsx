@@ -7,7 +7,7 @@ import { withBase } from "@/lib/base-path";
 import { FileDown, Lock, MessageSquareText, X } from "lucide-react";
 import Link from "next/link";
 import { FIELDS } from "@/lib/fields";
-import { canWriteLayer, LAYER_OWNER_LABEL, type Layer } from "@/lib/rights";
+import { LAYER_OWNER_LABEL, canActAsPilot, canSetEditionStatus, canWriteLayer, type Layer } from "@/lib/rights";
 import { REF_DEFAULTS, refLabel } from "@/lib/refs";
 import { fmtDate } from "@/lib/format";
 import type { TabCtx } from "./types";
@@ -38,20 +38,20 @@ const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && v 
 export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, settings }: TabCtx) {
   const alerts = computeAlerts(e, settings);
   const row = e as unknown as Record<string, unknown>;
-  const canStatus = me.role === "director" || me.role === "raf";
+  const canStatus = canSetEditionStatus(me);
   const layerFilled = (l: (typeof LAYERS)[number]) => l.fields.some((f) => isFilled(row[f]));
   const filledLayers = LAYERS.slice(0, 4).filter(layerFilled).length;
   const nextEmpty = LAYERS.slice(0, 4).find((l) => !layerFilled(l));
   const codirOpts = REF_DEFAULTS.codir_decision.map((c) => ({ value: c.code, label: refLabel(refs, "codir_decision", c.code) }));
   // Remarques : un droit du CODIR (direction, RAF, responsables de pôle) — la relecture des fiches se fait en CODIR ; le pilote et l'équipe les traitent.
-  const canRemark = isCodir(me.role);
+  const canRemark = isCodir(me);
   const canResolve = isPilot || isTeam || canRemark;
   const remarks: RemarkView[] = e.remarks.map((r) => ({ id: r.id, field: r.field, body: r.body, reason: r.reason, author: r.author.name, authorId: r.authorId, createdAt: fmtDate(r.createdAt), resolvedAt: r.resolvedAt ? fmtDate(r.resolvedAt) : null, resolvedBy: r.resolvedBy?.name ?? null }));
   const openRemarks = remarks.filter((r) => !r.resolvedAt).length;
   // Fiche validée = verrouillée (retour du 14/09) : les couches 1 à 3 passent par une proposition de modification ; la 4 et la logistique restent vivantes.
   const locked = isLocked(e);
   const canPropose = canRemark || isPilot || isTeam;
-  const canDecideProposal = me.role === "director" || isPilot;
+  const canDecideProposal = canActAsPilot(me, isPilot);
   const proposals: ProposalView[] = e.proposals.map((p) => ({ id: p.id, field: p.field, fieldLabel: FIELDS.edition[p.field]?.label ?? p.field, proposed: p.proposed, reason: p.reason, author: p.author.name, authorId: p.authorId, createdAt: fmtDate(p.createdAt), status: p.status, decidedBy: p.decidedBy?.name ?? null, decidedAt: p.decidedAt ? fmtDate(p.decidedAt) : null, comment: p.comment }));
   // Une seule date de décision : celle du CODIR (couche 4) ; l'ancienne « date de décision » ne sert plus que de repli.
   const validatedAt = e.codirDate ?? e.changes.find((c) => (c.field === "codirDecision" && c.after) || (c.field === "status" && c.after && LOCKED_STATUSES.includes(c.after)))?.createdAt ?? e.decisionDate ?? null;
@@ -60,12 +60,12 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, setti
     return {
       key: f, label: def.label ?? f, type: def.type, value: row[f] as LayerField["value"],
       suffix: def.type === "number" ? (f === "fte" ? "ETP" : "€") : undefined,
-      options: f === "codirDecision" ? codirOpts : f === "sponsorId" ? people.filter((p) => ["director", "raf", "pole_lead"].includes(p.role)).map((p) => ({ value: p.id, label: p.name })) : undefined,
+      options: f === "codirDecision" ? codirOpts : f === "sponsorId" ? people.filter((p) => p.codir).map((p) => ({ value: p.id, label: p.name })) : undefined,
     };
   });
   const proposable: ProposableField[] = LAYERS.slice(0, 3).flatMap((l) => layerFields(l).filter((f) => f.type !== "bool" && f.type !== "select").map((f) => ({ key: f.key, label: f.label, current: readableValue(f), multiline: f.type === "textarea", group: `${l.no} · ${l.title}` })));
   const toc = [...LAYERS.slice(0, 4).map((l) => ({ id: `couche-${l.key}`, label: `${l.no} ${l.title}` })), { id: "indicateurs", label: "Indicateurs" }, { id: "decisions", label: "Décisions" }, { id: "bilan", label: "Bilan" }, { id: "couche-year", label: "Logistique" }, { id: "equipe", label: "Équipe" }, { id: "historique", label: "Historique" }];
-  const canYear = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
+  const canYear = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project));
   const instances = REF_DEFAULTS.decision_instance.map((k) => ({ value: k.code, label: refLabel(refs, "decision_instance", k.code) }));
   const alertOpts = alerts.map((a) => ({ value: a.kind, label: a.label }));
   const legacyIndicators = [e.imposedIndicators, e.ownIndicators].filter(Boolean) as string[];
@@ -107,18 +107,18 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, setti
         {canRemark && !feedback && !locked && (
           <p className="text-xs text-muted-foreground"><MessageSquareText className="mr-1 inline size-3.5" />Fiche en rédaction : <Link href={`/edition/${e.id}?onglet=fiche&relecture=1`} className="text-primary hover:underline">relire et annoter</Link> rubrique par rubrique.</p>
         )}
-        <ProposalsPanel proposals={proposals} canDecide={canDecideProposal} meId={me.id} isDirector={me.role === "director"} />
+        <ProposalsPanel proposals={proposals} canDecide={canDecideProposal} meId={me.id} isDirector={canActAsPilot(me, false)} />
         {openRemarks > 0 && (
           <div className="flex items-center justify-between gap-3 rounded-md bg-warning-soft px-3.5 py-2.5 text-xs text-warning-foreground" data-testid="fiche-remarks-banner"><span><b>{openRemarks} remarque{openRemarks > 1 ? "s" : ""} à traiter</b> sur cette fiche, posée{openRemarks > 1 ? "s" : ""} par {[...new Set(remarks.filter((r) => !r.resolvedAt).map((r) => r.author))].join(", ")}. Elles apparaissent sous les rubriques concernées.</span></div>
         )}
         {LAYERS.map((layer) => {
-          const writable = canWriteLayer(me.role, layer.key, isPilot, isTeam, inMyPole(me, e.project));
+          const writable = canWriteLayer(me, layer.key, isPilot, isTeam, inMyPole(me, e.project));
           const chapters = layer.key === "validation";
           return (<Fragment key={layer.key}>
             <FicheLayer
               key={layer.key} editionId={e.id} layerKey={layer.key} no={layer.no} title={layer.title} owner={layer.owner}
               ownerMissingLabel={LAYER_OWNER_LABEL[layer.key]} fields={layerFields(layer)} writable={writable} defaultEditing={writable && !layerFilled(layer)} optional={layer.optional} hideCount={locked}
-              remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark && Boolean(feedback)} canResolve={canResolve} meId={me.id} isDirector={me.role === "director"}
+              remarks={remarks.filter((r) => layer.fields.includes(r.field))} canRemark={canRemark && Boolean(feedback)} canResolve={canResolve} meId={me.id} isDirector={canActAsPilot(me, false)}
               locked={locked && ["strategic", "means", "proposal"].includes(layer.key)} pendingProposals={proposals.filter((p) => p.status === "pending" && layer.fields.includes(p.field)).length}
             />
             {chapters && (
@@ -140,7 +140,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, setti
                 <section id="decisions" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="instance-decisions">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">⚖</span><h4 className="text-sm font-bold">Décisions des instances</h4><span className="text-[10px] text-muted-foreground">CODIR, réunion de pôle, revue trimestrielle, CA</span></div>
-                    {isCodir(me.role) && <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} alerts={alertOpts} />}
+                    {isCodir(me) && <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} alerts={alertOpts} />}
                   </div>
                   {e.decisions.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">Aucune décision consignée.</p> : (
                     <ul className="mt-2.5 divide-y text-sm lg:ml-9">
@@ -175,7 +175,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, feedback, setti
           </Fragment>);
         })}
 
-        <TeamSection editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me.role, "proposal", isPilot, isTeam)} />
+        <TeamSection editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role, codir: p.codir }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me, "proposal", isPilot, isTeam)} />
 
         <details id="historique" className="group scroll-mt-20 rounded-md border bg-card px-[18px] py-3" data-testid="history">
           <summary className="cursor-pointer list-none text-sm font-bold text-foreground">

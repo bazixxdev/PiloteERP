@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { canEditFunding, isCodir } from "@/lib/rights";
+import { canEditCalls, canEditFunding, isCodir, type Actor } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
 import { CALL_STATUSES, suggestedReference } from "@/lib/calls";
 import { dayjs } from "@/lib/format";
@@ -15,14 +15,14 @@ async function moduleOn(): Promise<string | null> {
 }
 
 // Repérer un appel : la RAF, la direction — et les responsables de pôle, qui reçoivent souvent l'information les premiers.
-function canSpot(role: string): boolean {
-  return canEditFunding(role) || role === "pole_lead";
+function canSpot(me: Actor): boolean {
+  return canEditCalls(me);
 }
 
 export async function addCall(input: { funderId: string; label: string; scheme?: string | null; deadline?: string | null; rolling?: boolean; recurring?: boolean; amountHint?: string | null; link?: string | null; note?: string | null }): Promise<Result<{ id: string }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me.role)) return { ok: false, error: "Un appel à projets se repère par la RAF, la direction ou un responsable de pôle." };
+  if (!canSpot(me)) return { ok: false, error: "Un appel à projets se repère par la RAF, la direction ou un responsable de pôle." };
   if (!input.funderId) return { ok: false, error: "Choisissez le financeur." };
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Donnez un intitulé à l'appel." };
@@ -39,7 +39,7 @@ export async function addCall(input: { funderId: string; label: string; scheme?:
 export async function setCallStatus(id: string, status: string | null): Promise<Result> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!isCodir(me.role)) return { ok: false, error: "Le statut d'un appel se pose en CODIR (direction, RAF, responsables de pôle)." };
+  if (!isCodir(me)) return { ok: false, error: "Le statut d'un appel se pose en CODIR (direction, RAF, responsables de pôle)." };
   if (status !== null && !CALL_STATUSES.some((s) => s.value === status)) return { ok: false, error: "Statut inconnu." };
   const c = await prisma.call.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Appel introuvable" };
@@ -52,7 +52,7 @@ export async function setCallStatus(id: string, status: string | null): Promise<
 export async function promoteCall(id: string): Promise<Result<{ conventionId: string; existed: boolean }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention depuis un appel." };
+  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention depuis un appel." };
   const c = await prisma.call.findUnique({ where: { id }, include: { funder: true } });
   if (!c) return { ok: false, error: "Appel introuvable" };
   if (c.conventionId) return { ok: true, data: { conventionId: c.conventionId, existed: true } };
@@ -75,7 +75,7 @@ export async function promoteCall(id: string): Promise<Result<{ conventionId: st
 export async function renewCall(id: string): Promise<Result<{ id: string }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me.role)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
+  if (!canSpot(me)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
   const c = await prisma.call.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Appel introuvable" };
   if (!c.deadline) return { ok: false, error: "Un appel au fil de l'eau ne se reconduit pas : il reste ouvert." };
@@ -92,7 +92,7 @@ export async function renewCall(id: string): Promise<Result<{ id: string }>> {
 export async function setCallActive(id: string, active: boolean): Promise<Result> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me.role)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
+  if (!canSpot(me)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
   await prisma.call.update({ where: { id }, data: { active } });
   revalidatePath("/", "layout");
   return { ok: true };

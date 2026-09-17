@@ -22,7 +22,7 @@ const LEVELS = [
 export default async function ValidationsPage({ searchParams }: { searchParams: Promise<{ niveau?: string; perimetre?: string }> }) {
   const { niveau, perimetre } = await searchParams;
   const [me, refs, settings] = await Promise.all([getCurrentPerson(), getRefs(), getSettings()]);
-  const myLevel = validationLevelOf(me.role);
+  const myLevel = validationLevelOf(me);
   const all = await prisma.validationRequest.findMany({
     include: { requester: true, decider: true, action: true, edition: { include: { project: { include: { pole: true, secondaryPoles: true } }, team: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } } },
     orderBy: [{ status: "desc" }, { createdAt: "asc" }],
@@ -42,7 +42,7 @@ export default async function ValidationsPage({ searchParams }: { searchParams: 
         subtitle={`Vue par niveau et décisions récentes ; le quotidien se traite dans Demandes. ${forMe.length} à traiter par moi · ${pending.length} en attente ${isTransversal(me) || perimeter === "cress" ? "dans toute la CRESS" : `dans mon pôle (${me.pole?.name ?? "—"})`} · seuils : ${fmtEuro(settings.validationThresholdLevel1)} (niveau 2) et ${fmtEuro(settings.validationThresholdLevel2)} (niveau 3) ; au-delà de l'enveloppe restante, niveau 3.`}
       />
 
-      <Section title="À traiter par moi" description={`${me.name} · ${me.role === "assistant" || me.role === "contributor" ? "vous ne validez pas" : `vous validez jusqu'au niveau ${myLevel}${me.role === "pilot" ? " sur vos projets" : me.role === "pole_lead" ? " sur votre pôle" : ""}`}.`} className="mb-4" testId="for-me">
+      <Section title="À traiter par moi" description={`${me.name} · ${validationLevelOf(me) === 0 ? "vous ne validez pas" : `vous validez jusqu'au niveau ${myLevel}${me.role === "pilot" ? " sur vos projets" : me.role === "pole_lead" ? " sur votre pôle" : ""}`}.`} className="mb-4" testId="for-me">
         {forMe.length === 0 ? <EmptyState title="Rien à valider pour vous" hint="Les demandes de votre niveau apparaîtront ici avec leur âge et le délai cible." /> : (
           <div className="grid gap-2">{forMe.map((v, i) => <ValidationCard key={v.id} v={v} refs={refs} canDecide showEdition index={i} attachments={v.attachments} />)}</div>
         )}

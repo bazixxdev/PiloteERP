@@ -5,9 +5,10 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
 import { loadEdition } from "@/lib/queries";
 import { getCurrentPerson, getRefs, getSettings, getPeople } from "@/lib/session";
+import { codirRole, getRoleMap } from "@/lib/roles";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { computeAlerts } from "@/lib/alerts";
-import { canAdmin, isCodir } from "@/lib/rights";
+import { canAdmin, canSetEditionStatus, isCodir } from "@/lib/rights";
 import { isLocked } from "@/lib/lock";
 import { TabsNav, type TabKey } from "./tabs-nav";
 import { ApercuTab } from "./apercu";
@@ -33,7 +34,7 @@ import { FocusMode } from "@/components/common/focus-mode";
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string; champ?: string }> }) {
   const { id } = await params;
   const { onglet, relecture, focus, validation, fil, ligne, champ } = await searchParams;
-  const [e, me, refs, settings, people] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople()]);
+  const [e, me, refs, settings, people, roles] = await Promise.all([loadEdition(id), getCurrentPerson(), getRefs(), getSettings(), getPeople(), getRoleMap()]);
   if (!e) notFound();
   const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
   const [funders, conventions] = await Promise.all([prisma.funder.findMany({ orderBy: { name: "asc" } }), prisma.convention.findMany({ include: { lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } } }, orderBy: { reference: "asc" } })]);
@@ -49,7 +50,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   // Alertes réglées par une décision d'instance : elles s'éteignent dans la bande d'état, avec la référence de la décision.
   const acks = e.decisions.filter((d) => d.alertKind).map((d) => ({ kind: d.alertKind as (typeof alerts)[number]["kind"], by: `${refLabel(refs, "decision_instance", d.instance)} ${fmtDate(d.decidedAt)}` }));
   const myTasks = await prisma.task.findMany({ where: { personId: me.id, editionId: e.id, done: false }, select: { id: true, label: true, dueDate: true, action: { select: { name: true } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] });
-  const canStatus = me.role === "director" || me.role === "raf";
+  const canStatus = canSetEditionStatus(me);
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
   const ctx = { e, me, refs, settings, people, funders, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks, openLine: ligne ?? null, openField: champ ?? null };
 
@@ -57,7 +58,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const counts = {
     apercu: e.validations.filter((v) => v.status === "pending").length,
     actions: e.actions.filter((a) => a.state !== "done").length,
-    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me.role)).length + e.attachments.length,
+    documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me)).length + e.attachments.length,
   };
 
   const owners = { pilot: e.project.pilot, guarantor: e.project.guarantor };
@@ -94,9 +95,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
               {/* La mission du plan opérationnel se lit dans la fiche (Cadre stratégique) ; ici elle doublait la ligne (critique du 16/09). */}
               <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · <span title={`Mission : ${e.project.mission.name}`}>{e.project.analyticCode}</span></span>
               <span aria-hidden className="hidden sm:inline">·</span>
-              <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} role={owners.pilot.role} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
+              <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} codir={codirRole(roles, owners.pilot.role)} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
               <span aria-hidden className="hidden sm:inline">·</span>
-              <span className="inline-flex items-center gap-1">{owners.guarantor && <Avatar name={owners.guarantor.name} role={owners.guarantor.role} className="size-5 text-[8px]" />} Garant <b className="font-semibold text-foreground">{owners.guarantor?.name ?? "—"}</b></span>
+              <span className="inline-flex items-center gap-1">{owners.guarantor && <Avatar name={owners.guarantor.name} codir={codirRole(roles, owners.guarantor.role)} className="size-5 text-[8px]" />} Garant <b className="font-semibold text-foreground">{owners.guarantor?.name ?? "—"}</b></span>
             </p>
           </div>
         </div>
@@ -107,7 +108,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
               (direction, responsable de pôle, RAF) : leur geste premier ici est de lire et d'arbitrer (critique du 16/09). */}
           <RequestValidationDialog
             editionId={e.id}
-            variant={isPilot || isTeam || !isCodir(me.role) ? "default" : "outline"}
+            variant={isPilot || isTeam || !isCodir(me) ? "default" : "outline"}
             defaultOpen={validation === "1"}
             suppliers={suppliers}
             actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}
@@ -115,7 +116,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.
             recipients={(() => { const lead = owners.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null; const dir = people.find((p) => p.role === "director")?.name ?? null; return { 1: isPilot ? (lead ?? dir) : owners.pilot.name, 2: lead ?? dir, 3: dir }; })()}
           />
-          <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me.role)} feedback={relecture === "1"} />
+          <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me)} feedback={relecture === "1"} />
         </div>
       </div>
       <AlertBar editionId={e.id} alerts={alerts} acks={acks} />
@@ -135,7 +136,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         <div className="grid gap-4">
           <nav className="flex gap-3 text-xs" aria-label="Sections du budget"><a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#realise" className="text-primary hover:underline">Réalisé comptable</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
           <div id="depenses" className="scroll-mt-20"><BudgetTab {...ctx} /></div>
-          <div id="realise" className="scroll-mt-20"><LedgerBlock e={ctx.e} settings={ctx.settings} canAdmin={canAdmin(me.role)} /></div>
+          <div id="realise" className="scroll-mt-20"><LedgerBlock e={ctx.e} settings={ctx.settings} canAdmin={canAdmin(me)} /></div>
           <div id="recettes" className="scroll-mt-20"><FinancementsTab {...ctx} /></div>
         </div>
       )}

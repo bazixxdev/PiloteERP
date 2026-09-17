@@ -1,4 +1,5 @@
 import { getCurrentPerson, getPeople, getRefs, getSessionUser } from "@/lib/session";
+import { codirRole, getRoleMap } from "@/lib/roles";
 import { DEMO_MODE } from "@/lib/auth";
 import { refLabel } from "@/lib/refs";
 import { PersonSwitcher } from "./person-switcher";
@@ -17,7 +18,7 @@ import { QuickMenu, type QuickItem } from "./quick-menus";
 import type { NavSection } from "@/lib/navigation";
 
 export async function Topbar({ tree }: { tree: NavSection[] }) {
-  const [current, people, refs, sessionUser] = await Promise.all([getCurrentPerson(), getPeople(), getRefs(), getSessionUser()]);
+  const [current, people, refs, sessionUser, roles] = await Promise.all([getCurrentPerson(), getPeople(), getRefs(), getSessionUser(), getRoleMap()]);
   const rawEditions = await prisma.edition.findMany({
     where: { status: { not: "closed" } },
     select: { id: true, year: true, project: { select: { name: true, poleId: true, pilotId: true, guarantorId: true, secondaryPoles: { select: { poleId: true } } } }, team: { select: { personId: true } } },
@@ -32,7 +33,7 @@ export async function Topbar({ tree }: { tree: NavSection[] }) {
   ]);
   const noteItems: QuickItem[] | null = recentNotes && recentNotes.map((n) => ({ id: n.id, title: n.title || "Sans titre", sub: `${fmtDate(n.date, "D MMM")} · ${n.edition ? `${n.edition.project.name} · ${n.edition.year}` : NOTE_CONTEXTS.find((c) => c.value === n.context)?.label ?? ""}`, href: `/notes?note=${n.id}`, color: noteColor(n.color)?.hex ?? null }));
   const taskItems: QuickItem[] | null = recentTasks && recentTasks.map((t) => ({ id: t.id, title: t.label, sub: [t.dueDate ? (dayjs(t.dueDate).isBefore(dayjs(), "day") ? `en retard · ${fmtDate(t.dueDate, "D MMM")}` : `pour le ${fmtDate(t.dueDate, "D MMM")}`) : "sans échéance", t.edition ? `${t.edition.project.name} · ${t.edition.year}` : null].filter(Boolean).join(" · "), href: "/taches" }));
-  const map = (p: (typeof people)[number]) => ({ id: p.id, name: p.name, role: p.role, roleLabel: refLabel(refs, "role", p.role), poleName: p.pole?.name ?? null });
+  const map = (p: { id: string; name: string; role: string; pole: { name: string } | null }) => ({ id: p.id, name: p.name, role: p.role, roleLabel: refLabel(refs, "role", p.role), poleName: p.pole?.name ?? null, codir: codirRole(roles, p.role) });
   return (
     <header className="flex h-[52px] shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:px-6 print:hidden">
       <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -48,7 +49,7 @@ export async function Topbar({ tree }: { tree: NavSection[] }) {
         {noteItems && <QuickMenu kind="notes" label="Notes" items={noteItems} allHref="/notes" addHref="/notes?note=nouvelle" addLabel="Nouvelle note" emptyText="Aucune note encore." />}
         {taskItems && <QuickMenu kind="tasks" label="Tâches" items={taskItems} allHref="/taches" addHref="/taches?ajouter=1" addLabel="Nouvelle tâche" emptyText="Rien à faire pour l'instant." />}
         <NotificationsBell items={notifications.map((n) => ({ id: n.id, title: n.title, body: n.body, link: n.link, createdAt: fmtDate(n.createdAt, "D MMM à HH:mm"), readAt: n.readAt ? n.readAt.toISOString() : null, sender: n.sender?.name ?? null }))} />
-        <PersonSwitcher people={people.map(map)} current={map(current)} canAdmin={canAdmin(current.role)} demo={DEMO_MODE} account={sessionUser?.name ?? null} />
+        <PersonSwitcher people={people.map(map)} current={map(current)} canAdmin={canAdmin(current)} demo={DEMO_MODE} account={sessionUser?.name ?? null} />
       </div>
     </header>
   );

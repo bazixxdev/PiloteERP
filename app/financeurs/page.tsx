@@ -24,7 +24,7 @@ export default async function FinanceursPage() {
       orderBy: { name: "asc" },
     }),
   ]);
-  const rw = canEditFunding(me.role);
+  const rw = canEditFunding(me);
   return (
     <div className="p-4 md:p-6">
       <DossiersNav current="financeurs" />

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { dayjs } from "@/lib/format";
-import { isForMe, REQUEST_KINDS, REQUEST_STATUSES, kindLabel } from "@/lib/requests";
+import { canTreatRequest, REQUEST_KINDS, REQUEST_STATUSES, kindLabel } from "@/lib/requests";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -34,7 +34,7 @@ export async function setRequestStatus(id: string, status: string, answer?: stri
   const r = await prisma.request.findUnique({ where: { id } });
   if (!r) return { ok: false, error: "Demande introuvable." };
   if (!REQUEST_STATUSES.some((s) => s.value === status)) return { ok: false, error: "État inconnu." };
-  const canTreat = isForMe(me, r) || me.role === "director" || me.role === "raf" || (r.poleId && me.role === "pole_lead" && me.poleId === r.poleId);
+  const canTreat = canTreatRequest(me, r);
   if (!canTreat && !(r.requesterId === me.id && status === "declined")) return { ok: false, error: "Seul le destinataire fait avancer cette demande (le demandeur peut la retirer)." };
   await prisma.request.update({ where: { id }, data: { status, answer: answer?.trim() || r.answer, doneAt: status === "done" || status === "declined" ? new Date() : null, ...(status !== "open" && !r.assigneeId ? { assigneeId: me.id } : {}) } });
   if (status === "done" || status === "declined") await prisma.task.updateMany({ where: { requestId: id, done: false }, data: { done: true, doneAt: new Date() } });
@@ -49,7 +49,7 @@ export async function assignRequest(id: string, assigneeId: string | null): Prom
   const me = await getCurrentPerson();
   const r = await prisma.request.findUnique({ where: { id } });
   if (!r) return { ok: false, error: "Demande introuvable." };
-  const canTreat = isForMe(me, r) || me.role === "director" || (r.poleId && me.role === "pole_lead" && me.poleId === r.poleId) || r.requesterId === me.id;
+  const canTreat = canTreatRequest(me, r) || r.requesterId === me.id;
   if (!canTreat) return { ok: false, error: "Vous ne pouvez pas réattribuer cette demande." };
   await prisma.request.update({ where: { id }, data: { assigneeId } });
   if (assigneeId && assigneeId !== me.id) await prisma.notification.create({ data: { personId: assigneeId, senderId: me.id, kind: "info", title: `Demande confiée : ${r.title}`, link: "/demandes" } });
@@ -63,7 +63,7 @@ export async function taskFromRequest(id: string): Promise<Result<{ taskId: stri
   const me = await getCurrentPerson();
   const r = await prisma.request.findUnique({ where: { id }, include: { requester: true, tasks: { where: { personId: me.id } } } });
   if (!r) return { ok: false, error: "Demande introuvable." };
-  const canTreat = isForMe(me, r) || me.role === "director" || me.role === "raf" || (r.poleId && me.role === "pole_lead" && me.poleId === r.poleId);
+  const canTreat = canTreatRequest(me, r);
   if (!canTreat) return { ok: false, error: "Seul le destinataire prend cette demande." };
   const existing = r.tasks[0];
   const t = existing ?? (await prisma.task.create({ data: { personId: me.id, label: `${r.title} (demande de ${r.requester.name})`, dueDate: r.dueDate, editionId: r.editionId, requestId: r.id } }));

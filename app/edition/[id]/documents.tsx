@@ -22,8 +22,8 @@ import { AddDocLinkForm } from "./add-forms";
 export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: TabCtx) {
   const notes = (await loadNotes(me, { editionId: e.id })).filter((n) => !n.archived);
   const kinds = REF_DEFAULTS.attachment_kind.map((k) => ({ value: k.code, label: refLabel(refs, "attachment_kind", k.code) }));
-  const codir = isCodir(me.role);
-  const rw = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project));
+  const codir = isCodir(me);
+  const rw = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project));
   const visible = e.docLinks.filter((d) => !d.codirOnly || codir);
   const defaultPath = serverPath(settings.serverPathTemplate, e.project.analyticCode, e.year);
   const hasPath = visible.some((d) => !isWebLink(d.url));
@@ -74,7 +74,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
       </Section>
 
       <div className="grid content-start gap-4">
-        <Section title="Pièces qui font foi" description="Devis, conventions, notifications, justificatifs, bilans remis (5 Mo au plus) ; le dossier complet reste sur le serveur." actions={(rw || canEditFunding(me.role)) ? <Reveal label="Pièce" size="sm" testId="upload-open"><UploadForm editionId={e.id} kinds={kinds} defaultKind="other" /></Reveal> : undefined} testId="pieces">
+        <Section title="Pièces qui font foi" description="Devis, conventions, notifications, justificatifs, bilans remis (5 Mo au plus) ; le dossier complet reste sur le serveur." actions={(rw || canEditFunding(me)) ? <Reveal label="Pièce" size="sm" testId="upload-open"><UploadForm editionId={e.id} kinds={kinds} defaultKind="other" /></Reveal> : undefined} testId="pieces">
           <AttachmentList items={e.attachments} refs={refs} emptyText="Aucune pièce déposée sur cette édition." />
         </Section>
 

@@ -16,11 +16,11 @@ export async function ensureMyIcsToken(regenerate = false): Promise<string> {
 
 export async function ensureTeamIcsToken(regenerate = false): Promise<string | null> {
   const me = await getCurrentPerson();
-  if (!canAdmin(me.role) && !regenerate) {
+  if (!canAdmin(me) && !regenerate) {
     const s = await prisma.settings.findUnique({ where: { id: 1 } });
     return s?.teamIcsToken ?? null;
   }
-  if (!canAdmin(me.role)) return null;
+  if (!canAdmin(me)) return null;
   const s = await prisma.settings.findUnique({ where: { id: 1 } });
   if (s?.teamIcsToken && !regenerate) return s.teamIcsToken;
   const token = newToken();

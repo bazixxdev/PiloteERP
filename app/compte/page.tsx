@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/common/page-header";
+import { isCodir } from "@/lib/rights";
 import { Section } from "@/components/common/section";
 import { Avatar } from "@/components/shell/person-switcher";
 import { IcsCard } from "@/components/common/ics-card";
@@ -33,7 +34,7 @@ export default async function ComptePage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
         <Section title="Identité et poste">
           <div className="mb-4 flex items-center gap-3">
-            <Avatar name={me.name} role={me.role} className="size-12 text-base" />
+            <Avatar name={me.name} codir={isCodir(me)} className="size-12 text-base" />
             <div><div className="text-base font-semibold">{me.name}</div><div className="text-xs text-muted-foreground">{refLabel(refs, "role", me.role)}{me.pole ? ` · ${me.pole.name}` : " · transversal"}</div></div>
           </div>
           <dl className="grid gap-3">

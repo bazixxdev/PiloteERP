@@ -14,7 +14,7 @@ import { FileDown, Lightbulb } from "lucide-react";
 // Projets et éditions : objets permanents et leurs éditions annuelles. Modifiable par la direction et la RAF, lisible par tous.
 export default async function ProjetsPage() {
   const me = await getCurrentPerson();
-  const rw = canAdmin(me.role);
+  const rw = canAdmin(me);
   const [people, poles, projects, missions] = await Promise.all([
     prisma.person.findMany({ orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ orderBy: { name: "asc" } }),

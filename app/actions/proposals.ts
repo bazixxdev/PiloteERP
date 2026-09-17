@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce } from "@/lib/fields";
-import { isCodir } from "@/lib/rights";
+import { canActAsPilot, has, isCodir } from "@/lib/rights";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -16,7 +16,7 @@ export async function proposeChange(editionId: string, field: string, proposed: 
   const def = FIELDS.edition[field];
   if (!def || !def.layer || def.layer === "validation") return { ok: false, error: "Cette rubrique ne se propose pas." };
   if (!reason.trim()) return { ok: false, error: "Dites pourquoi : c'est ce qui manque aujourd'hui aux corrections silencieuses." };
-  const allowed = isCodir(me.role) || e.project.pilotId === me.id || e.team.some((t) => t.personId === me.id);
+  const allowed = isCodir(me) || e.project.pilotId === me.id || e.team.some((t) => t.personId === me.id);
   if (!allowed) return { ok: false, error: "Seuls le pilote, l'équipe et le CODIR proposent une modification." };
   const p = await prisma.changeProposal.create({ data: { editionId, field, proposed: proposed.trim(), reason: reason.trim(), authorId: me.id } });
   const label = def.label ?? field;
@@ -36,9 +36,9 @@ export async function decideChange(id: string, decision: "accepted" | "refused",
   const p = await prisma.changeProposal.findUnique({ where: { id }, include: { edition: { include: { project: true } } } });
   if (!p) return { ok: false, error: "Proposition introuvable." };
   if (p.status !== "pending") return { ok: false, error: "Cette proposition est déjà décidée." };
-  const canDecide = me.role === "director" || p.edition.project.pilotId === me.id;
+  const canDecide = canActAsPilot(me, p.edition.project.pilotId === me.id);
   if (!canDecide) return { ok: false, error: "Le pilote de l'édition ou la direction décide d'une proposition." };
-  if (p.authorId === me.id && me.role !== "director") return { ok: false, error: "On n'accepte pas sa propre proposition : le pilote ou la direction tranche." };
+  if (p.authorId === me.id && !has(me, "edition.edit_all")) return { ok: false, error: "On n'accepte pas sa propre proposition : le pilote ou la direction tranche." };
   const def = FIELDS.edition[p.field];
   await prisma.$transaction(async (tx) => {
     if (decision === "accepted") {
@@ -63,7 +63,7 @@ export async function addAchievement(editionId: string, input: { kind: string; l
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
   if (!e) return { ok: false, error: "Édition introuvable." };
   const poles = [e.project.poleId, ...e.project.secondaryPoles.map((x) => x.poleId)];
-  const allowed = me.role === "director" || me.role === "raf" || e.project.pilotId === me.id || e.team.some((t) => t.personId === me.id) || (me.role === "pole_lead" && me.poleId !== null && poles.includes(me.poleId));
+  const allowed = canActAsPilot(me, e.project.pilotId === me.id, e.team.some((t) => t.personId === me.id)) || (isCodir(me) && (has(me, "scope.all") || (me.poleId !== null && poles.includes(me.poleId))));
   if (!allowed) return { ok: false, error: "Le pilote, l'équipe ou le CODIR consignent une réalisation." };
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Dites ce qui a été réalisé." };
@@ -79,7 +79,7 @@ export async function deleteAchievement(id: string): Promise<Result> {
   const me = await getCurrentPerson();
   const a = await prisma.achievement.findUnique({ where: { id }, include: { edition: { include: { project: true } } } });
   if (!a) return { ok: false, error: "Réalisation introuvable." };
-  if (a.authorId !== me.id && me.role !== "director" && a.edition.project.pilotId !== me.id) return { ok: false, error: "Seuls l'auteur, le pilote ou la direction retirent une réalisation." };
+  if (a.authorId !== me.id && !canActAsPilot(me, a.edition.project.pilotId === me.id)) return { ok: false, error: "Seuls l'auteur, le pilote ou la direction retirent une réalisation." };
   await prisma.achievement.delete({ where: { id } });
   revalidatePath(`/edition/${a.editionId}`);
   return { ok: true };

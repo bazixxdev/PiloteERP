@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { dayjs } from "./format";
-import { canDecideValidation } from "./rights";
+import { canDecideValidation, canTreatAllRequests, has, validationLevelOf, type Actor } from "./rights";
 
 // Demandes internes (retour du 14/09) : un seul canal pour « retour sur le site », « j'ai besoin de chiffres », « réserve-moi une salle »…
 export const REQUEST_KINDS = [
@@ -24,16 +24,16 @@ export const statusOf = (v: string) => REQUEST_STATUSES.find((s) => s.value === 
 export const requestInclude = { requester: true, assignee: true, pole: true, edition: { include: { project: { include: { secondaryPoles: true } } } }, tasks: { select: { id: true, personId: true } } };
 export type RequestRow = Awaited<ReturnType<typeof loadRequests>>[number];
 
-type Viewer = { id: string; role: string; poleId: string | null };
+type Viewer = Actor & { id: string; poleId: string | null };
 
 // Périmètre (retour de Gaël, 14/09 : « tout le monde ne doit pas voir les demandes de tout le monde »).
 // Je vois une demande si j'y suis partie prenante (demandeur, destinataire, pôle destinataire), si je pilote l'édition concernée,
-// si je suis responsable du pôle du demandeur, du destinataire ou du projet ; direction et RAF voient tout.
+// si je suis responsable du pôle du demandeur, du destinataire ou du projet ; qui traite toute demande (direction, RAF) voit tout.
 export function canSeeRequest(me: Viewer, r: { requesterId: string; assigneeId: string | null; poleId: string | null; requester: { poleId: string | null }; assignee: { poleId: string | null } | null; edition: { project: { pilotId: string; poleId: string; secondaryPoles: { poleId: string }[] } } | null }): boolean {
-  if (me.role === "director" || me.role === "raf") return true;
+  if (canTreatAllRequests(me)) return true;
   if (r.requesterId === me.id || isForMe(me, r)) return true;
   if (r.edition?.project.pilotId === me.id) return true;
-  if (me.role === "pole_lead" && me.poleId) {
+  if (has(me, "pole.manage") && me.poleId) {
     const poles = [r.poleId, r.requester.poleId, r.assignee?.poleId, r.edition?.project.poleId, ...(r.edition?.project.secondaryPoles ?? []).map((x) => x.poleId)];
     return poles.includes(me.poleId);
   }
@@ -42,17 +42,17 @@ export function canSeeRequest(me: Viewer, r: { requesterId: string; assigneeId: 
 
 // Même logique pour une validation : le demandeur, qui peut la décider, le pilote de l'édition, le responsable du pôle du projet ; direction et RAF.
 export function canSeeValidation(me: Viewer, v: { requesterId: string; requiredLevel: number; edition: { project: { pilotId: string; poleId: string; secondaryPoles?: { poleId: string }[] } } }): boolean {
-  if (me.role === "director" || me.role === "raf") return true;
+  if (canTreatAllRequests(me)) return true;
   if (v.requesterId === me.id || v.edition.project.pilotId === me.id) return true;
-  if (me.role === "pole_lead" && me.poleId) return [v.edition.project.poleId, ...(v.edition.project.secondaryPoles ?? []).map((x) => x.poleId)].includes(me.poleId);
+  if (has(me, "pole.manage") && me.poleId) return [v.edition.project.poleId, ...(v.edition.project.secondaryPoles ?? []).map((x) => x.poleId)].includes(me.poleId);
   return canDecideValidation(me, v);
 }
 
 // Libellé du troisième onglet de /demandes selon ce que la personne peut voir ; null quand il n'apporterait rien de plus.
-export function wideViewLabel(role: string): string | null {
-  if (role === "director" || role === "raf") return "Toute la CRESS";
-  if (role === "pole_lead") return "Mon pôle";
-  if (role === "pilot") return "Mes projets";
+export function wideViewLabel(me: Actor): string | null {
+  if (canTreatAllRequests(me)) return "Toute la CRESS";
+  if (has(me, "pole.manage")) return "Mon pôle";
+  if (validationLevelOf(me) >= 1) return "Mes projets";
   return null;
 }
 
@@ -62,16 +62,16 @@ export async function loadRequests(me: Viewer) {
 }
 
 // Une demande « me concerne » si elle m'est adressée, ou adressée à mon pôle (son responsable la voit d'abord).
-export function isForMe(me: { id: string; role: string; poleId: string | null }, r: { assigneeId: string | null; poleId: string | null }): boolean {
+export function isForMe(me: Viewer, r: { assigneeId: string | null; poleId: string | null }): boolean {
   if (r.assigneeId) return r.assigneeId === me.id;
-  if (r.poleId) return me.poleId === r.poleId || me.role === "director";
+  if (r.poleId) return me.poleId === r.poleId || canTreatAllRequests(me);
   return false;
 }
 
 // « À traiter par moi » : ce qui me concerne, plus tout pour la direction et les demandes du pôle pour son responsable.
 // Même règle pour la vue de la page et le badge de la barre latérale : les deux nombres doivent être identiques.
-export function canTreatRequest(me: { id: string; role: string; poleId: string | null }, r: { assigneeId: string | null; poleId: string | null }): boolean {
-  return isForMe(me, r) || me.role === "director" || (Boolean(r.poleId) && me.role === "pole_lead" && me.poleId === r.poleId);
+export function canTreatRequest(me: Viewer, r: { assigneeId: string | null; poleId: string | null }): boolean {
+  return isForMe(me, r) || canTreatAllRequests(me) || (Boolean(r.poleId) && has(me, "pole.manage") && me.poleId === r.poleId);
 }
 
 export const ageDays = (d: Date) => dayjs().diff(dayjs(d), "day");

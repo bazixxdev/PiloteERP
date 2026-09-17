@@ -7,7 +7,7 @@ import { Avatar } from "@/components/shell/person-switcher";
 import { TeamPicker } from "./team-picker";
 
 // L'équipe se lit (deux noms, pas quatorze chips) ; le sélecteur n'apparaît que sur « Modifier » (revue du 15/09).
-export function TeamSection({ editionId, people, selected, canEdit }: { editionId: string; people: { id: string; name: string; role: string }[]; selected: string[]; canEdit: boolean }) {
+export function TeamSection({ editionId, people, selected, canEdit }: { editionId: string; people: { id: string; name: string; role: string; codir?: boolean }[]; selected: string[]; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const members = people.filter((p) => selected.includes(p.id));
   return (
@@ -27,7 +27,7 @@ export function TeamSection({ editionId, people, selected, canEdit }: { editionI
         <p className="mt-2 text-sm italic text-muted-foreground">Aucune personne affectée.</p>
       ) : (
         <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
-          {members.map((m) => <li key={m.id} className="inline-flex items-center gap-1.5"><Avatar name={m.name} role={m.role} />{m.name}</li>)}
+          {members.map((m) => <li key={m.id} className="inline-flex items-center gap-1.5"><Avatar name={m.name} codir={m.codir} />{m.name}</li>)}
         </ul>
       )}
     </section>

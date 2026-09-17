@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
-import { canEditFunding } from "@/lib/rights";
+import { canEditFunding, canPlanLoad } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -27,7 +27,7 @@ export async function setPlannedLoad(editionId: string, personId: string, months
   const me = await getCurrentPerson();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true } });
   if (!e) return { ok: false, error: "Édition introuvable." };
-  const allowed = e.project.pilotId === me.id || canEditFunding(me.role) || me.role === "pole_lead";
+  const allowed = canPlanLoad(me, e.project.pilotId === me.id);
   if (!allowed) return { ok: false, error: "La charge est proposée par le pilote et ajustée par la RAF ou le responsable de pôle." };
   const clean = Object.entries(months).filter(([m, d]) => /^\d{4}-\d{2}$/.test(m) && Number.isFinite(d) && d >= 0).map(([m, d]) => [m, Math.round(d * 10) / 10] as const);
   const total = Math.round(clean.reduce((s, [, d]) => s + d, 0) * 10) / 10;
@@ -50,7 +50,7 @@ export async function setPlannedLoadMonth(editionId: string, personId: string, m
   if (!/^\d{4}-\d{2}$/.test(month) || !Number.isFinite(days) || days < 0) return { ok: false, error: "Valeur invalide." };
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: true, plannedLoads: { where: { personId } }, personDays: { where: { personId } }, team: { where: { personId } } } });
   if (!e) return { ok: false, error: "Édition introuvable." };
-  const allowed = e.project.pilotId === me.id || canEditFunding(me.role) || me.role === "pole_lead";
+  const allowed = canPlanLoad(me, e.project.pilotId === me.id);
   if (!allowed) return { ok: false, error: `${e.project.name} : seuls son pilote, la RAF, la direction ou un responsable de pôle modifient la charge.` };
   if (month.slice(0, 4) !== String(e.year)) return { ok: false, error: `${e.project.name} · ${e.year} : ce mois n'est pas dans l'année de l'édition.` };
   const value = Math.round(days * 10) / 10;
@@ -77,7 +77,7 @@ export async function setPlannedLoadMonth(editionId: string, personId: string, m
 // dans l'historique de l'édition et signalée à la RAF et à la direction — rien ne bouge en silence.
 export async function freezeLoad(year: number, freeze: boolean, note?: string): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: "La direction ou la RAF fige le plan de charge." };
+  if (!canEditFunding(me)) return { ok: false, error: "La direction ou la RAF fige le plan de charge." };
   if (freeze) await prisma.loadFreeze.upsert({ where: { year }, create: { year, frozenById: me.id, note: note?.trim() || null }, update: { frozenById: me.id, frozenAt: new Date(), note: note?.trim() || null } });
   else await prisma.loadFreeze.deleteMany({ where: { year } });
   revalidatePath("/plan-de-charge");

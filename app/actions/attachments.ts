@@ -29,7 +29,7 @@ export async function uploadAttachment(form: FormData): Promise<Result> {
     const isTeam = e.team.some((t) => t.personId === me.id);
     const validationId = String(form.get("validationId") ?? "") || null;
     const requester = validationId ? await prisma.validationRequest.findUnique({ where: { id: validationId } }) : null;
-    const allowed = canWriteLayer(me.role, "year", isPilot, isTeam, inMyPole(me, e.project)) || canEditFunding(me.role) || requester?.requesterId === me.id;
+    const allowed = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project)) || canEditFunding(me) || requester?.requesterId === me.id;
     if (!allowed) return { ok: false, error: "Vous ne pouvez pas déposer de pièce sur cette édition." };
 
     const ext = path.extname(file.name).toLowerCase().slice(0, 8);

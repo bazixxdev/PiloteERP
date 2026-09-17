@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce, type Model } from "@/lib/fields";
-import { canAdmin, canEditActions, canEditFunding, canWriteLayer } from "@/lib/rights";
+import { canAdmin, canEditActions, canEditCalls, canEditFunding, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
@@ -18,36 +18,36 @@ async function editionContext(editionId: string, personId: string) {
 }
 
 // Vérifie que la personne courante a le droit d'écrire ce champ (EF-K1, EF-B1b).
-async function allowed(model: Model, id: string, field: string, personId: string, role: string, myPoleId: string | null): Promise<string | null> {
+async function allowed(model: Model, id: string, field: string, personId: string, me: Actor, myPoleId: string | null): Promise<string | null> {
   const def = FIELDS[model][field];
   if (model === "edition") {
     const ctx = await editionContext(id, personId);
     const layer = def.layer ?? "proposal";
     if (field === "status" || field === "decisionDate" || field === "conditionalStart") {
-      return role === "director" || role === "raf" ? null : "Seules la direction et la RAF changent le statut.";
+      return canSetEditionStatus(me) ? null : "Seules la direction et la RAF changent le statut.";
     }
     // Fiche validée : les couches 1 à 3 ne se modifient plus en direct, seulement par proposition acceptée (retour du 14/09).
     if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return "Fiche validée : proposez une modification, elle sera acceptée par le pilote ou la direction et tracée.";
-    return canWriteLayer(role, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
+    return canWriteLayer(me, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {
     const a = await prisma.action.findUnique({ where: { id } });
     if (!a) return "Action introuvable";
     const ctx = await editionContext(a.editionId, personId);
     const own = a.ownerId === personId;
-    return canEditActions(role, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
+    return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
-  if (model === "call") return canEditFunding(role) || role === "pole_lead" ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
-  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "funderContact") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
-  if (model === "expense") return canEditFunding(role) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
+  if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
+  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "funderContact") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
+  if (model === "expense") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
     if (!ind) return "Indicateur introuvable";
     const ctx = await editionContext(ind.editionId, personId);
-    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous ne pouvez pas modifier ces indicateurs.";
+    return canWriteLayer(me, "year", ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous ne pouvez pas modifier ces indicateurs.";
   }
   if (model === "editionPersonDays") {
-    if (role === "raf" || role === "director" || role === "pole_lead") return null;
+    if (canPlanLoad(me)) return null;
     if (field === "plannedDays") {
       const d = await prisma.editionPersonDays.findUnique({ where: { id } });
       if (d) { const ctx = await editionContext(d.editionId, personId); if (ctx.isPilot) return null; }
@@ -59,9 +59,9 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const d = await prisma.docLink.findUnique({ where: { id } });
     if (!d) return "Lien introuvable";
     const ctx = await editionContext(d.editionId, personId);
-    return canWriteLayer(role, "year", ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous ne pouvez pas modifier ce lien.";
+    return canWriteLayer(me, "year", ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous ne pouvez pas modifier ce lien.";
   }
-  return canAdmin(role) ? null : "Réservé à l'administration (direction, RAF).";
+  return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
 }
 
 export async function saveField(model: Model, id: string, field: string, raw: unknown, revalidate?: string): Promise<SaveResult> {
@@ -69,7 +69,7 @@ export async function saveField(model: Model, id: string, field: string, raw: un
     const def = FIELDS[model]?.[field];
     if (!def) return { ok: false, error: `Champ non modifiable : ${model}.${field}` };
     const me = await getCurrentPerson();
-    const denied = await allowed(model, id, field, me.id, me.role, me.poleId);
+    const denied = await allowed(model, id, field, me.id, me, me.poleId);
     if (denied) return { ok: false, error: denied };
     const value = coerce(def.type, raw);
 
@@ -106,6 +106,12 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       // Désactiver = plus d'accès : les sessions ouvertes du compte tombent tout de suite (lot F).
       await prisma.person.update({ where: { id }, data: { active: false } });
       if (target?.userId) await prisma.session.deleteMany({ where: { userId: target.userId } });
+    } else if (model === "person" && field === "role") {
+      // Même garde-fou qu'à la désactivation : il reste toujours une direction active (le rôle qui garde l'administration).
+      const target = await prisma.person.findUnique({ where: { id } });
+      if (target?.role === "director" && value !== "director" && target.active && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+      if (!(await prisma.role.findUnique({ where: { code: String(value) } }))) return { ok: false, error: "Rôle inconnu." };
+      await prisma.person.update({ where: { id }, data: { role: String(value) } });
     } else if (model === "person" && field === "email") {
       // L'adresse est aussi l'identifiant de connexion : on la normalise et on la propage au compte.
       const email = value ? String(value).trim().toLowerCase() : null;

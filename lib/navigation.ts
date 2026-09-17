@@ -1,7 +1,7 @@
 // Arbre de navigation à deux niveaux (proto validé le 17/09) : une section = une icône et des feuilles ; la section
 // active se déplie d'après l'adresse, une seule à la fois. Tout est calculé ici, côté serveur, à partir des droits et des
 // modules ; la barre latérale ne fait qu'afficher et reconnaître l'entrée active. Module pur : pas de base, pas de React.
-import { canAdmin, canLockMonths, isCodir } from "./rights";
+import { canAdmin, canLockMonths, isCodir, type Actor } from "./rights";
 
 export type NavLeaf = {
   label: string;
@@ -23,8 +23,7 @@ export type NavSection = {
   also?: string[];
 };
 
-export type NavContext = {
-  role: string;
+export type NavContext = Actor & {
   modules: string[]; // modules de la personne (Mon compte)
   veille: boolean; // module d'instance « appels à projets »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
@@ -33,7 +32,7 @@ export type NavContext = {
 };
 
 export function navTreeFor(ctx: NavContext): NavSection[] {
-  const codir = isCodir(ctx.role);
+  const codir = isCodir(ctx);
   const sections: NavSection[] = [
     {
       id: "travail",
@@ -50,7 +49,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       items: [
         { label: "Ma répartition", href: "/temps", path: "/temps", absent: ["equipe", "personne"] },
         ...(ctx.showTeam ? [{ label: "Temps de l'équipe", href: "/temps?equipe=1", path: "/temps", present: ["equipe", "personne"] }] : []),
-        ...(canLockMonths(ctx.role) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
+        ...(canLockMonths(ctx) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
       ],
     },
     {
@@ -106,7 +105,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       ],
     });
   }
-  if (canAdmin(ctx.role)) {
+  if (canAdmin(ctx)) {
     sections.push({
       id: "admin",
       label: "Admin",

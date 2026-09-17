@@ -50,7 +50,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const forMe = lines.filter((l) => l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : canDecideValidation(me, validations.find((v) => v.id === l.id)!)));
   const mine = lines.filter((l) => (l.family === "request" ? requests.find((r) => r.id === l.id)!.requesterId === me.id : validations.find((v) => v.id === l.id)!.requesterId === me.id));
   const all = lines;
-  const wide = wideViewLabel(me.role);
+  const wide = wideViewLabel(me);
   const view = vue === "mes" ? "mes" : vue === "toutes" && wide ? "toutes" : "moi";
   const shown = view === "mes" ? mine : view === "toutes" ? all : forMe;
   const openShown = shown.filter((l) => l.open).sort((a, b) => (a.due?.getTime() ?? 9e15) - (b.due?.getTime() ?? 9e15));
@@ -77,7 +77,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours · demandes internes et validations au même endroit.{isCodir(me.role) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
+      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours · demandes internes et validations au même endroit.{isCodir(me) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
         <RequestValidationDialog editions={editionChoices} suppliers={suppliers} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} afterHref="/demandes?vue=mes" triggerLabel="Nouvelle validation" />
         <NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />
       </>} />

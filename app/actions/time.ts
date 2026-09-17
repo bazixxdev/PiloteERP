@@ -15,7 +15,7 @@ export type TimeCellKey = { projectId?: string | null; actionId?: string | null;
 export async function saveTime(input: TimeCellKey & { date: string; hours: number; comment?: string | null; personId?: string }): Promise<Result> {
   const me = await getCurrentPerson();
   const personId = input.personId ?? me.id;
-  if (personId !== me.id && !canLockMonths(me.role)) return { ok: false, error: "Vous ne saisissez que vos propres temps." };
+  if (personId !== me.id && !canLockMonths(me)) return { ok: false, error: "Vous ne saisissez que vos propres temps." };
   const date = dayjs(input.date).startOf("day");
   const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId, month: monthKey(date.toDate()) } } });
   if (locked) return { ok: false, error: "Ce mois est verrouillé : demandez à la RAF de le déverrouiller." };
@@ -71,7 +71,7 @@ export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copi
 // Verrouillage mensuel par la RAF (EF-D5) ; déverrouillage possible.
 export async function lockMonth(personId: string, month: string, lock: boolean): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canLockMonths(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) verrouille un mois." };
+  if (!canLockMonths(me)) return { ok: false, error: "Seule la RAF (ou la direction) verrouille un mois." };
   const start = dayjs(month + "-01");
   const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
   if (lock) {

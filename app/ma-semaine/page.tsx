@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { loadAgenda } from "@/lib/agenda";
 import { loadPortfolio } from "@/lib/queries";
-import { canDecideValidation } from "@/lib/rights";
+import { canDecideValidation, canEditFunding } from "@/lib/rights";
 import { byRelevance } from "@/lib/scope";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtDate, fmtNumber, slotLabel } from "@/lib/format";
@@ -46,7 +46,7 @@ export default async function MaSemainePage() {
 
   const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
   const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id);
-  const myDeliverables = agenda.deliverables.filter((d) => d.fundingLine.edition.project.pilotId === me.id || me.role === "raf");
+  const myDeliverables = agenda.deliverables.filter((d) => d.fundingLine.edition.project.pilotId === me.id || canEditFunding(me));
   const toDecide = agenda.validations.filter((v) => canDecideValidation(me, v));
   const myRequests = agenda.validations.filter((v) => v.requesterId === me.id);
   const missing = agenda.missingTime.find((m) => m.person.id === me.id)?.missing ?? [];

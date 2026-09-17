@@ -21,12 +21,26 @@ model Pole {
   requests Request[]
 }
 
+// Rôles et droits (lot F2) : un rôle porte un sous-ensemble du catalogue lib/permissions.ts (clés séparées par des virgules)
+// et un niveau de validation. Les six rôles d'origine sont « système » (code fixe, non supprimables) ; on peut en créer d'autres.
+model Role {
+  code            String   @id
+  label           String
+  description     String   @default("")
+  order           Int      @default(0)
+  system          Boolean  @default(false)
+  validationLevel Int      @default(0) // 0 n'approuve rien · 1 son édition · 2 son pôle · 3 partout
+  permissions     String   @default("")
+  people          Person[]
+}
+
 model Person {
   id            String   @id @default(cuid())
   name          String
   poleId        String?
   pole          Pole?    @relation("PoleMembers", fields: [poleId], references: [id])
-  role          String // pilot | contributor | pole_lead | director | raf | assistant
+  role          String // code d'un Role (pilot | contributor | pole_lead | director | raf | assistant | rôles créés dans l'admin)
+  roleRef       Role     @relation(fields: [role], references: [code])
   workRhythm    String // option_a | option_b | part_time | apprentice
   availableDays Int      @default(200)
   active        Boolean  @default(true)

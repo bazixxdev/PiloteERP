@@ -10,7 +10,7 @@ type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string
 // Contacts d'un financeur : tenus par la RAF (ou la direction). Le minimum utile, pas de synchronisation Outlook.
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
-  return canEditFunding(me.role) ? null : "Seule la RAF (ou la direction) tient les contacts des financeurs.";
+  return canEditFunding(me) ? null : "Seule la RAF (ou la direction) tient les contacts des financeurs.";
 }
 
 export async function addFunderContact(funderId: string, input: { firstName?: string; lastName: string; role?: string; email?: string; phone?: string }): Promise<Result<{ id: string }>> {

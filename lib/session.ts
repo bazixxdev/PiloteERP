@@ -5,13 +5,16 @@ import { auth, DEMO_MODE } from "./auth";
 import { withBase } from "./base-path";
 import { prisma } from "./db";
 import { buildRefMap, type RefMap } from "./refs";
+import { actorOf, codirRole, getRoleMap, getRoles, withActor } from "./roles";
 
 export const COOKIE = "pilote_person";
 
 export type CurrentPerson = NonNullable<Awaited<ReturnType<typeof loadPerson>>>;
 
+// La personne avec son pôle et, depuis le lot F2, les droits de son rôle (permissions, niveau de validation).
 async function loadPerson(where: { id: string } | { userId: string }) {
-  return prisma.person.findUnique({ where, include: { pole: true } });
+  const p = await prisma.person.findUnique({ where, include: { pole: true } });
+  return p ? actorOf(p) : null;
 }
 
 // Session en cours (better-auth) : l'utilisateur connecté, ou null.
@@ -51,11 +54,14 @@ export const getSettings = cache(async () => {
   return s ?? (await prisma.settings.create({ data: { id: 1 } }));
 });
 
+// Référentiels + les rôles (famille « role » servie par la table Role depuis le lot F2, pour que refLabel(refs, "role", …) tienne).
 export const getRefs = cache(async (): Promise<RefMap> => {
-  const rows = await prisma.refValue.findMany({ orderBy: { order: "asc" } });
-  return buildRefMap(rows);
+  const [rows, roles] = await Promise.all([prisma.refValue.findMany({ orderBy: { order: "asc" } }), getRoles()]);
+  return buildRefMap([...rows, ...roles.map((r) => ({ family: "role", code: r.code, label: r.label, color: null }))]);
 });
 
+// Personnes actives, avec les droits de leur rôle et le drapeau « siège au CODIR » (une lecture de la table Role pour toutes).
 export const getPeople = cache(async () => {
-  return prisma.person.findMany({ where: { active: true }, include: { pole: true }, orderBy: [{ order: "asc" }, { name: "asc" }] });
+  const [rows, roles] = await Promise.all([prisma.person.findMany({ where: { active: true }, include: { pole: true }, orderBy: [{ order: "asc" }, { name: "asc" }] }), getRoleMap()]);
+  return rows.map((p) => ({ ...withActor(roles, p), codir: codirRole(roles, p.role) }));
 });

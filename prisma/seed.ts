@@ -1,6 +1,7 @@
 // Données de démonstration : tout est fictif (personnes, montants, dates).
 import { PrismaClient } from "@prisma/client";
 import { REF_DEFAULTS } from "../lib/refs";
+import { DEFAULT_ROLES, serializePermissions } from "../lib/permissions";
 import { dayjs } from "../lib/format";
 import { DEFAULT_RHYTHMS, expectedHoursOn, rhythmAt } from "../lib/time";
 import { syncDeadlineNotifications, DEADLINE_KIND } from "../lib/deadline-notifications";
@@ -103,6 +104,7 @@ async function reset() {
   await prisma.pole.updateMany({ data: { leadId: null } });
   await prisma.person.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.role.deleteMany();
   await prisma.pole.deleteMany();
   await prisma.timeCode.deleteMany();
   await prisma.mission.deleteMany();
@@ -127,6 +129,8 @@ async function main() {
   for (const [family, defs] of Object.entries(REF_DEFAULTS)) {
     await prisma.refValue.createMany({ data: defs.map((v, i) => ({ family, code: v.code, label: v.label, color: v.color ?? null, order: i })) });
   }
+  // Rôles et droits (lot F2) : les six rôles système avec les droits du prototype.
+  await prisma.role.createMany({ data: DEFAULT_ROLES.map((r, i) => ({ code: r.code, label: r.label, description: r.description, order: i, system: true, validationLevel: r.validationLevel, permissions: serializePermissions(r.permissions) })) });
 
   const rhythms = await Promise.all(DEFAULT_RHYTHMS.map((r, i) => prisma.rhythm.create({ data: { ...r, order: i } })));
   const rhythmByCode = (code: string) => rhythms.find((r) => r.code === code)!;

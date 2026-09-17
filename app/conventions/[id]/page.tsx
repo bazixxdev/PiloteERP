@@ -25,7 +25,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
     prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
-  const rw = canEditFunding(me.role);
+  const rw = canEditFunding(me);
   // Éditions couvertes par la période et pas encore rattachées : proposées au rattachement depuis la convention.
   const attachable = rw ? (await prisma.edition.findMany({ where: { year: { gte: c.startYear, lte: c.endYear }, status: { not: "closed" }, id: { notIn: c.lines.map((l) => l.editionId) } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] })).map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` })) : [];
   const a = allocationOf(c);

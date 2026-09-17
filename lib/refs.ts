@@ -53,14 +53,7 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "adjust", label: "Ajuster", color: "warning" },
     { code: "stop", label: "Arrêter", color: "danger" },
   ],
-  role: [
-    { code: "director", label: "Direction" },
-    { code: "raf", label: "RAF" },
-    { code: "pole_lead", label: "Responsable de pôle" },
-    { code: "pilot", label: "Chargé·e de mission (pilote)" },
-    { code: "contributor", label: "Contributeur·rice" },
-    { code: "assistant", label: "Assistant·e" },
-  ],
+  role: [], // depuis le lot F2, les rôles vivent dans la table Role (lib/roles.ts) ; getRefs les injecte ici pour refLabel
   work_rhythm: [
     { code: "option_a", label: "Option A (36 h 30)" },
     { code: "option_b", label: "Option B (9 jours / quinzaine)" },
@@ -97,7 +90,7 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   validation_kind: "Natures de validation",
   validation_status: "Statuts de validation",
   codir_decision: "Décisions du séminaire",
-  role: "Rôles",
+  role: "Rôles", // pas un référentiel éditable : Admin › Rôles et droits
   work_rhythm: "Rythmes de travail",
   time_visibility: "Visibilité du temps",
   attachment_kind: "Natures de pièces jointes",

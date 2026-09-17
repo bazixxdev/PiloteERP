@@ -38,7 +38,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
   ]);
   const scoped = perimeter === "pole" ? editions.filter((e) => inMyScope(me, e.project, e.team.map((t) => t.personId))) : editions;
   const m = buildMatrix(year, scoped, funders, conventions);
-  const money = isCodir(me.role);
+  const money = isCodir(me);
   const qs = (p: Record<string, string | number | undefined>) => { const q = Object.entries({ annee: year, perimetre: sp.perimetre, ...p }).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => `${k}=${v}`).join("&"); return q ? `/matrice?${q}` : "/matrice"; };
   // Panneau d'une ligne, ouvert sur la matrice sans la quitter (?ligne=&champ=) : même contenu que dans l'onglet Budget.
   const panel = sp.ligne ? await (async () => {
@@ -136,8 +136,8 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
         </Zone>
       </div>
       {panel && (
-        <UrlPanel title={fundingPanelTitle(panel.e, panel.f)} description={<>{canEditFunding(me.role) ? FUNDING_PANEL_DESCRIPTION.rw : FUNDING_PANEL_DESCRIPTION.ro} · <Link href={`/edition/${panel.e.id}?onglet=budget#recettes`} className="text-primary hover:underline">ouvrir l&apos;édition</Link></>} closeHref={qs({})} testId="matrix-panel" wide>
-          <FundingLinePanelBody e={panel.e} f={panel.f} i={panel.i} rw={canEditFunding(me.role)} isPilot={panel.isPilot} refs={refs} funders={funders} conventions={conventions} highlight={sp.champ ?? null} />
+        <UrlPanel title={fundingPanelTitle(panel.e, panel.f)} description={<>{canEditFunding(me) ? FUNDING_PANEL_DESCRIPTION.rw : FUNDING_PANEL_DESCRIPTION.ro} · <Link href={`/edition/${panel.e.id}?onglet=budget#recettes`} className="text-primary hover:underline">ouvrir l&apos;édition</Link></>} closeHref={qs({})} testId="matrix-panel" wide>
+          <FundingLinePanelBody e={panel.e} f={panel.f} i={panel.i} rw={canEditFunding(me)} isPilot={panel.isPilot} refs={refs} funders={funders} conventions={conventions} highlight={sp.champ ?? null} />
         </UrlPanel>
       )}
       <p className="mt-2.5 text-[10px] text-muted-foreground">Une ligne par édition, une colonne par financeur présent sur l&apos;année · {money ? "vert : obtenu · ocre italique : demandé, non tranché · à déposer : dossier pas encore envoyé" : "● obtenu ◐ demandé ○ à déposer"} · « ! » : livrable en retard chez ce financeur.</p>

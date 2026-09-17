@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS } from "@/lib/fields";
-import { isCodir } from "@/lib/rights";
+import { canActAsPilot, isCodir, type Actor } from "@/lib/rights";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 // Poser une remarque sur une fiche est un droit du CODIR (direction, RAF, responsables de pôle) : la relecture des fiches s'y fait.
-export async function canRemark(me: { id: string; role: string; poleId: string | null }, _e?: unknown): Promise<boolean> {
+export async function canRemark(me: Actor, _e?: unknown): Promise<boolean> {
   void _e;
-  return isCodir(me.role);
+  return isCodir(me);
 }
 
 const REASONS = ["funder", "strategy", "feasibility", "form", "other"];
@@ -52,7 +52,7 @@ export async function deleteRemark(id: string): Promise<Result> {
   const me = await getCurrentPerson();
   const r = await prisma.fieldRemark.findUnique({ where: { id } });
   if (!r) return { ok: false, error: "Remarque introuvable." };
-  if (r.authorId !== me.id && me.role !== "director") return { ok: false, error: "Seul l'auteur (ou la direction) supprime une remarque." };
+  if (r.authorId !== me.id && !canActAsPilot(me, false)) return { ok: false, error: "Seul l'auteur (ou la direction) supprime une remarque." };
   await prisma.fieldRemark.delete({ where: { id } });
   revalidatePath(`/edition/${r.editionId}`);
   return { ok: true };

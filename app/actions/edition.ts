@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { canDecideValidation, canEditActions, canEditFunding, canWriteLayer, requiredLevelFor } from "@/lib/rights";
+import { canConsignDecision, canDecideValidation, canEditActions, canEditFunding, canWriteLayer, isCodir, requiredLevelFor, validationLevelOf } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
@@ -23,7 +23,7 @@ const path = (id: string) => `/edition/${id}`;
 
 export async function addAction(editionId: string, name: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
-  if (!canEditActions(c.me.role, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'action ici." };
+  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'action ici." };
   const count = await prisma.action.count({ where: { editionId } });
   const a = await prisma.action.create({ data: { editionId, name: name.trim() || "Nouvelle action", ownerId: c.isPilot ? c.me.id : c.e.project.pilotId, order: count } });
   revalidatePath(path(editionId));
@@ -32,7 +32,7 @@ export async function addAction(editionId: string, name: string): Promise<Result
 
 export async function addFundingLine(editionId: string, funderId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
+  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
   await prisma.fundingLine.create({ data: { editionId, funderId } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -42,7 +42,7 @@ export async function addDeliverable(fundingLineId: string, label: string, dueDa
   const line = await prisma.fundingLine.findUnique({ where: { id: fundingLineId } });
   if (!line) return { ok: false, error: "Ligne introuvable" };
   const c = await ctx(line.editionId);
-  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute un livrable." };
+  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute un livrable." };
   await prisma.deliverable.create({ data: { fundingLineId, label: label.trim() || "Livrable", dueDate: new Date(dueDate) } });
   revalidatePath(path(line.editionId));
   return { ok: true };
@@ -50,7 +50,7 @@ export async function addDeliverable(fundingLineId: string, label: string, dueDa
 
 export async function addIndicator(editionId: string, label: string, imposed: boolean): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'indicateur." };
+  if (!canWriteLayer(c.me, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'indicateur." };
   const count = await prisma.indicator.count({ where: { editionId } });
   await prisma.indicator.create({ data: { editionId, label: label.trim() || "Indicateur", imposed, order: count } });
   revalidatePath(path(editionId));
@@ -59,7 +59,7 @@ export async function addIndicator(editionId: string, label: string, imposed: bo
 
 export async function addDocLink(editionId: string, label: string, url: string, codirOnly: boolean): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me.role, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter de lien." };
+  if (!canWriteLayer(c.me, "year", c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter de lien." };
   await prisma.docLink.create({ data: { editionId, label: label.trim() || "Lien", url: url.trim(), codirOnly: codirOnly && ["director", "raf", "pole_lead"].includes(c.me.role) } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -75,7 +75,7 @@ export async function addComment(editionId: string, body: string): Promise<Resul
 
 export async function setTeam(editionId: string, personIds: string[]): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me.role, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: "Seul le pilote (ou la direction) compose l'équipe." };
+  if (!canWriteLayer(c.me, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: "Seul le pilote (ou la direction) compose l'équipe." };
   await prisma.editionTeam.deleteMany({ where: { editionId, personId: { notIn: personIds } } });
   for (const personId of personIds) {
     await prisma.editionTeam.upsert({ where: { editionId_personId: { editionId, personId } }, create: { editionId, personId }, update: {} });
@@ -162,7 +162,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
     await prisma.notification.create({ data: { personId: v.requesterId, senderId: me.id, kind: "info", title: `${decision === "approved" ? "Approuvée" : "Refusée"} : ${v.label}`, body: decision === "approved" && isQuote ? "Bon pour accord prêt à envoyer au fournisseur." : comment.trim() || null, link: decision === "approved" && isQuote ? `/validations/${v.id}/bon-pour-accord` : `/edition/${v.editionId}?onglet=apercu` } });
   }
   // La directrice voit tout ce qui s'engage sans elle : information, pas validation (retour du 14/09).
-  if (decision === "approved" && me.role !== "director" && v.amount) {
+  if (decision === "approved" && validationLevelOf(me) < 3 && v.amount) {
     const director = await prisma.person.findFirst({ where: { role: "director", active: true } });
     if (director && director.id !== v.requesterId) await prisma.notification.create({ data: { personId: director.id, senderId: me.id, kind: "info", title: `Pour information · ${v.label} approuvé (${v.amount} €)`, body: `Par ${me.name}, niveau ${v.requiredLevel}.`, link: `/edition/${v.editionId}?onglet=budget` } });
   }
@@ -173,7 +173,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
 // Reconduction N → N+1 (EF-A2) : couches 1 à 3, actions, financements, équipe ; couche 4, budget, temps et bilan vidés.
 export async function renewEdition(editionId: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
-  if (!["director", "raf", "pole_lead"].includes(c.me.role) && !c.isPilot) return { ok: false, error: "Seuls le pilote, le responsable de pôle, la RAF et la direction reconduisent une édition." };
+  if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: "Seuls le pilote, le responsable de pôle, la RAF et la direction reconduisent une édition." };
   const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
   if (!src) return { ok: false, error: "Édition introuvable" };
   const year = src.year + 1;
@@ -221,7 +221,7 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
   const d = await prisma.deliverable.findUnique({ where: { id }, include: { fundingLine: true } });
   if (!d) return { ok: false, error: "Livrable introuvable" };
   const c = await ctx(d.fundingLine.editionId);
-  if (!canEditFunding(c.me.role) && !c.isPilot) return { ok: false, error: "Réservé au pilote et à la RAF." };
+  if (!canEditFunding(c.me) && !c.isPilot) return { ok: false, error: "Réservé au pilote et à la RAF." };
   await prisma.deliverable.update({ where: { id }, data: { done, doneAt: done ? new Date() : null } });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -230,7 +230,7 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
 // Séminaire (EF-A5, EF-H4) : création en série des éditions N+1 selon la décision prise sur chaque projet.
 export async function batchCreateEditions(year: number, decisions: { editionId: string; decision: "renew" | "adjust" | "stop" }[]): Promise<Result<{ created: number; stopped: number; skipped: string[] }>> {
   const me = await getCurrentPerson();
-  if (!["director", "raf", "pole_lead"].includes(me.role)) return { ok: false, error: "La création en série est réservée au CODIR." };
+  if (!isCodir(me)) return { ok: false, error: "La création en série est réservée au CODIR." };
   let created = 0, stopped = 0;
   const skipped: string[] = [];
   for (const d of decisions) {
@@ -251,7 +251,7 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
 // Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé.
 export async function addExpense(editionId: string, label: string, spent: number, reference: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre une dépense." };
+  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre une dépense." };
   if (!reference.trim()) return { ok: false, error: "Une référence (facture, ligne du suivi) est requise." };
   await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed" } });
   revalidatePath(path(editionId));
@@ -261,7 +261,7 @@ export async function addExpense(editionId: string, label: string, spent: number
 // Décision d'instance consignée sur l'édition, datée, avec suite éventuelle (EF-F4, EF-H2, EF-H3).
 export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null; alertKind?: string | null }): Promise<Result> {
   const c = await ctx(input.editionId);
-  const allowed = ["director", "raf"].includes(c.me.role) || (c.me.role === "pole_lead" && (input.instance !== "codir" ? c.samePole : true));
+  const allowed = canConsignDecision(c.me, c.samePole, input.instance);
   if (!allowed) return { ok: false, error: "Les décisions d'instance sont consignées par le CODIR." };
   if (!input.body.trim()) return { ok: false, error: "Décision vide." };
   await prisma.decision.create({
@@ -276,7 +276,7 @@ export async function recordDecision(input: { editionId: string; instance: strin
 // Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.
 export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention." };
+  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention." };
   const reference = input.reference.trim();
   if (!reference) return { ok: false, error: "Référence obligatoire (ex. FSE-2026-2028)." };
   if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez la convention existante.` };
@@ -290,7 +290,7 @@ export async function createConvention(input: { funderId: string; reference: str
 // si elle est vide (ni montant, ni livrable, ni pièce), elle est supprimée.
 export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me.role)) return { ok: false, error: "Seule la RAF (ou la direction) modifie les affectations." };
+  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) modifie les affectations." };
   const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true } });
   if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
   const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0;
@@ -302,7 +302,7 @@ export async function detachFundingLineFromConvention(lineId: string): Promise<R
 
 export async function addFundingLineFromConvention(editionId: string, conventionId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me.role)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
+  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
   const conv = await prisma.convention.findUnique({ where: { id: conventionId } });
   if (!conv) return { ok: false, error: "Convention introuvable" };
   if (c.e.year < conv.startYear || c.e.year > conv.endYear) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };
@@ -317,7 +317,7 @@ export async function duplicateAction(actionId: string): Promise<Result<{ id: st
   const a = await prisma.action.findUnique({ where: { id: actionId } });
   if (!a) return { ok: false, error: "Action introuvable." };
   const c = await ctx(a.editionId);
-  if (!canEditActions(c.me.role, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: "Vous ne pouvez pas dupliquer cette action." };
+  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: "Vous ne pouvez pas dupliquer cette action." };
   const count = await prisma.action.count({ where: { editionId: a.editionId } });
   const d = await prisma.action.create({ data: { editionId: a.editionId, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
   revalidatePath(path(a.editionId));

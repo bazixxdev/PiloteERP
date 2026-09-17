@@ -105,7 +105,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </div>
-      {!big && <div className="mt-4"><IcsCard kind="team" canRegenerate={canAdmin(me.role)} /></div>}
+      {!big && <div className="mt-4"><IcsCard kind="team" canRegenerate={canAdmin(me)} /></div>}
       {!big && <p className="mt-4 text-xs text-muted-foreground">Horizon des alertes : {settings.horizonDays} jours dans le reste de l'outil ; ici, quinze jours.</p>}
     </div>
   );

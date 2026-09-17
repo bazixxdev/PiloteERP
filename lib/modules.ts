@@ -1,5 +1,7 @@
 // Modules activables par personne (Mon compte) : un module coupé disparaît de la navigation et de Ma semaine.
 // « Simon n'a pas besoin de to-do : pourquoi l'embêter ? » (retour du 14/09).
+import { has, leadsPole, type Actor } from "./rights";
+
 export const MODULES = [
   { key: "tasks", label: "Tâches", hint: "Listes de tâches, échéances et créneaux, avec ou sans projet." },
   { key: "notes", label: "Notes", hint: "Notes de réunion, rattachées à un projet ou transverses." },
@@ -37,13 +39,13 @@ export const VISIBILITIES = [
 ] as const;
 
 export function canReadShared(
-  viewer: { id: string; role: string; poleId: string | null },
+  viewer: Actor & { id: string; poleId: string | null },
   owner: { id: string; poleId: string | null },
   visibility: string,
 ): boolean {
   if (viewer.id === owner.id) return true;
   if (visibility === "all") return true;
-  if (visibility === "pole") return owner.poleId !== null && viewer.poleId === owner.poleId || (owner.poleId === null && ["director", "raf", "assistant"].includes(viewer.role));
-  if (visibility === "pole_lead") return (viewer.role === "pole_lead" && owner.poleId !== null && viewer.poleId === owner.poleId) || viewer.role === "director" || (owner.poleId === null && viewer.role === "raf");
+  if (visibility === "pole") return owner.poleId !== null && viewer.poleId === owner.poleId || (owner.poleId === null && has(viewer, "scope.all"));
+  if (visibility === "pole_lead") return leadsPole(viewer, owner.poleId !== null && viewer.poleId === owner.poleId) || has(viewer, "edition.edit_all") || (owner.poleId === null && has(viewer, "time.view_all"));
   return false;
 }

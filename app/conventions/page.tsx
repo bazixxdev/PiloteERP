@@ -24,7 +24,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
     getCurrentPerson(), getRefs(), prisma.funder.findMany({ orderBy: { name: "asc" } }),
     prisma.convention.findMany({ include: { funder: true, payments: true, lines: { include: { edition: { include: { project: true } }, deliverables: { where: { done: false }, orderBy: { dueDate: "asc" } }, payments: true } } }, orderBy: [{ endYear: "desc" }, { reference: "asc" }] }),
   ]);
-  const rw = canEditFunding(me.role);
+  const rw = canEditFunding(me);
   const isMulti = (c: (typeof all)[number]) => c.endYear > c.startYear || c.lines.length > 1;
   let rows = all;
   if (sp.financeur) rows = rows.filter((c) => c.funderId === sp.financeur);

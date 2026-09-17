@@ -1,6 +1,6 @@
 import { Section } from "@/components/common/section";
 import { Gauge } from "@/components/common/gauge";
-import { canEditFunding, canSeeTimeOf } from "@/lib/rights";
+import { canPlanLoad, canSeeTimeOf } from "@/lib/rights";
 import { AutoField } from "@/components/inline/auto-field";
 import Link from "next/link";
 import { fmtNumber } from "@/lib/format";
@@ -12,8 +12,8 @@ import { ClickToEdit } from "@/components/inline/click-to-edit";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
-  const canPlan = isPilot || canEditFunding(me.role) || me.role === "pole_lead";
-  const canSold = canEditFunding(me.role) || me.role === "pole_lead";
+  const canPlan = canPlanLoad(me, isPilot);
+  const canSold = canPlanLoad(me);
   const byAction = new Map<string | null, number>();
   const byPerson = new Map<string, number>();
   for (const t of e.yearEntries) {

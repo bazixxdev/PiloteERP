@@ -1,5 +1,7 @@
 import { prisma } from "./db";
 import { dayjs } from "./format";
+import { actorOf } from "./roles";
+import { canDecideValidation, canEditFunding, validationLevelOf } from "./rights";
 import { randomBytes } from "node:crypto";
 
 // Flux agenda iCal (sens outil → Outlook). Événements « journée entière », format standard, sans dépendance Microsoft.
@@ -56,13 +58,14 @@ const LIVE = ["in_progress", "validated"];
 
 // Événements d'une personne : ses jalons, les livrables des projets qu'elle pilote (tous pour la RAF), ses validations à traiter.
 export async function personEvents(personId: string, base: string): Promise<{ name: string; events: IcsEvent[] } | null> {
-  const p = await prisma.person.findUnique({ where: { id: personId } });
-  if (!p) return null;
+  const raw = await prisma.person.findUnique({ where: { id: personId } });
+  if (!raw) return null;
+  const p = await actorOf(raw);
   const from = dayjs().subtract(60, "day").toDate();
   const [actions, deliverables, validations, tasks] = await Promise.all([
     prisma.action.findMany({ where: { ownerId: p.id, state: { not: "done" }, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } } }),
-    prisma.deliverable.findMany({ where: { done: false, dueDate: { gte: from }, fundingLine: { edition: { status: { in: LIVE }, ...(p.role === "raf" ? {} : { project: { pilotId: p.id } }) } } }, include: { fundingLine: { include: { funder: true, edition: { include: { project: true } } } } } }),
-    p.role === "director" || p.role === "pole_lead" || p.role === "pilot"
+    prisma.deliverable.findMany({ where: { done: false, dueDate: { gte: from }, fundingLine: { edition: { status: { in: LIVE }, ...(canEditFunding(p) ? {} : { project: { pilotId: p.id } }) } } }, include: { fundingLine: { include: { funder: true, edition: { include: { project: true } } } } } }),
+    validationLevelOf(p) >= 1
       ? prisma.validationRequest.findMany({ where: { status: "pending" }, include: { edition: { include: { project: true } } } })
       : Promise.resolve([]),
     prisma.task.findMany({ where: { personId: p.id, done: false }, include: { edition: { include: { project: true } }, slots: { where: { endAt: { gte: from } } } } }),
@@ -74,8 +77,7 @@ export async function personEvents(personId: string, base: string): Promise<{ na
     ...actions.map((a) => ({ uid: `action-${a.id}`, date: a.milestoneDate!, summary: `Jalon · ${a.name}`, description: `${a.edition.project.name} · ${a.edition.year}`, url: `${base}/edition/${a.editionId}?onglet=actions`, category: "Pilote · jalon" })),
     ...deliverables.map((d) => ({ uid: `deliv-${d.id}`, date: d.dueDate, summary: `Livrable ${d.fundingLine.funder.name} · ${d.label}`, description: `${d.fundingLine.edition.project.name} · ${d.fundingLine.edition.year}`, url: `${base}/edition/${d.fundingLine.editionId}?onglet=financements`, category: "Pilote · livrable financeur" })),
     ...validations
-      .filter((v) => (p.role === "director" && v.requiredLevel <= 3) || (p.role === "pole_lead" && v.requiredLevel <= 2 && v.edition.project.poleId === p.poleId) || (p.role === "pilot" && v.requiredLevel === 1 && v.edition.project.pilotId === p.id))
-      .filter((v) => v.requesterId !== p.id)
+      .filter((v) => canDecideValidation(p, v))
       .map((v) => ({ uid: `valid-${v.id}`, date: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), summary: `À valider · ${v.label}`, description: `${v.edition.project.name} · délai cible`, url: `${base}/validations`, category: "Pilote · validation" })),
   ];
   return { name: `Pilote · échéances de ${p.name}`, events };

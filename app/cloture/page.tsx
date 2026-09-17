@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
-import { canLockMonths } from "@/lib/rights";
+import { canLockMonths, declaresTime } from "@/lib/rights";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
@@ -15,7 +15,7 @@ import { TimeNav } from "@/components/common/time-nav";
 export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
   const { mois } = await searchParams;
   const me = await getCurrentPerson();
-  if (!canLockMonths(me.role)) {
+  if (!canLockMonths(me)) {
     return (
       <div className="p-4 md:p-6">
         <PageHeader title="Clôture mensuelle" />
@@ -41,7 +41,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const days = workingDaysOfMonth(month);
   const rows: ClotureRow[] = people
     // Part fixe (lettre de mission) : rien à clôturer, sauf si des heures existent.
-    .filter((p) => (p.role !== "assistant" && !p.fixedShare) || entries.some((t) => t.personId === p.id))
+    .filter((p) => (declaresTime(p) && !p.fixedShare) || entries.some((t) => t.personId === p.id))
     .map((p) => {
       const mine = entries.filter((t) => t.personId === p.id);
       const daysDone = new Set(mine.map((t) => dayjs(t.date).format("YYYY-MM-DD"))).size;

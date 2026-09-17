@@ -1,3 +1,4 @@
+import { type Viewer } from "./scope";
 import { prisma } from "./db";
 import { dayjs } from "./format";
 import { canReadShared } from "./modules";
@@ -71,10 +72,10 @@ const toView = (me: string, n: Row): NoteView => ({
 const include = { author: true, edition: { include: { project: true } }, shares: { include: { person: { select: { id: true, name: true } } }, orderBy: { createdAt: "asc" as const } } };
 
 // Qui lit une note : son auteur, les personnes nommées, puis selon la visibilité (pôle, toute la CRESS).
-export const canReadNote = (me: { id: string; role: string; poleId: string | null }, n: Row) => n.authorId === me.id || n.shares.some((s) => s.person.id === me.id) || canReadShared(me, n.author, n.visibility);
+export const canReadNote = (me: Viewer, n: Row) => n.authorId === me.id || n.shares.some((s) => s.person.id === me.id) || canReadShared(me, n.author, n.visibility);
 
 // Mes notes, puis celles que d'autres partagent avec moi ; par date décroissante.
-export async function loadNotes(me: { id: string; role: string; poleId: string | null }, opts?: { editionId?: string }): Promise<NoteView[]> {
+export async function loadNotes(me: Viewer, opts?: { editionId?: string }): Promise<NoteView[]> {
   const rows = await prisma.note.findMany({
     where: { ...(opts?.editionId ? { editionId: opts.editionId } : {}), OR: [{ authorId: me.id }, { visibility: { not: "private" } }, { shares: { some: { personId: me.id } } }] },
     include, orderBy: [{ date: "desc" }, { updatedAt: "desc" }],
@@ -82,7 +83,7 @@ export async function loadNotes(me: { id: string; role: string; poleId: string |
   return rows.filter((n) => canReadNote(me, n)).map((n) => toView(me.id, n));
 }
 
-export async function loadNote(me: { id: string; role: string; poleId: string | null }, id: string): Promise<NoteView | null> {
+export async function loadNote(me: Viewer, id: string): Promise<NoteView | null> {
   const n = await prisma.note.findUnique({ where: { id }, include });
   if (!n || !canReadNote(me, n)) return null;
   return toView(me.id, n);

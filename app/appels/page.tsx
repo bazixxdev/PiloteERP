@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { canEditFunding, isCodir } from "@/lib/rights";
+import { canEditCalls, canEditFunding, isCodir } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
 import { deadlineState, isNewCall, sortCalls } from "@/lib/calls";
 import { fmtDate } from "@/lib/format";
@@ -28,8 +28,8 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
     prisma.call.findMany({ include: { funder: true, convention: { select: { id: true, reference: true, status: true } } } }),
     prisma.person.findMany({ select: { id: true, name: true } }),
   ]);
-  const rw = canEditFunding(me.role) || me.role === "pole_lead";
-  const codir = isCodir(me.role);
+  const rw = canEditCalls(me);
+  const codir = isCodir(me);
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   let rows = sortCalls(all, settings.deliverableAlertDays);
   if (!sp.vue) rows = rows.filter((c) => c.active && c.teamStatus !== "dismissed");
@@ -100,7 +100,7 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
                       ) : c.teamStatus === "apply" ? <span className="text-warning-foreground">à déposer : cliquez « Étudier »</span> : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <CallRowActions id={c.id} label={c.label} canPromote={canEditFunding(me.role)} canSpot={rw} promoted={!!c.conventionId} recurringClosed={c.recurring && st.key === "closed"} active={c.active} />
+                      <CallRowActions id={c.id} label={c.label} canPromote={canEditFunding(me)} canSpot={rw} promoted={!!c.conventionId} recurringClosed={c.recurring && st.key === "closed"} active={c.active} />
                     </td>
                   </tr>
                 );

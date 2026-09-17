@@ -11,13 +11,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type P = { id: string; name: string; role: string; roleLabel: string; poleName: string | null };
+type P = { id: string; name: string; role: string; roleLabel: string; poleName: string | null; codir: boolean };
 
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? "").join("");
 
-// Avatar à initiales (V2) ; les rôles CODIR reçoivent la teinte « mousse ».
-export function Avatar({ name, role, className }: { name: string; role?: string; className?: string }) {
-  const moss = role === "director" || role === "raf" || role === "pole_lead";
+// Avatar à initiales (V2) ; les rôles qui siègent au CODIR reçoivent la teinte « mousse ».
+export function Avatar({ name, codir, className }: { name: string; codir?: boolean; className?: string }) {
+  const moss = Boolean(codir);
   return <span className={cn("inline-flex size-[27px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold", moss ? "bg-[#dcecf2] text-mint" : "bg-[#e6ddcf] text-[#574f3f]", className)} aria-hidden>{initials(name)}</span>;
 }
 
@@ -34,13 +34,13 @@ export function PersonSwitcher({ people, current, canAdmin, demo, account }: { p
         <DropdownMenuTrigger asChild>
           <button type="button" className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-muted" data-testid="person-switcher" title="Menu utilisateur">
             <span className="hidden sm:inline"><b className="font-semibold text-foreground">{current.name}</b> · {current.roleLabel}</span>
-            <Avatar name={current.name} role={current.role} />
+            <Avatar name={current.name} codir={current.codir} />
             <ChevronDown className="size-3 opacity-60" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="flex items-center gap-2.5 font-normal">
-            <Avatar name={current.name} role={current.role} className="size-8 text-[11px]" />
+            <Avatar name={current.name} codir={current.codir} className="size-8 text-[11px]" />
             <span className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{current.name}</span><span className="block truncate text-xs text-muted-foreground">{current.roleLabel}{current.poleName ? ` · ${current.poleName}` : ""}</span>{account && account !== current.name && <span className="block truncate text-[10px] text-muted-foreground">connecté·e : {account}</span>}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -84,7 +84,7 @@ function PersonChooser({ open, onOpenChange, people, current }: { open: boolean;
                 onClick={() => pick(p.id)}
                 className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm hover:bg-muted disabled:opacity-60", p.id === current.id && "bg-info-soft")}
               >
-                <Avatar name={p.name} role={p.role} className="size-7 text-[10px]" />
+                <Avatar name={p.name} codir={p.codir} className="size-7 text-[10px]" />
                 <span className="min-w-0 flex-1">
                   <span className={cn("block truncate", p.id === current.id && "font-semibold")}>{p.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">{p.roleLabel}{p.poleName ? ` · ${p.poleName}` : ""}</span>

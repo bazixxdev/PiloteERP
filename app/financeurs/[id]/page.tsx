@@ -33,7 +33,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
     }),
   ]);
   if (!f) notFound();
-  const rw = canEditFunding(me.role);
+  const rw = canEditFunding(me);
   const main = f.contacts.find((c) => c.primary) ?? null;
   const active = f.conventions.filter((c) => c.startYear <= year && year <= c.endYear);
   const granted = f.lines.filter((l) => l.edition.year === year).reduce((s, l) => s + (l.amountGranted ?? 0), 0);
