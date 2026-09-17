@@ -6,7 +6,9 @@ import { Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod, toggleProjectPole } from "@/app/actions/admin";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -54,7 +56,10 @@ export function AddSimpleForm({ kind, placeholder, compact, family, projectId }:
 
 type Opt = { value: string; label: string };
 
-export function CreateProjectForm({ poles, people, missions }: { poles: Opt[]; people: Opt[]; missions: Opt[] }) {
+// Création d'un projet et de sa première édition : un bouton en haut à droite de la page Projets ouvre la modale
+// (retour de Gaël, 17/09 : « l'ajout doit être via un bouton en haut à droite, pas en direct », par une modale ou un volet).
+export function CreateProjectDialog({ poles, people, missions }: { poles: Opt[]; people: Opt[]; missions: Opt[] }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [poleId, setPoleId] = useState(poles[0]?.value ?? "");
@@ -63,17 +68,35 @@ export function CreateProjectForm({ poles, people, missions }: { poles: Opt[]; p
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const { pending, run } = useRun();
   const router = useRouter();
-  const sel = "h-8 rounded-lg border bg-card px-2 text-sm";
+  const field = "grid gap-1 text-xs";
   return (
-    <form className="flex flex-wrap items-center gap-1.5" data-testid="create-project" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => createProject({ name, analyticCode: code, poleId, pilotId, missionId, year: Number(year) }), (r) => { if (r.ok && r.data) router.push(`/edition/${(r.data as { editionId: string }).editionId}`); }); }}>
-      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du projet" className="h-8 w-44" data-testid="cp-name" />
-      <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code" className="h-8 w-20" data-testid="cp-code" />
-      <select className={sel} value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-      <select className={sel} value={pilotId} onChange={(e) => setPilotId(e.target.value)} aria-label="Pilote" data-testid="cp-pilot">{people.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-      <select className={sel} value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-      <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8 w-20" aria-label="Année" />
-      <Button type="submit" size="sm" disabled={pending || !name.trim()} data-testid="cp-submit"><Plus />Créer le projet et son édition</Button>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button size="sm" data-testid="cp-open"><Plus />Nouveau projet</Button></DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <form className="grid gap-3" data-testid="create-project" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => createProject({ name, analyticCode: code, poleId, pilotId, missionId, year: Number(year) }), (r) => { if (r.ok && r.data) { setOpen(false); router.push(`/edition/${(r.data as { editionId: string }).editionId}`); } }); }}>
+          <DialogHeader>
+            <DialogTitle>Nouveau projet</DialogTitle>
+            <DialogDescription>Un objet permanent, avec sa première édition. Le pôle principal est celui du pilote ; les pôles associés se cochent ensuite dans la liste.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <label className={field}><span className="font-semibold">Nom du projet</span><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Forum régional de l'ESS" autoFocus required data-testid="cp-name" /></label>
+            <label className={field}><span className="font-semibold">Code analytique</span><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="SEN-03" data-testid="cp-code" /></label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={field}><span className="font-semibold">Pilote</span><SearchableSelect options={people} value={pilotId} onChange={setPilotId} aria-label="Pilote" data-testid="cp-pilot" className="w-full" /></label>
+            <label className={field}><span className="font-semibold">Pôle principal</span><select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+          </div>
+          <div className="grid grid-cols-[1fr_6rem] gap-3">
+            <label className={field}><span className="font-semibold">Mission du plan opérationnel</span><select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+            <label className={field}><span className="font-semibold">Première édition</span><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8" aria-label="Année" /></label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button type="submit" size="sm" disabled={pending || !name.trim()} data-testid="cp-submit"><Plus />Créer le projet et son édition</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -1,15 +1,13 @@
 "use client";
 
-import { BookOpenText } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LEXIQUE } from "@/lib/lexique";
 
-// « On parle de la même chose » : le lexique de l'outil, ouvert depuis les pages qui croisent projets, éditions et financements.
-export function LexiqueDialog({ size = "sm" }: { size?: "xs" | "sm" }) {
+// « On parle de la même chose » : le lexique de l'outil. Transverse, il s'ouvre depuis le bouton Aide en bas de la barre
+// latérale (retour de Gaël, 17/09) — plus depuis les en-têtes de page.
+export function LexiqueDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild><Button variant="outline" size={size} data-testid="lexique-open"><BookOpenText />Lexique</Button></DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl" data-testid="lexique">
         <DialogHeader><DialogTitle>Lexique</DialogTitle><DialogDescription>Ce que chaque mot veut dire dans l&apos;outil. Vocabulaire à valider avec la CRESS (question 1 du cahier des charges).</DialogDescription></DialogHeader>
         <dl className="grid gap-3 text-sm">

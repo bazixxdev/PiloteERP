@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SHORTCUTS_EVENT } from "./help-menu";
 
 type Go = { key: string; href: string; label: string; roles?: string[] };
 const CODIR = ["director", "raf", "pole_lead"];
@@ -31,8 +32,10 @@ export function Shortcuts({ role }: { role: string }) {
       if (e.key === "g") { armed = Date.now(); return; }
       if (armed && Date.now() - armed < 1500 && GO[e.key]) { router.push(GO[e.key]); armed = 0; }
     };
+    const onHelp = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener(SHORTCUTS_EVENT, onHelp);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener(SHORTCUTS_EVENT, onHelp); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, role]);
   return (

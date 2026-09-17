@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createConvention } from "@/app/actions/edition";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 // Nouvelle convention (RAF) : financeur, référence unique, dispositif, période, montant notifié. Ouvre la page de la convention créée.
 export function CreateConventionDialog({ funders }: { funders: { value: string; label: string }[] }) {
@@ -22,7 +23,6 @@ export function CreateConventionDialog({ funders }: { funders: { value: string; 
   const [notified, setNotified] = useState("");
   const [pending, startT] = useTransition();
   const router = useRouter();
-  const sel = "h-8 w-full rounded-lg border bg-card px-2 text-sm";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button data-testid="cc-open"><Plus />Nouvelle convention</Button></DialogTrigger>
@@ -46,7 +46,7 @@ export function CreateConventionDialog({ funders }: { funders: { value: string; 
             <DialogTitle>Nouvelle convention</DialogTitle>
             <DialogDescription>Une référence unique ; les éditions s'y rattachent ensuite depuis leur onglet Financements.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-1"><Label htmlFor="cc-funder">Financeur</Label><select id="cc-funder" className={sel} value={funderId} onChange={(e) => setFunderId(e.target.value)} data-testid="cc-funder">{funders.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}</select></div>
+          <div className="grid gap-1"><Label htmlFor="cc-funder">Financeur</Label><SearchableSelect id="cc-funder" options={funders} value={funderId} onChange={setFunderId} data-testid="cc-funder" className="w-full" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1"><Label htmlFor="cc-reference">Référence</Label><Input id="cc-reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="FSE-2026-2028" data-testid="cc-reference" /></div>
             <div className="grid gap-1"><Label htmlFor="cc-scheme">Dispositif</Label><Input id="cc-scheme" value={scheme} onChange={(e) => setScheme(e.target.value)} placeholder="CPO, appel à projets…" /></div>

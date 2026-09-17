@@ -16,6 +16,7 @@ import { NOTE_COLORS, noteColor } from "@/lib/notes";
 import type { ListView } from "@/lib/tasks";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void;
 
@@ -66,10 +67,7 @@ export function ListHeader({ list, editions, count }: { list: ListView; editions
             <label className="grid gap-1"><span className="font-semibold">Nom</span><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name !== list.name) run(() => updateList(list.id, { name })); }} aria-label="Nom de la liste" className="h-8" disabled={pending} data-testid={`list-name-${list.id}`} /></label>
             <div className="grid gap-1"><span className="font-semibold">Couleur</span><ColorDots value={list.color} disabled={pending} onChange={(v) => run(() => updateList(list.id, { color: v }))} testPrefix={`list-color-${list.id}`} /></div>
             <label className="grid gap-1"><span className="font-semibold">Projet suivi</span>
-              <select aria-label="Édition rattachée" value={list.edition?.id ?? ""} disabled={pending} onChange={(e) => run(() => updateList(list.id, { editionId: e.target.value || null }))} className="h-8 rounded-md border bg-card px-2 text-xs" data-testid={`list-edition-${list.id}`}>
-                <option value="">Sans projet — une catégorie à moi</option>
-                {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
-              </select>
+              <SearchableSelect aria-label="Édition rattachée" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateList(list.id, { editionId: v || null }))} emptyOption="Sans projet — une catégorie à moi" className="w-full text-xs" data-testid={`list-edition-${list.id}`} />
             </label>
             <fieldset className="grid gap-1">
               <legend className="mb-1 font-semibold">Qui peut la lire ?</legend>
@@ -108,10 +106,7 @@ export function NewListDialog({ editions, compact }: { editions: EditionOpt[]; c
           <label className="grid gap-1 text-xs"><span className="font-semibold">Nom</span><Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Vie statutaire, Forum, Demandes du jour…" required data-testid="new-list-name" /></label>
           <div className="grid gap-1 text-xs"><span className="font-semibold">Couleur</span><ColorDots value={color} onChange={setColor} testPrefix="new-list-color" /></div>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Projet (facultatif)</span>
-            <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="new-list-edition">
-              <option value="">Sans projet — une catégorie à moi</option>
-              {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
-            </select>
+            <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={editionId} onChange={setEditionId} emptyOption="Sans projet — une catégorie à moi" aria-label="Projet" className="h-9 w-full" data-testid="new-list-edition" />
           </label>
           <fieldset className="grid gap-1 text-xs">
             <legend className="mb-1 font-semibold">Qui peut la lire ?</legend>

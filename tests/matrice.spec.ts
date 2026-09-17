@@ -58,11 +58,13 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
 
   // Lexique : depuis la matrice et depuis le portefeuille.
   await page.goto("/matrice");
+  await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
   await expect(page.getByTestId("lexique")).toContainText("Ligne de financement");
   await expect(page.getByTestId("lexique")).toContainText("L'exception");
   await page.keyboard.press("Escape");
   await page.goto("/portefeuille");
+  await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
   await expect(page.getByTestId("lexique")).toContainText("Édition");
 });

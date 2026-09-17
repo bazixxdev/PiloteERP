@@ -14,6 +14,7 @@ import type { EditionOpt } from "@/components/tasks/task-list";
 import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 const VIS = [
   { value: "private", label: "Privée", icon: Lock },
@@ -89,10 +90,7 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
         <select value={context} disabled={pending} onChange={(e) => { setContext(e.target.value); save({ context: e.target.value }); }} aria-label="Contexte" className="h-7 rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-context">
           {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
-        <select value={editionId} disabled={pending} onChange={(e) => { setEditionId(e.target.value); save({ editionId: e.target.value || null }); }} aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md border bg-card px-1.5 text-[11px]" data-testid="note-edition">
-          <option value="">Transverse — sans projet</option>
-          {editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
-        </select>
+        <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={editionId} disabled={pending} onChange={(v) => { setEditionId(v); save({ editionId: v || null }); }} emptyOption="Transverse — sans projet" aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md px-1.5 text-[11px]" data-testid="note-edition" />
         </>)}
         {readOnly ? (
           <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return note!.sharedWithMe ? <><UserPlus className="size-3" />Partagée avec vous · note de {note!.author.name}</> : <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>

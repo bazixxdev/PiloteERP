@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { recordDecision } from "@/app/actions/edition";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
 
@@ -39,7 +40,7 @@ export function DecisionForm({ editionId, label, people, instances, defaultInsta
             </select>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <select className={sel} value={followUp} onChange={(e) => setFollowUp(e.target.value)} aria-label="Suite confiée à"><option value="">Suite : personne</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+            <SearchableSelect options={people.map((p) => ({ value: p.id, label: p.name }))} value={followUp} onChange={setFollowUp} emptyOption="Suite : personne" aria-label="Suite confiée à" className="w-full" />
             <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8" aria-label="Pour le" />
           </div>
           <div className="flex justify-end gap-2">

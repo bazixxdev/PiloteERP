@@ -192,3 +192,44 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 @media (min-width: 1024px) {
   html:not([data-sidebar="rail"]) .subnav { display: none; }
 }
+/* Listes déroulantes natives : même habillage que les champs (bordure, rayon, anneau de focus), chevron dessiné par nous
+   plutôt que par le navigateur. La classe utilitaire de chaque page garde la main sur la hauteur, la largeur et la taille de texte.
+   (Retour de Gaël, 17/09 : « skiner un peu les menus déroulants ».) */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.6rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235e6c72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.45rem center;
+  background-size: 14px;
+  color: var(--foreground);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+select:not([multiple]):not([size]):hover { border-color: #b8c6cc; }
+select:not([multiple]):not([size]):focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 77, 109, 0.18); }
+select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.55; }
+/* Le sélecteur sans bordure (texte bleu en gras) garde son chevron mais collé au texte. */
+select.border-0 { padding-right: 1.15rem; background-position: right 0 center; background-size: 12px; }
+/* Navigateurs qui savent habiller la liste elle-même (Chrome / Edge 135+) : fond blanc, coins arrondis, ligne survolée bleutée. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]) { appearance: base-select; }
+  select:not([multiple]):not([size])::picker-icon { display: none; }
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin-top: 4px;
+    background: var(--popover);
+    color: var(--popover-foreground);
+    box-shadow: 0 8px 24px rgba(36, 61, 73, 0.12);
+    font-size: 13px;
+  }
+  select:not([multiple]):not([size]) option { padding: 6px 8px; border-radius: 5px; }
+  select:not([multiple]):not([size]) option:hover, select:not([multiple]):not([size]) option:focus-visible { background: var(--secondary); color: var(--primary); outline: none; }
+  select:not([multiple]):not([size]) option:checked { background: var(--sidebar-accent); color: var(--primary); font-weight: 600; }
+  select:not([multiple]):not([size]) option::checkmark { display: none; }
+}

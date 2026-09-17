@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { iAm, pick } from "./helpers";
 
 // Recette 1 (lot 1) : la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes.
 test("la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes", async ({ page }) => {
@@ -7,9 +7,10 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await iAm(page, "Claire Vasseur");
 
   // 1. La direction crée un projet et sa première édition.
+  await page.getByTestId("cp-open").click();
   await page.getByTestId("cp-name").fill("Projet recette Alpha");
   await page.getByTestId("cp-code").fill("REC-01");
-  await page.getByTestId("cp-pilot").selectOption({ label: "Inès Cabral" });
+  await pick(page, "cp-pilot", "Inès Cabral");
   await page.getByTestId("cp-submit").click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet recette Alpha", { timeout: 30_000 });
   await expect(page.getByTestId("edition-years")).toContainText(`${new Date().getFullYear()}`);

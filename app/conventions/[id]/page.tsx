@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
@@ -66,7 +65,6 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
           <p className="mt-1.5 text-xs" data-testid="convention-contact"><ContactLine c={c.contact ?? c.funder.contacts.find((x) => x.primary) ?? null} label={c.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${c.funderId}`} className="text-primary hover:underline">fiche {c.funder.name}</Link></p>
           <p className="mt-1.5 text-xs text-muted-foreground">{c.scheme ? `${c.scheme} · ` : ""}{c.startYear === c.endYear ? `Année ${c.startYear}` : `${c.startYear} → ${c.endYear}`} · {c.lines.length} édition{c.lines.length > 1 ? "s" : ""} rattachée{c.lines.length > 1 ? "s" : ""}{rw ? "" : " · lecture seule : tenue par la RAF"}</p>
         </div>
-        <Button asChild variant="outline"><Link href="/conventions">Retour à la liste</Link></Button>
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-5">

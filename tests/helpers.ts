@@ -1,6 +1,24 @@
 import { expect, type Page } from "@playwright/test";
 
 // Sélecteur « Je suis… » : change la personne courante (et ses droits).
+// Choisit une entrée dans une liste avec recherche (components/common/searchable-select.tsx) : ouvre, filtre si le champ existe, clique.
+// `what` = texte de l'entrée (sous-chaîne) ou son rang (0 = première entrée réelle, l'option « aucun » exclue).
+export async function pick(page: Page, testId: string, what: string | number) {
+  await page.getByTestId(testId).click();
+  const list = page.getByRole("listbox");
+  await expect(list).toBeVisible();
+  if (typeof what === "string") {
+    const search = page.getByTestId(`${testId}-search`);
+    if (await search.count()) await search.fill(what);
+    await list.getByRole("option", { name: new RegExp(what.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+  } else {
+    const options = list.getByRole("option");
+    const first = (await options.first().getAttribute("id")) && (await options.first().innerText()).match(/^(Sans projet|Transverse|Personne|—)/) ? 1 : 0;
+    await options.nth(first + what).click();
+  }
+  await expect(list).toBeHidden();
+}
+
 export async function iAm(page: Page, name: string) {
   await page.getByTestId("person-switcher").click();
   await page.getByTestId("menu-switch").click();

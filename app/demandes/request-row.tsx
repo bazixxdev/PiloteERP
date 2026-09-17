@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { assignRequest, setRequestStatus, taskFromRequest } from "@/app/actions/requests";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 // Boutons de traitement d'une demande (rangés le 15/09) : prendre (= une tâche liée dans mes tâches), faire ou décliner avec un mot, confier à quelqu'un.
 export function RequestActions({ id, status, canTreat, canWithdraw, people, assigneeId, hasTask }: { id: string; status: string; canTreat: boolean; canWithdraw: boolean; people: { id: string; name: string }[]; assigneeId: string | null; hasTask?: boolean }) {
@@ -30,9 +31,7 @@ export function RequestActions({ id, status, canTreat, canWithdraw, people, assi
           <Button size="xs" variant="ghost" disabled={pending} onClick={() => go("declined", "Demande déclinée")} data-testid={`request-decline-${id}`}><X />Décliner</Button>
           <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground" title="Réattribuer la demande : la personne est prévenue">
             <UserPlus className="size-3" aria-hidden />
-            <select value={assigneeId ?? ""} disabled={pending} onChange={(e) => start(async () => { const r = await assignRequest(id, e.target.value || null); if (!r.ok) toast.error(r.error); else { toast.success("Demande confiée"); router.refresh(); } })} aria-label="Confier à" className="h-7 rounded-md border bg-transparent px-1 text-[11px] text-muted-foreground" data-testid={`request-assign-${id}`}>
-              <option value="">Confier à…</option>{people.map((p) => <option key={p.id} value={p.id}>{p.id === assigneeId ? `${p.name} (en charge)` : p.name}</option>)}
-            </select>
+            <SearchableSelect options={people.map((p) => ({ value: p.id, label: p.name, hint: p.id === assigneeId ? "en charge" : undefined }))} value={assigneeId ?? ""} disabled={pending} onChange={(v) => start(async () => { const r = await assignRequest(id, v || null); if (!r.ok) toast.error(r.error); else { toast.success("Demande confiée"); router.refresh(); } })} placeholder="Confier à…" emptyOption="Personne" aria-label="Confier à" data-testid={`request-assign-${id}`} className="h-7 bg-transparent px-1 text-[11px] text-muted-foreground" align="end" />
           </span>
         </>
       )}

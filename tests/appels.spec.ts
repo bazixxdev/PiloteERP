@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { iAm, pick } from "./helpers";
 
 // Lot 0 + lot B — Appels à projets (module « veille », activable par installation) : repérer, poser le statut d'équipe,
 // promouvoir en convention à déposer une seule fois, retirer sans supprimer ; le radar montre les dépôts « on dépose ».
@@ -49,7 +49,7 @@ test("la RAF repère, le CODIR statue, « Étudier » crée la convention une se
   // Repérer un appel, puis le retirer : il sort de la liste, reste dans « Tous ».
   await page.goto("/appels");
   await page.getByTestId("call-add-open").click();
-  await page.getByTestId("call-funder").selectOption({ label: "ADEME" });
+  await pick(page, "call-funder", "ADEME");
   await page.getByTestId("call-label").fill("AAP test mobilité durable");
   await page.getByTestId("call-deadline").fill("2027-02-15");
   await page.getByTestId("call-submit").click();

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/common/reveal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -52,10 +53,7 @@ export function AddFundingMenu({ editionId, funders, conventions }: { editionId:
       <PopoverContent align="end" className="w-80">
         <div className="grid gap-2">
           <div className="text-xs font-semibold">Nouvelle ligne de financement</div>
-          <select className={sel} value={funderId} onChange={(e) => setFunderId(e.target.value)} data-testid="add-funding-funder" aria-label="Financeur">
-            <option value="">Choisir un financeur…</option>
-            {funders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select>
+          <SearchableSelect options={funders.map((f) => ({ value: f.id, label: f.name }))} value={funderId} onChange={setFunderId} placeholder="Choisir un financeur…" data-testid="add-funding-funder" aria-label="Financeur" className="w-full" />
           <Button size="sm" variant="outline" disabled={pending || !funderId} onClick={() => run(() => addFundingLine(editionId, funderId), () => { setFunderId(""); setOpen(false); })} data-testid="add-funding-submit"><Plus />Ajouter la ligne</Button>
           {conventions.length > 0 && (
             <>

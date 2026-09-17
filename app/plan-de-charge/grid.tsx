@@ -12,6 +12,7 @@ import { setPlannedLoadMonth } from "@/app/actions/load";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PersonLoad } from "@/lib/load";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type Row = PersonLoad;
 export type EditionOpt = { id: string; label: string; year: number; editable: boolean };
@@ -129,10 +130,7 @@ function AddLoad({ editions, pending, onAdd }: { editions: EditionOpt[]; pending
   if (editions.length === 0) return null;
   return (
     <form className="mt-2 flex items-center gap-1 border-t pt-2" onSubmit={(e) => { e.preventDefault(); const d = Number(days.replace(",", ".")); if (!id || !Number.isFinite(d) || d <= 0) return; onAdd(id, d); setId(""); setDays(""); }}>
-      <select value={id} onChange={(e) => setId(e.target.value)} className="h-7 min-w-0 flex-1 rounded border bg-card px-1 text-xs" aria-label="Ajouter une édition" data-testid="load-add-edition">
-        <option value="">+ Ajouter une édition…</option>
-        {editions.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
-      </select>
+      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder="+ Ajouter une édition…" className="h-7 min-w-0 flex-1 rounded px-1 text-xs" aria-label="Ajouter une édition" data-testid="load-add-edition" />
       <Input value={days} onChange={(e) => setDays(e.target.value)} placeholder="j" inputMode="decimal" aria-label="Jours" className="h-7 w-14 px-1 text-right text-xs" data-testid="load-add-days" />
       <Button type="submit" size="xs" variant="outline" disabled={pending || !id || !days} data-testid="load-add-submit"><Plus /></Button>
     </form>

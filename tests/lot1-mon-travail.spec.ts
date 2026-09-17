@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { iAm, pick } from "./helpers";
 
 // Lot 1 « Mon travail » (retour du 14/09) : listes de tâches partagées, notes, répartition en parts, modules, part fixe.
 
@@ -64,10 +64,9 @@ test("une note se prend, s'enregistre en quittant le champ, se rattache à une �
   await expect(page.getByTestId("note-saved")).toBeVisible();
   await expect(page.getByTestId("my-notes")).toContainText("Point jury du 15 septembre", { timeout: 15_000 });
   // Rattachement à une édition puis lecture depuis l'onglet Documents.
-  const select = page.getByTestId("note-edition");
-  const value = await select.locator("option").nth(1).getAttribute("value");
-  await select.selectOption(value!);
+  await pick(page, "note-edition", 0);
   await expect(page.getByTestId("note-saved")).toBeVisible();
+  const value = await page.getByTestId("note-edition").getAttribute("data-value");
   await page.goto(`/edition/${value}?onglet=documents`);
   await expect(page.getByTestId("edition-notes")).toContainText("Point jury du 15 septembre", { timeout: 15_000 });
   // Mode focus : la navigation disparaît, Échap la ramène.

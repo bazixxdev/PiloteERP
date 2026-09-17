@@ -6,6 +6,7 @@ import { Link2, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addFundingLineFromConvention, detachFundingLineFromConvention } from "@/app/actions/edition";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type R = { ok: true; data?: { deleted: boolean } } | { ok: false; error: string };
 
@@ -23,10 +24,7 @@ export function AttachEditionForm({ conventionId, editions }: { conventionId: st
   if (editions.length === 0) return <p className="text-xs text-muted-foreground">Toutes les éditions couvertes par la période sont déjà rattachées.</p>;
   return (
     <div className="flex flex-wrap gap-2">
-      <select className="h-8 max-w-[320px] rounded-lg border bg-card px-2 text-sm" value={id} onChange={(e) => setId(e.target.value)} aria-label="Édition à rattacher" data-testid="attach-edition-select">
-        <option value="">Rattacher une édition…</option>
-        {editions.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
-      </select>
+      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder="Rattacher une édition…" aria-label="Édition à rattacher" data-testid="attach-edition-select" className="w-[320px]" />
       <Button size="sm" variant="outline" disabled={pending || !id} onClick={() => run(() => addFundingLineFromConvention(id, conventionId), () => { toast.success("Édition rattachée : une ligne de financement conventionnée est créée"); setId(""); })} data-testid="attach-edition-submit"><Link2 />Rattacher</Button>
     </div>
   );

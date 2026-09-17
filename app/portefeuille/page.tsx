@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Lightbulb, Maximize2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
-import { LexiqueDialog } from "@/components/common/lexique-dialog";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Gauge } from "@/components/common/gauge";
 import { AlertChips, AlertSummary } from "@/components/common/alert-chips";
@@ -74,9 +73,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           codir ? (
             <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR</Link></Button>
           ) : isCodir(me.role) ? (
-            <><LexiqueDialog /><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode CODIR</Link></Button></>
+            <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode CODIR</Link></Button></>
           ) : (
-            <><LexiqueDialog /><Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button></>
+            <><Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button></>
           )
         }
       />

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { addRequest } from "@/app/actions/requests";
 import { REQUEST_KINDS } from "@/lib/requests";
+import { SearchableSelect } from "@/components/common/searchable-select";
 
 type Opt = { id: string; name: string };
 
@@ -29,6 +30,7 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
     const r = await addRequest({ kind, title, body, assigneeId: type === "p" ? id : null, poleId: type === "g" ? id : null, editionId: editionId || null, dueDate: dueDate || null });
     if (!r.ok) toast.error(r.error); else { toast.success("Demande envoyée"); setOpen(false); setTitle(""); setBody(""); setDueDate(""); router.refresh(); }
   });
+  const editionOptions = editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }));
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button data-testid="new-request"><Plus />Nouvelle demande</Button></DialogTrigger>
@@ -45,7 +47,7 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
             // Un achat ou un devis n'est pas une demande interne : c'est une validation, portée par une édition (retour du 15/09 : « je ne trouve pas ce bouton »).
             <div className="grid gap-2 rounded-md border bg-muted/40 p-3 text-xs" data-testid="request-quote-redirect">
               <p>Un achat ou un devis passe par le <b>circuit de validation</b> : il est engagé sur le budget d'une édition et validé au niveau que son montant impose. Utilisez le bouton <b>Nouvelle validation</b> à côté — ou choisissez l'édition ici, le formulaire s'ouvre sur sa fiche.</p>
-              <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="request-quote-edition"><option value="">— l'édition concernée —</option>{editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}</select>
+              <SearchableSelect options={editionOptions} value={editionId} onChange={setEditionId} placeholder="— l'édition concernée —" data-testid="request-quote-edition" className="h-9 w-full" />
               <div className="flex justify-end"><Button asChild disabled={!editionId} data-testid="request-quote-go"><Link href={editionId ? `/edition/${editionId}?onglet=apercu&validation=1` : "#"} aria-disabled={!editionId} onClick={(e) => { if (!editionId) e.preventDefault(); else setOpen(false); }}>Demander la validation sur cette édition →</Link></Button></div>
             </div>
           ) : (<>
@@ -53,16 +55,12 @@ export function NewRequestDialog({ people, poles, editions, defaultEditionId }: 
           <label className="grid gap-1 text-xs"><span className="font-semibold">Détail <span className="font-normal text-muted-foreground">(pour quoi faire, sous quelle forme)</span></span><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} className="rounded-md border bg-card p-2 text-sm" data-testid="request-body" /></label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-xs"><span className="font-semibold">À qui ?</span>
-              <select value={to} onChange={(e) => setTo(e.target.value)} required className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="request-to">
-                <option value="">— choisir —</option>
-                <optgroup label="Une personne">{people.map((p) => <option key={p.id} value={`p:${p.id}`}>{p.name}</option>)}</optgroup>
-                <optgroup label="Un pôle">{poles.map((p) => <option key={p.id} value={`g:${p.id}`}>{p.name}</option>)}</optgroup>
-              </select>
+              <SearchableSelect options={[...people.map((p) => ({ value: `p:${p.id}`, label: p.name, group: "Une personne" })), ...poles.map((p) => ({ value: `g:${p.id}`, label: p.name, group: "Un pôle" }))]} value={to} onChange={setTo} placeholder="— choisir —" aria-label="À qui ?" data-testid="request-to" className="h-9 w-full" />
             </label>
             <label className="grid gap-1 text-xs"><span className="font-semibold">Pour quand ?</span><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} data-testid="request-due" /></label>
           </div>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Projet concerné <span className="font-normal text-muted-foreground">(facultatif)</span></span>
-            <select value={editionId} onChange={(e) => setEditionId(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm"><option value="">—</option>{editions.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}</select>
+            <SearchableSelect options={editionOptions} value={editionId} onChange={setEditionId} emptyOption="— aucun —" aria-label="Projet concerné" className="h-9 w-full" />
           </label>
           <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" disabled={pending || !title.trim() || !to} data-testid="request-submit">Envoyer</Button></div>
           </>)}

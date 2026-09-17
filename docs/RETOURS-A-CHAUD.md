@@ -240,6 +240,16 @@ Gaël (16/09) : « un système de menu de gauche double niveau » ; exemples dé
 - Lenteur signalée par Gaël (« parfois ») : mesuré côté serveur après le déploiement, 0,10 à 0,25 s par page (portefeuille, temps, demandes, clôture, échéances, annuel, matrice), VPS 2 CPU / 8 Go, 260 Mo pour le service. Ce qui reste lent : la première visite de chaque page après un redéploiement (échauffement Next), et le mode dev en local (compilation à la volée). À surveiller : le layout relance à chaque navigation les compteurs + `syncDeadlineNotifications` + les requêtes de la barre haute (éditions, notifications, notes, tâches).
 - Vérifié en live : direction (toutes les sections), contributeur (Mes projets, Temps à une feuille, pas de Direction/Admin/Validations), `?vue=mes`, `?section=…`, rail, tablette. Tests : suite complète relancée après la réécriture (voir le message de session).
 
+### R. Listes déroulantes, modale de création, bouton Aide, doublons (17/09, matin) — fait
+
+Retours de Gaël en direct sur la démo :
+
+- **« Skiner un peu les menus déroulants »** : les 64 `<select>` natifs sont habillés en CSS global (`globals.css`, bordure et anneau de focus des champs, chevron dessiné par nous) ; sur Chrome / Edge 135+ la liste elle-même est habillée (`appearance: base-select`, `::picker(select)`), ailleurs elle reste celle du navigateur.
+- **« Une search intégrée quand il y a beaucoup d'éléments »** : `components/common/searchable-select.tsx` — déclencheur dessiné comme un champ, liste Radix Popover filtrable (accents ignorés), clavier ↑ ↓ Entrée Échap, groupes (« Une personne / Un pôle »), indication en gris (année, « en charge »), champ caché `name` pour les formulaires. Le champ de recherche n'apparaît qu'au-delà de 8 entrées. Appliqué aux listes longues : personnes (pilote du nouveau projet, suite CODIR, « Confier à », « À qui ? », personne du temps), éditions (rattacher à une convention, validation, note, plan de charge, listes de tâches ×2, demandes ×2), financeurs (appel, convention, ligne de financement). Les petites listes (statuts, natures, filtres en pastille) restent natives. Tests : helper `pick(page, testId, texte | rang)` dans `tests/helpers.ts`, 11 `selectOption` migrés.
+- **« L'ajout doit être via un bouton en haut à droite, en passant par une modale »** : `CreateProjectDialog` (app/admin/forms.tsx) remplace le formulaire en ligne de la page Projets ; bouton primaire « Nouveau projet » dans les actions de l'en-tête, modale avec les six champs. Tests : `cp-open` avant `cp-name`.
+- **« Le lexique est transverse : un petit bouton Aide en bas à gauche »** : `components/shell/help-menu.tsx` au pied de la barre latérale (icône seule en rail), menu vers le haut : Lexique (dialogue contrôlé, `LexiqueDialog` n'a plus de bouton), Raccourcis clavier (événement `pilote:aide-raccourcis` écouté par `Shortcuts`). Les boutons Lexique des en-têtes (portefeuille, projets, matrice) sont retirés. D'autres entrées viendront (prise en main, contact).
+- **Doublons** « ← Toutes les conventions » + « Retour à la liste » (convention, financeur) : le bouton de droite est retiré, le lien de retour reste. Vérifié sur les autres pages : pas d'autre en-tête à double sortie.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

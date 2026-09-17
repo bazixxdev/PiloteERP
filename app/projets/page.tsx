@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
-import { LexiqueDialog } from "@/components/common/lexique-dialog";
 import { Section } from "@/components/common/section";
 import { AutoField } from "@/components/inline/auto-field";
 import { DossiersNav } from "@/components/common/dossiers-nav";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
-import { AddSimpleForm, CreateProjectForm, ProjectPolesPicker } from "@/app/admin/forms";
+import { AddSimpleForm, CreateProjectDialog, ProjectPolesPicker } from "@/app/admin/forms";
 import { Button } from "@/components/ui/button";
 import { withBase } from "@/lib/base-path";
 import { FileDown, Lightbulb } from "lucide-react";
@@ -32,14 +31,14 @@ export default async function ProjetsPage() {
         subtitle={`${projects.length} projets · ${projects.reduce((s, p) => s + p.editions.length, 0)} éditions.${rw ? "" : " Lecture seule : la direction et la RAF créent les projets ; vous pouvez en proposer un."}`}
         actions={
           <>
-            <LexiqueDialog />
-            <Button asChild variant="outline" size="sm"><Link href="/projets/proposer" data-testid="propose-project"><Lightbulb />Proposer un projet</Link></Button>
             <Button asChild variant="outline" size="sm" title="Toutes les fiches de l'année en un seul Word, par pôle puis mission — à la place du copier-coller"><a href={withBase(`/plan-operationnel/export?annee=${currentYear}`)} data-testid="export-plan-operationnel"><FileDown />Plan opérationnel {currentYear} (Word)</a></Button>
+            <Button asChild variant="outline" size="sm"><Link href="/projets/proposer" data-testid="propose-project"><Lightbulb />Proposer un projet</Link></Button>
+            {rw && <CreateProjectDialog poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} />}
           </>
         }
       />
       <div className="overflow-x-auto">
-        <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre." actions={rw ? <CreateProjectForm poles={opt(poles)} people={opt(people.filter((p) => p.active))} missions={opt(missions)} /> : undefined}>
+        <Section title="Projets" description="Objets permanents ; chaque année une édition. Le pôle principal est celui du pilote ; un projet commun a des pôles associés, dont les membres le voient dans leur périmètre.">
           <table className="w-full text-sm" data-testid="projects-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr><th className="py-1.5">Projet</th><th className="py-1.5">Code</th><th className="py-1.5" title="Pôle principal, puis pôles associés pour un projet commun">Pôles</th><th className="py-1.5">Pilote</th><th className="py-1.5">Garant</th><th className="py-1.5">Mission</th><th className="py-1.5">Récurrent</th><th className="py-1.5">Éditions</th></tr>

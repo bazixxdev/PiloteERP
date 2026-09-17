@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Plan de charge : jours prévus par personne et par mois face à la capacité, ventilation depuis l'édition, vue par projet.
 test("le plan de charge montre les mois en dépassement ; le pilote ventile ses jours par mois depuis l'édition", async ({ page }) => {
@@ -49,9 +49,7 @@ test("le plan de charge montre les mois en dépassement ; le pilote ventile ses 
   await iAm(page, "Claire Vasseur");
   await page.goto("/plan-de-charge?debut=2026-09&horizon=6&pole=tous");
   await romain.locator('[data-testid$="-2026-10"]').click();
-  const add = page.getByTestId("load-add-edition");
-  const optValue = await add.locator("option", { hasText: "Club des collectivités · 2026" }).getAttribute("value");
-  await add.selectOption(optValue as string);
+  await pick(page, "load-add-edition", "Club des collectivités · 2026");
   await page.getByTestId("load-add-days").fill("3");
   await page.getByTestId("load-add-submit").click();
   await expect(page.getByRole("link", { name: /Club des collectivités/ })).toBeVisible();

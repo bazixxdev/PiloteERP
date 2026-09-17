@@ -5,7 +5,6 @@ import { DossiersNav } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { HelpTip } from "@/components/common/help-tip";
-import { LexiqueDialog } from "@/components/common/lexique-dialog";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
@@ -73,7 +72,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
       <PageHeader
         title={<span className="inline-flex items-center gap-2">Qui finance quoi <HelpTip title="Lire la matrice" testId="matrix-help"><p>Une ligne par édition de l&apos;année, une colonne par financeur présent. <b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i> = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l&apos;obtenu à l&apos;enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, l&apos;édition est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l&apos;année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s&apos;affichent.</p></HelpTip></span>}
         subtitle={<>{year} · {m.rows.length} édition{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre sa ligne de financement en panneau, sans quitter le tableau ; le chiffre cliqué y est surligné.</>}
-        actions={<div className="flex flex-wrap items-center gap-2"><LexiqueDialog />{money && <Button asChild variant="outline" size="sm"><a href={withBase(`/matrice/export?annee=${year}${perimeter === "pole" ? "&perimetre=pole" : ""}`)} data-testid="matrix-export"><Download />CSV</a></Button>}</div>}
+        actions={<div className="flex flex-wrap items-center gap-2">{money && <Button asChild variant="outline" size="sm"><a href={withBase(`/matrice/export?annee=${year}${perimeter === "pole" ? "&perimetre=pole" : ""}`)} data-testid="matrix-export"><Download />CSV</a></Button>}</div>}
       />
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <YearPicker years={[...new Set([...years.map((y) => y.year), currentYear])].sort()} current={year} hrefFor={(y) => qs({ annee: y })} />

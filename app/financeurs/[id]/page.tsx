@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { instanceHas } from "@/lib/modules";
@@ -54,7 +53,6 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">{f.contacts.length} contact{f.contacts.length > 1 ? "s" : ""} · {active.length} convention{active.length > 1 ? "s" : ""} active{active.length > 1 ? "s" : ""} · {f.lines.length} ligne{f.lines.length > 1 ? "s" : ""} de financement{rw ? "" : " · lecture seule : tenu par la RAF"}</p>
         </div>
-        <Button asChild variant="outline"><Link href="/financeurs">Retour à la liste</Link></Button>
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Convention partagée : une FSE 2026-2028 existe une fois, les éditions y sont affectées, la somme ne dépasse pas le notifié, la reconduction la conserve.
 test("la convention FSE est unique, ses affectations sont plafonnées, la reconduction la rattache", async ({ page }) => {
@@ -30,7 +30,7 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   // Création d'une convention et rattachement d'une édition.
   await page.goto("/conventions");
   await page.getByTestId("cc-open").click();
-  await page.getByTestId("cc-funder").selectOption({ label: "ADEME" });
+  await pick(page, "cc-funder", "ADEME");
   await page.getByTestId("cc-reference").fill("ADEME-TEST-2026-2027");
   await page.getByTestId("cc-notified").fill("30000");
   await page.getByTestId("cc-submit").click();
@@ -38,7 +38,7 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await expect(page.getByRole("heading", { level: 1 })).toContainText("ADEME-TEST-2026-2027");
   await expect(page.getByTestId("convention-lines")).toContainText(/aucune édition rattachée/i);
   // Depuis la convention : rattacher une édition couverte par la période, puis la détacher (ligne vide → supprimée).
-  await page.getByTestId("attach-edition-select").selectOption({ label: "Observatoire régional (ORESS) · 2026" });
+  await pick(page, "attach-edition-select", "Observatoire régional (ORESS) · 2026");
   await page.getByTestId("attach-edition-submit").click();
   await expect(page.getByTestId("convention-lines-table")).toContainText("Observatoire régional (ORESS) · 2026");
   page.once("dialog", (d) => d.accept());

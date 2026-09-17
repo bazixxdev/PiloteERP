@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm } from "./helpers";
+import { iAm, pick } from "./helpers";
 import { dayjs } from "../lib/format";
 
 // Simulation collective : une édition vit une semaine entre six personnes, dans l'ordre réel du fonctionnement cible.
@@ -14,9 +14,10 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   // 1. La direction crée le projet, cadre la couche 1 et met l'édition en cours.
   await page.goto("/projets");
   await iAm(page, "Claire Vasseur");
+  await page.getByTestId("cp-open").click();
   await page.getByTestId("cp-name").fill("Projet collectif Bêta");
   await page.getByTestId("cp-code").fill("COL-01");
-  await page.getByTestId("cp-pilot").selectOption({ label: "Hugo Lemaire" });
+  await pick(page, "cp-pilot", "Hugo Lemaire");
   await page.getByTestId("cp-submit").click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Projet collectif Bêta", { timeout: 30_000 }); // première compilation de la vue édition
   const editionUrl = page.url().split("?")[0];
@@ -35,7 +36,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("field-directExpenseEnvelope").blur();
   await page.getByRole("tab", { name: "Budget" }).click();
   await page.getByTestId("add-funding-open").click();
-  await page.getByTestId("add-funding-funder").selectOption({ label: "Région" });
+  await pick(page, "add-funding-funder", "Région");
   await page.getByTestId("add-funding-submit").click();
   await expect(page.getByTestId("funding-line-0")).toBeVisible();
   await page.waitForLoadState("networkidle");

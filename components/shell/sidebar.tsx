@@ -7,6 +7,7 @@ import { Briefcase, CalendarDays, CalendarClock, Clock, FileSignature, Inbox, La
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 import { locate, type NavSection } from "@/lib/navigation";
+import { HelpMenu } from "./help-menu";
 
 // Barre latérale à deux niveaux (proto validé le 17/09) : une section par icône, la section de la page courante dépliée
 // avec ses feuilles reliées par un trait d'arbre, les autres repliées. Un bouton la réduit en rail d'icônes (choix mémorisé) ;
@@ -129,6 +130,9 @@ export function Sidebar({ tree }: { tree: NavSection[] }) {
           );
         })}
       </nav>
+      <div className={cn("mt-2 border-t pt-2", collapsed ? "flex justify-center" : "flex justify-center lg:block")}>
+        <HelpMenu rail={collapsed} />
+      </div>
     </aside>
   );
 }

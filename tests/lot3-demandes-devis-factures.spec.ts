@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iAm, openEditionByName } from "./helpers";
+import { iAm, openEditionByName, pick } from "./helpers";
 
 // Lot 3 « Demandes, devis, factures, documents » : un seul tableau des demandes, bon pour accord à la validation d'un devis,
 // facture reçue → service fait → payée avec le pilote prévenu, règle des documents écrite.
@@ -10,9 +10,7 @@ test("une demande interne se dépose, arrive chez l'assistante, devient une tâc
   await page.getByTestId("new-request").click();
   await page.getByTestId("request-kind-assistant").click();
   await page.getByTestId("request-title").fill("Réserver la salle du CA pour le jury du Prix");
-  const to = page.getByTestId("request-to");
-  const opt = await to.locator("option", { hasText: "Léa Morin" }).getAttribute("value");
-  await to.selectOption(opt!);
+  await pick(page, "request-to", "Léa Morin");
   await page.getByTestId("request-due").fill("2026-09-25");
   await page.getByTestId("request-submit").click();
   await expect(page.getByText("Demande envoyée")).toBeVisible();
@@ -100,8 +98,7 @@ test("chacun ne voit que les demandes qui le concernent : son pôle pour un resp
   await page.getByTestId("new-request").click();
   await page.getByTestId("request-kind-assistant").click();
   await page.getByTestId("request-title").fill("Commander les badges du jury");
-  const to = page.getByTestId("request-to");
-  await to.selectOption((await to.locator("option", { hasText: "Léa Morin" }).getAttribute("value"))!);
+  await pick(page, "request-to", "Léa Morin");
   await page.getByTestId("request-submit").click();
   await expect(page.getByText("Demande envoyée")).toBeVisible();
   // Un pilote d'un autre pôle : pas d'onglet « Toute la CRESS », et la demande n'apparaît nulle part.
@@ -134,9 +131,8 @@ test("une validation se demande depuis Demandes, en choisissant l'édition ; le 
   await page.goto("/demandes");
   await iAm(page, "Inès Cabral");
   await page.getByTestId("request-validation-open").click();
-  const edition = page.getByTestId("rv-edition");
   // Une édition sans devis en attente dans le jeu de démo (les tests des pièces jointes s'appuient sur ceux de l'ORESS).
-  await edition.selectOption((await edition.locator("option", { hasText: "Réseau Femmes et ESS" }).getAttribute("value"))!);
+  await pick(page, "rv-edition", "Réseau Femmes et ESS");
   await page.getByTestId("rv-label").fill("Devis relecture de la note de conjoncture");
   await page.getByTestId("rv-amount").fill("250");
   // Fournisseur connu : la recherche dans le champ le propose, son adresse se remplit.
