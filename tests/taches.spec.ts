@@ -120,4 +120,14 @@ test("la fiche d'une tâche porte une description ; le kanban range par liste ; 
   await expect(vie).toContainText("Imprimer les feuilles d'émargement");
   await page.getByTestId("tasks-display-liste").click();
   await expect(page.getByTestId("tasks-main")).toHaveAttribute("data-view", "afaire");
+  // Dans une liste, le kanban découpe par échéance ; ajouter dans « Aujourd'hui » date la tâche du jour.
+  await page.getByTestId("tasks-lists").locator('[data-name="Vie statutaire"]').click();
+  await expect(page.getByTestId("tasks-main")).toHaveAttribute("data-name", "Vie statutaire");
+  await page.getByTestId("tasks-display-kanban").click();
+  await expect(page.getByTestId("tasks-kanban")).toHaveAttribute("data-mode", "due");
+  await expect(page.getByTestId("kanban-col-week")).toContainText("Envoyer la convocation");
+  await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-add-]").click();
+  await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-input-]").fill("Appeler la préfecture");
+  await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-input-]").press("Enter");
+  await expect(page.getByTestId("kanban-col-today")).toContainText("Appeler la préfecture");
 });

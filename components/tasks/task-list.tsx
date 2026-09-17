@@ -176,10 +176,10 @@ export function dueMeta(t: TaskView) {
 }
 
 // Rond à cocher : rouge en retard, pétrole aujourd'hui, gris sinon ; rempli une fois fait.
-export function CheckCircle({ t, checked, pending, onChange }: { t: TaskView; checked: boolean; pending: boolean; onChange: (v: boolean) => void }) {
+export function CheckCircle({ t, checked, pending, onChange, className }: { t: TaskView; checked: boolean; pending: boolean; onChange: (v: boolean) => void; className?: string }) {
   const { late, today } = dueMeta(t);
   return (
-    <label className="relative mt-0.5 inline-flex size-[18px] shrink-0 cursor-pointer items-center justify-center" title={checked ? "Rouvrir" : "Terminer"}>
+    <label className={cn("relative mt-0.5 inline-flex size-[18px] shrink-0 cursor-pointer items-center justify-center", className)} title={checked ? "Rouvrir" : "Terminer"}>
       <input type="checkbox" checked={checked} disabled={pending} aria-label={`${checked ? "Rouvrir" : "Terminer"} la tâche ${t.label}`} className="peer absolute inset-0 z-[1] size-full cursor-pointer opacity-0" onChange={(e) => onChange(e.target.checked)} data-testid={`task-done-${t.id}`} />
       <span className={cn("size-[18px] rounded-full border-2 transition-colors peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary/20", checked ? "border-mint bg-mint" : late ? "border-danger hover:bg-danger-soft" : today ? "border-primary hover:bg-info-soft" : "border-[#b9c4c9] hover:bg-muted")} aria-hidden />
       {checked && <svg viewBox="0 0 12 12" className="pointer-events-none absolute size-2.5 text-white" aria-hidden><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
@@ -244,17 +244,18 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
   const { text: dueText, late, today } = dueMeta(t);
   const [checked, setChecked] = useState(t.done);
   useEffect(() => setChecked(t.done), [t.done]);
-  const Field = ({ label: l, children }: { label: string; children: React.ReactNode }) => <div className="grid min-w-0 gap-1 border-b border-border/60 py-2.5 last:border-0"><span className="text-[11px] font-semibold text-muted-foreground">{l}</span><div className="min-w-0 text-xs [&_button]:max-w-full [&_span]:max-w-full">{children}</div></div>;
+  // Dans la fiche, les pastilles ne se tronquent pas : on lit le nom entier de la liste et de l'édition, sur plusieurs lignes s'il le faut.
+  const Field = ({ label: l, children }: { label: string; children: React.ReactNode }) => <div className="grid min-w-0 gap-1 border-b border-border/60 py-2.5 last:border-0"><span className="text-[11px] font-semibold text-muted-foreground">{l}</span><div className="min-w-0 text-xs leading-relaxed [&_.truncate]:overflow-visible [&_.truncate]:whitespace-normal [&_button]:h-auto [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:text-left [&_span]:max-w-full">{children}</div></div>;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl gap-0 p-0 sm:max-w-3xl" data-testid={`task-detail-${t.id}`}>
         <DialogHeader className="border-b px-4 py-2.5 text-[11px] text-muted-foreground">
           <DialogTitle className="flex items-center gap-1.5 text-[11px] font-normal">{t.list ? <><span className="font-bold" style={{ color: noteColor(t.list.color)?.hex ?? "var(--border)" }}>#</span>{t.list.name}</> : <><Inbox className="size-3" aria-hidden />À trier</>}{t.edition && <span className="text-muted-foreground/70"> / {t.edition.name} · {t.edition.year}</span>}</DialogTitle>
         </DialogHeader>
-        <div className="grid md:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="grid md:grid-cols-[minmax(0,1fr)_280px]">
           <div className="grid content-start gap-3 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle t={t} checked={checked} pending={pending} onChange={(v) => { setChecked(v); run(() => updateTask(t.id, { done: v })); }} />
+            <div className="flex items-center gap-3">
+              <CheckCircle t={t} checked={checked} pending={pending} className="mt-0" onChange={(v) => { setChecked(v); run(() => updateTask(t.id, { done: v })); }} />
               <Input value={label} onChange={(e) => setLabel(e.target.value)} onBlur={() => { if (label.trim() && label !== t.label) run(() => updateTask(t.id, { label })); }} className={cn("h-8 border-0 px-0 text-base font-semibold shadow-none focus-visible:ring-0", checked && "line-through opacity-60")} aria-label="Libellé de la tâche" data-testid="task-detail-label" />
             </div>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { if (description.trim() !== (t.description ?? "").trim()) run(() => updateTask(t.id, { description })); }} placeholder="Description : le contexte, le lien, ce qu'il faut ne pas oublier…" rows={4} className="w-full resize-y rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm placeholder:text-muted-foreground/70 hover:border-border focus:border-border focus:outline-none" aria-label="Description de la tâche" data-testid="task-detail-description" />
