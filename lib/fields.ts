@@ -75,7 +75,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" }, notes: { type: "textarea" } }, // alias historique d'organisation (écran Financeurs)
   organisation: { name: { type: "text" }, notes: { type: "textarea" }, siret: { type: "text" }, website: { type: "text" }, address: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, active: { type: "bool" } },
-  organisationContact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" } },
+  contact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" }, organisationName: { type: "text" }, address: { type: "text" }, postcode: { type: "text" }, city: { type: "text" }, tags: { type: "text" } },
   mission: { name: { type: "text" } },
   timeCode: { label: { type: "text" }, kind: { type: "select" } },
   pole: { name: { type: "text" }, leadId: { type: "select" } },

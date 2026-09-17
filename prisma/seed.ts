@@ -75,7 +75,9 @@ async function reset() {
   await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
-  await prisma.organisationContact.deleteMany();
+  await prisma.contactListItem.deleteMany();
+  await prisma.contactList.deleteMany();
+  await prisma.contact.deleteMany();
   await prisma.editionPartner.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.notification.deleteMany();
@@ -159,7 +161,7 @@ async function main() {
     7: [{ firstName: "Nora", lastName: "Achour", role: "Responsable réseau", email: "n.achour@exemple.fr" }],
   };
   for (const [idx, list] of Object.entries(contactsSeed)) {
-    for (const [i, c] of list.entries()) await prisma.organisationContact.create({ data: { organisationId: funders[Number(idx)].id, ...c, primary: i === 0 } });
+    for (const [i, c] of list.entries()) await prisma.contact.create({ data: { organisationId: funders[Number(idx)].id, ...c, primary: i === 0 } });
   }
 
   // Conventions partagées : FSE 2026-2028 (DLA + sensibilisation) ; CPO Région 2025-2027 pour les projets Région pluriannuels.
@@ -1028,8 +1030,23 @@ async function main() {
 
   await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille" } });
 
-  // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
   const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
+  // Contacts et listes (18/09) : quelques personnes extérieures fictives, une liste « Réseau développeurs ESS » à Thomas
+  // (partagée à son pôle) avec ses colonnes propres, une liste privée d'invités à Élise.
+  const extContacts = await Promise.all([
+    { firstName: "Marius", lastName: "Garnier", email: "m.garnier@exemple.fr", phone: "06 12 00 00 01", role: "Chargé de développement", organisationName: "Initiative Loiret", city: "Orléans", postcode: "45000", tags: "réseau,financement" },
+    { firstName: "Salomé", lastName: "Petit", email: "s.petit@exemple.fr", role: "Développeuse ESS", organisationId: org("France Active Centre-Val de Loire"), city: "Tours", postcode: "37000", tags: "réseau,accompagnement" },
+    { firstName: "Yann", lastName: "Kervella", email: "y.kervella@exemple.fr", role: "Directeur", organisationName: "Coop'Alim Berry", city: "Bourges", postcode: "18000", tags: "réseau,alimentation" },
+    { firstName: "Fatou", lastName: "Diallo", email: "f.diallo@exemple.fr", role: "Élue déléguée à l'ESS", organisationId: org("Tours Métropole Val de Loire"), city: "Tours", tags: "élu" },
+    { firstName: "Olivier", lastName: "Renaud", email: "o.renaud@exemple.fr", role: "Journaliste", organisationName: "La Nouvelle République", city: "Tours", tags: "presse" },
+    { firstName: "Léna", lastName: "Bourgeois", email: "l.bourgeois@exemple.fr", role: "Enseignante-chercheuse", organisationId: org("Université de Tours"), city: "Tours", tags: "recherche,alimentation" },
+  ].map((c) => prisma.contact.create({ data: { ...c, createdById: byName("Thomas Guérin").id } })));
+  const reseau = await prisma.contactList.create({ data: { ownerId: byName("Thomas Guérin").id, name: "Réseau développeurs ESS", description: "Les développeurs et chargés de mission ESS du territoire, pour les séminaires annuels.", visibility: "pole", color: "vert", editionId: ed("TES-05").id, fields: JSON.stringify([{ key: "charte", label: "Charte signée", type: "bool" }, { key: "seminaire_2025", label: "Séminaire 2025", type: "bool" }, { key: "territoire", label: "Territoire", type: "select", options: ["Indre-et-Loire", "Loiret", "Cher", "Loir-et-Cher", "Indre", "Eure-et-Loir"] }]) } });
+  for (const [i, c] of extContacts.slice(0, 4).entries()) await prisma.contactListItem.create({ data: { listId: reseau.id, contactId: c.id, role: i === 3 ? "Élue référente" : "Membre", values: JSON.stringify({ charte: i !== 2, seminaire_2025: i < 2, territoire: ["Loiret", "Indre-et-Loire", "Cher", "Indre-et-Loire"][i] }) } });
+  const invites = await prisma.contactList.create({ data: { ownerId: byName("Élise Fontaine").id, name: "Invités · soirée de remise des prix", visibility: "private", color: "corail", editionId: ed("SEN-01").id, fields: JSON.stringify([{ key: "confirme", label: "Confirmé", type: "bool" }, { key: "table", label: "Table", type: "text" }]) } });
+  for (const c of [extContacts[3], extContacts[4]]) await prisma.contactListItem.create({ data: { listId: invites.id, contactId: c.id, role: "Invité·e", values: JSON.stringify({ confirme: c === extContacts[3], table: c === extContacts[3] ? "Table d'honneur" : "" }) } });
+
+  // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
   for (const [code, name, role] of [["TES-02", "Université de Tours", "Co-organise le cycle, accueille deux conférences"], ["TES-05", "France Active Centre-Val de Loire", "Intervient sur le financement des coopérations"], ["SEN-03", "Tours Métropole Val de Loire", "Accueille le forum"], ["OBS-01", "Mouvement associatif Centre-Val de Loire", "Partage ses données associatives"], ["SEN-03", "ESS France", "Relaie le forum au niveau national"]] as const) {
     await prisma.editionPartner.create({ data: { editionId: ed(code).id, organisationId: org(name), role } });
   }

@@ -21,8 +21,8 @@ export async function addFunderContact(funderId: string, input: { firstName?: st
   if (!lastName) return { ok: false, error: "Le nom est obligatoire." };
   const email = input.email?.trim() || null;
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Adresse email invalide." };
-  const count = await prisma.organisationContact.count({ where: { organisationId: funderId } });
-  const c = await prisma.organisationContact.create({
+  const count = await prisma.contact.count({ where: { organisationId: funderId } });
+  const c = await prisma.contact.create({
     data: { organisationId: funderId, lastName, firstName: input.firstName?.trim() || null, role: input.role?.trim() || null, email, phone: input.phone?.trim() || null, primary: count === 0 },
   });
   revalidatePath("/", "layout");
@@ -32,13 +32,13 @@ export async function addFunderContact(funderId: string, input: { firstName?: st
 export async function deleteFunderContact(id: string): Promise<Result> {
   const denied = await guard();
   if (denied) return { ok: false, error: denied };
-  const c = await prisma.organisationContact.findUnique({ where: { id } });
+  const c = await prisma.contact.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Contact introuvable." };
-  await prisma.organisationContact.delete({ where: { id } });
+  await prisma.contact.delete({ where: { id } });
   // Un seul contact principal : s'il disparaît, le premier restant prend le relais.
   if (c.primary) {
-    const next = await prisma.organisationContact.findFirst({ where: { organisationId: c.organisationId }, orderBy: { createdAt: "asc" } });
-    if (next) await prisma.organisationContact.update({ where: { id: next.id }, data: { primary: true } });
+    const next = await prisma.contact.findFirst({ where: { organisationId: c.organisationId }, orderBy: { createdAt: "asc" } });
+    if (next) await prisma.contact.update({ where: { id: next.id }, data: { primary: true } });
   }
   revalidatePath("/", "layout");
   return { ok: true };
@@ -47,11 +47,11 @@ export async function deleteFunderContact(id: string): Promise<Result> {
 export async function setPrimaryFunderContact(id: string): Promise<Result> {
   const denied = await guard();
   if (denied) return { ok: false, error: denied };
-  const c = await prisma.organisationContact.findUnique({ where: { id } });
+  const c = await prisma.contact.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Contact introuvable." };
   await prisma.$transaction([
-    prisma.organisationContact.updateMany({ where: { organisationId: c.organisationId }, data: { primary: false } }),
-    prisma.organisationContact.update({ where: { id }, data: { primary: true } }),
+    prisma.contact.updateMany({ where: { organisationId: c.organisationId }, data: { primary: false } }),
+    prisma.contact.update({ where: { id }, data: { primary: true } }),
   ]);
   revalidatePath("/", "layout");
   return { ok: true };

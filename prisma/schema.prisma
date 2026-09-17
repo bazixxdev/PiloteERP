@@ -83,6 +83,8 @@ model Person {
   changes            ChangeLog[]
   uploads            Attachment[]
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
+  contactsCreated    Contact[]          @relation("ContactCreator")
+  contactLists       ContactList[]      @relation("ContactListOwner")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
@@ -221,32 +223,78 @@ model Organisation {
   createdAt   DateTime        @default(now())
   lines       FundingLine[]
   conventions Convention[]
-  contacts    OrganisationContact[]
+  contacts    Contact[]
   calls       Call[]
   validations ValidationRequest[]
   editions    EditionPartner[]
 }
 
-// Interlocuteurs d'une organisation (instructeur, gestionnaire, élu référent, commercial…). Données personnelles de tiers : le
-// minimum utile, tenu par la RAF ; le contact principal sert par défaut, une ligne ou une convention peut désigner son propre
-// contact du dossier. Un contact parti est détaché (`leftAt`), jamais supprimé tant qu'un dossier le cite.
-model OrganisationContact {
-  id             String        @id @default(cuid())
-  organisationId String
-  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  firstName      String?
-  lastName       String
-  role           String? // fonction
-  email          String?
-  phone          String?
-  notes          String?
-  primary        Boolean       @default(false)
-  leftAt         DateTime?
-  createdAt      DateTime      @default(now())
-  lines          FundingLine[]
-  conventions    Convention[]
+// Contacts (lot « Contacts et listes », 18/09) : toute personne extérieure à l'équipe — interlocuteur d'un financeur, d'un
+// fournisseur, invité, membre d'un réseau… Organisation facultative (ou un nom de structure en texte) ; tags libres ;
+// données personnelles de tiers : le minimum utile. Un contact parti se détache (`leftAt`), il ne s'efface pas tant qu'un
+// dossier le cite. Prêt pour Brevo (identifiant, statut RGPD) sans que rien ne soit branché.
+model Contact {
+  id               String        @id @default(cuid())
+  organisationId   String?
+  organisation     Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  organisationName String? // structure en texte quand elle n'est pas dans l'annuaire
+  firstName        String?
+  lastName         String
+  role             String? // fonction
+  email            String?
+  phone            String?
+  address          String?
+  postcode         String?
+  city             String?
+  tags             String        @default("") // mots-clés, séparés par des virgules
+  notes            String?
+  primary          Boolean       @default(false) // contact principal de son organisation
+  leftAt           DateTime?
+  brevoContactId   String?       @unique
+  brevoStatus      String? // null = hors Brevo ; unsubscribed | blacklisted
+  createdById      String?
+  createdBy        Person?       @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @default(now()) @updatedAt
+  lines            FundingLine[]
+  conventions      Convention[]
+  listItems        ContactListItem[]
 
   @@index([organisationId])
+  @@index([email])
+}
+
+// Liste de contacts : invités d'un événement, réseau sur une thématique, annuaire d'un projet… À son auteur, avec une
+// visibilité (privée, mon responsable, mon pôle, toute la CRESS), une édition facultative, et ses propres colonnes
+// (`fields`, JSON : [{ key, label, type: bool | text | date | select, options? }]) dont les valeurs vivent sur chaque ligne.
+model ContactList {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       Person   @relation("ContactListOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  visibility  String   @default("private") // private | pole_lead | pole | all
+  color       String?
+  editionId   String?
+  edition     Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  fields      String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  items       ContactListItem[]
+
+  @@index([ownerId])
+}
+
+model ContactListItem {
+  listId    String
+  list      ContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role      String? // ce qu'il ou elle est dans cette liste (invité, intervenant, membre…)
+  values    String      @default("{}") // valeurs des colonnes propres à la liste (JSON, clé → valeur)
+  addedAt   DateTime    @default(now())
+
+  @@id([listId, contactId])
 }
 
 // Partenaires d'une édition (lot E2) : des organisations liées, en plus du texte libre `Edition.partners` qui reste le repli.
@@ -280,7 +328,7 @@ model Convention {
   signedAt        DateTime?
   notes           String?
   contactId       String? // contact du dossier ; sinon le contact principal du financeur
-  contact         OrganisationContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact         Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
   payments        Payment[]
   call            Call?
@@ -366,6 +414,7 @@ model Edition {
   deliveryDate          DateTime? // date de rendu
   partners              String?
   partnerLinks          EditionPartner[]
+  contactLists          ContactList[]
   method                String?
   governance            String?
   ownIndicators         String?
@@ -498,7 +547,7 @@ model FundingLine {
   multiYear        Boolean       @default(false)
   notes            String?
   contactId        String? // contact du dossier ; sinon le contact principal du financeur
-  contact          OrganisationContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact          Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deliverables     Deliverable[]
   actions          Action[]
   attachments      Attachment[]

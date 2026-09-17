@@ -5,7 +5,7 @@ import { getSettings } from "@/lib/session";
 import { instanceHas } from "@/lib/modules";
 import { SectionIcon } from "@/components/shell/section-icon";
 
-export type DossiersTab = "projets" | "conventions" | "financeurs" | "organisations" | "matrice" | "appels";
+export type DossiersTab = "projets" | "conventions" | "financeurs" | "organisations" | "contacts" | "matrice" | "appels";
 
 // Sous-navigation « Projets et financements » : un H1 de section, les onglets dessous (actif souligné en bleu pétrole),
 // puis une ligne compacte — le compteur à gauche, l'action principale à droite — collée au tableau (maquette de Gaël, 18/09).
@@ -22,6 +22,7 @@ export async function DossiersNav({ current }: { current: DossiersTab }) {
       {tab("conventions", "Conventions", "/conventions")}
       {tab("financeurs", "Financeurs", "/financeurs")}
       {tab("organisations", "Organisations", "/organisations")}
+      {tab("contacts", "Contacts", "/contacts")}
       {tab("matrice", "Qui finance quoi", "/matrice")}
       {veille && tab("appels", "Appels à projets", "/appels")}
     </nav>

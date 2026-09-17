@@ -43,7 +43,7 @@ export function DepartureForm({ person, others, blocks }: { person: { id: string
   const [actionsTo, setActionsTo] = useState<string | null>(null);
   const [requestsTo, setRequestsTo] = useState<string | null>(null);
   const [leaveTeams, setLeaveTeams] = useState(blocks.teams.length > 0);
-  const [leftAt, setLeftAt] = useState(person.leftAt ?? new Date().toISOString().slice(0, 10));
+  const [leftAt, setLeftAt] = useState(person.leftAt ?? new Date().toLocaleDateString("sv")); // date locale (pas UTC)
   const [deactivate, setDeactivate] = useState(true);
   const nothing = !blocks.piloted.length && !blocks.guaranteed.length && !blocks.ledPoles.length && !blocks.sponsored.length && !blocks.actions.length && !blocks.requests.length;
   const submit = () => start(async () => {

@@ -38,7 +38,9 @@ async function allowed(model: Model, id: string, field: string, personId: string
     return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
   if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
-  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation" || model === "organisationContact") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
+  // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.
+  if (model === "contact") return null;
+  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
   if (model === "expense") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });

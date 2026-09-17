@@ -1,0 +1,234 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Download, Plus, Settings2, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { visibilityIcon } from "@/components/common/visibility-icon";
+import { addListField, addToList, deleteContactList, previewImport, removeFromList, removeListField, runImport, setItemValue, updateContactList, type ImportMapping, type ImportPreview } from "@/app/actions/contacts";
+import { CONTACT_COLUMNS, contactName, FIELD_TYPES, tagsOf, type ContactListFull, type ListField, type ListFieldType } from "@/lib/contacts";
+import { VISIBILITIES } from "@/lib/modules";
+import { NOTE_COLORS, noteColor } from "@/lib/notes";
+import { withBase } from "@/lib/base-path";
+import type { EditionOpt } from "@/components/tasks/task-list";
+import { cn } from "@/lib/utils";
+import { ContactForm } from "./controls";
+
+type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (r: { data?: unknown }) => void) => void;
+function useRun(): [boolean, Run] {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const run: Run = (fn, after) => start(async () => { const r = await fn(); if (!r.ok) { toast.error(r.error ?? "Erreur"); return; } after?.(r); router.refresh(); });
+  return [pending, run];
+}
+
+// Une liste de contacts : en-tête (nom, visibilité, projet, réglages), ligne compacte (compteur, ajouter, importer, exporter),
+// puis le tableau — colonnes communes, rôle dans la liste, colonnes propres modifiables en place.
+export function ContactListView({ list, canEdit, editions, organisations }: { list: ContactListFull; meId: string; canEdit: boolean; editions: EditionOpt[]; organisations: { id: string; name: string }[] }) {
+  const [pending, run] = useRun();
+  const [q, setQ] = useState("");
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const rows = useMemo(() => { const n = norm(q.trim()); return n ? list.items.filter((i) => norm(`${contactName(i.contact)} ${i.contact.email ?? ""} ${i.contact.organisation?.name ?? i.contact.organisationName ?? ""} ${i.contact.city ?? ""} ${i.role ?? ""}`).includes(n)) : list.items; }, [q, list.items]);
+  const Icon = visibilityIcon(list.visibility);
+  const vis = VISIBILITIES.find((v) => v.value === list.visibility);
+  const color = noteColor(list.color);
+  return (
+    <div className="rounded-md border bg-card">
+      <div className="flex flex-wrap items-start justify-between gap-2 px-4 pb-2 pt-3" data-testid={`contact-list-header-${list.id}`}>
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-[19px] font-bold">{color && <span className="size-2.5 shrink-0 rounded-full" style={{ background: color.hex }} aria-hidden />}<span className="truncate">{list.name}</span></h2>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
+            {!canEdit && <span>Liste de {list.owner.name} ·</span>}
+            <span className="inline-flex items-center gap-1" title={vis?.hint} data-testid={`contact-list-visibility-${list.id}`} data-value={list.visibility}><Icon className="size-3" aria-hidden />{vis?.label}</span>
+            {list.edition ? <span>· <Link href={`/edition/${list.edition.id}`} className="text-primary hover:underline">{list.edition.project.name} · {list.edition.year}</Link></span> : <span>· sans projet</span>}
+            {list.description && <span>· {list.description}</span>}
+            {!canEdit && <span>· en lecture</span>}
+          </p>
+        </div>
+        {canEdit && <ListSettings list={list} editions={editions} pending={pending} run={run} />}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 border-y px-4 py-2">
+        <span className="text-sm text-muted-foreground" data-testid="contact-list-count">{list.items.length} contact{list.items.length > 1 ? "s" : ""}</span>
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer…" className="h-8 w-44 text-xs" aria-label="Filtrer la liste" data-testid="contact-list-filter" />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm"><a href={withBase(`/contacts/export?liste=${list.id}`)} data-testid="contact-list-export"><Download />Exporter (CSV)</a></Button>
+          {canEdit && <ImportDialog list={list} />}
+          {canEdit && <AddToListDialog list={list} organisations={organisations} pending={pending} run={run} />}
+        </div>
+      </div>
+      {/* Le tableau reste, même vide : on voit ses colonnes (et celles qu'on vient d'ajouter). */}
+      {(
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]" data-testid="contact-list-table">
+            <thead className="text-left text-[10px] font-semibold text-muted-foreground">
+              <tr>
+                <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th><th className="px-2 py-1.5">Rôle dans la liste</th>
+                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`}>{f.label}{canEdit && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
+                {canEdit && <th className="px-2 py-1.5"></th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier." : "Rien ne correspond au filtre."}</td></tr>}
+              {rows.map((i) => {
+                const c = i.contact;
+                return (
+                  <tr key={c.id} data-testid={`contact-item-${c.id}`}>
+                    <td className="px-4 py-1.5"><Link href={`/contacts?liste=${list.id}&contact=${c.id}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline">{contactName(c)}</Link>{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}{tagsOf(c).length > 0 && <div className="mt-0.5 flex flex-wrap gap-1">{tagsOf(c).map((t) => <span key={t} className="rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t}</span>)}</div>}</td>
+                    <td className="px-2 py-1.5 text-xs">{c.organisation?.name ?? c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-2 py-1.5 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && <br />}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
+                    <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>
+                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit} pending={pending} run={run} /></td>)}
+                    {canEdit && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Une cellule de colonne propre (ou le rôle) : case, texte, date ou liste, enregistrée en quittant la cellule.
+function ValueCell({ listId, contactId, field, value, canEdit, pending, run }: { listId: string; contactId: string; field: ListField; value: string | boolean | null; canEdit: boolean; pending: boolean; run: Run }) {
+  const [v, setV] = useState<string>(typeof value === "string" ? value : "");
+  const [checked, setChecked] = useState(Boolean(value)); // coche immédiate, confirmée par le rafraîchissement
+  const save = (next: string | boolean | null) => run(() => setItemValue(listId, contactId, field.key, next));
+  const testId = `cell-${field.key}-${contactId}`;
+  if (field.type === "bool") return <input type="checkbox" checked={checked} disabled={!canEdit || pending} onChange={(e) => { setChecked(e.target.checked); save(e.target.checked); }} className="size-4 rounded border-border accent-primary" aria-label={field.label} data-testid={testId} />;
+  if (!canEdit) return <span className="text-xs">{typeof value === "string" && value ? value : <span className="text-muted-foreground">—</span>}</span>;
+  if (field.type === "select") return (
+    <Select value={typeof value === "string" ? value : ""} disabled={pending} onChange={(e) => save(e.target.value || null)} className="h-7 min-w-[8rem] text-xs" aria-label={field.label} data-testid={testId}>
+      <option value="">—</option>
+      {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+    </Select>
+  );
+  return <Input type={field.type === "date" ? "date" : "text"} value={v} disabled={pending} onChange={(e) => { setV(e.target.value); if (field.type === "date") save(e.target.value || null); }} onBlur={() => { if (field.type !== "date" && v !== (value ?? "")) save(v); }} className="h-7 min-w-[7rem] text-xs" aria-label={field.label} data-testid={testId} />;
+}
+
+// Réglages : nom, description, visibilité, couleur, projet, colonnes propres, suppression.
+function ListSettings({ list, editions, pending, run }: { list: ContactListFull; editions: EditionOpt[]; pending: boolean; run: Run }) {
+  const router = useRouter();
+  const [name, setName] = useState(list.name);
+  const [description, setDescription] = useState(list.description ?? "");
+  const [label, setLabel] = useState("");
+  const [type, setType] = useState<ListFieldType>("bool");
+  const [options, setOptions] = useState("");
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button variant="outline" size="sm" className="text-xs" onClick={() => setOpen(true)} data-testid={`contact-list-settings-${list.id}`}><Settings2 className="size-3.5" />Réglages</Button>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Réglages de la liste</DialogTitle></DialogHeader>
+        <div className="grid gap-3 text-xs">
+          <label className="grid gap-1"><span className="font-semibold">Nom</span><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name !== list.name) run(() => updateContactList(list.id, { name })); }} className="h-8" disabled={pending} data-testid={`contact-list-name-${list.id}`} /></label>
+          <label className="grid gap-1"><span className="font-semibold">À quoi elle sert</span><Input value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { if (description !== (list.description ?? "")) run(() => updateContactList(list.id, { description })); }} className="h-8" disabled={pending} /></label>
+          <div className="grid gap-1"><span className="font-semibold">Projet</span><SearchableSelect aria-label="Édition rattachée" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateContactList(list.id, { editionId: v || null }))} emptyOption="Sans projet" className="w-full text-xs" /></div>
+          <div className="grid gap-1"><span className="font-semibold">Couleur</span><div className="flex items-center gap-1.5">{NOTE_COLORS.map((k) => <button key={k.value} type="button" title={k.label} aria-label={k.label} aria-pressed={list.color === k.value} disabled={pending} onClick={() => run(() => updateContactList(list.id, { color: list.color === k.value ? null : k.value }))} className={cn("size-6 rounded-full border-2", list.color === k.value ? "border-foreground" : "border-transparent hover:border-border")} style={{ background: k.hex }} />)}</div></div>
+          <fieldset className="grid gap-1"><legend className="mb-1 font-semibold">Qui la lit</legend>
+            {VISIBILITIES.map((v) => <label key={v.value} className="flex items-start gap-2"><input type="radio" name={`clvis-${list.id}`} value={v.value} checked={list.visibility === v.value} disabled={pending} onChange={() => run(() => updateContactList(list.id, { visibility: v.value }), () => toast.success(v.value === "private" ? "Liste privée" : "Liste partagée"))} className="mt-0.5 accent-primary" data-testid={`contact-list-vis-${list.id}-${v.value}`} /><span><b className="font-medium">{v.label}</b> <span className="text-muted-foreground">· {v.hint}</span></span></label>)}
+          </fieldset>
+          <div className="grid gap-1.5 border-t pt-2">
+            <span className="font-semibold">Colonnes propres à cette liste</span>
+            {list.fields.length > 0 && <ul className="grid gap-0.5 text-[11px] text-muted-foreground">{list.fields.map((f) => <li key={f.key}>· {f.label} <span className="opacity-70">({FIELD_TYPES.find((t) => t.value === f.type)?.label}{f.options ? ` : ${f.options.join(", ")}` : ""})</span></li>)}</ul>}
+            <form className="grid gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addListField(list.id, { label, type, options }), () => { setLabel(""); setOptions(""); toast.success("Colonne ajoutée"); }); }} data-testid="add-field-form">
+              <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom de la colonne (Charte, Séminaire 2025…)" className="h-8" data-testid="add-field-label" />
+                <Select value={type} onChange={(e) => setType(e.target.value as ListFieldType)} className="h-8 text-xs" aria-label="Type de colonne" data-testid="add-field-type">{FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</Select>
+              </div>
+              {type === "select" && <Input value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Valeurs possibles, séparées par des virgules" className="h-8" data-testid="add-field-options" />}
+              <div><Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim()} data-testid="add-field-submit"><Plus />Ajouter la colonne</Button></div>
+            </form>
+          </div>
+          <div className="border-t pt-2"><Button variant="ghost" size="sm" disabled={pending} className="text-danger hover:text-danger" onClick={() => { if (confirm(`Supprimer la liste « ${list.name} » ? Les contacts restent dans l'annuaire.`)) run(() => deleteContactList(list.id), () => router.push("/contacts")); }} data-testid={`contact-list-delete-${list.id}`}><Trash2 className="size-3.5" />Supprimer la liste</Button></div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Ajouter : un contact de l'annuaire (recherche), ou un nouveau.
+function AddToListDialog({ list, organisations, pending, run }: { list: ContactListFull; organisations: { id: string; name: string }[]; pending: boolean; run: Run }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [contactId, setContactId] = useState("");
+  const [role, setRole] = useState("");
+  const [all, setAll] = useState<{ id: string; label: string }[] | null>(null);
+  const load = async () => { if (all) return; const r = await fetch(withBase("/contacts/export?annuaire=1")); setAll(await r.json()); };
+  const inList = new Set(list.items.map((i) => i.contactId));
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) void load(); }}>
+      <Button size="sm" onClick={() => { setOpen(true); void load(); }} data-testid="contact-list-add"><UserPlus />Ajouter un contact</Button>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Ajouter à « {list.name} »</DialogTitle></DialogHeader>
+        <div className="flex gap-1 rounded-md bg-muted p-0.5 text-xs">
+          <button type="button" onClick={() => setMode("existing")} className={cn("flex-1 rounded px-2 py-1", mode === "existing" && "bg-card font-semibold shadow-sm")} data-testid="add-mode-existing">De l&apos;annuaire</button>
+          <button type="button" onClick={() => setMode("new")} className={cn("flex-1 rounded px-2 py-1", mode === "new" && "bg-card font-semibold shadow-sm")} data-testid="add-mode-new">Nouveau contact</button>
+        </div>
+        {mode === "existing" ? (
+          <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); run(() => addToList(list.id, { contactId, role }), () => { setContactId(""); setRole(""); toast.success("Ajouté à la liste"); }); }}>
+            <SearchableSelect options={(all ?? []).filter((c) => !inList.has(c.id)).map((c) => ({ value: c.id, label: c.label }))} value={contactId} onChange={setContactId} emptyOption="— choisir un contact —" searchFrom={1} aria-label="Contact" className="h-9 w-full" data-testid="add-existing-contact" />
+            <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Rôle dans la liste (facultatif) : invité, intervenant…" className="h-8 text-xs" data-testid="add-existing-role" />
+            <div className="flex justify-end"><Button type="submit" size="sm" disabled={pending || !contactId} data-testid="add-existing-submit">Ajouter</Button></div>
+          </form>
+        ) : (
+          <ContactForm organisations={organisations} pending={pending} submitLabel="Créer et ajouter" testPrefix="add-new" onSubmit={(c) => run(() => addToList(list.id, { contact: c }), () => { setOpen(false); toast.success("Contact créé et ajouté"); })} />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Import en deux temps : le fichier, puis la correspondance des colonnes (proposée d'après les en-têtes), puis l'import.
+function ImportDialog({ list }: { list: ContactListFull }) {
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [mapping, setMapping] = useState<ImportMapping>({});
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const targets = [{ value: "", label: "— ignorer —" }, ...CONTACT_COLUMNS.map((c) => ({ value: c.key, label: c.label })), { value: "role:list", label: "Rôle dans la liste" }, ...list.fields.map((f) => ({ value: `field:${f.key}`, label: `Colonne « ${f.label} »` }))];
+  const reset = () => { setFile(null); setPreview(null); setMapping({}); };
+  const analyse = () => { if (!file) return; const fd = new FormData(); fd.set("listId", list.id); fd.set("file", file); start(async () => { const r = await previewImport(fd); if (!r.ok) { toast.error(r.error); return; } setPreview(r.data!); setMapping(r.data!.guesses); }); };
+  const go = () => { if (!file) return; const fd = new FormData(); fd.set("listId", list.id); fd.set("file", file); start(async () => { const r = await runImport(fd, mapping); if (!r.ok) { toast.error(r.error); return; } const d = r.data!; toast.success(`${d.added} ajouté${d.added > 1 ? "s" : ""} à la liste · ${d.created} contact${d.created > 1 ? "s" : ""} créé${d.created > 1 ? "s" : ""} · ${d.updated} complété${d.updated > 1 ? "s" : ""}${d.skipped ? ` · ${d.skipped} ligne${d.skipped > 1 ? "s" : ""} sans nom ni e-mail` : ""}`); setOpen(false); reset(); router.refresh(); }); };
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} data-testid="contact-list-import"><Upload />Importer</Button>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Importer dans « {list.name} »</DialogTitle></DialogHeader>
+        {!preview ? (
+          <div className="grid gap-3 text-xs">
+            <p className="text-muted-foreground">Un fichier .csv ou .xlsx (la première feuille), une ligne par personne. Les titres et logos au-dessus de l&apos;en-tête sont ignorés. Un contact déjà connu (même e-mail, sinon même nom et prénom) est complété, pas dupliqué ; les autres sont créés dans l&apos;annuaire — tous entrent dans la liste.</p>
+            <Input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="h-9" aria-label="Fichier à importer" data-testid="import-file" />
+            <div className="flex justify-end"><Button size="sm" disabled={pending || !file} onClick={analyse} data-testid="import-analyse">Lire le fichier</Button></div>
+          </div>
+        ) : (
+          <div className="grid gap-3 text-xs">
+            <p className="text-muted-foreground">{preview.total} ligne{preview.total > 1 ? "s" : ""} trouvée{preview.total > 1 ? "s" : ""}. Dites où va chaque colonne ; ce qui est proposé vient des en-têtes. Il faut au moins le nom ou l&apos;e-mail.</p>
+            <div className="max-h-80 overflow-auto rounded-md border">
+              <table className="w-full text-[11px]" data-testid="import-mapping">
+                <thead className="bg-muted/40 text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="px-2 py-1">Colonne du fichier</th><th className="px-2 py-1">Exemple</th><th className="px-2 py-1">Va dans</th></tr></thead>
+                <tbody className="divide-y">
+                  {preview.headers.map((h, i) => (
+                    <tr key={h}>
+                      <td className="px-2 py-1 font-medium">{h}</td>
+                      <td className="max-w-[14rem] truncate px-2 py-1 text-muted-foreground">{preview.rows.map((r) => r[i]).filter(Boolean).slice(0, 2).join(" · ")}</td>
+                      <td className="px-2 py-1"><Select value={mapping[h] ?? ""} onChange={(e) => setMapping({ ...mapping, [h]: e.target.value })} className="h-7 w-52 text-[11px]" aria-label={`Destination de ${h}`} data-testid={`import-map-${i}`}>{targets.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</Select></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between"><Button size="sm" variant="ghost" onClick={reset}>Autre fichier</Button><Button size="sm" disabled={pending || !Object.values(mapping).some((v) => v === "lastName" || v === "email")} onClick={go} data-testid="import-run">Importer {preview.total} ligne{preview.total > 1 ? "s" : ""}</Button></div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

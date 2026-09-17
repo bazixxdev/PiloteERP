@@ -32,7 +32,7 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await page.getByTestId("slot-close").click();
   // Un créneau posé aujourd'hui s'affiche dans « Aujourd'hui », avec son heure.
   await task.locator("[data-testid^=task-plan-]").click();
-  await page.getByTestId("slot-date").fill(new Date().toISOString().slice(0, 10));
+  await page.getByTestId("slot-date").fill(new Date().toLocaleDateString("sv")); // date locale, pas UTC (la suite peut tourner après minuit)
   await page.getByTestId("slot-start").fill("15:00");
   await page.getByTestId("slot-end").fill("16:00");
   await page.getByTestId("slot-submit").click();

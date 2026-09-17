@@ -10,6 +10,7 @@ import { noteColor } from "@/lib/notes";
 import { ListHeader, NewListDialog } from "./list-card";
 import { visibilityIcon } from "@/components/common/visibility-icon";
 import { cn } from "@/lib/utils";
+import { dayjs } from "@/lib/format";
 import { ListDropLink } from "@/components/tasks/list-drop-link";
 import { TaskKanban } from "@/components/tasks/kanban";
 import { DisplayToggle } from "./display-toggle";
@@ -36,7 +37,7 @@ export default async function TachesPage({ searchParams }: { searchParams: Promi
   const currentList = liste ? lists.find((l) => l.id === liste) : null;
   const currentShared = partagee ? shared.find((s) => s.list.id === partagee) : null;
   const view = currentList ? "liste" : currentShared ? "partagee" : vue === "trier" ? "trier" : vue === "terminees" ? "terminees" : "afaire";
-  const late = open.filter((t) => t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10)).length;
+  const late = open.filter((t) => t.dueDate && t.dueDate < dayjs().format("YYYY-MM-DD")).length;
   // Affichage (redesign du 18/09) : liste ou kanban, mémorisé dans l'adresse ; le kanban n'a de sens que sur mes tâches en cours.
   const kanban = ["afaire", "trier", "liste"].includes(view) && affichage === "kanban";
 

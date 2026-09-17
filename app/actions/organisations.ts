@@ -49,9 +49,9 @@ export async function setOrganisationKind(id: string, kind: OrganisationKind, on
 // Un contact parti se détache (date) ; il reste lisible sur les dossiers qui le citent. Retour possible.
 export async function setContactLeft(id: string, left: boolean): Promise<Result> {
   const d = await guard(); if (d) return { ok: false, error: d };
-  const c = await prisma.organisationContact.findUnique({ where: { id } });
+  const c = await prisma.contact.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Contact introuvable." };
-  await prisma.organisationContact.update({ where: { id }, data: { leftAt: left ? new Date() : null, primary: left ? false : c.primary } });
+  await prisma.contact.update({ where: { id }, data: { leftAt: left ? new Date() : null, primary: left ? false : c.primary } });
   revalidatePath("/", "layout");
   return { ok: true };
 }
