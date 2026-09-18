@@ -16,9 +16,27 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   await expect(page.getByTestId("tile-opening")).toContainText("148");
   await expect(page.getByTestId("treasury-table")).toContainText("Salaires et charges");
   await expect(page.getByTestId("treasury-table")).toContainText("Versements des financeurs");
-  await expect(page.getByTestId("treasury-table")).toContainText("Cotisations à régler");
-  await expect(page.getByTestId("treasury-pay")).toContainText("en retard"); // un solde attendu avant le mois de départ
+  await expect(page.getByTestId("treasury-table")).toContainText("Cotisations");
+  await expect(page.getByTestId("col-current")).toContainText("en cours");
   await expect(page.getByTestId("treasury-chart")).toBeVisible();
+  // Sous-onglets : recettes attendues (versements calculés, dont un en retard), charges, ressources humaines, réel.
+  await page.getByTestId("treasury-tab-recettes").click();
+  await expect(page.getByTestId("treasury-pay")).toContainText("en retard");
+  await page.getByTestId("treasury-tab-rh").click();
+  await expect(page.getByTestId("rules-hr")).toContainText("Alternance communication");
+  await expect(page.getByTestId("hr-total")).toContainText("€");
+  await page.getByTestId("new-rule-hr").click();
+  await page.getByTestId("rule-label").fill("Chargé·e de mission alimentation (CDD)");
+  await page.getByTestId("rule-amount").fill("2800");
+  await page.getByTestId("rule-start").fill(ym(2));
+  await page.getByTestId("rule-end").fill(ym(8));
+  await page.getByTestId("rule-notes").fill("remplacement congé maternité");
+  await page.getByTestId("rule-submit").click();
+  await expect(page.getByText("Ressource ajoutée")).toBeVisible();
+  await expect(page.getByTestId("rules-hr")).toContainText("remplacement congé maternité");
+  await page.getByTestId("treasury-tab-reel").click();
+  await expect(page.getByTestId("treasury-actuals")).toBeVisible();
+  await page.getByTestId("treasury-tab-plan").click();
   const before = Number(await page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value"));
   // Une règle mensuelle de plus : chaque mois baisse d'autant.
   await page.getByTestId("new-rule").click();
@@ -28,12 +46,13 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   await page.getByTestId("rule-amount").fill("1000");
   await page.getByTestId("rule-start").fill(ym(0));
   await page.getByTestId("rule-submit").click();
-  await expect(page.getByText("Règle ajoutée")).toBeVisible();
-  await expect(page.getByTestId("treasury-rules")).toContainText("Maintenance informatique");
+  await expect(page.getByText("Charge ajoutée")).toBeVisible();
   await expect(page.getByTestId("row-out-Prestataires")).toBeVisible();
+  await expect.poll(async () => page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value")).not.toBe(String(before));
   const after = Number(await page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value"));
   expect(before - after).toBe(2000); // deux mois écoulés (mois de départ et le suivant) × 1 000 €
   // Un flux ponctuel : seul son mois bouge.
+  const m3before = Number(await page.getByTestId(`balance-${ym(3)}`).getAttribute("data-value"));
   await page.getByTestId("new-rule").click();
   await page.getByTestId("rule-direction-in").click();
   await page.getByTestId("rule-label").fill("Remboursement formation OPCO");
@@ -41,26 +60,32 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   await pick(page, "rule-period", "Une fois");
   await page.getByTestId("rule-start").fill(ym(3));
   await page.getByTestId("rule-submit").click();
-  await expect(page.getByText("Règle ajoutée")).toBeVisible();
+  await expect(page.getByText("Charge ajoutée")).toBeVisible();
   await expect(page.getByTestId("row-in-Autres encaissements")).toContainText("4 000");
+  await expect.poll(async () => page.getByTestId(`balance-${ym(3)}`).getAttribute("data-value")).not.toBe(String(m3before));
   expect(Number(await page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value"))).toBe(after); // avant le mois du flux : rien ne bouge
-  // Décocher une règle la sort du plan sans la supprimer.
+  // Onglet Charges : décocher une ligne la sort du plan sans la supprimer ; le commentaire se lit.
+  await page.getByTestId("treasury-tab-charges").click();
   const rule = page.locator('[data-testid^=rule-][data-label="Maintenance informatique"]');
-  await rule.locator("[data-testid^=rule-active-]").uncheck();
-  await expect(page.getByTestId("row-out-Prestataires")).toHaveCount(0);
   await expect(rule).toBeVisible();
-  // Un changement qui ne vaut qu'à partir d'un mois (embauche, loyer qui augmente) : l'ancien montant reste avant.
-  const salaires = page.locator('[data-testid^=rule-][data-label="Salaires et charges sociales"]');
-  await salaires.locator("[data-testid^=rule-edit-]").click();
-  await page.getByTestId("rule-amount").fill("37000");
+  await rule.locator("[data-testid^=rule-active-]").uncheck();
+  await expect(page.getByTestId("rules-out")).toContainText("Loyer des locaux");
+  await page.getByTestId("treasury-tab-plan").click();
+  await expect(page.getByTestId("row-out-Prestataires")).toHaveCount(0);
+  // Un changement qui ne vaut qu'à partir d'un mois (loyer qui augmente) : l'ancien montant reste avant.
+  await page.getByTestId("treasury-tab-charges").click();
+  const loyer = page.locator('[data-testid^=rule-][data-label="Loyer des locaux"]');
+  await loyer.locator("[data-testid^=rule-edit-]").click();
+  await page.getByTestId("rule-amount").fill("2600");
   await page.getByTestId("rule-from-mode").check();
   await page.getByTestId("rule-from").fill(ym(4));
   await page.getByTestId("rule-submit").click();
   await expect(page.getByText(/Nouveau montant à partir de/)).toBeVisible();
-  await expect(page.locator('[data-testid^=rule-][data-label="Salaires et charges sociales"]')).toHaveCount(2);
-  const row = page.getByTestId("row-out-Salaires et charges");
-  await expect(row).toContainText("33 500");
-  await expect(row).toContainText("37 000");
+  await expect(page.locator('[data-testid^=rule-][data-label="Loyer des locaux"]')).toHaveCount(2);
+  await page.getByTestId("treasury-tab-plan").click();
+  const row = page.getByTestId("row-out-Loyer et charges locatives");
+  await expect(row).toContainText("2 400");
+  await expect(row).toContainText("2 600");
   // Solde de départ : tout le plan se décale ; un seuil haut fait passer des mois sous le seuil.
   await page.getByTestId("treasury-opening").click();
   await page.getByTestId("opening-balance").fill("20000");

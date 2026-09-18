@@ -85,11 +85,13 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
     }] : []),
     ...(ctx.materiel ? [{
       id: "materiel" as const,
-      label: "Matériel",
+      label: "Prêts",
       items: [
-        { label: "Inventaire", href: "/materiel", path: "/materiel", absent: ["vue"] },
-        { label: "Prêts en cours", href: "/materiel?vue=prets", path: "/materiel", present: ["vue"] },
+        { label: "Prêts en cours", href: "/materiel/prets", path: "/materiel/prets", absent: ["vue"] },
+        { label: "Prêts terminés", href: "/materiel/prets?vue=termines", path: "/materiel/prets", present: ["vue"] },
+        { label: "Inventaire du matériel", href: "/materiel", path: "/materiel" },
       ],
+      also: ["/materiel/pret"],
     }] : []),
     {
       id: "demandes",

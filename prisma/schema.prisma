@@ -87,6 +87,7 @@ model Person {
   contactLists       ContactList[]      @relation("ContactListOwner")
   membershipsCreated Membership[]       @relation("MembershipCreator")
   cashRulesCreated   CashRule[]         @relation("CashRuleCreator")
+  cashRules          CashRule[]         @relation("CashRulePerson")
   loans              Loan[]             @relation("LoanBorrower")
   loansCreated       Loan[]             @relation("LoanCreator")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
@@ -738,6 +739,9 @@ model Settings {
 model CashRule {
   id          String   @id @default(cuid())
   label       String
+  kind        String   @default("flow") // flow (charge ou recette) | hr (ressource humaine : une personne ou un poste, son coût mensuel chargé)
+  personId    String? // ressource humaine de l'équipe (facultatif : un poste à pourvoir n'a pas encore de personne)
+  person      Person?  @relation("CashRulePerson", fields: [personId], references: [id], onDelete: SetNull)
   direction   String // in (encaissement) | out (décaissement)
   category    String // libellé libre, regroupe les lignes du plan (Salaires et charges, Loyer, Fonctionnement…)
   amount      Float

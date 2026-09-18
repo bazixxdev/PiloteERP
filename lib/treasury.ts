@@ -31,7 +31,8 @@ export function monthLabel(m: Month, long = false): string {
   return new Date(y, mo - 1, 1).toLocaleDateString("fr-FR", long ? { month: "long", year: "numeric" } : { month: "short", year: "2-digit" });
 }
 
-export type CashRuleInput = { id: string; label: string; direction: string; category: string; amount: number; period: string; startMonth: string; endMonth: string | null; active: boolean };
+export type CashRuleInput = { id: string; label: string; direction: string; category: string; amount: number; period: string; startMonth: string; endMonth: string | null; active: boolean; kind?: string };
+export const HR_CATEGORY = "Salaires et charges";
 // Un flux dérivé des dossiers : versement attendu, facture, engagement, cotisation.
 export type DerivedFlow = { key: string; label: string; direction: "in" | "out"; category: string; amount: number; month: Month; late?: boolean; href?: string; hint?: string };
 
@@ -116,13 +117,13 @@ export async function loadDerivedFlows(from: Month): Promise<DerivedFlow[]> {
   }
   for (const d of dues) {
     if (d.amount <= 0) continue;
-    out.push({ key: `due:${d.id}`, label: `Cotisation ${d.year} — ${d.organisation?.name ?? [d.contact?.firstName, d.contact?.lastName].filter(Boolean).join(" ")}`, direction: "in", category: "Cotisations à régler", amount: d.amount, month: from, href: `/adherents?annee=${d.year}&statut=due`, hint: "placée sur le premier mois : à encaisser" });
+    out.push({ key: `due:${d.id}`, label: `Cotisation ${d.year} — ${d.organisation?.name ?? [d.contact?.firstName, d.contact?.lastName].filter(Boolean).join(" ")}`, direction: "in", category: "Cotisations", amount: d.amount, month: from, href: `/adherents?annee=${d.year}&statut=due`, hint: "placée sur le premier mois : à encaisser" });
   }
   return out;
 }
 
 export async function loadCashRules() {
-  return prisma.cashRule.findMany({ orderBy: [{ direction: "asc" }, { category: "asc" }, { label: "asc" }] });
+  return prisma.cashRule.findMany({ include: { person: { select: { id: true, name: true } } }, orderBy: [{ direction: "asc" }, { category: "asc" }, { label: "asc" }] });
 }
 
 // Export CSV du plan (point-virgule, BOM).
@@ -136,4 +137,72 @@ export function planToCsv(plan: Plan): string {
   lines.push(["Total décaissements", "", ...plan.outTotals.map(num), num(plan.totalOut)].join(";"));
   lines.push(["Solde fin de mois", "", ...plan.balances.map(num), ""].join(";"));
   return "﻿" + lines.join("\n");
+}
+
+// ——— Le réel (retour de Gaël, 18/09) : ce qui s'est passé, mois par mois, lu dans le grand livre importé (fichier ou
+// Pennylane, écritures datées), rangé dans les catégories du plan d'après le compte. Pas de relevé bancaire dans le prototype :
+// le réel est comptable, pas bancaire — on le dit à l'écran. ———
+export const ACCOUNT_CATEGORIES: { prefix: string; category: string; direction: "in" | "out" }[] = [
+  { prefix: "64", category: HR_CATEGORY, direction: "out" },
+  { prefix: "613", category: "Loyer et charges locatives", direction: "out" },
+  { prefix: "614", category: "Loyer et charges locatives", direction: "out" },
+  { prefix: "622", category: "Prestataires", direction: "out" },
+  { prefix: "625", category: "Déplacements", direction: "out" },
+  { prefix: "63", category: "Impôts et taxes", direction: "out" },
+  { prefix: "66", category: "Remboursement d'emprunt", direction: "out" },
+  { prefix: "60", category: "Fonctionnement", direction: "out" },
+  { prefix: "61", category: "Fonctionnement", direction: "out" },
+  { prefix: "62", category: "Fonctionnement", direction: "out" },
+  { prefix: "65", category: "Autres décaissements", direction: "out" },
+  { prefix: "67", category: "Autres décaissements", direction: "out" },
+  { prefix: "70", category: "Prestations et ventes", direction: "in" },
+  { prefix: "74", category: "Versements des financeurs", direction: "in" },
+  { prefix: "756", category: "Cotisations", direction: "in" },
+  { prefix: "76", category: "Produits financiers", direction: "in" },
+  { prefix: "75", category: "Autres encaissements", direction: "in" },
+  { prefix: "77", category: "Autres encaissements", direction: "in" },
+];
+export function accountCategory(account: string): { category: string; direction: "in" | "out" } | null {
+  const a = account.trim();
+  // Le préfixe le plus long l'emporte (613 avant 61).
+  const hit = ACCOUNT_CATEGORIES.filter((x) => a.startsWith(x.prefix)).sort((x, y) => y.prefix.length - x.prefix.length)[0];
+  return hit ? { category: hit.category, direction: hit.direction } : a.startsWith("6") ? { category: "Autres décaissements", direction: "out" } : a.startsWith("7") ? { category: "Autres encaissements", direction: "in" } : null;
+}
+
+export type ActualCell = { month: Month; category: string; direction: "in" | "out"; amount: number };
+// Le réel par mois et catégorie sur une fenêtre de mois, depuis les écritures datées des snapshots du grand livre (la source
+// qui compte est celle des paramètres, `realizedSource` = ledger ; sinon on prend ce qu'il y a : fichier, puis Pennylane).
+export async function loadActuals(months: Month[]): Promise<{ cells: ActualCell[]; source: string | null }> {
+  const years = Array.from(new Set(months.map((m) => Number(m.slice(0, 4)))));
+  const lines = await prisma.ledgerLine.findMany({ where: { year: { in: years } }, select: { source: true, accountNumber: true, detail: true } });
+  if (lines.length === 0) return { cells: [], source: null };
+  const source = lines.some((l) => l.source === "pennylane") ? "pennylane" : lines[0].source;
+  const set = new Set(months);
+  const map = new Map<string, ActualCell>();
+  for (const l of lines.filter((x) => x.source === source)) {
+    const cat = accountCategory(l.accountNumber);
+    if (!cat) continue;
+    let entries: { date?: string; debit?: number; credit?: number }[] = [];
+    try { entries = JSON.parse(l.detail ?? "[]"); } catch { entries = []; }
+    for (const e of entries) {
+      const m = (e.date ?? "").slice(0, 7);
+      if (!set.has(m)) continue;
+      const amount = cat.direction === "out" ? (e.debit ?? 0) - (e.credit ?? 0) : (e.credit ?? 0) - (e.debit ?? 0);
+      const key = `${m}|${cat.direction}|${cat.category}`;
+      const c = map.get(key) ?? { month: m, category: cat.category, direction: cat.direction, amount: 0 };
+      c.amount += amount; map.set(key, c);
+    }
+  }
+  return { cells: Array.from(map.values()), source };
+}
+
+// « D'habitude » : la moyenne mensuelle du réel par catégorie sur les trois derniers mois pleins — proposée à la saisie d'une
+// charge ou d'une recette.
+export function usualAmounts(cells: ActualCell[], months: Month[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (months.length === 0) return out;
+  const by = new Map<string, number>();
+  for (const c of cells) if (months.includes(c.month)) by.set(`${c.direction}|${c.category}`, (by.get(`${c.direction}|${c.category}`) ?? 0) + c.amount);
+  for (const [k, v] of by) out[k] = Math.round(v / months.length);
+  return out;
 }

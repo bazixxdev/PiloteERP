@@ -19,12 +19,11 @@ import { attachmentInclude } from "@/lib/attachments";
 
 // Matériel et prêts (module « materiel », 18/09) : l'inventaire (disponible = quantité − sorti), le registre des prêts en
 // cours avec les retours en retard, la fiche d'un matériel en panneau (?materiel=) avec son historique.
-export default async function MaterielPage({ searchParams }: { searchParams: Promise<{ vue?: string; q?: string; categorie?: string; dispo?: string; materiel?: string }> }) {
+export default async function MaterielPage({ searchParams }: { searchParams: Promise<{ q?: string; categorie?: string; dispo?: string; materiel?: string }> }) {
   const sp = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!instanceHas(settings, "materiel")) notFound();
   const rw = canManageEquipment(me);
-  const loansView = sp.vue === "prets";
   const [items, loans, categories, people, organisations, editions] = await Promise.all([
     loadEquipment({ q: sp.q, category: sp.categorie, onlyAvailable: sp.dispo === "1", includeRetired: rw }),
     loadOpenLoans(), equipmentCategories(),
@@ -35,36 +34,16 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
   const open = sp.materiel ? await loadEquipmentOne(sp.materiel) : null;
   const openFiles = open ? await prisma.attachment.findMany({ where: { equipmentId: open.id }, include: attachmentInclude, orderBy: { createdAt: "desc" } }) : [];
   const late = loans.filter((l) => isLate(l));
-  const closeHref = `/materiel${loansView ? "?vue=prets" : ""}`;
+  const closeHref = "/materiel";
   const openOut = open ? open.loans.filter((l) => !l.returnedAt).reduce((n, l) => n + l.quantity, 0) : 0;
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Package className="size-5 text-primary" aria-hidden />{loansView ? "Prêts en cours" : "Matériel"}</span>}
-        subtitle={<>{items.filter((i) => i.state !== "retired").length} matériel{items.length > 1 ? "s" : ""} · {loans.length} prêt{loans.length > 1 ? "s" : ""} en cours{late.length ? <span className="text-danger"> · {late.length} retour{late.length > 1 ? "s" : ""} en retard</span> : ""}</>}
+        title={<span className="inline-flex items-center gap-2"><Package className="size-5 text-primary" aria-hidden />Inventaire du matériel</span>}
+        subtitle={<>{items.filter((i) => i.state !== "retired").length} matériel{items.length > 1 ? "s" : ""} · <Link href="/materiel/prets" className="text-primary hover:underline">{loans.length} prêt{loans.length > 1 ? "s" : ""} en cours</Link>{late.length ? <span className="text-danger"> · {late.length} retour{late.length > 1 ? "s" : ""} en retard</span> : ""}</>}
         actions={rw ? <NewEquipmentDialog categories={categories} /> : undefined}
       />
-      {loansView ? (
-        <div className="rounded-md border bg-card">
-          {loans.length === 0 ? <div className="p-4"><EmptyState title="Aucun prêt en cours" hint="Tout est rentré. Un prêt s'enregistre depuis l'inventaire (« Prêter »)." icon={<Package className="size-5" />} /></div> : (
-            <table className="w-full text-[13px]" data-testid="loans-table">
-              <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="px-4 py-1.5">Matériel</th><th className="px-2 py-1.5">À qui</th><th className="px-2 py-1.5">Pour</th><th className="px-2 py-1.5">Sorti le</th><th className="px-2 py-1.5">Retour attendu</th><th className="px-2 py-1.5"></th></tr></thead>
-              <tbody className="divide-y">
-                {loans.map((l) => (
-                  <tr key={l.id} className={cn("align-top", isLate(l) && "bg-danger-soft/40")} data-testid={`loan-${l.id}`} data-late={isLate(l) ? "1" : "0"}>
-                    <td className="px-4 py-1.5"><Link href={`/materiel/pret/${l.id}`} className="font-medium text-primary hover:underline" data-testid={`loan-fiche-link-${l.id}`}>{l.equipment.name}</Link>{l.quantity > 1 && <span className="text-muted-foreground"> × {l.quantity}</span>}<span className="ml-1 font-mono text-[10px] text-muted-foreground">P-{String(l.number).padStart(4, "0")}</span>{l.notes && <div className="text-[11px] text-muted-foreground">{l.notes}</div>}</td>
-                    <td className="px-2 py-1.5 text-xs">{borrowerName(l)}</td>
-                    <td className="px-2 py-1.5 text-xs">{l.edition ? <Link href={`/edition/${l.edition.id}`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> : <span className="text-muted-foreground">—</span>}</td>
-                    <td className="px-2 py-1.5 text-xs whitespace-nowrap">{fmtDate(l.outAt)}</td>
-                    <td className={cn("px-2 py-1.5 text-xs whitespace-nowrap", isLate(l) && "font-semibold text-danger")}>{l.dueAt ? fmtDate(l.dueAt) : <span className="text-muted-foreground">—</span>}{isLate(l) && " · en retard"}</td>
-                    <td className="px-2 py-1.5 text-right whitespace-nowrap"><ReturnButton loanId={l.id} label={l.equipment.name} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ) : (
+      {(
         <div className="rounded-md border bg-card">
           <EquipmentToolbar q={sp.q ?? ""} category={sp.categorie ?? ""} categories={categories} available={sp.dispo === "1"} />
           {items.length === 0 ? <div className="p-4"><EmptyState title="Aucun matériel" hint={sp.q || sp.categorie || sp.dispo ? "Rien ne correspond." : rw ? "Ajoutez le matériel prêtable : vidéoprojecteur, kakemonos, enceinte…" : "L'inventaire se tient par la direction, la RAF ou l'assistant·e."} icon={<Package className="size-5" />} /></div> : (

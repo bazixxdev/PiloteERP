@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canManageTreasury } from "@/lib/rights";
-import { addMonths, DIRECTIONS, isMonth, PERIODS } from "@/lib/treasury";
+import { addMonths, DIRECTIONS, HR_CATEGORY, isMonth, PERIODS } from "@/lib/treasury";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 const DENIED = "La trésorerie se tient par la direction ou la RAF (droit « Tient la trésorerie »).";
@@ -15,10 +15,12 @@ async function guard() {
   return { me, denied: canManageTreasury(me) ? null : DENIED };
 }
 
-export type CashRuleForm = { label: string; direction: string; category: string; amount: number | string; period: string; startMonth: string; endMonth?: string | null; notes?: string | null; active?: boolean };
+export type CashRuleForm = { label: string; direction: string; category: string; amount: number | string; period: string; startMonth: string; endMonth?: string | null; notes?: string | null; active?: boolean; kind?: string; personId?: string | null };
 
-function validate(input: CashRuleForm): { ok: true; data: { label: string; direction: string; category: string; amount: number; period: string; startMonth: string; endMonth: string | null; notes: string | null } } | { ok: false; error: string } {
-  const label = clean(input.label); if (!label) return { ok: false, error: "Donnez un libellé." };
+function validate(input: CashRuleForm): { ok: true; data: { label: string; direction: string; category: string; amount: number; period: string; startMonth: string; endMonth: string | null; notes: string | null; kind: string; personId: string | null } } | { ok: false; error: string } {
+  // Une ressource humaine : toujours un décaissement mensuel dans « Salaires et charges ».
+  if (input.kind === "hr") input = { ...input, direction: "out", category: HR_CATEGORY, period: "monthly" };
+  const label = clean(input.label); if (!label) return { ok: false, error: input.kind === "hr" ? "Donnez le nom de la personne ou du poste." : "Donnez un libellé." };
   if (!DIRECTIONS.some((d) => d.value === input.direction)) return { ok: false, error: "Sens inconnu." };
   const category = clean(input.category) ?? (input.direction === "in" ? "Autres encaissements" : "Autres décaissements");
   const amount = Number(String(input.amount).replace(/\s/g, "").replace(",", "."));
@@ -28,7 +30,7 @@ function validate(input: CashRuleForm): { ok: true; data: { label: string; direc
   const endMonth = clean(input.endMonth);
   if (endMonth && !isMonth(endMonth)) return { ok: false, error: "Mois de fin invalide (AAAA-MM)." };
   if (endMonth && endMonth < input.startMonth) return { ok: false, error: "Le mois de fin précède le début." };
-  return { ok: true, data: { label, direction: input.direction, category, amount, period: input.period, startMonth: input.startMonth, endMonth: input.period === "once" ? null : endMonth, notes: clean(input.notes) } };
+  return { ok: true, data: { label, direction: input.direction, category, amount, period: input.period, startMonth: input.startMonth, endMonth: input.period === "once" ? null : endMonth, notes: clean(input.notes), kind: input.kind === "hr" ? "hr" : "flow", personId: input.personId || null } };
 }
 
 export async function createCashRule(input: CashRuleForm): Promise<Result<{ id: string }>> {

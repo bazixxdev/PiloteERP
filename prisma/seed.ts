@@ -1081,7 +1081,6 @@ async function main() {
   await prisma.settings.update({ where: { id: 1 }, data: { cashOpeningBalance: 148500, cashOpeningMonth: ym, cashAlertThreshold: 30000 } });
   const rafId = byName("Nadia Ferrand").id;
   for (const r of [
-    { label: "Salaires et charges sociales", direction: "out", category: "Salaires et charges", amount: 33500, period: "monthly", notes: "charges comprises, hors postes financés sur conventions (paie du 28)" },
     { label: "Loyer des locaux", direction: "out", category: "Loyer et charges locatives", amount: 2400, period: "monthly" },
     { label: "Fonctionnement courant", direction: "out", category: "Fonctionnement", amount: 3200, period: "monthly", notes: "fournitures, télécoms, déplacements, frais bancaires" },
     { label: "Remboursement du prêt (Banque des Territoires)", direction: "out", category: "Remboursement d'emprunt", amount: 1250, period: "monthly", endMonth: `${year + 1}-06` },
@@ -1091,6 +1090,17 @@ async function main() {
     { label: "Subvention de fonctionnement Région (solde 2026)", direction: "in", category: "Subvention de fonctionnement", amount: 38000, period: "once", startMonth: `${year}-${String(new Date().getMonth() + 2 > 12 ? 12 : new Date().getMonth() + 2).padStart(2, "0")}` },
     { label: "FDVA fonctionnement (État)", direction: "in", category: "Subvention de fonctionnement", amount: 12000, period: "quarterly", notes: "quatre versements dans l'année" },
   ]) await prisma.cashRule.create({ data: { startMonth: ym, ...r, createdById: rafId } });
+  // Ressources humaines : une ligne par personne (coût mensuel chargé), une alternance qui s'arrête, un poste à pourvoir.
+  for (const [name, amount, extra] of [
+    ["Claire Vasseur", 4600, {}], ["Nadia Ferrand", 3500, {}], ["Léa Morin", 1600, { notes: "temps partiel 80 %" }], ["Julien Barbot", 3300, {}], ["Sophie Delaunay", 3200, {}],
+    ["Thomas Guérin", 2800, {}], ["Camille Aubert", 2700, { notes: "financé à 50 % sur la convention FSE" }], ["Maxime Roussel", 2700, {}], ["Hugo Lemaire", 2600, {}], ["Inès Cabral", 2600, {}],
+    ["Élise Fontaine", 2600, {}], ["Romain Tessier", 2500, {}],
+  ] as [string, number, { notes?: string; endMonth?: string }][]) {
+    const person = people.find((p) => p.name === name);
+    await prisma.cashRule.create({ data: { kind: "hr", personId: person?.id ?? null, label: name, direction: "out", category: "Salaires et charges", amount, period: "monthly", startMonth: `${year - 1}-01`, ...extra, createdById: rafId } });
+  }
+  await prisma.cashRule.create({ data: { kind: "hr", label: "Alternance communication", direction: "out", category: "Salaires et charges", amount: 1100, period: "monthly", startMonth: `${year}-09`, endMonth: `${year + 1}-08`, notes: "contrat d'apprentissage, un an", createdById: rafId } });
+  await prisma.cashRule.create({ data: { kind: "hr", label: "Chargé·e de mission transition (poste à pourvoir)", direction: "out", category: "Salaires et charges", amount: 3100, period: "monthly", startMonth: `${year + 1}-03`, notes: "CDI, recrutement en cours — financé sur la convention Région 2027", createdById: rafId } });
 
   // Matériel et prêts (module « materiel », 18/09) : l'inventaire prêtable, deux prêts en cours (dont un en retard), un rendu.
   const eq = async (name: string, category: string, quantity: number, location: string, extra: { reference?: string; state?: string; value?: number; notes?: string } = {}) => prisma.equipment.create({ data: { name, category, quantity, location, ...extra } });
@@ -1166,9 +1176,35 @@ async function main() {
   if (sen01 && soiree) {
     push("SEN-01-SOIREE", "6234", "Cadeaux, trophées", [{ d: "2026-11-20", tiers: "Trophées du Centre", lib: "Trophées Prix ESS", amt: 640 }, { d: "2026-11-20", tiers: "Traiteur Les Saveurs", lib: "Cocktail de remise", amt: 1180 }]);
     await prisma.analyticTag.create({ data: { code: "SEN-01-SOIREE", targetKind: "action", targetId: soiree.id, note: "Code du comptable pour la soirée de remise." } });
+    await prisma.analyticTag.create({ data: { code: "FONC", targetKind: "ignore", note: "Fonctionnement (salaires, loyer, prêt…) : hors éditions ; sert au réel de la trésorerie." } });
   }
   push("FONCT-2026", "6132", "Locations immobilières", [{ d: "2026-01-05", tiers: "SCI Les Halles", lib: "Loyer janvier", amt: 1850 }, { d: "2026-02-05", tiers: "SCI Les Halles", lib: "Loyer février", amt: 1850 }]);
   push("TESS-ETUDE", "6226", "Honoraires", [{ d: "2026-07-02", tiers: "Bureau d'études Mobilis", lib: "Étude mobilité — acompte", amt: 3200 }]);
+  // Le fonctionnement des trois derniers mois (code analytique FONC, à ignorer côté éditions) : salaires, loyer, fonctionnement,
+  // prêt, subvention de fonctionnement, prestations — le « réel » de la trésorerie et les montants « d'habitude ».
+  const fonc = new Map<string, (typeof ledger)[number]>();
+  for (let k = 3; k >= 1; k--) {
+    const dm = new Date(nowD.getFullYear(), nowD.getMonth() - k, 1);
+    const ymk = `${dm.getFullYear()}-${String(dm.getMonth() + 1).padStart(2, "0")}`;
+    const yr = dm.getFullYear();
+    // Une ligne par compte et par exercice (contrainte d'unicité), les mois dans le détail.
+    const line = (account: string, label: string, day: string, tiers: string, lib: string, amt: number, product = false) => {
+      const key = `${account}|${yr}`;
+      let l = fonc.get(key);
+      if (!l) { l = { analyticCode: "FONC", accountNumber: account, accountLabel: label, year: yr, debit: 0, credit: 0, detail: [] }; fonc.set(key, l); ledger.push(l); }
+      l.detail.push({ date: `${ymk}-${day}`, piece: `${product ? "VT" : "AC"}-${pieceNo.n++}`, thirdParty: tiers, label: lib, debit: product ? 0 : amt, credit: product ? amt : 0 });
+      if (product) l.credit += amt; else l.debit += amt;
+    };
+    line("641", "Rémunérations du personnel", "28", "Paie", `Salaires ${ymk}`, 24200 + k * 150);
+    line("645", "Charges sociales", "28", "URSSAF", `Charges sociales ${ymk}`, 9300 + k * 60);
+    line("613", "Locations", "05", "SCI du Val", `Loyer ${ymk}`, 2400);
+    line("606", "Fournitures", "12", "Bureau Vallée", "Fournitures et consommables", 640 + k * 45);
+    line("626", "Télécommunications", "15", "Orange", "Téléphonie et internet", 380);
+    line("625", "Déplacements", "20", "SNCF", "Déplacements équipe", 910 - k * 70);
+    line("661", "Charges d'intérêts", "10", "Banque des Territoires", "Échéance prêt", 1250);
+    line("706", "Prestations de services", "18", "Formation ESS Loire", "Formation facturée", 3100 + k * 200, true);
+    if (k === 2) line("74", "Subventions d'exploitation", "22", "État (FDVA)", "FDVA fonctionnement — versement", 12000, true);
+  }
   await prisma.ledgerLine.createMany({ data: ledger.map((l) => ({ source: "file", analyticCode: l.analyticCode, accountNumber: l.accountNumber, accountLabel: l.accountLabel, year: l.year, debit: l.debit, credit: l.credit, detail: JSON.stringify(l.detail), importedAt: d(-4) })) });
   await prisma.ledgerImport.create({ data: { source: "file", year: 2026, fileName: "grand-livre-analytique-2026-08.xlsx", lines: ledger.length, rows: ledger.reduce((s, l) => s + l.detail.length, 0), byId: raf.id, importedAt: d(-4) } });
 

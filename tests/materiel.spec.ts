@@ -84,8 +84,16 @@ test("l'assistante ajoute du matériel ; un pilote l'emprunte pour un projet, le
   await expect(page).toHaveURL(/\/materiel\/pret\//);
   await expect(page.getByTestId("loan-who")).toContainText("Bastien Lefort");
   await expect(page.getByTestId("loan-who")).toContainText("Coop'Alim Berry");
-  // Prêts en cours : le retard du vidéoprojecteur, le retour libère.
-  await page.goto("/materiel?vue=prets");
+  // Prêts en cours (l'entrée du module) : « Nouveau prêt » choisit le matériel ; le retard du vidéoprojecteur, le retour libère.
+  await page.goto("/materiel/prets");
+  await page.getByTestId("new-loan").click();
+  await pick(page, "loan-equipment", "Urne et boîte à idées");
+  await pick(page, "loan-person", "Maxime Roussel");
+  await page.getByTestId("loan-due").fill(ymd(2));
+  await page.getByTestId("loan-submit").click();
+  await expect(page).toHaveURL(/\/materiel\/pret\//);
+  await expect(page.getByTestId("loan-who")).toContainText("Maxime Roussel");
+  await page.goto("/materiel/prets");
   const loans = page.getByTestId("loans-table");
   await expect(loans).toContainText("Paperboard sur pied");
   const lateRow = page.locator('[data-testid^=loan-][data-late="1"]');
@@ -96,6 +104,9 @@ test("l'assistante ajoute du matériel ; un pilote l'emprunte pour un projet, le
   await lateRow.locator("[data-testid^=loan-return-confirm-]").click();
   await expect(page.getByText(/retour enregistré/)).toBeVisible();
   await expect(page.locator('[data-testid^=loan-][data-late="1"]')).toHaveCount(0);
+  // Prêts terminés : le retour y est, avec son commentaire.
+  await page.goto("/materiel/prets?vue=termines");
+  await expect(page.getByTestId("closed-loans-table")).toContainText("télécommande manquante");
   // Le commentaire de retour se lit sur la fiche du prêt (rendu), modifiable.
   await page.goto("/materiel?q=epson");
   await page.locator("[data-testid^=equipment-open-]").first().click();

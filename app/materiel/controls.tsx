@@ -70,8 +70,11 @@ export function NewEquipmentDialog({ categories }: { categories: string[] }) {
 }
 
 // Prêter : à quelqu'un de l'équipe, à un contact de l'annuaire, ou à une organisation ; pour une édition (facultatif) ; retour attendu.
-export function LoanDialog({ equipment, people, organisations, editions, compact }: { equipment: { id: string; name: string; available: number }; people: { id: string; name: string }[]; organisations: { id: string; name: string }[]; editions: EditionOpt[]; compact?: boolean }) {
+export function LoanDialog({ equipment: fixed, equipments, people, organisations, editions, compact }: { equipment?: { id: string; name: string; available: number }; equipments?: { id: string; name: string; available: number }[]; people: { id: string; name: string }[]; organisations: { id: string; name: string }[]; editions: EditionOpt[]; compact?: boolean }) {
   const [open, setOpen] = useState(false);
+  // Depuis l'inventaire, le matériel est fixé ; depuis « Prêts », on le choisit dans le dialogue.
+  const [equipmentId, setEquipmentId] = useState(fixed?.id ?? "");
+  const equipment = fixed ?? (equipments ?? []).find((e) => e.id === equipmentId) ?? { id: "", name: "", available: 1 };
   const [to, setTo] = useState<"person" | "contact" | "organisation">("person");
   const [personId, setPersonId] = useState("");
   const [contactId, setContactId] = useState("");
@@ -84,12 +87,13 @@ export function LoanDialog({ equipment, people, organisations, editions, compact
   const loadContacts = async () => { if (contacts) return; const r = await fetch(withBase("/contacts/export?annuaire=1")); setContacts(await r.json()); };
   // Une organisation emprunte toujours par quelqu'un : ses contacts, ou un nouveau créé au passage.
   const orgContacts = (contacts ?? []).filter((c) => c.organisationId === organisationId);
-  const ok = Boolean(f.dueAt) && (to === "person" ? Boolean(personId) : to === "contact" ? Boolean(contactId) : Boolean(organisationId) && (Boolean(contactId) || Boolean(newContact.lastName.trim())));
+  const ok = Boolean(equipment.id) && Boolean(f.dueAt) && (to === "person" ? Boolean(personId) : to === "contact" ? Boolean(contactId) : Boolean(organisationId) && (Boolean(contactId) || Boolean(newContact.lastName.trim())));
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{compact ? <Button size="xs" variant="outline" disabled={equipment.available <= 0} title={equipment.available <= 0 ? "Tout est sorti" : "Prêter"} data-testid={`loan-open-${equipment.id}`}><HandHelping />Prêter</Button> : <Button size="sm" disabled={equipment.available <= 0} data-testid={`loan-open-${equipment.id}`}><HandHelping />Prêter</Button>}</DialogTrigger>
+      <DialogTrigger asChild>{!fixed ? <Button size="sm" data-testid="new-loan"><Plus />Nouveau prêt</Button> : compact ? <Button size="xs" variant="outline" disabled={equipment.available <= 0} title={equipment.available <= 0 ? "Tout est sorti" : "Prêter"} data-testid={`loan-open-${equipment.id}`}><HandHelping />Prêter</Button> : <Button size="sm" disabled={equipment.available <= 0} data-testid={`loan-open-${equipment.id}`}><HandHelping />Prêter</Button>}</DialogTrigger>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Prêter « {equipment.name} »</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{fixed ? `Prêter « ${equipment.name} »` : "Nouveau prêt"}</DialogTitle></DialogHeader>
+        {!fixed && <div className="grid gap-1 text-xs"><span className="font-semibold">Quel matériel</span><SearchableSelect options={(equipments ?? []).map((e) => ({ value: e.id, label: e.name, hint: e.available > 0 ? `${e.available} dispo` : "tout sorti" }))} value={equipmentId} onChange={setEquipmentId} emptyOption="— choisir dans l'inventaire —" searchFrom={1} aria-label="Matériel" className="h-9 w-full" data-testid="loan-equipment" />{equipment.id && equipment.available <= 0 && <span className="text-danger">Tout est sorti : enregistrez un retour d&apos;abord.</span>}</div>}
         <div className="flex gap-1 rounded-md bg-muted p-0.5 text-xs">
           {([["person", "À l'équipe"], ["contact", "À un contact"], ["organisation", "À une organisation"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setTo(k); setContactId(""); if (k !== "person") void loadContacts(); }} className={cn("flex-1 rounded px-2 py-1", to === k && "bg-card font-semibold shadow-sm")} data-testid={`loan-to-${k}`}>{l}</button>)}
         </div>

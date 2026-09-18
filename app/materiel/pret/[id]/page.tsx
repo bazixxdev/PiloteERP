@@ -61,7 +61,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   );
   return (
     <div className="p-4 md:p-6">
-      <div className="no-print mb-2"><Link href="/materiel?vue=prets" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" />Prêts en cours</Link></div>
+      <div className="no-print mb-2"><Link href="/materiel/prets" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" />Prêts en cours</Link></div>
       <div data-print-root data-testid="loan-fiche" data-status={l.returnedAt ? "returned" : late ? "late" : "open"}>
         <PageHeader
           title={<span className="inline-flex items-center gap-2"><Package className="size-5 text-primary" aria-hidden />Fiche de prêt <span className="font-mono text-base text-muted-foreground" data-testid="loan-number">{number}</span></span>}
