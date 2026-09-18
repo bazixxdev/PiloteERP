@@ -1,0 +1,24 @@
+# Unité paramétrée (lot I) : `systemctl enable --now pilote@cress`, `pilote@tlst`… Le dossier, les données et le journal suivent
+# le nom de l'instance ; le port vient du .env de l'instance (PORT=…, posé par deploy.sh).
+[Unit]
+Description=Pilote — instance %i (Next.js)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/%i-pilote
+EnvironmentFile=/var/www/%i-pilote/.env
+Environment=NODE_ENV=production
+Environment=HOME=/var/www/%i-pilote-data
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=3
+# Pas de journal verbeux : les accès sont dans nginx.
+StandardOutput=append:/var/log/%i-pilote.log
+StandardError=append:/var/log/%i-pilote.log
+
+[Install]
+WantedBy=multi-user.target

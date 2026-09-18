@@ -1,18 +1,30 @@
-# Mise en ligne de la démo (bazixx-vps)
+# Mise en ligne des instances (bazixx-vps)
 
-URL : https://cress.bazixx.fr/outilcli/cress/pilote (rideau `auth_basic`, hors moteurs de recherche).
+Une instance par client (lot I) : même code, son dossier, sa base, son port, son sous-chemin, son service. Ce qui la distingue est
+dans `deploy/instances/<instance>.env` (aucun secret : ils vivent dans le `.env` serveur, posé et complété par `deploy.sh`).
 
-## Installation initiale (une fois, en root sur `bazixx-vps`)
-1. `mkdir -p /var/www/cress-pilote /var/www/cress-pilote-data /var/www/cress-pilote-medias /var/www/maintenance`
-2. `cp deploy/maintenance.html /var/www/maintenance/__maintenance.html`
-3. `cp deploy/systemd/cress-pilote.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable cress-pilote`
-4. `cp deploy/nginx/cress.bazixx.fr.conf /etc/nginx/sites-available/ && ln -s ../sites-available/cress.bazixx.fr.conf /etc/nginx/sites-enabled/`
-5. `htpasswd -c /etc/nginx/.htpasswd-cress cress` (mot de passe transmis à part), `nginx -t && systemctl reload nginx`
-6. `certbot --nginx -d cress.bazixx.fr`
+| Instance | URL | Service | Port |
+|---|---|---|---|
+| `cress` | https://cress.bazixx.fr/outilcli/cress/pilote (rideau `auth_basic`, hors moteurs de recherche) | `pilote@cress` (ex-`cress-pilote`) | 3002 |
+| `tlst` | https://tlst.bazixx.fr/outilcli/tlst/pilote — **pas encore en ligne** (DNS et certificat à poser) | `pilote@tlst` | 3003 |
 
 ## À chaque mise à jour (depuis le poste de travail)
-`./deploy/deploy.sh` — et `./deploy/deploy.sh --seed` pour remettre la base de démo à zéro.
+`./deploy/deploy.sh <instance>` — et `./deploy/deploy.sh <instance> --seed` pour remettre la base de démo à zéro.
 
-Le script copie le code, construit dans un dossier à côté, sauvegarde la base SQLite dans `/var/backups/cress`, applique les migrations, bascule avec la page de maintenance, vérifie que l'application répond, sinon revient à la version précédente.
+Le script copie le code, construit dans un dossier à côté, sauvegarde la base (`pg_dump` dans `BACKUP_DIR`), applique les migrations,
+bascule avec la page de maintenance, vérifie que l'application répond, sinon revient à la version précédente. Le `.env` serveur
+reçoit `NEXT_PUBLIC_CLIENT` et `PORT` de l'instance ; le build embarque donc l'habillage du client (`config/clients/`).
 
-Base : SQLite sur disque (`/var/www/cress-pilote-data/prototype.db`) ; pièces jointes : `/var/www/cress-pilote-medias`. Postgres et stockage objet au passage V1.
+## Installation initiale d'une instance (une fois, en root sur `bazixx-vps`)
+1. Créer le DNS et la conf nginx : `cp deploy/nginx/<domaine>.conf /etc/nginx/sites-available/ && ln -s ../sites-available/<domaine>.conf /etc/nginx/sites-enabled/`
+2. `htpasswd -c /etc/nginx/.htpasswd-<instance> <utilisateur>` (mot de passe transmis à part), `nginx -t && systemctl reload nginx`
+3. `certbot --nginx -d <domaine>`
+4. `cp deploy/maintenance.html /var/www/maintenance/__maintenance.html` (une fois pour le serveur)
+5. `./deploy/deploy.sh <instance> --seed` depuis le poste : le script crée le rôle et la base Postgres, le `.env`, installe l'unité
+   `pilote@.service` si elle manque, seed, build, démarre.
+
+## Passage de `cress-pilote` à `pilote@cress` (fait par `deploy.sh cress`)
+Au premier déploiement sous le nouveau nom, l'ancienne unité est arrêtée puis désactivée quand la nouvelle répond ; en cas
+d'échec, le script revient sur l'ancienne. Ensuite `rm /etc/systemd/system/cress-pilote.service && systemctl daemon-reload` à la main.
+
+Base : PostgreSQL local (`DBNAME` de l'instance, une par client) ; pièces jointes : `MEDIAS` de l'instance.

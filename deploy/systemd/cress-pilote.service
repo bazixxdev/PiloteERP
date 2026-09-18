@@ -1,3 +1,5 @@
+# Remplacé par pilote@.service (lot I) : deploy.sh cress bascule sur pilote@cress au premier déploiement réussi, puis cette unité
+# est désactivée et peut être retirée du serveur.
 [Unit]
 Description=Pilote — prototype CRESS Centre-Val de Loire (Next.js)
 After=network.target
