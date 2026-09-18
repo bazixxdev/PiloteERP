@@ -726,15 +726,15 @@ model Settings {
   // après ce passage est notifiée à ce moment-là, pas à la date théorique du palier.
   deadlineSyncAt            DateTime?
   timeRules                 String @default("")
-  // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee})
-  serverPathTemplate        String @default("\\\\cress\\Partage\\Action\\{code}\\{annee}")
+  // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee}) — posé par le seed du client (lot I).
+  serverPathTemplate        String @default("")
   teamIcsToken              String? // jeton du flux agenda équipe (.ics)
   apiToken                  String? // jeton des exports pour Excel / outils externes
   hoursPerDay               Float   @default(7) // coefficient heures → jours, avec son origine dans la notice
   // Jours de fonctionnement par mois (réunions transverses, café, entretiens…) déduits de la capacité du plan de charge (S14 : 9 j / 86).
   operatingDaysPerMonth     Float   @default(0)
   // Adresse de facturation écrite sur le bon pour accord (lot 3) : les factures y arrivent, pas chez le pilote.
-  billingEmail              String  @default("factures@cress-cvl.example")
+  billingEmail              String  @default("") // posée par le seed du client (lot I)
   billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.

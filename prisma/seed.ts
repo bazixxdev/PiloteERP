@@ -1,5 +1,6 @@
 // Données de démonstration : tout est fictif (personnes, montants, dates).
 import { PrismaClient } from "@prisma/client";
+import { client } from "../config/clients";
 import { REF_DEFAULTS } from "../lib/refs";
 import { DEFAULT_ROLES, serializePermissions } from "../lib/permissions";
 import { findOrCreateOrganisation } from "../lib/organisations";
@@ -128,6 +129,9 @@ async function main() {
       id: 1,
       teamIcsToken: randomBytes(18).toString("base64url"),
       apiToken: randomBytes(18).toString("base64url"),
+      serverPathTemplate: client.settings.serverPathTemplate,
+      billingEmail: client.settings.billingEmail,
+      modules: client.modules,
       timeRules:
         "Chaque salarié·e saisit ses heures chaque semaine, au plus tard le lundi suivant. Les réunions transverses (café du lundi, réunion d'équipe) vont sur « Fonctionnement ». Les congés et absences vont sur « Non travaillé ». La RAF verrouille le mois dans les dix jours qui suivent.",
     },
@@ -1032,7 +1036,7 @@ async function main() {
     { personId: director.id, senderId: leadB.id, kind: "info", title: "Pour information · Devis intervenant conférence 2 approuvé (600 €)", body: `Par ${leadB.name}, niveau 2.`, link: `/edition/${ed("TES-02").id}?onglet=budget`, createdAt: d(-97), readAt: d(-96) },
   ] });
 
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents,tresorerie,materiel" } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5 } });
 
   const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
   // Contacts et listes (18/09) : quelques personnes extérieures fictives, une liste « Réseau développeurs ESS » à Thomas
