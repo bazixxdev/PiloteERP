@@ -7,6 +7,9 @@ import { expect, type Locator, type Page } from "@playwright/test";
 export async function pick(page: Page, target: string | Locator, what: string | number | { value: string }) {
   const trigger = typeof target === "string" ? page.getByTestId(target) : target;
   const list = page.locator("[data-slot=select-list]");
+  // Une notification (sonner, en bas à droite) qui recouvre la liste intercepte le clic — et la souris posée dessus la fige.
+  // On la laisse s'effacer avant d'ouvrir (quelques secondes au plus).
+  await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10_000 }).catch(() => undefined);
   // Un clic peut tomber avant l'hydratation (page qui vient de se recharger) : on réessaie jusqu'à ce que la liste s'ouvre.
   await expect(async () => {
     if (!(await list.isVisible())) await trigger.click();

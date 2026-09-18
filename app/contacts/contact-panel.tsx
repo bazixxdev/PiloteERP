@@ -1,11 +1,12 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { AutoField } from "@/components/inline/auto-field";
 import { fmtDate } from "@/lib/format";
-import { tagsOf } from "@/lib/contacts";
+import { BREVO_STATUS, brevoAttributesOf, tagsOf } from "@/lib/contacts";
 import { ContactOrganisationPicker, DeleteContactButton } from "./panel-controls";
 
 type C = {
-  id: string; firstName: string | null; lastName: string; role: string | null; email: string | null; phone: string | null; address: string | null; postcode: string | null; city: string | null; tags: string; notes: string | null; leftAt: Date | null; organisationName: string | null; createdById: string | null; createdAt: Date;
+  id: string; firstName: string | null; lastName: string; role: string | null; email: string | null; phone: string | null; address: string | null; postcode: string | null; city: string | null; tags: string; notes: string | null; leftAt: Date | null; organisationName: string | null; createdById: string | null; createdAt: Date; brevoContactId: string | null; brevoStatus: string | null; brevoAttributes: string; brevoSyncedAt: Date | null;
   organisation: { id: string; name: string } | null;
   listItems: { role: string | null; list: { id: string; name: string } }[];
   lines: { id: string; edition: { id: string; year: number; project: { name: string } } }[];
@@ -45,7 +46,15 @@ export function ContactPanelBody({ contact: c, organisations, meId }: { contact:
         {c.conventions.length > 0 && <div>Conventions : {c.conventions.map((v) => <span key={v.id}> · <Link href={`/conventions/${v.id}`} className="text-primary hover:underline">{v.reference}</Link></span>)}</div>}
         <div className="text-muted-foreground">Créé le {fmtDate(c.createdAt)}{c.leftAt ? ` · parti·e le ${fmtDate(c.leftAt)}` : ""}</div>
       </section>
-      <DeleteContactButton id={c.id} own={c.createdById === meId} cited={c.lines.length + c.conventions.length > 0} />
+      {c.brevoContactId && (
+        <section className="grid gap-1 text-xs" data-testid="contact-brevo">
+          <h3 className="text-xs font-semibold">Brevo</h3>
+          <div><span className={c.brevoStatus === "active" ? "text-mint" : "rounded-sm bg-warning-soft px-1 text-warning"} title={BREVO_STATUS[c.brevoStatus ?? "active"]?.hint} data-testid="contact-brevo-status" data-value={c.brevoStatus}>{BREVO_STATUS[c.brevoStatus ?? "active"]?.label}</span> <span className="text-muted-foreground">· contact #{c.brevoContactId}{c.brevoSyncedAt ? ` · vu le ${fmtDate(c.brevoSyncedAt)}` : ""}</span></div>
+          {Object.keys(brevoAttributesOf(c)).length > 0 && <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]" data-testid="contact-brevo-attributes">{Object.entries(brevoAttributesOf(c)).map(([k, v]) => <Fragment key={k}><dt className="font-mono text-muted-foreground">{k}</dt><dd>{v}</dd></Fragment>)}</dl>}
+          {c.brevoStatus === "unsubscribed" && <p className="text-muted-foreground">{BREVO_STATUS.unsubscribed.hint}</p>}
+        </section>
+      )}
+      <DeleteContactButton id={c.id} own={c.createdById === meId} cited={c.lines.length + c.conventions.length > 0} brevo={c.brevoStatus === "active"} />
     </div>
   );
 }

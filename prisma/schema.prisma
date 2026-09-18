@@ -251,7 +251,9 @@ model Contact {
   primary          Boolean       @default(false) // contact principal de son organisation
   leftAt           DateTime?
   brevoContactId   String?       @unique
-  brevoStatus      String? // null = hors Brevo ; unsubscribed | blacklisted
+  brevoStatus      String? // null = hors Brevo ; active | unsubscribed (désinscrit·e, RGPD) | deleted (disparu·e de Brevo)
+  brevoAttributes  String        @default("{}") // attributs Brevo non repris dans les colonnes communes (JSON, nom → valeur)
+  brevoSyncedAt    DateTime?
   createdById      String?
   createdBy        Person?       @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt        DateTime      @default(now())
@@ -278,6 +280,11 @@ model ContactList {
   editionId   String?
   edition     Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
   fields      String   @default("[]")
+  // Connecteur Brevo : une liste `source = brevo` est le miroir d'une liste Brevo (membres tenus par la synchronisation, colonnes
+  // = attributs Brevo, en lecture) ; une liste `manual` envoyée vers Brevo garde l'identifiant de la liste créée là-bas.
+  source        String    @default("manual") // manual | brevo
+  brevoListId   Int?      @unique
+  brevoSyncedAt DateTime? // dernière synchronisation (source brevo) ou dernier envoi (source manual)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
   items       ContactListItem[]
@@ -703,6 +710,9 @@ model Settings {
   realizedSource            String  @default("raf")
   // Axes analytiques Pennylane retenus (libellés, séparés par des virgules) ; vide = toutes les lignes.
   pennylaneAxes             String  @default("")
+  // Connecteur Brevo (clé dans l'environnement, BREVO_API_KEY) : dernière synchronisation et son compte rendu.
+  brevoSyncedAt             DateTime?
+  brevoSyncReport           String?
 }
 
 // Réalisé comptable (lot D) : snapshot agrégé du grand livre analytique, par source (fichier importé, Pennylane…), rapproché

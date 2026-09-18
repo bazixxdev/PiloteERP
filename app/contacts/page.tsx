@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookUser, Users } from "lucide-react";
+import { BookUser, Send, Users } from "lucide-react";
 import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { UrlPanel } from "@/components/common/url-panel";
@@ -11,6 +11,8 @@ import { noteColor } from "@/lib/notes";
 import { loadEditionOpts } from "@/lib/tasks";
 import { canReadList, contactName, loadContactList, loadContactLists, loadContacts, tagsOf } from "@/lib/contacts";
 import { cn } from "@/lib/utils";
+import { brevoConfig } from "@/lib/brevo";
+import { canAdmin } from "@/lib/rights";
 import { ContactsToolbar, NewContactListDialog, NewContactDialog } from "./controls";
 import { ContactPanelBody } from "./contact-panel";
 import { ContactListView } from "./list-view";
@@ -20,7 +22,7 @@ import { ContactListView } from "./list-view";
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ liste?: string; contact?: string; q?: string; tag?: string }> }) {
   const sp = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
-  const [{ mine, shared }, editions, organisations] = await Promise.all([loadContactLists(me), loadEditionOpts(me, settings), prisma.organisation.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
+  const [{ mine, shared, brevo }, editions, organisations] = await Promise.all([loadContactLists(me), loadEditionOpts(me, settings), prisma.organisation.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
   const list = sp.liste ? await loadContactList(sp.liste) : null;
   if (sp.liste && (!list || !canReadList(me, list))) return <div className="p-6 text-sm text-muted-foreground">Liste introuvable, ou non partagée avec vous.</div>;
   const contacts = list ? [] : await loadContacts({ q: sp.q, tag: sp.tag });
@@ -60,11 +62,17 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               {shared.map((l) => listLink(l, l.owner.name))}
             </nav>
           )}
+          {brevo.length > 0 && (
+            <nav className="rounded-md border bg-card p-1.5" aria-label="Listes Brevo" data-testid="brevo-contact-lists">
+              <div className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground"><Send className="size-3" aria-hidden />Depuis Brevo · {brevo.length}</div>
+              {brevo.map((l) => listLink(l, l.description ?? undefined))}
+            </nav>
+          )}
         </div>
 
         <div className="min-w-0" data-testid="contacts-main" data-view={list ? "liste" : "annuaire"} data-name={list?.name}>
           {list ? (
-            <ContactListView list={list} meId={me.id} canEdit={list.ownerId === me.id} editions={editions} organisations={organisations} />
+            <ContactListView list={list} meId={me.id} canEdit={list.ownerId === me.id || (list.source === "brevo" && canAdmin(me))} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())} editions={editions} organisations={organisations} />
           ) : (
             <div className="rounded-md border bg-card">
               <div className="px-4 pb-2 pt-3"><h2 className="text-[19px] font-bold">Tous les contacts</h2><p className="text-[11px] text-muted-foreground">{contacts.length} contact{contacts.length > 1 ? "s" : ""}{sp.q || sp.tag ? " pour cette recherche" : ""} · interlocuteurs des financeurs et fournisseurs, invités, membres des réseaux.</p></div>

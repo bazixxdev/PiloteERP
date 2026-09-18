@@ -357,6 +357,15 @@ Gaël : chaque pilote tient des Excel de contacts (invités, réseau sur une th�
 - Seed : 6 contacts extérieurs, une liste « Réseau développeurs ESS » (pôle, colonnes Charte signée / Séminaire 2025 / Territoire) et une liste privée d'invités. Lexique : contact, liste de contacts. 3 tests `tests/contacts.spec.ts`. 60 tests.
 - Non fait, consigné : Brevo (sens Brevo → outil d'abord, puis « pousser cette liste vers Brevo »), HelloAsso via Adhérents, fusion de deux contacts, dédoublonnage assisté.
 
+### AE. Brevo (18/09) — fait
+
+Gaël : « fait 1 2 3 4 : à traiter en module ? » puis « Adhérents, Brevo etc. sont en fait un truc associé à cette fonction, en gros on crée un tableau custom qui vient se remplir ? » — réponse : oui pour la présentation (une liste peut avoir une source), non pour la donnée à règles (adhésions, prêts restent typées). « ok go brevo ».
+- **Connecteur** (`lib/brevo.ts`, repris d'erp-tlst) : clé `BREVO_API_KEY` dans l'environnement du serveur (jamais en base) ; sans clé, l'admin dit « non configuré » et l'import de fichier reste la voie. Faux Brevo pour les recettes (`tests/brevo-mock.mjs`, lancé par Playwright).
+- **Synchroniser** (Admin › Import / export › Brevo, `admin.manage`) : tous les contacts du compte → annuaire. Attributs reconnus vers les colonnes communes (PRENOM / NOM / SMS / SOCIETE / FONCTION / VILLE / CP / ADRESSE, et leurs variantes anglaises), le reste gardé tel quel (`brevoAttributes`, affiché dans la fiche). Rapprochement par identifiant Brevo puis e-mail ; **un contact connu est complété (cases vides), jamais écrasé** ; sans nom, il entre sous son e-mail. `emailBlacklisted` → **Désinscrit·e** ; disparu du compte → **Supprimé·e de Brevo** ; marqués, gardés (RGPD : l'humain tranche). Dernière synchro et compte rendu dans les paramètres.
+- **Suivre une liste Brevo** = un miroir ici (`ContactList.source = brevo`, `brevoListId`, visible de toute la CRESS, auteur = qui l'a suivie), à part dans la colonne de gauche (« Depuis Brevo ») ; membres tenus par la synchro (entrées et sorties), **attributs en colonnes** (`fields[].brevo`, en lecture, non retirables), colonnes propres et rôle toujours possibles par-dessus. Pas d'ajout / import / retrait à la main. « Mettre à jour » et « Ne plus suivre » (admin) sur la liste.
+- **Envoyer vers Brevo** (auteur de la liste ou admin, listes manuelles) : dialogue qui annonce ce qui part (avec e-mail), ce qui ne part pas (sans e-mail ; désinscrits / supprimés, jamais renvoyés). Première fois : liste créée dans le dossier « Pilote » (créé au besoin) ; puis contacts créés ou complétés (`updateEnabled`, seulement les attributs que le compte connaît), inscrits ; ceux retirés ici sortent de la liste Brevo (restent dans Brevo). Identifiant Brevo posé sur le contact au passage ; « dans Brevo depuis le … » dans l'en-tête.
+- Pas de synchro planifiée (un bouton ; cron plus tard si l'usage le demande), pas de fusion de contacts, pas de HelloAsso (viendra avec Adhérents).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

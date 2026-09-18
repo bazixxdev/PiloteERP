@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Plus, Settings2, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { Download, Plus, RefreshCw, Send, Settings2, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
 import { visibilityIcon } from "@/components/common/visibility-icon";
 import { addListField, addToList, deleteContactList, previewImport, removeFromList, removeListField, runImport, setItemValue, updateContactList, type ImportMapping, type ImportPreview } from "@/app/actions/contacts";
-import { CONTACT_COLUMNS, contactName, FIELD_TYPES, tagsOf, type ContactListFull, type ListField, type ListFieldType } from "@/lib/contacts";
+import { BREVO_STATUS, CONTACT_COLUMNS, contactName, FIELD_TYPES, tagsOf, type ContactListFull, type ListField, type ListFieldType } from "@/lib/contacts";
+import { pushListToBrevo, syncBrevo, unfollowBrevoList } from "@/app/actions/brevo";
+import { fmtDate } from "@/lib/format";
 import { VISIBILITIES } from "@/lib/modules";
 import { NOTE_COLORS, noteColor } from "@/lib/notes";
 import { withBase } from "@/lib/base-path";
@@ -29,8 +31,10 @@ function useRun(): [boolean, Run] {
 
 // Une liste de contacts : en-tête (nom, visibilité, projet, réglages), ligne compacte (compteur, ajouter, importer, exporter),
 // puis le tableau — colonnes communes, rôle dans la liste, colonnes propres modifiables en place.
-export function ContactListView({ list, canEdit, editions, organisations }: { list: ContactListFull; meId: string; canEdit: boolean; editions: EditionOpt[]; organisations: { id: string; name: string }[] }) {
+export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editions, organisations }: { list: ContactListFull; meId: string; canEdit: boolean; isAdmin: boolean; brevoConfigured: boolean; editions: EditionOpt[]; organisations: { id: string; name: string }[] }) {
   const [pending, run] = useRun();
+  const router = useRouter();
+  const mirror = list.source === "brevo"; // miroir d'une liste Brevo : membres et attributs tenus par la synchronisation
   const [q, setQ] = useState("");
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const rows = useMemo(() => { const n = norm(q.trim()); return n ? list.items.filter((i) => norm(`${contactName(i.contact)} ${i.contact.email ?? ""} ${i.contact.organisation?.name ?? i.contact.organisationName ?? ""} ${i.contact.city ?? ""} ${i.role ?? ""}`).includes(n)) : list.items; }, [q, list.items]);
@@ -47,18 +51,25 @@ export function ContactListView({ list, canEdit, editions, organisations }: { li
             <span className="inline-flex items-center gap-1" title={vis?.hint} data-testid={`contact-list-visibility-${list.id}`} data-value={list.visibility}><Icon className="size-3" aria-hidden />{vis?.label}</span>
             {list.edition ? <span>· <Link href={`/edition/${list.edition.id}`} className="text-primary hover:underline">{list.edition.project.name} · {list.edition.year}</Link></span> : <span>· sans projet</span>}
             {list.description && <span>· {list.description}</span>}
+            {mirror && <span data-testid="contact-list-mirror">· synchronisée {list.brevoSyncedAt ? `le ${fmtDate(list.brevoSyncedAt)}` : "pas encore"} · membres tenus par Brevo</span>}
+            {!mirror && list.brevoListId && <span data-testid="contact-list-pushed">· dans Brevo{list.brevoSyncedAt ? ` depuis le ${fmtDate(list.brevoSyncedAt)}` : ""}</span>}
             {!canEdit && <span>· en lecture</span>}
           </p>
         </div>
-        {canEdit && <ListSettings list={list} editions={editions} pending={pending} run={run} />}
+        <div className="flex flex-wrap items-center gap-2">
+          {mirror && isAdmin && <Button variant="outline" size="sm" className="text-xs" disabled={pending} onClick={() => run(() => syncBrevo(), (r) => toast.success(`Brevo : ${(r.data as { contacts: number }).contacts} contacts lus`))} data-testid="brevo-sync-list"><RefreshCw className="size-3.5" />Mettre à jour</Button>}
+          {mirror && isAdmin && <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" disabled={pending} onClick={() => { if (confirm(`Ne plus suivre « ${list.name} » ? Les contacts restent dans l'annuaire.`)) run(() => unfollowBrevoList(list.id), () => router.push("/contacts")); }} data-testid="brevo-unfollow">Ne plus suivre</Button>}
+          {canEdit && <ListSettings list={list} editions={editions} pending={pending} run={run} />}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 border-y px-4 py-2">
         <span className="text-sm text-muted-foreground" data-testid="contact-list-count">{list.items.length} contact{list.items.length > 1 ? "s" : ""}</span>
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer…" className="h-8 w-44 text-xs" aria-label="Filtrer la liste" data-testid="contact-list-filter" />
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm"><a href={withBase(`/contacts/export?liste=${list.id}`)} data-testid="contact-list-export"><Download />Exporter (CSV)</a></Button>
-          {canEdit && <ImportDialog list={list} />}
-          {canEdit && <AddToListDialog list={list} organisations={organisations} pending={pending} run={run} />}
+          <Button asChild variant="outline" size="sm"><a href={withBase(`/contacts/export?liste=${list.id}`)} title="Exporter la liste en CSV (colonnes communes et propres)" data-testid="contact-list-export"><Download />Exporter</a></Button>
+          {canEdit && !mirror && brevoConfigured && <PushDialog list={list} />}
+          {canEdit && !mirror && <ImportDialog list={list} />}
+          {canEdit && !mirror && <AddToListDialog list={list} organisations={organisations} pending={pending} run={run} />}
         </div>
       </div>
       {/* Le tableau reste, même vide : on voit ses colonnes (et celles qu'on vient d'ajouter). */}
@@ -68,22 +79,22 @@ export function ContactListView({ list, canEdit, editions, organisations }: { li
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
                 <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th><th className="px-2 py-1.5">Rôle dans la liste</th>
-                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`}>{f.label}{canEdit && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
-                {canEdit && <th className="px-2 py-1.5"></th>}
+                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`} title={f.brevo ? "Attribut Brevo, en lecture" : undefined}>{f.label}{canEdit && !f.brevo && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
+                {canEdit && !mirror && <th className="px-2 py-1.5"></th>}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier." : "Rien ne correspond au filtre."}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? "Aucun contact dans cette liste Brevo pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
               {rows.map((i) => {
                 const c = i.contact;
                 return (
                   <tr key={c.id} data-testid={`contact-item-${c.id}`}>
-                    <td className="px-4 py-1.5"><Link href={`/contacts?liste=${list.id}&contact=${c.id}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline">{contactName(c)}</Link>{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}{tagsOf(c).length > 0 && <div className="mt-0.5 flex flex-wrap gap-1">{tagsOf(c).map((t) => <span key={t} className="rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t}</span>)}</div>}</td>
+                    <td className="px-4 py-1.5"><Link href={`/contacts?liste=${list.id}&contact=${c.id}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline">{contactName(c)}</Link>{c.brevoStatus && c.brevoStatus !== "active" && <span className="ml-1.5 inline-block whitespace-nowrap rounded-sm bg-warning-soft px-1 text-[10px] text-warning" title={BREVO_STATUS[c.brevoStatus]?.hint} data-testid={`brevo-status-${c.id}`}>{BREVO_STATUS[c.brevoStatus]?.label}</span>}{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}{tagsOf(c).length > 0 && <div className="mt-0.5 flex flex-wrap gap-1">{tagsOf(c).map((t) => <span key={t} className="rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t}</span>)}</div>}</td>
                     <td className="px-2 py-1.5 text-xs">{c.organisation?.name ?? c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-2 py-1.5 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && <br />}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
                     <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>
-                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit} pending={pending} run={run} /></td>)}
-                    {canEdit && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
+                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.brevo} pending={pending} run={run} /></td>)}
+                    {canEdit && !mirror && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
                   </tr>
                 );
               })}
@@ -102,7 +113,7 @@ function ValueCell({ listId, contactId, field, value, canEdit, pending, run }: {
   const save = (next: string | boolean | null) => run(() => setItemValue(listId, contactId, field.key, next));
   const testId = `cell-${field.key}-${contactId}`;
   if (field.type === "bool") return <input type="checkbox" checked={checked} disabled={!canEdit || pending} onChange={(e) => { setChecked(e.target.checked); save(e.target.checked); }} className="size-4 rounded border-border accent-primary" aria-label={field.label} data-testid={testId} />;
-  if (!canEdit) return <span className="text-xs">{typeof value === "string" && value ? value : <span className="text-muted-foreground">—</span>}</span>;
+  if (!canEdit) return <span className="text-xs" data-testid={testId} data-value={typeof value === "string" ? value : ""}>{typeof value === "string" && value ? value : <span className="text-muted-foreground">—</span>}</span>;
   if (field.type === "select") return (
     <Select value={typeof value === "string" ? value : ""} disabled={pending} onChange={(e) => save(e.target.value || null)} className="h-7 min-w-[8rem] text-xs" aria-label={field.label} data-testid={testId}>
       <option value="">—</option>
@@ -136,7 +147,7 @@ function ListSettings({ list, editions, pending, run }: { list: ContactListFull;
           </fieldset>
           <div className="grid gap-1.5 border-t pt-2">
             <span className="font-semibold">Colonnes propres à cette liste</span>
-            {list.fields.length > 0 && <ul className="grid gap-0.5 text-[11px] text-muted-foreground">{list.fields.map((f) => <li key={f.key}>· {f.label} <span className="opacity-70">({FIELD_TYPES.find((t) => t.value === f.type)?.label}{f.options ? ` : ${f.options.join(", ")}` : ""})</span></li>)}</ul>}
+            {list.fields.length > 0 && <ul className="grid gap-0.5 text-[11px] text-muted-foreground">{list.fields.map((f) => <li key={f.key}>· {f.label} <span className="opacity-70">({f.brevo ? "attribut Brevo" : FIELD_TYPES.find((t) => t.value === f.type)?.label}{f.options ? ` : ${f.options.join(", ")}` : ""})</span></li>)}</ul>}
             <form className="grid gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addListField(list.id, { label, type, options }), () => { setLabel(""); setOptions(""); toast.success("Colonne ajoutée"); }); }} data-testid="add-field-form">
               <div className="grid grid-cols-[1fr_auto] gap-1.5">
                 <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom de la colonne (Charte, Séminaire 2025…)" className="h-8" data-testid="add-field-label" />
@@ -228,6 +239,35 @@ function ImportDialog({ list }: { list: ContactListFull }) {
             <div className="flex justify-between"><Button size="sm" variant="ghost" onClick={reset}>Autre fichier</Button><Button size="sm" disabled={pending || !Object.values(mapping).some((v) => v === "lastName" || v === "email")} onClick={go} data-testid="import-run">Importer {preview.total} ligne{preview.total > 1 ? "s" : ""}</Button></div>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Envoyer vers Brevo : la liste y est créée (dossier « Pilote ») ou mise à jour ; on dit avant ce qui partira et ce qui ne partira pas.
+function PushDialog({ list }: { list: ContactListFull }) {
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const withEmail = list.items.filter((i) => i.contact.email);
+  const blocked = withEmail.filter((i) => i.contact.brevoStatus === "unsubscribed" || i.contact.brevoStatus === "deleted").length;
+  const sendable = withEmail.length - blocked;
+  const noEmail = list.items.length - withEmail.length;
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} title={list.brevoListId ? "Mettre à jour la liste dans Brevo" : "Envoyer la liste vers Brevo"} data-testid="contact-list-push"><Send />{list.brevoListId ? "Brevo · à jour" : "Vers Brevo"}</Button>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>{list.brevoListId ? "Mettre à jour dans Brevo" : "Envoyer vers Brevo"}</DialogTitle></DialogHeader>
+        <div className="grid gap-2 text-xs" data-testid="push-summary">
+          <p>{list.brevoListId ? <>La liste Brevo liée est mise à jour avec le contenu de « {list.name} ».</> : <>Une liste « {list.name} » est créée dans Brevo (dossier « Pilote »).</>}</p>
+          <ul className="grid gap-1 text-muted-foreground">
+            <li>· <b className="text-foreground">{sendable}</b> contact{sendable > 1 ? "s" : ""} avec e-mail : créé{sendable > 1 ? "s" : ""} ou complété{sendable > 1 ? "s" : ""} dans Brevo (nom, prénom, téléphone, structure…), puis inscrit{sendable > 1 ? "s" : ""} à la liste.</li>
+            {noEmail > 0 && <li>· {noEmail} sans e-mail : ignoré{noEmail > 1 ? "s" : ""}.</li>}
+            {blocked > 0 && <li>· {blocked} désinscrit{blocked > 1 ? "s" : ""} ou supprimé{blocked > 1 ? "s" : ""} dans Brevo : jamais renvoyé{blocked > 1 ? "s" : ""} (RGPD).</li>}
+            {list.brevoListId && <li>· Un contact retiré ici sort de la liste Brevo (il reste dans Brevo).</li>}
+          </ul>
+        </div>
+        <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Annuler</Button><Button size="sm" disabled={pending || sendable === 0} onClick={() => start(async () => { const r = await pushListToBrevo(list.id); if (!r.ok) { toast.error(r.error); return; } const d = r.data!; toast.success(`Brevo : ${d.sent} contact${d.sent > 1 ? "s" : ""} envoyé${d.sent > 1 ? "s" : ""}${d.removed ? ` · ${d.removed} retiré${d.removed > 1 ? "s" : ""}` : ""}`); setOpen(false); router.refresh(); })} data-testid="push-run">{list.brevoListId ? "Mettre à jour" : "Envoyer"}</Button></div>
       </DialogContent>
     </Dialog>
   );

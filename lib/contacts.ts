@@ -7,7 +7,8 @@ import type { Viewer } from "./scope";
 // (« Charte », « Séminaire 2025 », « Territoire »…) sans refaire un tableur.
 
 export type ListFieldType = "bool" | "text" | "date" | "select";
-export type ListField = { key: string; label: string; type: ListFieldType; options?: string[] };
+// `brevo` : colonne posée par la synchronisation Brevo (un attribut du compte) — en lecture, ne se retire pas.
+export type ListField = { key: string; label: string; type: ListFieldType; options?: string[]; brevo?: boolean };
 export const FIELD_TYPES: { value: ListFieldType; label: string }[] = [
   { value: "bool", label: "Case à cocher" },
   { value: "text", label: "Texte court" },
@@ -18,7 +19,7 @@ export const FIELD_TYPES: { value: ListFieldType; label: string }[] = [
 export function parseFields(s: string | null | undefined): ListField[] {
   try {
     const v = JSON.parse(s || "[]");
-    return Array.isArray(v) ? v.filter((f) => f && typeof f.key === "string" && typeof f.label === "string" && ["bool", "text", "date", "select"].includes(f.type)).map((f) => ({ key: f.key, label: f.label, type: f.type, options: Array.isArray(f.options) ? f.options.map(String) : undefined })) : [];
+    return Array.isArray(v) ? v.filter((f) => f && typeof f.key === "string" && typeof f.label === "string" && ["bool", "text", "date", "select"].includes(f.type)).map((f) => ({ key: f.key, label: f.label, type: f.type, options: Array.isArray(f.options) ? f.options.map(String) : undefined, ...(f.brevo ? { brevo: true } : {}) })) : [];
   } catch { return []; }
 }
 export const serializeFields = (fields: ListField[]) => JSON.stringify(fields);
@@ -26,6 +27,14 @@ export function parseValues(s: string | null | undefined): Record<string, string
   try { const v = JSON.parse(s || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; }
 }
 export const fieldKey = (label: string) => label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "champ";
+
+// Statut Brevo d'un contact (null = hors Brevo).
+export const BREVO_STATUS: Record<string, { label: string; hint: string }> = {
+  active: { label: "Dans Brevo", hint: "Contact présent dans Brevo, abonné." },
+  unsubscribed: { label: "Désinscrit·e", hint: "S'est désinscrit·e dans Brevo (RGPD) : il ou elle n'est plus renvoyé·e vers Brevo, mais reste dans l'annuaire — à vous de trancher." },
+  deleted: { label: "Supprimé·e de Brevo", hint: "N'apparaît plus dans Brevo : gardé·e ici, pas renvoyé·e." },
+};
+export const brevoAttributesOf = (c: { brevoAttributes: string }): Record<string, string> => { try { const v = JSON.parse(c.brevoAttributes || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; } };
 
 export const contactName = (c: { firstName?: string | null; lastName: string }) => [c.firstName, c.lastName].filter(Boolean).join(" ");
 export const tagsOf = (c: { tags: string }) => c.tags.split(",").map((t) => t.trim()).filter(Boolean);
@@ -53,12 +62,14 @@ export function canReadList(me: Viewer, list: { ownerId: string; visibility: str
 
 const listInclude = { owner: { select: { id: true, name: true, poleId: true } }, edition: { select: { id: true, year: true, project: { select: { name: true } } } }, _count: { select: { items: true } } };
 
-// Mes listes, puis celles que d'autres partagent avec moi.
+// Mes listes, celles que d'autres partagent avec moi, et les miroirs de listes Brevo (à part, quel que soit leur auteur).
 export async function loadContactLists(me: Viewer) {
   const rows = await prisma.contactList.findMany({ include: listInclude, orderBy: [{ name: "asc" }] });
-  const mine = rows.filter((l) => l.ownerId === me.id);
-  const shared = rows.filter((l) => l.ownerId !== me.id && canReadList(me, l));
-  return { mine, shared };
+  const brevo = rows.filter((l) => l.source === "brevo" && canReadList(me, l));
+  const own = rows.filter((l) => l.source !== "brevo");
+  const mine = own.filter((l) => l.ownerId === me.id);
+  const shared = own.filter((l) => l.ownerId !== me.id && canReadList(me, l));
+  return { mine, shared, brevo };
 }
 
 export type ContactRow = Awaited<ReturnType<typeof loadContacts>>[number];

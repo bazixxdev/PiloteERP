@@ -22,6 +22,8 @@ import { modulesOf } from "@/lib/modules";
 import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
 import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
+import { brevoConfig } from "@/lib/brevo";
+import { BrevoPanel } from "./brevo-forms";
 import { SOURCE_LABEL } from "@/lib/ledger";
 import { AccountActions, OutboxRow } from "./account-forms";
 import { PersonPanelBody, personPanelTitle } from "./person-panel";
@@ -343,6 +345,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <ApiCard apiToken={settings.apiToken} />
           </Section>
+          {current === "donnees" && (
+            <Section title="Brevo" description="Le connecteur lit tous les contacts du compte Brevo et leurs attributs dans l'annuaire (Projets et financements › Contacts), et tient en miroir les listes Brevo suivies. Sens Brevo → outil ; l'inverse se fait liste par liste (« Envoyer vers Brevo »). Désinscrits et supprimés sont marqués, jamais effacés.">
+              {rw ? <BrevoPanel configured={!!brevoConfig()} syncedAt={settings.brevoSyncedAt ? fmtDate(settings.brevoSyncedAt) : null} report={settings.brevoSyncReport} inBrevo={await prisma.contact.count({ where: { brevoContactId: { not: null } } })} /> : <p className="text-xs text-muted-foreground">Réservé à l&apos;administration.</p>}
+            </Section>
+          )}
           {ledger && (
             <Section title="Réalisé comptable" description="Le grand livre analytique du logiciel de compta, importé par exercice et rapproché des éditions par le code analytique. Réimporter un exercice remplace ses lignes (aucun doublon). Colonnes attendues : code analytique, compte, débit, crédit ; libellé, date, pièce, tiers facultatifs." testId="ledger-admin" className="lg:col-span-2">
               {rw ? (
