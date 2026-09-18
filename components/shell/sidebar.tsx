@@ -5,7 +5,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BookUser, CalendarDays, CalendarClock, Clock, FileSignature, HandCoins, Inbox, Landmark, PanelLeftClose, PanelLeftOpen, Package, Settings, ChevronRight, Users, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { withBase } from "@/lib/base-path";
+import { Logo } from "./logo";
+import { branding } from "@/lib/branding";
 import { locate, type NavSection } from "@/lib/navigation";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -140,11 +141,9 @@ export function Sidebar({ tree, account }: { tree: NavSection[]; account: Accoun
     >
       {/* Logo réduit d'un cinquième et davantage d'air avant la première rubrique (maquette du 17/09). */}
       <div className={cn("flex items-center pb-6 pt-1", collapsed ? "flex-col gap-2" : "flex-col gap-2 lg:flex-row lg:justify-between lg:px-1")}>
-        <Link href="/portefeuille" className="flex items-center justify-center" aria-label="CRESS Centre-Val de Loire · Portefeuille">
-          {/* eslint-disable-next-line @next/next/no-img-element -- PNG statique servi tel quel : l'optimiseur d'images ne gère pas le basePath */}
-          <img src={withBase("/logo-cress.png")} alt="CRESS Centre-Val de Loire" width={465} height={187} className={cn("h-auto w-[120px]", collapsed ? "hidden" : "hidden lg:block")} />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={withBase("/logo-cress-mark.png")} alt="" width={190} height={177} className={cn("h-auto w-8", collapsed ? "block" : "lg:hidden")} />
+        <Link href="/portefeuille" className="flex items-center justify-center" aria-label={`${branding().longName} · Portefeuille`}>
+          <Logo variant="color" className={cn("w-[120px]", collapsed ? "hidden" : "hidden lg:block")} />
+          <Logo variant="mark" decorative className={cn("w-8", collapsed ? "block" : "lg:hidden")} />
         </Link>
         <button
           type="button"

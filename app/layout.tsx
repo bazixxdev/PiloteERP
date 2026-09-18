@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Nunito } from "next/font/google";
 import "./globals.css";
+import { branding, fontStack } from "@/lib/branding";
 import { Sidebar } from "@/components/shell/sidebar";
 import { PageBreadcrumb, Topbar } from "@/components/shell/topbar";
 import { getAccountProps } from "@/components/shell/account-data";
@@ -15,10 +17,23 @@ import { navTreeFor } from "@/lib/navigation";
 import { canTreatRequest, wideViewLabel } from "@/lib/requests";
 import { Suspense } from "react";
 
+// Police Google des titres quand le client en déclare une (TLST : Nunito). next/font exige un appel statique par police :
+// on charge celles que les clients connus utilisent ; un client à pile locale ne s'en sert pas.
+const nunito = Nunito({ subsets: ["latin"], weight: ["600", "700"], display: "swap", variable: "--font-google-nunito" });
+const GOOGLE_FONTS: Record<string, { className: string; variable: string }> = { Nunito: { className: nunito.variable, variable: "var(--font-google-nunito)" } };
+
+const brand = branding();
 export const metadata: Metadata = {
-  title: "Pilote · CRESS Centre-Val de Loire",
-  description: "Prototype de l'outil de pilotage des projets",
+  title: `Pilote · ${brand.longName}`,
+  description: "Outil de pilotage des projets",
 };
+
+// Tokens du thème et polices du client (lot I), posés sur :root par-dessus les valeurs produit de globals.css.
+function fontCss(spec: typeof brand.fonts.titles): string {
+  return "google" in spec ? `${GOOGLE_FONTS[spec.google]?.variable ?? `"${spec.google}"`}, ${spec.fallback}` : fontStack(spec);
+}
+const themeStyle = `:root { ${brand.themeCss} --font-titles: ${fontCss(brand.fonts.titles)}; --font-sans: ${fontCss(brand.fonts.sans)}; }`;
+const fontClasses = [brand.fonts.titles, brand.fonts.sans].map((f) => ("google" in f ? GOOGLE_FONTS[f.google]?.className ?? "" : "")).join(" ").trim() || undefined;
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +81,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // renvoyé tout le reste vers /connexion ; ici on ne fait que choisir l'habillage.
   if (!(await getCurrentPersonOrNull())) {
     return (
-      <html lang="fr">
+      <html lang="fr" className={fontClasses}>
+        <head><style dangerouslySetInnerHTML={{ __html: themeStyle }} /></head>
         <body className="antialiased">
           <main className="min-h-screen">{children}</main>
           <Toaster position="bottom-right" richColors />
@@ -76,7 +92,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   }
   const c = await counters();
   return (
-    <html lang="fr">
+    <html lang="fr" className={fontClasses}>
+        <head><style dangerouslySetInnerHTML={{ __html: themeStyle }} /></head>
       <body className="antialiased">
         <div className="flex h-screen overflow-hidden">
           {/* useSearchParams (entrée active selon ?vue=, ?section=…) exige une frontière Suspense dans un layout. */}

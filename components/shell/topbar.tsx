@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { Breadcrumb } from "./breadcrumb";
 import { prisma } from "@/lib/db";
 import { NotificationsBell } from "./notifications-bell";
-import { withBase } from "@/lib/base-path";
+import { Logo } from "./logo";
 import { getAccountProps } from "./account-data";
 import { getNavEditions } from "./nav-editions";
 import { fmtDate, dayjs } from "@/lib/format";
@@ -30,8 +30,7 @@ export async function Topbar() {
   return (
     <header className="flex h-[56px] shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:px-6 print:hidden">
       <div className="flex min-w-0 flex-1 items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <span className="md:hidden"><img src={withBase("/logo-cress-mark.png")} alt="CRESS" width={190} height={177} className="h-auto w-6" /></span>
+        <span className="md:hidden"><Logo variant="mark" className="w-6" /></span>
         <QuickSearch editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` }))} />
       </div>
       <div className="flex items-center gap-2">

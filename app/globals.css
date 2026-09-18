@@ -63,7 +63,8 @@
 }
 
 :root {
-  /* Charte V2 (maquette du 13/09/2026, inspirée du site CRESS Pays de la Loire) :
+  /* Thème produit de repli : le client le surcharge dans le layout (lib/branding.ts, config/clients/, lot I).
+     Charte V2 (maquette du 13/09/2026, inspirée du site CRESS Pays de la Loire) :
      bleu profond #004D6D (actions, titres), corail #EA5427 (accents), menthe #85C8B5 (touches),
      crème #F8E9C6 (accueil), encre #243D49 (texte), papier #F7F7F3 (fond des écrans).
      Alertes : ocre #8C601B et terre #A24533 ; confirmation : vert #226552. */
