@@ -12,7 +12,8 @@
     "test": "playwright test",
     "postinstall": "prisma generate",
     "screenshots": "tsx scripts/screenshots.ts",
-    "test:unit": "tsx --test tests/unit/*.test.ts"
+    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "check:vocab": "node scripts/check-vocab.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
