@@ -10,7 +10,8 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
   const d = (n: number) => today.add(n, "day").toDate();
 
   const equipe = await prisma.pole.create({ data: { name: "Équipe" } });
-  const missions = await Promise.all(["Nourrir le territoire", "Faire lieu et faire lien", "Transmettre et réparer"].map((name, i) => prisma.mission.create({ data: { name, order: i } })));
+  // Raisons d'être = les trois axes du tiers-lieu tels qu'erp-tlst les référençait (seule chose que sa base contenait, 18/09).
+  const missions = await Promise.all(["Compétences", "Alimentation", "Lieu partagé"].map((name, i) => prisma.mission.create({ data: { name, order: i } })));
   const timeCodes = await Promise.all([
     { code: "FONCT", label: "Fonctionnement (réunions, vie du lieu)", kind: "operating" },
     { code: "GEST", label: "Gestion administrative et financière", kind: "operating" },
@@ -38,9 +39,9 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
   const mairie = await prisma.organisation.create({ data: { name: "Ville de Loches", kinds: "authority,partner" } });
 
   const projets = [
-    { name: "Jardin partagé", code: "JAR-01", pilot: chloe, mission: 0, envelope: 8000, steps: ["Semis de printemps", "Chantier participatif", "Fête des récoltes"] },
-    { name: "Cantine solidaire", code: "CAN-01", pilot: chloe, mission: 0, envelope: 15000, steps: ["Ouverture de saison", "Repas de quartier", "Bilan de l'année"] },
-    { name: "Ateliers réparation", code: "REP-01", pilot: david, mission: 2, envelope: 4000, steps: ["Atelier vélo", "Atelier électroménager", "Atelier couture"] },
+    { name: "Jardin partagé", code: "JAR-01", pilot: chloe, mission: 1, envelope: 8000, steps: ["Semis de printemps", "Chantier participatif", "Fête des récoltes"] },
+    { name: "Cantine solidaire", code: "CAN-01", pilot: chloe, mission: 1, envelope: 15000, steps: ["Ouverture de saison", "Repas de quartier", "Bilan de l'année"] },
+    { name: "Ateliers réparation", code: "REP-01", pilot: david, mission: 0, envelope: 4000, steps: ["Atelier vélo", "Atelier électroménager", "Atelier couture"] },
   ];
   const editions = [];
   for (const [i, p] of projets.entries()) {
