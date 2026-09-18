@@ -161,7 +161,8 @@ Brevo · Adhérents + HelloAsso · Trésorerie (plan, sous-onglets, ressources h
 |---|---|
 | Notes de frais natives | à décider plus tard — ne pas reproposer spontanément (consigne de Gaël) |
 | Entra ID | plus tard |
-| Multi-instance (lot I, version TLST) | après la revue de Gaël sur `audit/initial-review` |
+| Multi-instance (lot I, version TLST) | **engagé le 18/09** : design dans `docs/superpowers/specs/2026-09-18-lot-i-multi-instance-design.md` (fichier client versionné : nom, logos couleur / blanc / marque / favicon, thème complet, polices, vocabulaire ; seed par client ; `deploy.sh <instance>`) |
+| **Écran admin › Apparence** (nom, couleurs avec aperçu, logos et favicon téléversés, polices, surchargeant le fichier client en base) | **feuille de route** — Gaël (18/09) : « je ne compte pas avoir que 2 clients » ; le lot I prépare le point d'entrée unique (`lib/branding.ts`). Le vocabulaire reste dans le fichier. |
 | Trésorerie : relevés bancaires importés / rapprochement, reconduction automatique des récurrents | consigné (le « d'habitude » y répond à la main) |
 | Brevo / HelloAsso : synchronisation planifiée (cron) | consigné (bouton pour l'instant) |
 | Matériel : réservation à l'avance, rappel automatique du retour, photos | consigné |
