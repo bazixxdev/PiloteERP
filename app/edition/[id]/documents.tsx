@@ -63,7 +63,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <div className="min-w-0 flex-1"><AutoField model="docLink" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} /></div>
-                    {d.codirOnly && <span className="inline-flex items-center gap-0.5 rounded-sm bg-coral/10 px-1 text-[10px] text-coral"><Lock className="size-2.5" />{`${V.codir.one}`}</span>}
+                    {d.codirOnly && <span className="inline-flex items-center gap-0.5 rounded-sm bg-coral/10 px-1 text-[10px] text-coral"><Lock className="size-2.5" />{V.codir.one}</span>}
                   </div>
                   {!web && <AutoField model="docLink" id={d.id} field="url" type="text" value={d.url} readOnly={!rw} inputClassName="font-mono text-xs text-muted-foreground" />}
                 </div>

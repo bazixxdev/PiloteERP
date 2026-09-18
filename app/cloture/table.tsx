@@ -12,6 +12,7 @@ import { lockMonth, lockMonthForAll } from "@/app/actions/time";
 import { remindTime } from "@/app/actions/notifications";
 import { fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { V, cap } from "@/lib/vocab";
 
 export type ClotureRow = { id: string; name: string; pole: string; hours: number; expected: number; daysDone: number; daysExpected: number; missingDays: number; declaredWeeks: number; weeks: number; status: "locked" | "declared" | "complete" | "partial" | "missing"; lockedBy: string | null; remindedAt: string | null; detailHref: string };
 
@@ -47,7 +48,7 @@ export function ClotureTable({ month, rows }: { month: string; rows: ClotureRow[
       <table className="w-full text-sm" data-testid="cloture-table" data-group={testId}>
         <thead className="bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
           <tr>
-            <th className="px-4 py-2.5">Personne</th><th className="px-3 py-2.5">Pôle</th>
+            <th className="px-4 py-2.5">Personne</th><th className="px-3 py-2.5">{cap(V.pole)}</th>
             <th className="px-3 py-2.5 text-right" title="Jours attendus par le rythme de la personne qui portent au moins une saisie">Saisies · jours</th>
             <th className="px-3 py-2.5 text-right">Heures</th>
             <th className="px-3 py-2.5 text-right" title="Semaines déclarées complètes par la personne">Déclaration · semaines</th>

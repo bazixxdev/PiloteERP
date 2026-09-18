@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Presentation } from "@/app/cafe/presentation";
 import { DecisionForm } from "./decision-form";
 import { SessionTimer } from "./session-timer";
+import { V, cap, le, de, au, pl } from "@/lib/vocab";
 
 // Écran CODIR (EF-H2) : seulement ce qui appelle une décision — validations, jalons dépassés, livrables proches,
 // enveloppes et temps en écart — et la décision se consigne sur l'édition sans quitter l'écran (EF-F4).
@@ -25,8 +26,8 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   if (!isCodir(me)) {
     return (
       <div className="p-4 md:p-6">
-        <PageHeader title="Écran CODIR" />
-        <EmptyState title="Réservé au CODIR" hint="Direction, RAF et responsables de pôle. Choisissez « Claire Vasseur » dans le sélecteur pour le voir." />
+        <PageHeader title={`Écran ${V.codir.one}`} />
+        <EmptyState title={`Réservé ${au(V.codir)}`} hint={`${cap(V.direction)}, ${V.raf.one} et responsables ${de(V.pole)}. Choisissez « Claire Vasseur » dans le sélecteur pour le voir.`} />
       </div>
     );
   }
@@ -87,13 +88,13 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   return (
     <div className={cn("p-4 md:p-6", big && "text-lg")}>
       <Presentation on={big} exitHref={qs({ plein: "" })} />
-      <div className="mb-1 text-[11px] font-bold tracking-[1.8px] text-primary uppercase">Réunion de direction · {fmtDate(new Date(), "D MMMM YYYY")}</div>
+      <div className="mb-1 text-[11px] font-bold tracking-[1.8px] text-primary uppercase">{`Réunion de ${V.direction.one} · `}{fmtDate(new Date(), "D MMMM YYYY")}</div>
       <PageHeader
         title="Les sujets à décider."
-        subtitle={<span>{inAlert} édition{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length} éditions · séance <SessionTimer minutes={20} /></span>}
+        subtitle={<span>{inAlert}{` ${V.edition.one}`}{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length}{` ${pl(V.edition)} · séance `}<SessionTimer minutes={20} /></span>}
         actions={
           <>
-            <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode CODIR <span className="text-muted-foreground">· Échap</span></Link></Button>
+            <Button asChild variant="outline"><Link href="/portefeuille">{`Quitter le mode ${V.codir.one} `}<span className="text-muted-foreground">· Échap</span></Link></Button>
             <Button asChild variant={big ? "outline" : "default"} data-testid="codir-project"><Link href={big ? qs({ plein: "" }) : qs({ plein: "1" })}><Maximize2 />{big ? "Quitter la projection" : "Projeter"}</Link></Button>
           </>
         }
@@ -101,15 +102,15 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
 
       {/* Filtre par pôle, sous l'en-tête ; le bouton Projeter reste en haut à droite. */}
       <div className="mb-4 flex flex-wrap items-center gap-1" data-testid="codir-poles">
-        <span className="mr-1 text-[11px] text-muted-foreground">Pôle</span>
-        <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "tous" })}>Tous les pôles</Link></Button>
+        <span className="mr-1 text-[11px] text-muted-foreground">{cap(V.pole)}</span>
+        <Button asChild size="sm" variant={!sp.pole ? "default" : "outline"}><Link href={qs({ pole: "tous" })}>{`Tous les ${pl(V.pole)}`}</Link></Button>
         {poles.map(([id, name]) => <Button key={id} asChild size="sm" variant={sp.pole === id ? "default" : "outline"}><Link href={qs({ pole: id })}>{name.split(" ")[0]}</Link></Button>)}
       </div>
 
       {/* Ordre du jour : 3 à 5 sujets à arbitrer en 20 minutes ; le reste des alertes reste accessible plus bas. */}
       <section className="mb-4 rounded-md border bg-card p-5" data-testid="codir-agenda">
         <h2 className={cn("mb-1 font-bold", big ? "text-2xl" : "text-[15px]")}>Ordre du jour · {agenda.length} sujet{agenda.length > 1 ? "s" : ""} à arbitrer</h2>
-        <p className={cn("mb-3 text-muted-foreground", big ? "text-base" : "text-xs")}>{topics.size} édition{topics.size > 1 ? "s" : ""} appellent une décision ; les {agenda.length} plus lourdes d'abord, alertes regroupées par édition. Environ {agenda.length ? Math.round(20 / agenda.length) : 0} minutes par sujet.</p>
+        <p className={cn("mb-3 text-muted-foreground", big ? "text-base" : "text-xs")}>{topics.size}{` ${V.edition.one}`}{topics.size > 1 ? "s" : ""} appellent une décision ; les {agenda.length}{` plus lourdes d'abord, alertes regroupées par ${V.edition.one}. Environ `}{agenda.length ? Math.round(20 / agenda.length) : 0} minutes par sujet.</p>
         {agenda.length === 0 ? <p className="text-sm text-muted-foreground">Rien à arbitrer : la réunion peut être courte.</p> : (
           <ol className="grid gap-3">
             {agenda.map((t, i) => (
@@ -126,7 +127,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Décision attendue</dt>
                     <dd>{uniq(t.decisions).join(" · ")}</dd>
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Responsable</dt>
-                    <dd>{t.e.project.pilot.name} <span className="text-muted-foreground">· pilote</span>{t.e.project.guarantor ? <span className="text-muted-foreground"> · garant {t.e.project.guarantor.name}</span> : null}</dd>
+                    <dd>{t.e.project.pilot.name} <span className="text-muted-foreground">{`· ${V.pilote.one}`}</span>{t.e.project.guarantor ? <span className="text-muted-foreground"> · garant {t.e.project.guarantor.name}</span> : null}</dd>
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Échéance</dt>
                     <dd>{t.due ? <span className={cn(daysFromNow(t.due) < 0 && "font-semibold text-danger")}>{fmtDate(t.due)}{daysFromNow(t.due) < 0 ? ` · dépassée de ${-daysFromNow(t.due)} j` : ` · dans ${daysFromNow(t.due)} j`}</span> : "Pas de date : à fixer en séance"}</dd>
                   </dl>
@@ -164,7 +165,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
 
       <section className="mt-4 rounded-md border bg-card p-5">
         <h2 className={cn("mb-2 flex items-center gap-2 font-semibold", big ? "text-2xl" : "text-base")}><Users className="size-5 text-primary" />Décisions consignées ces 30 jours</h2>
-        {recent.length === 0 ? <p className="text-sm text-muted-foreground">Aucune décision récente. Chaque point ci-dessus a un bouton « Consigner » : la décision est datée sur l'édition.</p> : (
+        {recent.length === 0 ? <p className="text-sm text-muted-foreground">{`Aucune décision récente. Chaque point ci-dessus a un bouton « Consigner » : la décision est datée sur ${le(V.edition)}.`}</p> : (
           <ul className="divide-y text-sm" data-testid="recent-decisions">
             {recent.map((d) => (
               <li key={d.id} className="py-1.5">

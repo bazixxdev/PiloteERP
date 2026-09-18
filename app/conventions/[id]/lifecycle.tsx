@@ -11,6 +11,7 @@ import { addDossierNote, addDossierTask, setDossierStatus, toggleDossierTask, up
 import { TRANSITIONS } from "@/lib/dossiers";
 import { withBase } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
+import { V, au } from "@/lib/vocab";
 
 // Le cycle d'un dossier : les boutons de passage à l'étape suivante ; écarter / refuser demandent le pourquoi, obtenu demande la
 // forme du financement et le montant notifié.
@@ -79,7 +80,7 @@ export function DossierWorkspace({ id, tasks, notes, files, rw }: { id: string; 
         <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Tâches <span className="font-normal">· pour s&apos;organiser, chacun coche les siennes</span></div>
         <ul className="grid gap-1">{tasks.map((t) => <li key={t.id} className={cn("flex items-center gap-2", t.done && "text-muted-foreground line-through")}><input type="checkbox" checked={t.done} disabled={pending} onChange={(e) => run(() => toggleDossierTask(t.id, e.target.checked))} className="size-3.5 accent-primary" aria-label={t.label} data-testid={`dossier-task-${t.id}`} /><span>{t.label}</span><span className="text-[10px] text-muted-foreground">{t.person.name}{t.dueDate ? ` · ${fmt(t.dueDate)}` : ""}</span></li>)}</ul>
         <form className="mt-1.5 flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addDossierTask(id, label, due || null), () => { setLabel(""); setDue(""); }); }}>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Relire le cahier des charges, demander le budget au pilote…" className="h-7 w-72 text-[11px]" aria-label="Nouvelle tâche" data-testid="dossier-task-label" />
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Relire le cahier des charges, demander le budget ${au(V.pilote)}…`} className="h-7 w-72 text-[11px]" aria-label="Nouvelle tâche" data-testid="dossier-task-label" />
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-7 w-36 text-[11px]" aria-label="Échéance" />
           <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim()} data-testid="dossier-task-submit">Ajouter</Button>
         </form>

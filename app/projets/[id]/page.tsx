@@ -13,6 +13,7 @@ import { AddSimpleForm, ProjectPolesPicker } from "@/app/admin/forms";
 import { PROJECT_STATES, projectState } from "@/lib/projects";
 import { SectionIcon } from "@/components/shell/section-icon";
 import { cn } from "@/lib/utils";
+import { V, cap, le, un, de, aucun, ppe, pl } from "@/lib/vocab";
 
 // Fiche projet (lot 1 du 19/09, retour de Gaël) : le projet est ce qui dure — un programme de dix ans a des éditions chaque
 // année, financées différemment. Ici : raison d'être, pôle, pilote, garant, code ; puis ses éditions, ses financements, son équipe.
@@ -50,14 +51,14 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
             {rw ? <AutoField model="project" id={p.id} field="name" type="text" value={p.name} inputClassName="text-[25px] font-bold leading-tight tracking-[-0.7px]" className="min-w-[280px]" label="Nom du projet" testId="project-name" /> : <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{p.name}</h1>}
             <StatusBadge label={st.label} color={st.color} />
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground" data-testid="project-summary"><span className="font-mono">{p.analyticCode}</span> · {p.pole.name}{p.secondaryPoles.length ? ` (+ ${p.secondaryPoles.map((s) => s.pole.name).join(", ")})` : ""} · pilote {p.pilot.name} · {p.editions.length} édition{p.editions.length > 1 ? "s" : ""}{p.recurring ? " · récurrent" : ""}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground" data-testid="project-summary"><span className="font-mono">{p.analyticCode}</span> · {p.pole.name}{p.secondaryPoles.length ? ` (+ ${p.secondaryPoles.map((s) => s.pole.name).join(", ")})` : ""}{` · ${V.pilote.one} `}{p.pilot.name} · {p.editions.length}{` ${V.edition.one}`}{p.editions.length > 1 ? "s" : ""}{p.recurring ? " · récurrent" : ""}</p>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="grid content-start gap-4">
-          <Section title="Éditions" description="Une édition par année : sa fiche, ses actions, son budget. C'est là qu'on travaille." actions={rw ? <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact /> : undefined} testId="project-editions">
-            {p.editions.length === 0 ? <p className="text-sm text-muted-foreground">Aucune édition encore.</p> : (
+          <Section title={cap(pl(V.edition))} description={`${cap(un(V.edition))} par année : sa fiche, ses actions, son budget. C'est là qu'on travaille.`} actions={rw ? <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact /> : undefined} testId="project-editions">
+            {p.editions.length === 0 ? <p className="text-sm text-muted-foreground">{`${cap(aucun(V.edition))} encore.`}</p> : (
               <table className="w-full text-[13px]">
                 <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">Année</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-3 text-right">Enveloppe</th><th className="py-1.5 pr-3 text-right">Actions</th><th className="py-1.5">Équipe</th></tr></thead>
                 <tbody className="divide-y">
@@ -74,7 +75,7 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
               </table>
             )}
           </Section>
-          <Section title="Financements" description="Les lignes de financement de chaque édition — qui finance quoi, année par année. Le détail et les versements sont sur l'édition (onglet Budget)." testId="project-fundings">
+          <Section title="Financements" description={`Les lignes de financement de chaque ${V.edition.one} — qui finance quoi, année par année. Le détail et les versements sont sur ${le(V.edition)} (onglet Budget).`} testId="project-fundings">
             {lines.length === 0 ? <p className="text-sm text-muted-foreground">Aucun financement rattaché.</p> : (
               <table className="w-full text-[13px]">
                 <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5">Année</th><th className="py-1.5">Financeur</th><th className="py-1.5">Dispositif</th><th className="py-1.5">Statut</th><th className="py-1.5 text-right">Demandé</th><th className="py-1.5 text-right">Obtenu</th></tr></thead>
@@ -95,22 +96,22 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
           </Section>
         </div>
         <div className="grid content-start gap-4">
-          <Section title="Identité" description="Ce qui ne change pas d'une année à l'autre. Modifiable par la direction et la RAF." testId="project-identity">
+          <Section title="Identité" description={`Ce qui ne change pas d'une année à l'autre. Modifiable par ${le(V.direction)} et ${le(V.raf)}.`} testId="project-identity">
             <div className="grid gap-3">
               {F({ field: "missionId", label: "Raison d'être (mission du plan opérationnel)", type: "select", value: p.missionId, options: opt(missions), allowEmpty: false })}
               {F({ field: "strategicAxis", label: "Axe stratégique", value: p.strategicAxis })}
-              {F({ field: "poleId", label: "Pôle principal", type: "select", value: p.poleId, options: opt(poles), allowEmpty: false, refresh: true })}
-              <div className="grid gap-0.5"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pôles associés (projet commun)</span><ProjectPolesPicker projectId={p.id} mainPoleId={p.poleId} poles={opt(poles)} selected={p.secondaryPoles.map((x) => x.poleId)} readOnly={!rw} /></div>
-              {F({ field: "pilotId", label: "Pilote", type: "select", value: p.pilotId, options: opt(people), allowEmpty: false })}
-              {F({ field: "guarantorId", label: "Garant (responsable de pôle)", type: "select", value: p.guarantorId, options: opt(people) })}
+              {F({ field: "poleId", label: `${cap(ppe(V.pole, "principal"))}`, type: "select", value: p.poleId, options: opt(poles), allowEmpty: false, refresh: true })}
+              <div className="grid gap-0.5"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{`${cap(ppe(V.pole, "associé") + "s")} (projet commun)`}</span><ProjectPolesPicker projectId={p.id} mainPoleId={p.poleId} poles={opt(poles)} selected={p.secondaryPoles.map((x) => x.poleId)} readOnly={!rw} /></div>
+              {F({ field: "pilotId", label: `${cap(V.pilote)}`, type: "select", value: p.pilotId, options: opt(people), allowEmpty: false })}
+              {F({ field: "guarantorId", label: `Garant (responsable ${de(V.pole)})`, type: "select", value: p.guarantorId, options: opt(people) })}
               {F({ field: "analyticCode", label: "Code analytique", value: p.analyticCode })}
               <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center gap-2 text-xs"><AutoField model="project" id={p.id} field="recurring" type="bool" value={p.recurring} readOnly={!rw} label="Récurrent" testId="project-recurring" />Récurrent (une édition par an)</label>
+                <label className="flex items-center gap-2 text-xs"><AutoField model="project" id={p.id} field="recurring" type="bool" value={p.recurring} readOnly={!rw} label="Récurrent" testId="project-recurring" />{`Récurrent (${un(V.edition)} par an)`}</label>
                 <label className={cn("flex items-center gap-2 text-xs", p.archived && "text-muted-foreground")}><AutoField model="project" id={p.id} field="archived" type="bool" value={p.archived} readOnly={!rw} label="Archivé" refreshOnSave testId="project-archived" />Archivé</label>
               </div>
             </div>
           </Section>
-          <Section title="Équipe" description="Le pilote, le garant, et les personnes des équipes d'édition." testId="project-team">
+          <Section title="Équipe" description={`${cap(le(V.pilote))}, le garant, et les personnes des équipes ${de(V.edition)}.`} testId="project-team">
             <ul className="grid gap-1 text-sm">
               {Array.from(teamMap.values()).map(({ person, roles }) => <li key={person.id} className="flex items-center justify-between gap-2"><span>{person.name}</span><span className="text-[11px] text-muted-foreground">{Array.from(roles).join(" · ")}</span></li>)}
             </ul>

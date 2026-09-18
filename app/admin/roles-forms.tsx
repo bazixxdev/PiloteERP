@@ -11,6 +11,7 @@ import { Select } from "@/components/common/searchable-select";
 import { createRole, deleteRole, resetRole, setRolePermission, updateRole } from "@/app/actions/roles";
 import { PERMISSION_MODULES, PERMISSIONS, type PermissionModule } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { V, son, pl } from "@/lib/vocab";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 export type RoleView = { code: string; label: string; description: string; system: boolean; validationLevel: number; permissions: string[]; count: number };
@@ -24,8 +25,8 @@ function useRun() {
 
 const LEVELS = [
   { value: "0", label: "0 · n'approuve rien" },
-  { value: "1", label: "1 · ses éditions" },
-  { value: "2", label: "2 · son pôle" },
+  { value: "1", label: `1 · ses ${pl(V.edition)}` },
+  { value: "2", label: `2 · ${son(V.pole)}` },
   { value: "3", label: "3 · partout" },
 ];
 

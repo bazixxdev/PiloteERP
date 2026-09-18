@@ -14,6 +14,7 @@ import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CreateConventionDialog, NewDossierDialog } from "./create-form";
 import { ConventionFilters } from "./filters";
+import { V, cap, un, du, pl } from "@/lib/vocab";
 
 type Search = { vue?: string; financeur?: string; statut?: string; type?: string };
 
@@ -91,7 +92,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
   return (
     <div className="p-4 md:p-6">
       <DossiersHeader current="conventions" title="Financements obtenus"
-        summary={`${won.length} financement${won.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux éditions · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}`}
+        summary={`${won.length} financement${won.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux ${pl(V.edition)} · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}`}
         actions={rw ? <CreateConventionDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined} />
       <ConventionFilters funders={funders.map((f) => ({ value: f.id, label: f.name }))} statuses={statusOpts} current={{ vue: "obtenus", financeur: sp.financeur ?? "", statut: sp.statut ?? "", type: sp.type ?? "" }} withType />
       {rows.length === 0 ? <EmptyState title={won.length === 0 ? "Aucun financement obtenu" : "Aucun financement pour ces filtres"} hint={won.length === 0 ? "Un dossier déposé et obtenu arrive ici ; un financement déjà acquis s'enregistre directement." : "Changez le filtre."} /> : (
@@ -106,7 +107,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                 <th className="px-3 py-2.5 text-right">Notifié</th>
                 <th className="px-3 py-2.5">Affecté · reste</th>
                 <th className="px-3 py-2.5">Versé · reste</th>
-                <th className="px-3 py-2.5">Éditions couvertes</th>
+                <th className="px-3 py-2.5">{`${cap(pl(V.edition))} couvertes`}</th>
               </tr>
             </thead>
             <tbody>
@@ -136,7 +137,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
                       <small className={cn("mt-1 block text-[10px]", pay.late.length > 0 ? "font-semibold text-danger" : "text-muted-foreground")}>{pay.late.length > 0 ? `${pay.late.length} en retard` : pay.remaining === null ? "notifié inconnu" : pay.remaining > 0 ? `reste ${fmtEuro(pay.remaining)}` : "tout perçu"}</small>
                     </td>
                     <td className="min-w-[170px] max-w-[210px] px-3 py-3">
-                      {c.lines.length === 0 ? <span className="text-xs text-muted-foreground">aucune — à rattacher depuis l&apos;onglet Financements d&apos;une édition</span> : (
+                      {c.lines.length === 0 ? <span className="text-xs text-muted-foreground">{`aucune — à rattacher depuis l'onglet Financements d'${un(V.edition)}`}</span> : (
                         <div className="flex flex-wrap gap-1">
                           {c.lines.slice(0, 3).map((l) => <Link key={l.id} href={`/edition/${l.editionId}?onglet=budget#recettes`} className="max-w-full truncate rounded-full bg-secondary px-2 py-0.5 text-[10px] text-primary hover:underline" title={`${l.edition.project.name} · ${l.edition.year}`}>{l.edition.project.name} · {l.edition.year}</Link>)}
                           {c.lines.length > 3 && <Link href={`/conventions/${c.id}`} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground hover:underline">+{c.lines.length - 3}</Link>}
@@ -150,7 +151,7 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
           </table>
         </div>
       )}
-      <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} financement{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""} sur {won.length} · les clés de répartition restent dans l&apos;Excel de la RAF · les versements en retard se pilotent dans Échéances et Trésorerie.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} financement{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""} sur {won.length}{` · les clés de répartition restent dans l'Excel ${du(V.raf)} · les versements en retard se pilotent dans Échéances et Trésorerie.`}</p>
     </div>
   );
 }

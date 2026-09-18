@@ -15,6 +15,7 @@ import { REF_DEFAULTS } from "@/lib/refs";
 const FORMS = REF_DEFAULTS.funding_form;
 import { Select } from "@/components/common/searchable-select";
 import { SearchableSelect } from "@/components/common/searchable-select";
+import { V, pl } from "@/lib/vocab";
 
 // Nouvelle convention (RAF) : financeur, référence unique, dispositif, période, montant notifié. Ouvre la page de la convention créée.
 export function CreateConventionDialog({ funders }: { funders: { value: string; label: string }[] }) {
@@ -50,7 +51,7 @@ export function CreateConventionDialog({ funders }: { funders: { value: string; 
         >
           <DialogHeader>
             <DialogTitle>Financement déjà obtenu</DialogTitle>
-            <DialogDescription>Pour un financement acquis sans dossier ici (convention en cours, mécénat…). Une référence unique ; les éditions s&apos;y rattachent ensuite depuis leur onglet Financements.</DialogDescription>
+            <DialogDescription>{`Pour un financement acquis sans dossier ici (convention en cours, mécénat…). Une référence unique ; les ${pl(V.edition)} s'y rattachent ensuite depuis leur onglet Financements.`}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-1"><Label htmlFor="cc-funder">Financeur</Label><SearchableSelect id="cc-funder" options={funders} value={funderId} onChange={setFunderId} data-testid="cc-funder" className="w-full" /></div>
           <div className="grid gap-1"><Label htmlFor="cc-form">Forme</Label><Select id="cc-form" value={form} onChange={(e) => setForm(e.target.value)} className="h-9 text-sm" data-testid="cc-form">{FORMS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}</Select></div>

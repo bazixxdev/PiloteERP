@@ -19,6 +19,7 @@ import { paymentSummary } from "@/lib/payments";
 import { AMOUNT_KINDS, amounts, durationOf, isWon } from "@/lib/dossiers";
 import { attachmentInclude } from "@/lib/attachments";
 import { DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
+import { V, cap, le, un, aucun, pl } from "@/lib/vocab";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -73,7 +74,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
             <StatusBadge label={refLabel(refs, "dossier_status", c.status)} color={refColor(refs, "dossier_status", c.status)} />
             {a.over && <StatusBadge label={`Affectations au-delà du notifié · ${fmtEuro(-a.remaining!)}`} color="danger" dot={false} />}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground"><span className="font-mono">{c.reference}</span>{c.scheme ? ` · ${c.scheme}` : ""} · {c.startYear === c.endYear ? `année ${c.startYear}` : `${c.startYear} → ${c.endYear} (${durationOf(c)} ans)`}{c.targetProject && <> · pour <Link href={`/projets/${c.targetProject.id}`} className="text-primary hover:underline">{c.targetProject.name}</Link></>}{won && c.form ? ` · ${refLabel(refs, "funding_form", c.form)}` : ""}{rw ? "" : " · lecture seule : tenu par la RAF"}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground"><span className="font-mono">{c.reference}</span>{c.scheme ? ` · ${c.scheme}` : ""} · {c.startYear === c.endYear ? `année ${c.startYear}` : `${c.startYear} → ${c.endYear} (${durationOf(c)} ans)`}{c.targetProject && <> · pour <Link href={`/projets/${c.targetProject.id}`} className="text-primary hover:underline">{c.targetProject.name}</Link></>}{won && c.form ? ` · ${refLabel(refs, "funding_form", c.form)}` : ""}{rw ? "" : ` · lecture seule : tenu par ${le(V.raf)}`}</p>
           <div className="mt-2"><Stepper status={c.status} /></div>
         </div>
         {rw && <LifecycleButtons id={c.id} status={c.status} forms={formOpts} />}
@@ -91,8 +92,8 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
       {won && <div className="mb-4 grid gap-3 sm:grid-cols-5">
         {card("Demandé", c.amountRequested === null ? "—" : fmtEuro(c.amountRequested), "au dépôt du dossier")}
         {card("Notifié", c.amountNotified === null ? "—" : fmtEuro(c.amountNotified), "plafond des affectations", undefined, `notified-value-${c.reference}`)}
-        {card("Affecté aux éditions", fmtEuro(a.granted), pct !== null ? `${pct} % du notifié · montants obtenus des lignes` : "somme des montants obtenus", a.over ? "border-danger bg-danger-soft/50" : undefined, `allocated-${c.reference}`)}
-        {card("Reste à affecter", a.remaining === null ? "—" : fmtEuro(a.remaining), a.remaining === null ? "renseignez le notifié" : a.remaining < 0 ? "dépassement : réduisez une affectation ou corrigez le notifié" : "disponible pour une édition à venir", a.remaining !== null && a.remaining < 0 ? "border-danger bg-danger-soft/50" : undefined)}
+        {card(`Affecté aux ${pl(V.edition)}`, fmtEuro(a.granted), pct !== null ? `${pct} % du notifié · montants obtenus des lignes` : "somme des montants obtenus", a.over ? "border-danger bg-danger-soft/50" : undefined, `allocated-${c.reference}`)}
+        {card("Reste à affecter", a.remaining === null ? "—" : fmtEuro(a.remaining), a.remaining === null ? "renseignez le notifié" : a.remaining < 0 ? "dépassement : réduisez une affectation ou corrigez le notifié" : `disponible pour ${un(V.edition)} à venir`, a.remaining !== null && a.remaining < 0 ? "border-danger bg-danger-soft/50" : undefined)}
         {card("Versé", fmtEuro(pay.received), pay.remaining === null ? "renseignez le notifié" : pay.late.length > 0 ? `${pay.late.length} versement${pay.late.length > 1 ? "s" : ""} en retard` : pay.remaining > 0 ? `reste à percevoir ${fmtEuro(pay.remaining)}` : "tout est perçu", pay.late.length > 0 ? "border-danger bg-danger-soft/50" : undefined, `received-${c.reference}`)}
       </div>
 }
@@ -123,14 +124,14 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               <DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} />
             </Section>
           )}
-          {won && <Section title="Affectations aux éditions" description="Une ligne de financement par édition rattachée ; le montant obtenu se saisit sur l'édition (onglet Financements). Le rattachement se fait ici ou depuis l'édition." testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
+          {won && <Section title={`Affectations aux ${pl(V.edition)}`} description={`Une ligne de financement par ${V.edition.one} rattachée ; le montant obtenu se saisit sur ${le(V.edition)} (onglet Financements). Le rattachement se fait ici ou depuis ${le(V.edition)}.`} testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
             {c.lines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune édition rattachée{rw ? " — choisissez-en une ci-dessus, ou depuis l'onglet Financements d'une édition couverte par la période." : "."}</p>
+              <p className="text-sm text-muted-foreground">{`${cap(aucun(V.edition))} rattachée`}{rw ? ` — choisissez-en une ci-dessus, ou depuis l'onglet Financements d'${un(V.edition)} couverte par la période.` : "."}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm" data-testid="convention-lines-table">
                   <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                    <tr><th className="py-1.5 pr-2">Édition</th><th className="py-1.5 pr-2">Pilote</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5 pr-2">Livrables</th>{rw && <th className="py-1.5" />}</tr>
+                    <tr><th className="py-1.5 pr-2">{cap(V.edition)}</th><th className="py-1.5 pr-2">{cap(V.pilote)}</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5 pr-2">Livrables</th>{rw && <th className="py-1.5" />}</tr>
                   </thead>
                   <tbody className="divide-y">
                     {c.lines.map((l) => {
@@ -156,11 +157,11 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
             )}
           </Section>}
 
-          {won && <Section title="Versements" description="Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par la RAF ou la direction. Un versement propre à une édition se saisit sur sa ligne et apparaît ici avec son projet." testId="convention-payments">
+          {won && <Section title="Versements" description={`Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par ${le(V.raf)} ou ${le(V.direction)}. Un versement propre à ${un(V.edition)} se saisit sur sa ligne et apparaît ici avec son projet.`} testId="convention-payments">
             <PaymentsList payments={allPayments} reference={c.amountNotified} rw={rw} target={{ conventionId: c.id }} showSource testId="convention-payments-list" />
           </Section>}
 
-          <Section title={won ? "Le financement obtenu" : "Suivi"} description={rw ? "Sauvegarde automatique à chaque champ." : "Renseigné par la RAF."} testId="dossier-info">
+          <Section title={won ? "Le financement obtenu" : "Suivi"} description={rw ? "Sauvegarde automatique à chaque champ." : `Renseigné par ${le(V.raf)}.`} testId="dossier-info">
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Statut" field="status" type="select" options={statusOpts} />
               {won && <Field label="Forme" field="form" type="select" options={formOpts} placeholder="— à préciser —" testId={`form-${c.reference}`} />}
@@ -171,12 +172,12 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               <Field label="Contact du dossier" field="contactId" type="select" options={c.funder.contacts.map((x) => ({ value: x.id, label: `${[x.firstName, x.lastName].filter(Boolean).join(" ")}${x.role ? ` · ${x.role}` : ""}` }))} placeholder="— contact principal —" refresh />
               {(c.status === "lost" || c.status === "dismissed") && <div className="sm:col-span-2"><Field label="Pourquoi" field="decisionNote" type="textarea" /></div>}
             </div>
-            <div className="mt-3"><Field label="Notes" field="notes" type="textarea" placeholder="Conditions, avenants, clés de répartition (référence à l'Excel RAF)…" /></div>
+            <div className="mt-3"><Field label="Notes" field="notes" type="textarea" placeholder={`Conditions, avenants, clés de répartition (référence à l'Excel ${V.raf.one})…`} /></div>
             {won && <div className="mt-3 border-t pt-3"><DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} /></div>}
           </Section>
         </div>
 
-        {won && <Section title="Obligations à venir" description="Livrables non remis des éditions rattachées, les plus proches d'abord." testId="convention-obligations">
+        {won && <Section title="Obligations à venir" description={`Livrables non remis des ${pl(V.edition)} rattachées, les plus proches d'abord.`} testId="convention-obligations">
           {obligations.length === 0 ? <p className="text-sm text-muted-foreground">Aucun livrable en attente.</p> : (
             <ul className="divide-y text-sm">
               {obligations.map(({ d, l }) => {

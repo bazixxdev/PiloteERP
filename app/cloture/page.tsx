@@ -11,6 +11,7 @@ import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
 import { TimeNav } from "@/components/common/time-nav";
+import { V, le, au } from "@/lib/vocab";
 
 export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
   const { mois } = await searchParams;
@@ -19,7 +20,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
     return (
       <div className="p-4 md:p-6">
         <PageHeader title="Clôture mensuelle" />
-        <EmptyState title="Réservé à la RAF et à la direction" hint="Choisissez « Nadia Ferrand (RAF) » dans le sélecteur en haut à droite pour voir cet écran." />
+        <EmptyState title={`Réservé ${au(V.raf)} et ${au(V.direction)}`} hint={`Choisissez « Nadia Ferrand (${V.raf.one}) » dans le sélecteur en haut à droite pour voir cet écran.`} />
       </div>
     );
   }
@@ -87,7 +88,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
       <ClotureTable month={month} rows={rows} />
       <details className="group mt-4 rounded-md border bg-card px-4 py-3">
         <summary className="cursor-pointer list-none text-sm"><span className="font-semibold">Total du mois</span> · {fmtNumber(entries.reduce((s, t) => s + t.hours, 0), 0)} heures saisies par {new Set(entries.map((t) => t.personId)).size} personnes <span className="text-[11px] text-primary group-open:hidden">· comment lire cet écran</span></summary>
-        <p className="mt-2 text-sm text-muted-foreground">Lecture d'une ligne : <b>Saisies</b> compte les jours attendus du rythme de la personne qui portent au moins une saisie ; <b>Déclaration</b> compte les semaines que la personne a déclarées complètes ; <b>État</b> résume les deux, sans tolérance : un jour attendu sans saisie reste « à compléter ». Une fois verrouillé, un mois passe en lecture seule pour la personne ; la RAF peut le déverrouiller pour une correction. « Relancer » envoie une notification dans l'outil à la personne (cloche en haut à droite, et dans « Ma semaine ») et laisse une trace ici ; en V1, un mail part aussi. « Détail » ouvre la grille de la personne, semaine par semaine.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Lecture d'une ligne : <b>Saisies</b> compte les jours attendus du rythme de la personne qui portent au moins une saisie ; <b>Déclaration</b> compte les semaines que la personne a déclarées complètes ; <b>État</b>{` résume les deux, sans tolérance : un jour attendu sans saisie reste « à compléter ». Une fois verrouillé, un mois passe en lecture seule pour la personne ; ${le(V.raf)} peut le déverrouiller pour une correction. « Relancer » envoie une notification dans l'outil à la personne (cloche en haut à droite, et dans « Ma semaine ») et laisse une trace ici ; en V1, un mail part aussi. « Détail » ouvre la grille de la personne, semaine par semaine.`}</p>
       </details>
     </div>
   );

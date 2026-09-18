@@ -9,13 +9,14 @@ import { refLabel } from "@/lib/refs";
 import { fmtDate } from "@/lib/format";
 import { loadResponsibilities } from "@/lib/people";
 import { DepartureForm } from "./departure-form";
+import { V } from "@/lib/vocab";
 
 // « Préparer un départ » (lot E1, EF-K3) : tout ce que la personne porte, bloc par bloc, avec un repreneur ; puis la date et,
 // au choix, la désactivation. Rien n'est effacé — l'historique reste à son nom.
 export default async function DeparturePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, refs, people] = await Promise.all([getCurrentPerson(), getRefs(), getPeople()]);
-  if (!canAdmin(me)) return <div className="p-6 text-sm text-muted-foreground">Réservé à l&apos;administration (direction, RAF).</div>;
+  if (!canAdmin(me)) return <div className="p-6 text-sm text-muted-foreground">{`Réservé à l'administration (${V.direction.one}, ${V.raf.one}).`}</div>;
   const p = await prisma.person.findUnique({ where: { id }, include: { pole: true } });
   if (!p) notFound();
   const r = await loadResponsibilities(id);

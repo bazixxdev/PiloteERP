@@ -12,6 +12,7 @@ import { addRequest } from "@/app/actions/requests";
 import { REQUEST_KINDS } from "@/lib/requests";
 import { RequestValidationDialog } from "@/app/edition/[id]/request-validation-dialog";
 import { cn } from "@/lib/utils";
+import { V, cap, un } from "@/lib/vocab";
 
 type Opt = { id: string; name: string };
 const ICONS: Record<string, LucideIcon> = { site: Globe, com: Megaphone, data: BarChart3, assistant: ClipboardList, work: Hammer, other: HelpCircle };
@@ -43,14 +44,14 @@ export function NewDemandPanel({ people, poles, editions, validation }: { people
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl" data-testid="new-demand-panel">
         <SheetHeader>
           <SheetTitle>{kind === null ? "Nouvelle demande" : kind === "validation" ? "Demander une validation" : `Demande · ${kindDef?.label ?? ""}`}</SheetTitle>
-          <SheetDescription>{kind === null ? "Qu'est-ce que vous demandez ? Une validation (achat, devis, dépense, envoi…) est une demande comme les autres : elle part au bon valideur." : kind === "validation" ? "Le montant s'engage sur le budget d'une édition ; la demande part au niveau que son montant impose." : kindDef?.hint || "À qui, pour quand, pour quoi faire."}</SheetDescription>
+          <SheetDescription>{kind === null ? "Qu'est-ce que vous demandez ? Une validation (achat, devis, dépense, envoi…) est une demande comme les autres : elle part au bon valideur." : kind === "validation" ? `Le montant s'engage sur le budget d'${un(V.edition)} ; la demande part au niveau que son montant impose.` : kindDef?.hint || "À qui, pour quand, pour quoi faire."}</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">
           {kind === null ? (
             <div className="grid gap-2 sm:grid-cols-2" data-testid="demand-types">
               <button type="button" onClick={() => setKind("validation")} className="flex items-start gap-3 rounded-xl border-2 border-primary/40 bg-info-soft/60 p-3 text-left hover:border-primary sm:col-span-2" data-testid="request-kind-validation">
                 <ShieldCheck className="mt-0.5 size-6 shrink-0 text-primary" aria-hidden />
-                <span><span className="block text-sm font-semibold">Une validation</span><span className="block text-xs text-muted-foreground">achat, devis, dépense, envoi, changement de périmètre, jalon financeur — engagée sur une édition, validée au niveau du montant</span></span>
+                <span><span className="block text-sm font-semibold">Une validation</span><span className="block text-xs text-muted-foreground">{`achat, devis, dépense, envoi, changement de périmètre, jalon financeur — engagée sur ${un(V.edition)}, validée au niveau du montant`}</span></span>
               </button>
               {REQUEST_KINDS.map((k) => { const Icon = ICONS[k.value] ?? HelpCircle; return (
                 <button key={k.value} type="button" onClick={() => setKind(k.value)} className="flex items-start gap-3 rounded-xl border p-3 text-left hover:border-primary hover:bg-muted/40" data-testid={`request-kind-${k.value}`}>
@@ -70,7 +71,7 @@ export function NewDemandPanel({ people, poles, editions, validation }: { people
                   <label className="grid gap-1 text-xs"><span className="font-semibold">Détail <span className="font-normal text-muted-foreground">(pour quoi faire, sous quelle forme)</span></span><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="rounded-md border bg-card px-2 py-1.5 text-sm" data-testid="request-body" /></label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="grid gap-1 text-xs"><span className="font-semibold">À qui ?</span>
-                      <SearchableSelect options={[...people.map((p) => ({ value: `p:${p.id}`, label: p.name, group: "Une personne" })), ...poles.map((p) => ({ value: `g:${p.id}`, label: p.name, group: "Un pôle" }))]} value={to} onChange={setTo} placeholder="— choisir —" aria-label="Destinataire" className="h-9 w-full" data-testid="request-to" />
+                      <SearchableSelect options={[...people.map((p) => ({ value: `p:${p.id}`, label: p.name, group: "Une personne" })), ...poles.map((p) => ({ value: `g:${p.id}`, label: p.name, group: `${cap(un(V.pole))}` }))]} value={to} onChange={setTo} placeholder="— choisir —" aria-label="Destinataire" className="h-9 w-full" data-testid="request-to" />
                     </label>
                     <label className="grid gap-1 text-xs"><span className="font-semibold">Pour quand ?</span><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} data-testid="request-due" /></label>
                   </div>

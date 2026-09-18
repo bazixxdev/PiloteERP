@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { recordDecision } from "@/app/actions/edition";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V, le } from "@/lib/vocab";
 
 type Opt = { value: string; label: string };
 
@@ -45,7 +46,7 @@ export function DecisionForm({ editionId, label, people, instances, defaultInsta
           </div>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button size="sm" disabled={pending || !body.trim()} data-testid="decision-submit" onClick={() => start(async () => { const r = await recordDecision({ editionId, instance, body, followUpId: followUp || null, dueDate: due || null, alertKind: alertKind || null }); if (!r.ok) { toast.error(r.error); return; } toast.success("Décision consignée sur l'édition"); setOpen(false); setBody(label ? `${label} : ` : ""); router.refresh(); })}>Consigner</Button>
+            <Button size="sm" disabled={pending || !body.trim()} data-testid="decision-submit" onClick={() => start(async () => { const r = await recordDecision({ editionId, instance, body, followUpId: followUp || null, dueDate: due || null, alertKind: alertKind || null }); if (!r.ok) { toast.error(r.error); return; } toast.success(`Décision consignée sur ${le(V.edition)}`); setOpen(false); setBody(label ? `${label} : ` : ""); router.refresh(); })}>Consigner</Button>
           </div>
         </div>
       </PopoverContent>

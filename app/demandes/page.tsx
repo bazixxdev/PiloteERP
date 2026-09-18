@@ -16,6 +16,7 @@ import { NewDemandPanel } from "./new-demand";
 import { ReassignControl, RequestActions } from "./request-row";
 import { ValidationCard } from "@/components/common/validation-card";
 import { DecideButtons } from "@/components/common/decide-buttons";
+import { V, cap, le, de, tout } from "@/lib/vocab";
 
 
 // Demandes (retour du 14/09) : un seul tableau pour tout ce qu'on demande à quelqu'un — demandes internes et validations —
@@ -38,12 +39,12 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const lines: Line[] = [
     ...requests.map((r): Line => ({
       id: r.id, family: "request", kind: kindLabel(r.kind), title: r.title, sub: [r.body, r.edition ? `${r.edition.project.name} · ${r.edition.year}` : null].filter(Boolean).join(" · "),
-      who: r.requester.name, to: r.assignee?.name ?? (r.pole ? `pôle ${r.pole.name}` : "—"), due: r.dueDate, status: statusOf(r.status), age: ageDays(r.createdAt), href: "/demandes", open: r.status === "open" || r.status === "doing",
+      who: r.requester.name, to: r.assignee?.name ?? (r.pole ? `${V.pole.one} ${r.pole.name}` : "—"), due: r.dueDate, status: statusOf(r.status), age: ageDays(r.createdAt), href: "/demandes", open: r.status === "open" || r.status === "doing",
       actions: <RequestActions id={r.id} status={r.status} canTreat={canTreat(r)} canWithdraw={r.requesterId === me.id} people={peopleOpts} assigneeId={r.assigneeId} hasTask={r.tasks.some((t) => t.personId === me.id)} />,
     })),
     ...validations.map((v): Line => ({
       id: v.id, family: "validation", kind: refLabel(refs, "validation_kind", v.kind), title: `${v.label}${v.amount != null ? ` · ${fmtEuro(v.amount)}` : ""}`, sub: `${v.edition.project.name} · ${v.edition.year}`,
-      who: v.requester.name, to: ["", "pilote", "responsable de pôle", "direction"][v.requiredLevel] ?? "—", due: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), status: { label: refLabel(refs, "validation_status", v.status), color: v.status === "pending" ? "warning" : v.status === "approved" ? "mint" : "muted" }, age: ageDays(v.createdAt), href: `/edition/${v.editionId}?onglet=apercu`, open: v.status === "pending",
+      who: v.requester.name, to: ["", "pilote", `responsable ${de(V.pole)}`, "direction"][v.requiredLevel] ?? "—", due: dayjs(v.createdAt).add(v.targetDelayDays, "day").toDate(), status: { label: refLabel(refs, "validation_status", v.status), color: v.status === "pending" ? "warning" : v.status === "approved" ? "mint" : "muted" }, age: ageDays(v.createdAt), href: `/edition/${v.editionId}?onglet=apercu`, open: v.status === "pending",
       // Fusion demandes / validations (retour du 15/09) : on décide ici, en place ; la file par niveau reste dans /validations.
       actions: v.status === "pending" && canDecideValidation(me, v) ? <div className="mt-1.5" data-testid={`decide-${v.id}`}><DecideButtons id={v.id} /></div> : v.status === "approved" && (v.kind === "quote" || v.kind === "expense") ? <Link href={`/validations/${v.id}/bon-pour-accord`} className="mt-1 inline-block text-xs text-primary hover:underline">Bon pour accord →</Link> : undefined,
     })),
@@ -54,7 +55,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const doneForMe = lines.filter((l) => !l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : validations.find((v) => v.id === l.id)!.deciderId === me.id));
   const mine = lines.filter((l) => (l.family === "request" ? requests.find((r) => r.id === l.id)!.requesterId === me.id : validations.find((v) => v.id === l.id)!.requesterId === me.id));
   const all = lines;
-  const wide = me.role === "director" ? "Toute la CRESS" : null;
+  const wide = me.role === "director" ? `${cap(tout(V.org))}` : null;
   const view = vue === "mes" ? "mes" : vue === "toutes" && wide ? "toutes" : "moi";
   const shown = view === "mes" ? mine : view === "toutes" ? all : [...forMe, ...doneForMe];
   const openShown = shown.filter((l) => l.open).sort((a, b) => (a.due?.getTime() ?? 9e15) - (b.due?.getTime() ?? 9e15));
@@ -96,8 +97,8 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
         ))}
       </div>
-      <Section title={view === "moi" ? "Qu'on me fait · en cours" : view === "mes" ? "Que j'ai faites · en cours" : "Toute la CRESS · en cours"} description={view === "toutes" ? "Pour la direction : toutes les demandes en cours. Une seule action ici — réaiguiller (changer à qui on demande) ; la personne à l'origine est prévenue." : view === "moi" ? "Les demandes qui vous sont adressées (ou à votre pôle), et les validations de votre niveau. Prendre, faire, décliner, confier ; approuver ou refuser." : "Ce que vous avez demandé, validations comprises ; retirez une demande si elle n'a plus lieu d'être."} testId="for-me">
-        {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground" data-testid="requests-open">{view === "moi" ? "Rien à traiter — rien à valider pour vous. Les demandes qui vous sont adressées, ou adressées à votre pôle, arriveront ici." : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl" data-testid="requests-open">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
+      <Section title={view === "moi" ? "Qu'on me fait · en cours" : view === "mes" ? "Que j'ai faites · en cours" : `${cap(tout(V.org))} · en cours`} description={view === "toutes" ? `Pour ${le(V.direction)} : toutes les demandes en cours. Une seule action ici — réaiguiller (changer à qui on demande) ; la personne à l'origine est prévenue.` : view === "moi" ? `Les demandes qui vous sont adressées (ou à votre ${V.pole.one}), et les validations de votre niveau. Prendre, faire, décliner, confier ; approuver ou refuser.` : "Ce que vous avez demandé, validations comprises ; retirez une demande si elle n'a plus lieu d'être."} testId="for-me">
+        {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground" data-testid="requests-open">{view === "moi" ? `Rien à traiter — rien à valider pour vous. Les demandes qui vous sont adressées, ou adressées à votre ${V.pole.one}, arriveront ici.` : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl" data-testid="requests-open">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
       </Section>
       {closedShown.length > 0 && (
         <Section title="Terminées récemment" testId="requests-closed"><div className="-mx-4 -mb-4">{closedShown.map((l) => <Row key={l.id} l={l} />)}</div></Section>

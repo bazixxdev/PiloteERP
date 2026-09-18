@@ -31,6 +31,7 @@ import { AccountActions, OutboxRow } from "./account-forms";
 import { PersonPanelBody, personPanelTitle } from "./person-panel";
 import { UrlPanel } from "@/components/common/url-panel";
 import { DEMO_MODE } from "@/lib/auth";
+import { V, cap, le, du, de, au, mon, pl } from "@/lib/vocab";
 
 const SECTIONS = [
   { key: "personnes", label: "Personnes" },
@@ -94,7 +95,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Admin" subtitle={rw ? "Référentiels, seuils, personnes : paramétrable par le référent CRESS sans prestataire." : "Lecture seule : l'administration est réservée à la direction et à la RAF."} />
+      <PageHeader title="Admin" subtitle={rw ? `Référentiels, seuils, personnes : paramétrable par le référent ${V.org.one} sans prestataire.` : `Lecture seule : l'administration est réservée ${au(V.direction)} et ${au(V.raf)}.`} />
       <nav className="subnav mb-5 flex flex-wrap gap-1 border-b" data-testid="admin-tabs">
         {SECTIONS.map((s) => (
           <Link key={s.key} href={`/admin?section=${s.key}`} className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", s.key === current ? "border-coral" : "border-transparent text-muted-foreground hover:text-foreground")}>{s.label}</Link>
@@ -103,10 +104,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
       {current === "personnes" && (
         <div className="grid gap-4">
-          <Section title="Personnes" description="Rôle, pôle, rythme de travail et jours disponibles dans l'année." actions={rw ? <AddSimpleForm kind="person" placeholder="Prénom Nom" /> : undefined}>
+          <Section title="Personnes" description={`Rôle, ${V.pole.one}, rythme de travail et jours disponibles dans l'année.`} actions={rw ? <AddSimpleForm kind="person" placeholder="Prénom Nom" /> : undefined}>
             <table className="w-full text-sm" data-testid="people-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5">Nom</th><th className="py-1.5"></th><th className="py-1.5">Pôle</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme · en vigueur depuis</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
+                <tr><th className="py-1.5">Nom</th><th className="py-1.5"></th><th className="py-1.5">{cap(V.pole)}</th><th className="py-1.5">Rôle</th><th className="py-1.5">Rythme · en vigueur depuis</th><th className="py-1.5 text-right">Jours dispo.</th><th className="py-1.5">Actif</th></tr>
               </thead>
               <tbody className="divide-y">
                 {people.map((p) => (
@@ -133,7 +134,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </Section>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Section title="Pôles" actions={rw ? <AddSimpleForm kind="pole" placeholder="Nom du pôle" /> : undefined}>
+            <Section title={cap(pl(V.pole))} actions={rw ? <AddSimpleForm kind="pole" placeholder={`Nom ${du(V.pole)}`} /> : undefined}>
               <table className="w-full text-sm">
                 <tbody className="divide-y">
                   {poles.map((p) => (
@@ -161,7 +162,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </table>
               <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Coefficient heures → jours (réalisé, exports)</span><AutoField model="settings" id="1" field="hoursPerDay" type="number" value={settings.hoursPerDay} readOnly={!rw} suffix="h/j" /></div>
               <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_120px]"><span>Jours de fonctionnement par mois déduits de la capacité du plan de charge <span className="text-xs text-muted-foreground">(réunions transverses, café, entretiens · un chargé de mission y passe environ 1 jour sur 7)</span></span><AutoField model="settings" id="1" field="operatingDaysPerMonth" type="number" value={settings.operatingDaysPerMonth} readOnly={!rw} suffix="j/mois" testId="operating-days" /></div>
-              <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_260px]"><span>Adresse de facturation <span className="text-xs text-muted-foreground">(écrite sur chaque bon pour accord : les factures y arrivent, pas chez le pilote)</span></span><AutoField model="settings" id="1" field="billingEmail" type="text" value={settings.billingEmail} readOnly={!rw} testId="billing-email" /></div>
+              <div className="mt-2 grid items-center gap-2 text-sm sm:grid-cols-[1fr_260px]"><span>Adresse de facturation <span className="text-xs text-muted-foreground">{`(écrite sur chaque bon pour accord : les factures y arrivent, pas chez ${le(V.pilote)})`}</span></span><AutoField model="settings" id="1" field="billingEmail" type="text" value={settings.billingEmail} readOnly={!rw} testId="billing-email" /></div>
               <div className="mt-2 grid gap-1 text-sm"><span>Consigne de facturation (dans le bon pour accord)</span><AutoField model="settings" id="1" field="billingNote" type="textarea" rows={2} value={settings.billingNote} readOnly={!rw} /></div>
             </Section>
 
@@ -188,7 +189,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {current === "referentiels" && (
         <div className="grid gap-4 lg:grid-cols-3">
           <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans l'Annuaire (Organisations, genre Financeur).">
-            <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>. Les projets et leurs éditions sont aussi dans <Link href="/projets" className="text-primary hover:underline">Projets et éditions</Link>.</p>
+            <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>{`. Les projets et leurs ${pl(V.edition)} sont aussi dans `}<Link href="/projets" className="text-primary hover:underline">{`Projets et ${pl(V.edition)}`}</Link>.</p>
           </Section>
           <Section title="Fournisseurs" description={<>Organisations de genre « fournisseur » (lot E2) : alimentées depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher), tenues dans l'<Link href="/organisations" className="text-primary hover:underline">annuaire des organisations</Link>.</>} actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
             {suppliers.length === 0 ? <p className="text-sm text-muted-foreground">Aucun fournisseur encore.</p> : (
@@ -203,7 +204,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </ul>
             )}
           </Section>
-          <Section title="Raisons d'être (missions du plan opérationnel)" description="Pourquoi la CRESS porte un projet : chaque projet s'y rattache." actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle raison d'être" compact /> : undefined}>
+          <Section title="Raisons d'être (missions du plan opérationnel)" description={`Pourquoi ${le(V.org)} porte un projet : chaque projet s'y rattache.`} actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle raison d'être" compact /> : undefined}>
             <ul className="divide-y text-sm">{missions.map((m) => <li key={m.id}><AutoField model="mission" id={m.id} field="name" type="text" value={m.name} readOnly={!rw} /></li>)}</ul>
           </Section>
           <Section title="Codes de temps hors projet" actions={rw ? <AddSimpleForm kind="timeCode" placeholder="Nouveau code" compact /> : undefined}>
@@ -251,7 +252,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               {roles.map((r) => <RoleCard key={r.code} role={r} readOnly={!canManageRoles(me)} />)}
             </div>
           </Section>
-          <Section title="Droits par rôle" description="Ce qu'un rôle peut faire au-delà de son propre périmètre. Ce qui dépend du contexte — je pilote cette édition, j'en suis l'équipe, c'est mon pôle — est toujours accordé, quel que soit le rôle. Enregistré à chaque case.">
+          <Section title="Droits par rôle" description={`Ce qu'un rôle peut faire au-delà de son propre périmètre. Ce qui dépend du contexte — j'en suis ${le(V.pilote)} ou l'équipe, c'est ${mon(V.pole)} — est toujours accordé, quel que soit le rôle. Enregistré à chaque case.`}>
             <RolesMatrix roles={roles} readOnly={!canManageRoles(me)} />
           </Section>
         </div>
@@ -295,7 +296,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
       {current === "parametres" && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Validations" description="Niveau requis : sous le seuil 1 le pilote valide ; entre les deux, le responsable de pôle ; au-dessus ou hors enveloppe, la direction.">
+          <Section title="Validations" description={`Niveau requis : sous le seuil 1 ${le(V.pilote)} valide ; entre les deux, le responsable ${de(V.pole)} ; au-dessus ou hors enveloppe, ${le(V.direction)}.`}>
             <div className="grid gap-3">
               <Row label="Seuil niveau 1 → 2 (€)"><AutoField model="settings" id="1" field="validationThresholdLevel1" type="number" value={settings.validationThresholdLevel1} readOnly={!rw} suffix="€" /></Row>
               <Row label="Seuil niveau 2 → 3 (€)"><AutoField model="settings" id="1" field="validationThresholdLevel2" type="number" value={settings.validationThresholdLevel2} readOnly={!rw} suffix="€" /></Row>
@@ -312,15 +313,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Visibilité du temps saisi" description="Qui voit les temps de qui Le temps agrégé par projet et par action reste lisible par tous ceux qui pilotent.">
             <AutoField model="settings" id="1" field="timeVisibility" type="select" value={settings.timeVisibility} options={refOpt("time_visibility")} allowEmpty={false} readOnly={!rw} testId="setting-time-visibility" />
           </Section>
-          <Section title="Dossier de référence sur le serveur" description="Gabarit du chemin proposé sur chaque édition ; {code} et {annee} sont remplacés.">
+          <Section title="Dossier de référence sur le serveur" description={`Gabarit du chemin proposé sur chaque ${V.edition.one} ; {code} et {annee} sont remplacés.`}>
             <AutoField model="settings" id="1" field="serverPathTemplate" type="text" value={settings.serverPathTemplate} readOnly={!rw} inputClassName="font-mono text-xs" />
           </Section>
           <Section title="Règles de saisie du temps" description="Affichées à chaque personne dans « Temps », sous « Aide et règles de saisie ».">
             <AutoField model="settings" id="1" field="timeRules" type="textarea" rows={6} value={settings.timeRules} readOnly={!rw} placeholder="Qui saisit, où vont les réunions transverses, quels codes par poste…" />
           </Section>
-          <Section title="Réalisé comptable" description="Quelle source compte dans les alertes d'enveloppe, le portefeuille et le niveau des validations : le réalisé saisi par la RAF sur les dépenses, ou les charges du grand livre importé. L'autre s'affiche en regard dans l'onglet Budget ; jamais les deux additionnés." testId="realized-source">
+          <Section title="Réalisé comptable" description={`Quelle source compte dans les alertes d'enveloppe, le portefeuille et le niveau des validations : le réalisé saisi par ${le(V.raf)} sur les dépenses, ou les charges du grand livre importé. L'autre s'affiche en regard dans l'onglet Budget ; jamais les deux additionnés.`} testId="realized-source">
             <div className="grid gap-3">
-              <Row label="Source du réalisé"><AutoField model="settings" id="1" field="realizedSource" type="select" value={settings.realizedSource} options={[{ value: "raf", label: "Saisi par la RAF (dépenses)" }, { value: "ledger", label: "Grand livre importé (compta)" }]} readOnly={!rw} allowEmpty={false} testId="realized-source-select" /></Row>
+              <Row label="Source du réalisé"><AutoField model="settings" id="1" field="realizedSource" type="select" value={settings.realizedSource} options={[{ value: "raf", label: `Saisi par ${le(V.raf)} (dépenses)` }, { value: "ledger", label: "Grand livre importé (compta)" }]} readOnly={!rw} allowEmpty={false} testId="realized-source-select" /></Row>
               <Row label="Axes analytiques Pennylane (préfixes, séparés par des virgules ; vide = tout)"><AutoField model="settings" id="1" field="pennylaneAxes" type="text" value={settings.pennylaneAxes} readOnly={!rw} placeholder="PROJETS, FINANCEMENT" /></Row>
             </div>
           </Section>
@@ -358,7 +359,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </Section>
           )}
           {ledger && (
-            <Section title="Réalisé comptable" description="Le grand livre analytique du logiciel de compta, importé par exercice et rapproché des éditions par le code analytique. Réimporter un exercice remplace ses lignes (aucun doublon). Colonnes attendues : code analytique, compte, débit, crédit ; libellé, date, pièce, tiers facultatifs." testId="ledger-admin" className="lg:col-span-2">
+            <Section title="Réalisé comptable" description={`Le grand livre analytique du logiciel de compta, importé par exercice et rapproché des ${pl(V.edition)} par le code analytique. Réimporter un exercice remplace ses lignes (aucun doublon). Colonnes attendues : code analytique, compte, débit, crédit ; libellé, date, pièce, tiers facultatifs.`} testId="ledger-admin" className="lg:col-span-2">
               {rw ? (
                 <div className="grid gap-4">
                   <div className="flex flex-wrap items-end justify-between gap-3">
@@ -400,7 +401,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <div className="mt-3 space-y-1 text-xs text-muted-foreground">
               <p><strong>personnes</strong> : nom ; pole ; role (director, raf, pole_lead, pilot, contributor, assistant) ; rythme (option_a, option_b, part_time, apprentice) ; jours</p>
               <p><strong>financeurs</strong> : nom</p>
-              <p><strong>projets</strong> : nom ; code ; pole ; pilote ; mission</p>
+              <p><strong>projets</strong> : nom ; code ; pole ; pilote ; mission</p>{/* vocab-ok : noms de colonnes du fichier */}
             </div>
           </Section>
         </div>

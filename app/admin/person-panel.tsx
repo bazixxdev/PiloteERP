@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/format";
 import { loadResponsibilities, responsibilityCount } from "@/lib/people";
 import { refLabel, type RefMap } from "@/lib/refs";
 import { cn } from "@/lib/utils";
+import { V, cap, de, pl } from "@/lib/vocab";
 
 // Fiche d'une personne (lot E1), en panneau sur Admin › Personnes (?personne=<id>) : identité, poste, dates, compte, ce qu'elle
 // porte. Chaque champ s'enregistre seul (AutoField) ; la désactivation et les réattributions passent par « Préparer un départ ».
@@ -39,7 +40,7 @@ export async function PersonPanelBody({ id, refs, rw, poles, rhythms }: { id: st
         <h3 className="text-xs font-semibold text-foreground">Poste</h3>
         <div className="grid grid-cols-2 gap-2">
           <F field="role" type="select" label="Rôle" value={p.role} options={Object.values(refs.role ?? {}).map((x) => ({ value: x.code, label: x.label }))} />
-          <F field="poleId" type="select" label="Pôle" value={p.poleId} options={poles.map((x) => ({ value: x.id, label: x.name }))} />
+          <F field="poleId" type="select" label={cap(V.pole)} value={p.poleId} options={poles.map((x) => ({ value: x.id, label: x.name }))} />
         </div>
         <p className="text-xs text-muted-foreground">Rythme : <b className="font-medium text-foreground">{rhythm}</b> · {p.availableDays} jours disponibles par an{p.fixedShare ? " · part fixe" : ""} — se règlent dans le tableau.</p>
       </section>
@@ -60,9 +61,9 @@ export async function PersonPanelBody({ id, refs, rw, poles, rhythms }: { id: st
         <ul className="grid gap-1 text-xs">
           <li>Projets pilotés : <b className="font-medium">{r.piloted.length}</b>{r.piloted.length > 0 && <span className="text-muted-foreground"> · {r.piloted.map((x) => x.name).join(", ")}</span>}</li>
           <li>Garant de projet : <b className="font-medium">{r.guaranteed.length}</b>{r.guaranteed.length > 0 && <span className="text-muted-foreground"> · {r.guaranteed.map((x) => x.name).join(", ")}</span>}</li>
-          {r.ledPoles.length > 0 && <li>Responsable de pôle : <span className="text-muted-foreground">{r.ledPoles.map((x) => x.name).join(", ")}</span></li>}
-          {r.sponsored.length > 0 && <li>Sponsor d&apos;éditions : <b className="font-medium">{r.sponsored.length}</b></li>}
-          <li>Actions à faire : <b className="font-medium">{r.actions.length}</b> · demandes ouvertes : <b className="font-medium">{r.requests.length}</b> · tâches : <b className="font-medium">{r.tasks}</b> · équipes d&apos;éditions en cours : <b className="font-medium">{r.teams.length}</b></li>
+          {r.ledPoles.length > 0 && <li>{`Responsable ${de(V.pole)} : `}<span className="text-muted-foreground">{r.ledPoles.map((x) => x.name).join(", ")}</span></li>}
+          {r.sponsored.length > 0 && <li>{`Sponsor d'${pl(V.edition)} : `}<b className="font-medium">{r.sponsored.length}</b></li>}
+          <li>Actions à faire : <b className="font-medium">{r.actions.length}</b> · demandes ouvertes : <b className="font-medium">{r.requests.length}</b> · tâches : <b className="font-medium">{r.tasks}</b>{` · équipes d'${pl(V.edition)} en cours : `}<b className="font-medium">{r.teams.length}</b></li>
         </ul>
         {rw && p.active && (
           <div className="pt-1">

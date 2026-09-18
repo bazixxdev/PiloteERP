@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createEdition, createPerson, createPole, createProject, createRef, createRefValue, importCsv, togglePersonTimeCode, createRhythm, addRhythmPeriod, toggleProjectPole } from "@/app/actions/admin";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V, cap, du, ce, ppe } from "@/lib/vocab";
 
 type R = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -91,23 +92,23 @@ export function CreateProjectDialog({ poles, people, missions }: { poles: Opt[];
         <form className="grid gap-3" data-testid="create-project" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => createProject({ name, analyticCode: code, poleId, pilotId, missionId, year: Number(year) }), (r) => { if (r.ok && r.data) { setOpen(false); router.push(`/edition/${(r.data as { editionId: string }).editionId}`); } }); }}>
           <DialogHeader>
             <DialogTitle>Nouveau projet</DialogTitle>
-            <DialogDescription>Un objet permanent, avec sa première édition. Le pôle principal est celui du pilote ; les pôles associés se cochent ensuite dans la liste.</DialogDescription>
+            <DialogDescription>{`Un objet permanent, avec sa première ${V.edition.one}. Le ${ppe(V.pole, "principal")} est celui ${du(V.pilote)} ; les ${ppe(V.pole, "associé") + "s"} se cochent ensuite dans la liste.`}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-[1fr_7rem] gap-3">
             <label className={field}><span className="font-semibold">Nom du projet</span><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Forum régional de l'ESS" autoFocus required data-testid="cp-name" /></label>
             <label className={field}><span className="font-semibold">Code analytique</span><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="SEN-03" data-testid="cp-code" /></label>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className={field}><span className="font-semibold">Pilote</span><SearchableSelect options={people} value={pilotId} onChange={setPilotId} aria-label="Pilote" data-testid="cp-pilot" className="w-full" /></label>
-            <label className={field}><span className="font-semibold">Pôle principal</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
+            <label className={field}><span className="font-semibold">{cap(V.pilote)}</span><SearchableSelect options={people} value={pilotId} onChange={setPilotId} aria-label={cap(V.pilote)} data-testid="cp-pilot" className="w-full" /></label>
+            <label className={field}><span className="font-semibold">{cap(ppe(V.pole, "principal"))}</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label={cap(V.pole)}>{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
           </div>
           <div className="grid grid-cols-[1fr_6rem] gap-3">
             <label className={field}><span className="font-semibold">Raison d&apos;être (mission du plan opérationnel)</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
-            <label className={field}><span className="font-semibold">Première édition</span><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8" aria-label="Année" /></label>
+            <label className={field}><span className="font-semibold">{`Première ${V.edition.one}`}</span><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8" aria-label="Année" /></label>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button type="submit" size="sm" disabled={pending || !name.trim()} data-testid="cp-submit"><Plus />Créer le projet et son édition</Button>
+            <Button type="submit" size="sm" disabled={pending || !name.trim()} data-testid="cp-submit"><Plus />{`Créer le projet et son ${V.edition.one}`}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -166,7 +167,7 @@ export function ProjectPolesPicker({ projectId, mainPoleId, poles, selected, rea
         const main = p.value === mainPoleId;
         const on = selected.includes(p.value);
         return (
-          <button key={p.value} type="button" disabled={readOnly || main || pending} title={main ? "Pôle principal (celui du pilote)" : on ? "Retirer ce pôle" : "Associer ce pôle"} data-testid={`project-pole-${p.value}`}
+          <button key={p.value} type="button" disabled={readOnly || main || pending} title={main ? `${cap(ppe(V.pole, "principal"))} (celui ${du(V.pilote)})` : on ? `Retirer ${ce(V.pole)}` : `Associer ${ce(V.pole)}`} data-testid={`project-pole-${p.value}`}
             className={"rounded-full border px-2 py-0.5 text-[11px] " + (main ? "border-primary bg-primary text-white" : on ? "border-primary bg-secondary text-primary" : "bg-card text-muted-foreground hover:bg-muted")}
             onClick={() => run(() => toggleProjectPole(projectId, p.value, !on))}>
             {p.label.split(" ")[0]}{main ? " · principal" : ""}

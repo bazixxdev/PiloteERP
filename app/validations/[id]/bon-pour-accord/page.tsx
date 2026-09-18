@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
 import { fmtDate, fmtEuro } from "@/lib/format";
+import { V, cap, le, du } from "@/lib/vocab";
 
 // Bon pour accord (lot 3) : à la validation d'un devis, le mail au fournisseur est prêt — accord, montant, référence, adresse de
 // facturation. Un « bon pour accord » écrit par une personne habilitée vaut acceptation : plus d'impression, de tampon ni de signature.
@@ -19,7 +20,7 @@ export default async function BonPourAccordPage({ params }: { params: Promise<{ 
   if (!v) notFound();
   const approved = v.status === "approved";
   const ref = `${v.edition.project.analyticCode}-${v.edition.year}-${v.id.slice(-6).toUpperCase()}`;
-  const subject = `Bon pour accord — ${v.label} — CRESS Centre-Val de Loire (réf. ${ref})`;
+  const subject = `Bon pour accord — ${v.label} — ${V.orgLong} (réf. ${ref})`;
   const body = [
     `Bonjour,`,
     ``,
@@ -28,7 +29,7 @@ export default async function BonPourAccordPage({ params }: { params: Promise<{ 
     ``,
     `Facturation : ${settings.billingEmail}. ${settings.billingNote}`,
     ``,
-    `Bon pour accord donné le ${fmtDate(v.decidedAt ?? new Date())} par ${v.decider?.name ?? "—"}, ${v.decider?.role === "director" ? "directrice" : "responsable habilité·e"}, CRESS Centre-Val de Loire.`,
+    `Bon pour accord donné le ${fmtDate(v.decidedAt ?? new Date())} par ${v.decider?.name ?? "—"}, ${v.decider?.role === "director" ? V.direction.one : "responsable habilité·e"}, ${V.orgLong}.`,
     ``,
     `Cordialement,`,
     `${v.requester.name}`,
@@ -55,9 +56,9 @@ export default async function BonPourAccordPage({ params }: { params: Promise<{ 
           </Section>
           <Section title="Et après" className="text-sm">
             <ol className="grid gap-2 text-xs">
-              <li><b>1.</b> Le devis approuvé est déjà <b>engagé</b> sur le budget de l'édition ({v.amount != null ? fmtEuro(v.amount) : "—"}).</li>
+              <li><b>1.</b> Le devis approuvé est déjà <b>engagé</b>{` sur le budget ${du(V.edition)} (`}{v.amount != null ? fmtEuro(v.amount) : "—"}).</li>
               <li><b>2.</b> La facture arrive sur <b>{settings.billingEmail}</b>. Si elle arrive chez vous, transférez-la.</li>
-              <li><b>3.</b> La RAF la marque <b>reçue</b> puis <b>payée</b> dans l'onglet Budget ; vous êtes prévenu·e à chaque étape, et on vous demande si la prestation est conforme (sans bloquer le paiement).</li>
+              <li><b>3.</b>{` ${cap(le(V.raf))} la marque `}<b>reçue</b> puis <b>payée</b> dans l'onglet Budget ; vous êtes prévenu·e à chaque étape, et on vous demande si la prestation est conforme (sans bloquer le paiement).</li>
             </ol>
             <p className="mt-3 text-[10px] text-muted-foreground">Vu par {me.name}. Décision : {v.decider?.name} le {fmtDate(v.decidedAt)}{v.decisionComment ? ` — « ${v.decisionComment} »` : ""}.</p>
           </Section>
