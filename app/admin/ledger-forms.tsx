@@ -63,7 +63,7 @@ export function TagForm({ code, editions, actions, projects, lines }: { code: st
   return (
     <form className="flex flex-wrap items-center gap-1" data-testid={`tag-form-${code}`} onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await setAnalyticTag(code, kind, kind === "ignore" ? null : target); if (!r.ok) { toast.error(r.error); return; } toast.success(`Code ${code} rapproché`); router.refresh(); }); }}>
       <Select className={sel} value={kind} onChange={(e) => { setKind(e.target.value); setTarget(""); }} aria-label="Type de cible" data-testid={`tag-kind-${code}`}>
-        <option value="edition">{un(V.edition)}</option><option value="action">une action</option><option value="project">un projet (chaque année)</option><option value="fundingLine">une ligne de financement</option><option value="ignore">à ignorer (fonctionnement)</option>
+        <option value="edition">{un(V.edition)}</option><option value="action">{un(V.action)}</option><option value="project">un projet (chaque année)</option><option value="fundingLine">une ligne de financement</option><option value="ignore">à ignorer (fonctionnement)</option>
       </Select>
       {kind !== "ignore" && <Select className={`${sel} max-w-[260px]`} value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Cible" data-testid={`tag-target-${code}`}><option value="">Choisir…</option>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select>}
       <Button type="submit" size="xs" variant="outline" disabled={pending || (kind !== "ignore" && !target)} data-testid={`tag-submit-${code}`}>Rapprocher</Button>

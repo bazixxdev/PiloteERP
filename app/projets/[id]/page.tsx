@@ -57,10 +57,10 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="grid content-start gap-4">
-          <Section title={cap(pl(V.edition))} description={`${cap(un(V.edition))} par année : sa fiche, ses actions, son budget. C'est là qu'on travaille.`} actions={rw ? <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact /> : undefined} testId="project-editions">
+          <Section title={cap(pl(V.edition))} description={`${cap(un(V.edition))} par année : sa fiche, ses ${pl(V.action)}, son budget. C'est là qu'on travaille.`} actions={rw ? <AddSimpleForm kind="edition" projectId={p.id} placeholder="Année" compact /> : undefined} testId="project-editions">
             {p.editions.length === 0 ? <p className="text-sm text-muted-foreground">{`${cap(aucun(V.edition))} encore.`}</p> : (
               <table className="w-full text-[13px]">
-                <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">Année</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-3 text-right">Enveloppe</th><th className="py-1.5 pr-3 text-right">Actions</th><th className="py-1.5">Équipe</th></tr></thead>
+                <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">Année</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-3 text-right">Enveloppe</th><th className="py-1.5 pr-3 text-right">{cap(pl(V.action))}</th><th className="py-1.5">Équipe</th></tr></thead>
                 <tbody className="divide-y">
                   {p.editions.map((e) => (
                     <tr key={e.id} data-testid={`project-edition-${e.year}`}>

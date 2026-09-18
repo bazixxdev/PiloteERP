@@ -8,6 +8,7 @@ import { getCurrentPerson } from "@/lib/session";
 import { familyOf, FAMILY_LABEL, type NotificationFamily } from "@/lib/notifications";
 import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { V, le } from "@/lib/vocab";
 
 type Filter = "toutes" | "non-lues" | NotificationFamily;
 
@@ -36,7 +37,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   );
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Notifications" subtitle="Ce qui vous a été adressé : relances, remarques, demandes, échéances de vos projets. Chaque ligne mène à l'écran où l'action se fait." actions={<MarkAllRead disabled={unread === 0} />} />
+      <PageHeader title="Notifications" subtitle={`Ce qui vous a été adressé : relances, remarques, demandes, échéances de vos projets. Chaque ligne mène à l'écran où ${le(V.action)} se fait.`} actions={<MarkAllRead disabled={unread === 0} />} />
       <div className="mb-4 flex flex-wrap items-center gap-1">
         {chip("toutes", "Toutes")}
         {chip("non-lues", "Non lues", unread)}

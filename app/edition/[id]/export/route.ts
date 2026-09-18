@@ -5,7 +5,7 @@ import { fmtDate } from "@/lib/format";
 import { getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
 import { ficheParagraphs, loadFiche } from "@/lib/fiche-docx";
-import { V, cap } from "@/lib/vocab";
+import { V, cap, pl } from "@/lib/vocab";
 
 // Export du bilan (EF-I3) : .md ou .docx basique.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -50,7 +50,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           }),
           new Paragraph({ text: "Réalisations consignées", heading: HeadingLevel.HEADING_1 }),
           ...(e.achievements.length ? e.achievements.map((a) => new Paragraph({ text: `• ${achLine(a)}` })) : [new Paragraph({ text: "—" })]),
-          new Paragraph({ text: "Actions", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({ text: `${cap(pl(V.action))}`, heading: HeadingLevel.HEADING_1 }),
           ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}` })),
           new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype).` }),
         ],
@@ -67,7 +67,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     "## Indicateurs", "", "| Indicateur | Cible | Réalisé | Imposé |", "|---|---|---|---|",
     ...e.indicators.map((i) => `| ${i.label} | ${i.target ?? ""} | ${i.actual ?? ""} | ${i.imposed ? "oui" : ""} |`), "",
     "## Réalisations consignées", "", ...(e.achievements.length ? e.achievements.map((a) => `- ${achLine(a)}`) : ["—"]), "",
-    "## Actions", "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
+    `## ${cap(pl(V.action))}`, "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
     `_Exporté le ${fmtDate(new Date())} depuis Pilote (prototype)._`, "",
   ].join("\n");
   return new NextResponse(md, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}.md"` } });

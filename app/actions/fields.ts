@@ -8,7 +8,7 @@ import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageEquipm
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
-import { V, cap, le, de } from "@/lib/vocab";
+import { V, cap, le, de, ce } from "@/lib/vocab";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
@@ -33,10 +33,10 @@ async function allowed(model: Model, id: string, field: string, personId: string
   }
   if (model === "action") {
     const a = await prisma.action.findUnique({ where: { id } });
-    if (!a) return "Action introuvable";
+    if (!a) return `${cap(V.action)} introuvable`;
     const ctx = await editionContext(a.editionId, personId);
     const own = a.ownerId === personId;
-    return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
+    return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : `Vous ne pouvez pas modifier ${ce(V.action)}.`;
   }
   if (model === "call") return canEditCalls(me) ? null : `Un appel à projets se modifie par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.`;
   // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.

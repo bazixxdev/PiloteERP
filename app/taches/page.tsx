@@ -14,6 +14,7 @@ import { dayjs } from "@/lib/format";
 import { ListDropLink } from "@/components/tasks/list-drop-link";
 import { TaskKanban } from "@/components/tasks/kanban";
 import { DisplayToggle } from "./display-toggle";
+import { V, un } from "@/lib/vocab";
 
 // Espace Tâches (revue UX du 15/09, même structure que les notes) : à gauche les vues (À faire, À trier, Terminées), mes listes
 // et celles qu'on partage avec moi ; à droite une seule liste de tâches, une seule zone d'ajout, les lignes groupées par échéance.
@@ -90,7 +91,7 @@ export default async function TachesPage({ searchParams }: { searchParams: Promi
           {view === "afaire" && !kanban && (
             <>
               <div className="px-4 pb-1 pt-3"><h2 className="text-[19px] font-bold">À faire</h2><p className="text-[11px] text-muted-foreground">Toutes vos tâches en cours, ce qui presse d'abord.</p></div>
-              <TaskList tasks={open} editions={editions} lists={listOpts} autoFocus={ajouter === "1"} grouped showList emptyText="Rien en cours. Ajoutez une tâche ci-dessus : c'est à vous, ce n'est ni une action du projet, ni un jalon." />
+              <TaskList tasks={open} editions={editions} lists={listOpts} autoFocus={ajouter === "1"} grouped showList emptyText={`Rien en cours. Ajoutez une tâche ci-dessus : c'est à vous, ce n'est ni ${un(V.action)} du projet, ni un jalon.`} />
             </>
           )}
           {view === "trier" && !kanban && (

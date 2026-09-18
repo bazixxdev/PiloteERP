@@ -42,7 +42,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
     <div className="p-4 md:p-6">
       <PageHeader title={`Séminaire · ${pl(V.edition)} ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur ${V.edition.one} ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
 
-      <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, actions, financements, équipe). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien.`} className="mb-4">
+      <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, ${pl(V.action)}, financements, équipe). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien.`} className="mb-4">
         <BatchForm
           year={target}
           canRun={codir}

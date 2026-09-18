@@ -117,7 +117,7 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
 
 export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   edition_status: `Statuts ${de(V.edition)}`,
-  action_state: "États d'action",
+  action_state: `États d'${V.action.one}`,
   funding_status: "Statuts de financement",
   validation_kind: "Natures de validation",
   validation_status: "Statuts de validation",

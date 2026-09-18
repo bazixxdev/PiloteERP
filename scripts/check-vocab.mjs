@@ -19,6 +19,7 @@ const WORDS = [
   ["RAF", W("RAF")],
   ["direction", W("[Dd]irection")],
   ["pilote", W("pilotes?")],
+  ["action", W("[Aa]ctions?")],
 ];
 
 function* files(dir) {
@@ -44,7 +45,12 @@ for (const root of ROOTS) {
         const parent = node.parent;
         const isTestId = parent && ts.isJsxAttribute(parent) && parent.name.getText() === "data-testid";
         const isImport = parent && (ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent));
-        if (!isTestId && !isImport) {
+        // Un type littéral (`"direction" | "admin"`) ou une clé technique (`module: "direction"`, `pilote_person`, `@pilote.cress`)
+        // n'est pas de l'affichage : pas d'espace, pas de majuscule, pas d'accent.
+        const isType = parent && ts.isLiteralTypeNode(parent);
+        const isKey = /^[a-z0-9_:.@/?=&#-]+$/.test(s);
+        const isClass = parent && ts.isJsxAttribute(parent) && parent.name.getText() === "className";
+        if (!isTestId && !isImport && !isType && !isKey && !isClass) {
           const { line } = sf.getLineAndCharacterOfPosition(node.getStart());
           if (!/vocab-ok/.test(lines[line])) {
             for (const [label, re] of WORDS) {

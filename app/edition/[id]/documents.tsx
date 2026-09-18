@@ -16,7 +16,7 @@ import { hasModule } from "@/lib/modules";
 import { inMyPole } from "@/lib/scope";
 import type { TabCtx } from "./types";
 import { AddDocLinkForm } from "./add-forms";
-import { V, du, ce } from "@/lib/vocab";
+import { V, du, ce, pl } from "@/lib/vocab";
 
 // Documents (revue du 15/09) : une liste de chemins et de liens avec leur famille, les pièces qui font foi, les notes.
 // La discussion est dans le Fil (en-tête) ; l'adresse pour Teams dans le menu « … ».
@@ -35,7 +35,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
         title="Fichiers et liens"
         description={<span className="inline-flex items-center gap-1.5">{`Chemins sur le serveur ${du(V.org)} et adresses web (Teams, OneNote, convention en ligne) `}<HelpTip title="Où va quoi ? Trois familles, une règle chacune" testId="documents-rule">
           <ol className="mt-1 grid gap-1.5">
-            <li><b>Ce qui naît dans l'outil</b> — fiche, objectifs, indicateurs, actions, réalisations, décisions, remarques, bilan. <span className="text-muted-foreground">Ici seulement ; le Word est un export, jamais une source.</span></li>
+            <li><b>Ce qui naît dans l'outil</b>{` — fiche, objectifs, indicateurs, ${pl(V.action)}, réalisations, décisions, remarques, bilan. `}<span className="text-muted-foreground">Ici seulement ; le Word est un export, jamais une source.</span></li>
             <li><b>Les pièces qui font foi</b> — devis validé, notification, convention signée, justificatif financeur, bilan remis. <span className="text-muted-foreground">Déposées ici, rattachées à leur objet, jamais supprimées : ce sont celles qu'un contrôle demande.</span></li>
             <li><b>Tout le reste</b> — livrables produits, documents de travail, notes de service, comptes rendus. <span className="text-muted-foreground">{`Sur le serveur, dans le dossier ${du(V.edition)} ; l'outil donne le chemin. Teams reste éphémère, OneDrive est arrêté.`}</span></li>
           </ol>

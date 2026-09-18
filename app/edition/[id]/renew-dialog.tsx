@@ -37,7 +37,7 @@ export function RenewDialog({ edition, disabled, open: openProp, onOpenChange, h
               <li>Couche 1 · cadre stratégique</li>
               <li>Couche 2 · cadre de moyens</li>
               <li>Couche 3 · proposition opérationnelle</li>
-              <li>{edition.actions} action{edition.actions > 1 ? "s" : ""} (jalons +1 an, état « à faire »)</li>
+              <li>{edition.actions}{` ${V.action.one}`}{edition.actions > 1 ? "s" : ""} (jalons +1 an, état « à faire »)</li>
               <li>{edition.fundingLines} ligne{edition.fundingLines > 1 ? "s" : ""} de financement (statut « à déposer », montants vidés)</li>
               <li>Équipe de {edition.team} personne{edition.team > 1 ? "s" : ""}, jours vendus, indicateurs (cibles), liens</li>
             </ul>

@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { saveTime, copyPreviousWeek, declareWeek } from "@/app/actions/time";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { V, cap, le, du } from "@/lib/vocab";
+import { V, cap, le, un, du } from "@/lib/vocab";
 
 export type GridRow = { label: string; sub: string; projectId: string | null; actionId: string | null; timeCodeId: string | null; kind: "project" | "action" | "code" };
 type Entry = { date: string; projectId: string | null; actionId: string | null; timeCodeId: string | null; hours: number; comment: string | null };
@@ -142,7 +142,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
         <table className="w-full min-w-[740px] table-fixed text-xs">
           <thead>
             <tr className="bg-[#f1f5f6] text-[10px] font-semibold text-muted-foreground">
-              <th className="w-[32%] px-3 py-[11px] text-left">Projet / action <small className="font-normal">· en heures</small></th>
+              <th className="w-[32%] px-3 py-[11px] text-left">{`Projet / ${V.action.one} `}<small className="font-normal">· en heures</small></th>
               {p.days.map((d, i) => {
                 const dj = dayjs(d);
                 return (
@@ -252,7 +252,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4 text-xs text-muted-foreground">
         <div className="max-w-[420px]">
           <p><b>Tab</b> pour avancer · heures décimales acceptées, par exemple 1,5 · Entrée valide la cellule.</p>
-          <p className="mt-1.5">Survolez le nom d'une action, ou placez-y le focus, pour retrouver son objectif. Les codes de temps accueillent le travail transverse.</p>
+          <p className="mt-1.5">{`Survolez le nom d'${un(V.action)}, ou placez-y le focus, pour retrouver son objectif. Les codes de temps accueillent le travail transverse.`}</p>
         </div>
         {!p.readOnly && (
           <div className="flex flex-wrap items-center gap-3" data-testid="week-declaration">

@@ -12,7 +12,7 @@ import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
 import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
-import { V, ce } from "@/lib/vocab";
+import { V, cap, le, du, ce, aucun, pl } from "@/lib/vocab";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
@@ -24,20 +24,20 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
 
   return (
     <div className="grid gap-4">
-      <Section title="Actions" description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} /> : undefined}>
+      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} /> : undefined}>
         {e.actions.length === 0 ? (
-          <EmptyState title="Aucune action" hint={`Ajoutez la première action de ${ce(V.edition)} : un nom, un responsable, un jalon.`} />
+          <EmptyState title={cap(aucun(V.action))} hint={`Ajoutez la première ${V.action.one} de ${ce(V.edition)} : un nom, un responsable, un jalon.`} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm" data-testid="actions-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
                 <tr>
                   <th className="w-8 py-1.5 pr-2">#</th>
-                  <th className="py-1.5 pr-2">Action</th>
+                  <th className="py-1.5 pr-2">{cap(V.action)}</th>
                   <th className="py-1.5 pr-2">Responsable</th>
                   <th className="py-1.5 pr-2">Jalon</th>
                   <th className="py-1.5 pr-2">État</th>
-                  <th className="min-w-[180px] py-1.5 pr-2" title="Heures saisies sur l'action, face à l'objectif fixé">Temps</th>
+                  <th className="min-w-[180px] py-1.5 pr-2" title={`Heures saisies sur ${le(V.action)}, face à l'objectif fixé`}>Temps</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -48,23 +48,23 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   const over = a.timeTarget != null && c > a.timeTarget;
                   const lateMilestone = a.milestoneDate && a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day");
                   return (
-                    <tr key={a.id} className="group" data-testid={`action-row-${i}`}>
+                    <tr key={a.id} className="group" data-testid={`${V.action.one}-row-${i}`}>
                       <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
                       <td className="min-w-[220px] py-1 pr-2">
-                        <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`action-name-${i}`} inputClassName="font-medium" label={`Nom de l'action ${i + 1}`} />
+                        <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`${V.action.one}-name-${i}`} inputClassName="font-medium" label={`Nom ${du(V.action)} ${i + 1}`} />
                         {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
                         {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
                         <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[a.fundingLine ? a.fundingLine.funder.name : null, a.isPublic ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
                           <div className="grid gap-2 sm:grid-cols-3">
-                            <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`action-description-${i}`} label={`Contenu, ${a.name}`} /></div>
+                            <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
                             <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
                             <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Participants, invités</span><AutoField model="action" id={a.id} field="participants" type="textarea" rows={2} value={a.participants} readOnly={!rw} placeholder="—" label={`Participants, ${a.name}`} /></div>
                             <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Ligne de financement</span><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— le projet, sans ligne dédiée —" label={`Ligne de financement, ${a.name}`} /></div>
-                            <div className="flex items-end pb-1"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`action-public-${i}`} label={`Événement public, ${a.name}`} placeholder="Événement public (agenda du site)" /></div>
+                            <div className="flex items-end pb-1"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`${V.action.one}-public-${i}`} label={`Événement public, ${a.name}`} placeholder="Événement public (agenda du site)" /></div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
-                              <div className="text-[10px] font-semibold text-muted-foreground">Tâches en cours sur cette action</div>
+                              <div className="text-[10px] font-semibold text-muted-foreground">{`Tâches en cours sur ${ce(V.action)}`}</div>
                               {a.tasks.length === 0 ? <p className="text-xs text-muted-foreground">Aucune.</p> : <ul className="mt-1 divide-y text-xs">{a.tasks.map((t) => <li key={t.id} className="flex items-center justify-between gap-2 py-1"><span className="truncate">{t.label}</span><span className="shrink-0 text-muted-foreground">{t.person.name}{t.dueDate ? ` · ${dayjs(t.dueDate).format("D MMM")}` : ""}</span></li>)}</ul>}
                             </div>
                             <div>
@@ -73,7 +73,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                             </div>
                             <div className="sm:col-span-2">
                               <div className="text-[10px] font-semibold text-muted-foreground">Réalisations consignées</div>
-                              {e.achievements.filter((x) => x.actionId === a.id).length === 0 ? <p className="text-xs text-muted-foreground">Aucune : consignez-les sous le tableau, en liant l'action.</p> : <ul className="mt-1 divide-y text-xs">{e.achievements.filter((x) => x.actionId === a.id).map((x) => <li key={x.id} className="py-1"><span className="text-muted-foreground">{dayjs(x.date).format("D MMM")} · </span>{x.value != null ? <b className="tabular">{x.value}{x.unit ? ` ${x.unit}` : ""} · </b> : null}{x.label}</li>)}</ul>}
+                              {e.achievements.filter((x) => x.actionId === a.id).length === 0 ? <p className="text-xs text-muted-foreground">{`Aucune : consignez-les sous le tableau, en liant ${le(V.action)}.`}</p> : <ul className="mt-1 divide-y text-xs">{e.achievements.filter((x) => x.actionId === a.id).map((x) => <li key={x.id} className="py-1"><span className="text-muted-foreground">{dayjs(x.date).format("D MMM")} · </span>{x.value != null ? <b className="tabular">{x.value}{x.unit ? ` ${x.unit}` : ""} · </b> : null}{x.label}</li>)}</ul>}
                             </div>
                           </div>
                         </ActionPanel>
@@ -81,9 +81,9 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} label={`Jalon, ${a.name}`} placeholder="—" /></td>
                       <td className="min-w-[130px] py-1 pr-2">
-                        {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`action-late-${i}`}>en retard</span>}
+                        {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`${V.action.one}-late-${i}`}>en retard</span>}
                         {rw ? (
-                          <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`action-state-${i}`} label={`État, ${a.name}`} />
+                          <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`${V.action.one}-state-${i}`} label={`État, ${a.name}`} />
                         ) : (
                           <StatusBadge label={refLabel(refs, "action_state", a.state)} color={refColor(refs, "action_state", a.state)} />
                         )}

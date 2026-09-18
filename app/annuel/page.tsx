@@ -94,7 +94,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                       <td key={mi} className="overflow-hidden px-1 py-1.5">
                         <div className="flex min-w-0 flex-col gap-0.5">
                           {cell.slice(0, 3).map((a) => (
-                            <Link key={a.id} href={`/edition/${a.editionId}?onglet=actions`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
+                            <Link key={a.id} href={`/edition/${a.editionId}?onglet=${pl(V.action)}`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
                               <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[a.state])} />
                               <span className="line-clamp-2 min-w-0 break-words leading-tight">{a.name}</span>
                             </Link>
@@ -114,7 +114,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">{`Chaque pastille est un jalon d'action dont la personne est responsable ; les jours prévus (charge) se règlent sur chaque ${V.edition.one}, onglet Temps, ou au séminaire.`}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{`Chaque pastille est un jalon d'${V.action.one} dont la personne est responsable ; les jours prévus (charge) se règlent sur chaque ${V.edition.one}, onglet Temps, ou au séminaire.`}</p>
     </div>
   );
 }

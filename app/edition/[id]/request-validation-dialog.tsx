@@ -122,7 +122,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
             </div>
           )}
           <div className="grid gap-1">
-            <Label htmlFor="rv-action">Action concernée</Label>
+            <Label htmlFor="rv-action">{`${cap(V.action)} concernée`}</Label>
             <Select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
               <option value="">{`— ${le(V.edition)} entière —`}</option>
               {actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -172,7 +172,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
 
           {label.trim() && (
             <p className="rounded-lg border border-dashed px-3 py-2 text-xs" data-testid="rv-summary">
-              <b>Récapitulatif :</b> {kindLabel.toLowerCase()} « {label.trim()} »{amountNumber ? ` de ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amountNumber)}` : ""}{actionId ? ` pour l'action « ${actions.find((a) => a.id === actionId)?.name ?? ""} »` : ""}, {fileName ? `avec la pièce « ${fileName} »` : url ? "avec un lien vers la pièce" : "sans pièce jointe"}, transmis à {recipient ?? LEVEL_ROLE[level]}.
+              <b>Récapitulatif :</b> {kindLabel.toLowerCase()} « {label.trim()} »{amountNumber ? ` de ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amountNumber)}` : ""}{actionId ? ` pour ${le(V.action)} « ${actions.find((a) => a.id === actionId)?.name ?? ""} »` : ""}, {fileName ? `avec la pièce « ${fileName} »` : url ? "avec un lien vers la pièce" : "sans pièce jointe"}, transmis à {recipient ?? LEVEL_ROLE[level]}.
             </p>
           )}
         </div>

@@ -7,7 +7,7 @@ import { paymentSummary } from "@/lib/payments";
 import { fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
-import { V, le, du } from "@/lib/vocab";
+import { V, cap, le, un, du } from "@/lib/vocab";
 
 // Réalisé comptable de l'édition (lot D) : ce que la compta a enregistré sur ses codes analytiques — charges par poste (avec les
 // pièces), produits, frais de déplacement, par action et par financement quand un code le permet. Composant serveur : il lit
@@ -32,7 +32,7 @@ export async function LedgerBlock({ e, settings, canAdmin }: Pick<TabCtx, "e" | 
       title="Réalisé comptable"
       description={<span className="inline-flex flex-wrap items-center gap-1.5">Ce que la compta a enregistré sur les codes {codes.map((c) => <code key={c} className="rounded bg-muted px-1 font-mono text-[11px]">{c}</code>)} en {e.year}{lastImport && <> · {SOURCE_LABEL[lastImport.source] ?? lastImport.source} du {fmtDate(lastImport.importedAt)}</>}
         <HelpTip title="D'où viennent ces chiffres" testId="ledger-help">
-          <p>{`Le grand livre analytique du logiciel de compta est importé (fichier exporté, ou Pennylane) et rapproché ${du(V.edition)} par ses codes analytiques : celui du projet, ceux de ses lignes de financement, et les correspondances posées dans l'admin (une action, un code particulier). Aucun lien en dur : une écriture sans code connu apparaît dans « codes à rapprocher » de l'admin.`}</p>
+          <p>{`Le grand livre analytique du logiciel de compta est importé (fichier exporté, ou Pennylane) et rapproché ${du(V.edition)} par ses codes analytiques : celui du projet, ceux de ses lignes de financement, et les correspondances posées dans l'admin (${un(V.action)}, un code particulier). Aucun lien en dur : une écriture sans code connu apparaît dans « codes à rapprocher » de l'admin.`}</p>
           <p className="mt-1">Charges = comptes 6 (débit − crédit), produits = comptes 7, frais = comptes 625 (déplacements, missions, réceptions — les notes de frais quand elles viennent d&apos;un autre outil). <b>Un seul réalisé compte dans les alertes d&apos;enveloppe</b> : {fromLedger ? `la compta (réglage actuel) ; le réalisé saisi par ${le(V.raf)} s'affiche en regard` : `le réalisé saisi par ${le(V.raf)} (réglage actuel) ; la compta s'affiche en regard`}. Réglable dans admin › Paramètres.</p>
         </HelpTip></span>}
       testId="ledger-block"
@@ -79,8 +79,8 @@ export async function LedgerBlock({ e, settings, canAdmin }: Pick<TabCtx, "e" | 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {r.byAction.size > 0 && (
                 <div className="rounded-lg border p-3 text-sm" data-testid="ledger-by-action">
-                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Par action (codes rapprochés d&apos;une action)</div>
-                  <ul className="divide-y">{[...r.byAction].map(([id, amount]) => <li key={id} className="flex justify-between py-1"><span>{actionName.get(id) ?? "Action"}</span><span className="tabular font-medium">{fmtEuro(amount)}</span></li>)}</ul>
+                  <div className="mb-1 text-[11px] font-semibold text-muted-foreground">{`Par ${V.action.one} (codes rapprochés d'${un(V.action)})`}</div>
+                  <ul className="divide-y">{[...r.byAction].map(([id, amount]) => <li key={id} className="flex justify-between py-1"><span>{actionName.get(id) ?? `${cap(V.action)}`}</span><span className="tabular font-medium">{fmtEuro(amount)}</span></li>)}</ul>
                 </div>
               )}
               {r.byFundingLine.size > 0 && (

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addTask } from "@/app/actions/tasks";
 import { Select } from "@/components/common/searchable-select";
-import { V, le, ce } from "@/lib/vocab";
+import { V, cap, le, ce } from "@/lib/vocab";
 
 // « Me créer une tâche » : une tâche personnelle rattachée à l'édition (et, au choix, à une action) ; elle vit dans Ma semaine.
 export function CreateTaskButton({ editionId, actions, compact }: { editionId: string; actions: { id: string; name: string }[]; compact?: boolean }) {
@@ -27,7 +27,7 @@ export function CreateTaskButton({ editionId, actions, compact }: { editionId: s
           <div className="text-sm font-semibold">Une tâche pour moi</div>
           <p className="text-[11px] text-muted-foreground">{`Privée : elle n'apparaît que dans votre « Ma semaine », rattachée à ${ce(V.edition)}.`}</p>
           <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Relancer le financeur, préparer le support…" aria-label="Tâche" data-testid="task-from-edition-label" />
-          <Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={actionId} onChange={(e) => setActionId(e.target.value)} aria-label="Action concernée"><option value="">{`— ${le(V.edition)} entière —`}</option>{actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
+          <Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={actionId} onChange={(e) => setActionId(e.target.value)} aria-label={`${cap(V.action)} concernée`}><option value="">{`— ${le(V.edition)} entière —`}</option>{actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Échéance (facultative)" className="h-8" />
           <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button><Button type="submit" size="sm" disabled={pending || !label.trim()} data-testid="task-from-edition-submit">Ajouter</Button></div>
         </form>

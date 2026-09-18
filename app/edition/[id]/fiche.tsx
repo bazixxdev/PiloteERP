@@ -21,7 +21,7 @@ import { isLocked, LOCKED_STATUSES } from "@/lib/lock";
 import type { RemarkView } from "./remarks";
 import { cn } from "@/lib/utils";
 import { isCodir } from "@/lib/rights";
-import { V, le, du, de } from "@/lib/vocab";
+import { V, cap, le, du, de, pl } from "@/lib/vocab";
 
 // Les quatre couches de la fiche (numérotées comme dans la maquette V2), plus la logistique renseignée au fil de l'année.
 const LAYERS: { key: Layer; no: string; title: string; owner: string; fields: string[]; optional?: boolean }[] = [
@@ -129,9 +129,9 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
                 <section id="indicateurs" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-indicators">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">◎</span><h4 className="text-sm font-bold">Indicateurs</h4><span className="text-[10px] text-muted-foreground">cible fixée à la rédaction · réalisé mis à jour dans l'année</span></div>
-                    <Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">Mettre à jour dans Actions →</Link>
+                    <Link href={`/edition/${e.id}?onglet=${pl(V.action)}#realisations`} className="text-xs text-primary hover:underline">{`Mettre à jour dans ${cap(pl(V.action))} →`}</Link>
                   </div>
-                  {e.indicators.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">Aucun indicateur : ajoutez-les depuis l'onglet Actions (cible, imposé par un financeur ou propre au projet).</p> : (
+                  {e.indicators.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">{`Aucun indicateur : ajoutez-les depuis l'onglet ${cap(pl(V.action))} (cible, imposé par un financeur ou propre au projet).`}</p> : (
                     <ul className="mt-2.5 grid gap-1 text-sm lg:ml-9">
                       {e.indicators.map((i) => <li key={i.id} className="flex items-baseline justify-between gap-2 border-b border-dashed py-1"><span className="min-w-0 truncate">{i.label}{i.imposed && <span className="ml-1 rounded-sm bg-info-soft px-1 text-[10px] text-primary">imposé</span>}</span><span className="shrink-0 text-xs tabular text-muted-foreground">cible <b className="text-foreground">{i.target ?? "—"}</b>{i.actual ? <> · réalisé <b className="text-foreground">{i.actual}</b></> : null}</span></li>)}
                     </ul>

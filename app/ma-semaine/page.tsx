@@ -60,9 +60,9 @@ export default async function MaSemainePage() {
 
   // Une seule liste d'échéances, découpée en trois horizons.
   const items: Item[] = [
-    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · ${cap(V.edition)} ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
+    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · ${cap(V.edition)} ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=${pl(V.action)}`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
     ...myDeliverables.map((d): Item => ({ id: `d-${d.id}`, kind: "deliverable", title: d.label, sub: `${d.fundingLine.edition.project.name} · Livrable pour ${d.fundingLine.funder.name}`, href: `/edition/${d.fundingLine.editionId}?onglet=budget#recettes`, date: d.dueDate, daysLeft: d.daysLeft })),
-    ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
+    ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=${pl(V.action)}`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
     // Les tâches datées en retard rejoignent le retard ; les autres vivent dans « Mes tâches » (pas de doublon).
     ...tasks.filter((t) => !t.done && t.dueDate && dayjs(t.dueDate).isBefore(dayjs(), "day")).map((t): Item => ({ id: `t-${t.id}`, kind: "task", title: t.label, sub: t.edition ? `${t.edition.name} · ${t.edition.year}` : "tâche personnelle", href: "#mes-taches", date: dayjs(t.dueDate!).toDate(), daysLeft: dayjs(t.dueDate!).startOf("day").diff(dayjs().startOf("day"), "day") })),
   ].sort((a, b) => a.daysLeft - b.daysLeft);
@@ -93,7 +93,7 @@ export default async function MaSemainePage() {
   const dayLabel = (n: number) => (n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} j`);
   const badgeColor = (n: number) => (n < 0 ? "danger" : n <= 7 ? "warning" : "muted");
   const firstName = me.name.split(/\s+/)[0];
-  const kindLabel = { action: "Action", deliverable: "Livrable", milestone: "Jalon d'équipe", task: "Tâche" };
+  const kindLabel = { action: `${cap(V.action)}`, deliverable: "Livrable", milestone: "Jalon d'équipe", task: "Tâche" };
 
   const ItemRow = ({ it }: { it: Item }) => (
     <Row late={it.daysLeft < 0}>

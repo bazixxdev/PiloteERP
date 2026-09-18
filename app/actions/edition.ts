@@ -9,7 +9,7 @@ import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
-import { V, cap, le, un, du, de, au, ce } from "@/lib/vocab";
+import { V, cap, le, un, du, de, au, ce, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -25,9 +25,9 @@ const path = (id: string) => `/edition/${id}`;
 
 export async function addAction(editionId: string, name: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
-  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: "Vous ne pouvez pas ajouter d'action ici." };
+  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: `Vous ne pouvez pas ajouter d'${V.action.one} ici.` };
   const count = await prisma.action.count({ where: { editionId } });
-  const a = await prisma.action.create({ data: { editionId, name: name.trim() || "Nouvelle action", ownerId: c.isPilot ? c.me.id : c.e.project.pilotId, order: count } });
+  const a = await prisma.action.create({ data: { editionId, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: c.isPilot ? c.me.id : c.e.project.pilotId, order: count } });
   revalidatePath(path(editionId));
   return { ok: true, data: { id: a.id } };
 }
@@ -317,9 +317,9 @@ export async function addFundingLineFromConvention(editionId: string, convention
 // Dupliquer une action (occurrences : petits-déjeuners, forums SPRO) : même contenu, lieu, participants et objectif ; jalon vidé, état « à faire ».
 export async function duplicateAction(actionId: string): Promise<Result<{ id: string }>> {
   const a = await prisma.action.findUnique({ where: { id: actionId } });
-  if (!a) return { ok: false, error: "Action introuvable." };
+  if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
   const c = await ctx(a.editionId);
-  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: "Vous ne pouvez pas dupliquer cette action." };
+  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas dupliquer ${ce(V.action)}.` };
   const count = await prisma.action.count({ where: { editionId: a.editionId } });
   const d = await prisma.action.create({ data: { editionId: a.editionId, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
   revalidatePath(path(a.editionId));

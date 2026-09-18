@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Presentation } from "@/app/cafe/presentation";
 import { DecisionForm } from "./decision-form";
 import { SessionTimer } from "./session-timer";
-import { V, cap, le, de, au, pl } from "@/lib/vocab";
+import { V, cap, le, du, de, au, pl } from "@/lib/vocab";
 
 // Écran CODIR (EF-H2) : seulement ce qui appelle une décision — validations, jalons dépassés, livrables proches,
 // enveloppes et temps en écart — et la décision se consigne sur l'édition sans quitter l'écran (EF-F4).
@@ -81,7 +81,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   for (const { e, a, days } of lateMilestones) { const t = topic(e); t.score += 3 + Math.min(3, Math.floor(days / 30)); t.problems.push(`Jalon « ${a.name} » dépassé de ${days} j`); t.decisions.push("Replanifier le jalon, ou l'abandonner"); t.overdueDays = Math.max(t.overdueDays, days); nearer(t, a.milestoneDate!); }
   for (const { e, f, d, days } of deliverables) { const t = topic(e); t.score += days < 0 ? 3 : 2; t.problems.push(`Livrable « ${d.label} » pour ${f.funder.name} ${days < 0 ? `en retard de ${-days} j` : `dû dans ${days} j`}`); t.decisions.push(days < 0 ? "Fixer la date de remise et prévenir le financeur" : "Confirmer que la remise est tenue"); nearer(t, d.dueDate); }
   for (const e of envelopes) { const t = topic(e); const over = e.used - e.budgetEnvelope!; t.score += over > 0 ? 3 : 1; t.problems.push(over > 0 ? `Enveloppe dépassée de ${fmtEuro(over)} (${Math.round((e.used / e.budgetEnvelope!) * 100)} %)` : `Enveloppe consommée à ${Math.round((e.used / e.budgetEnvelope!) * 100) } %`); t.decisions.push(over > 0 ? "Couvrir le dépassement ou réduire les engagements" : "Geler ou autoriser les dépenses restantes"); }
-  for (const { e, a, consumed } of timeOver) { const t = topic(e); t.score += 1; t.problems.push(`Temps « ${a.name} » : ${fmtNumber(consumed, 0)} h sur ${a.timeTarget} h`); t.decisions.push("Revoir l'objectif de temps ou le périmètre de l'action"); }
+  for (const { e, a, consumed } of timeOver) { const t = topic(e); t.score += 1; t.problems.push(`Temps « ${a.name} » : ${fmtNumber(consumed, 0)} h sur ${a.timeTarget} h`); t.decisions.push(`Revoir l'objectif de temps ou le périmètre ${du(V.action)}`); }
   const agenda = [...topics.values()].sort((x, y) => y.score - x.score || (x.due && y.due ? dayjs(x.due).diff(y.due) : 0)).slice(0, 5);
   const uniq = (xs: string[]) => [...new Set(xs)];
 

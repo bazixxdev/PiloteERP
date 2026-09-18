@@ -68,7 +68,7 @@ export async function addAchievement(editionId: string, input: { kind: string; l
   if (!allowed) return { ok: false, error: `${cap(le(V.pilote))}, l'équipe ou ${le(V.codir)} consignent une réalisation.` };
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Dites ce qui a été réalisé." };
-  if (input.actionId) { const a = await prisma.action.findUnique({ where: { id: input.actionId } }); if (!a || a.editionId !== editionId) return { ok: false, error: `Action introuvable sur ${ce(V.edition)}.` }; }
+  if (input.actionId) { const a = await prisma.action.findUnique({ where: { id: input.actionId } }); if (!a || a.editionId !== editionId) return { ok: false, error: `${cap(V.action)} introuvable sur ${ce(V.edition)}.` }; }
   const date = input.date ? new Date(input.date) : new Date();
   if (Number.isNaN(date.getTime())) return { ok: false, error: "Date invalide." };
   const a = await prisma.achievement.create({ data: { editionId, kind: input.kind || "other", label, value: input.value ?? null, unit: input.unit?.trim() || null, date, actionId: input.actionId || null, authorId: me.id } });

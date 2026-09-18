@@ -126,7 +126,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
           {at && suggestions.length === 0 && editions.length > 0 && <p className="mt-1 pl-6 text-[10px] text-muted-foreground">{cap(aucun(V.edition))} ne correspond à « {at[1].trim()} ».</p>}
         </form>
       )}
-      {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">{emptyText ?? "Aucune tâche en cours. Une tâche, c'est à vous : ce n'est ni une action du projet, ni un jalon."}</p>}
+      {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">{emptyText ?? `Aucune tâche en cours. Une tâche, c'est à vous : ce n'est ni ${un(V.action)} du projet, ni un jalon.`}</p>}
       {grouped ? (
         groupByDue(open).map((g) => (
           <section key={g.key} data-testid={`due-group-${g.key}`}>
@@ -274,7 +274,7 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
             <Field label={cap(V.edition)}>{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
             <Field label="Échéance"><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></Field>
             {t.requestId && <Field label="Demande d'origine"><Link href="/demandes" className="text-primary hover:underline">Ouvrir la demande</Link> · la cocher fait la demande</Field>}
-            <Field label="Actions"><button type="button" disabled={pending} onClick={() => run(() => deleteTask(t.id), () => onOpenChange(false))} className="inline-flex items-center gap-1 text-danger hover:underline"><Trash2 className="size-3" />Supprimer la tâche</button></Field>
+            <Field label={cap(pl(V.action))}><button type="button" disabled={pending} onClick={() => run(() => deleteTask(t.id), () => onOpenChange(false))} className="inline-flex items-center gap-1 text-danger hover:underline"><Trash2 className="size-3" />Supprimer la tâche</button></Field>
           </aside>
         </div>
       </DialogContent>
@@ -401,8 +401,8 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
           </div>
           {current && current.actions.length > 0 && (
             <div className="mb-2 border-b pb-2">
-              <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>{cap(V.action)} de {ce(V.edition)} (facultatif)</label>
-              <Select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
+              <label className="text-[10px] text-muted-foreground" htmlFor={`task-${V.action.one}-${t.id}`}>{cap(V.action)} de {ce(V.edition)} (facultatif)</label>
+              <Select id={`task-${V.action.one}-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
                 <option value="">— {le(V.edition)} enti{V.edition.gender === "f" ? "ère" : "er"} —</option>
                 {current.actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </Select>

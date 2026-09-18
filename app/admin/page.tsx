@@ -310,7 +310,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <Row label="Alerte enveloppe à (%)"><AutoField model="settings" id="1" field="envelopeAlertPercent" type="number" value={settings.envelopeAlertPercent} readOnly={!rw} suffix="%" /></Row>
             </div>
           </Section>
-          <Section title="Visibilité du temps saisi" description="Qui voit les temps de qui Le temps agrégé par projet et par action reste lisible par tous ceux qui pilotent.">
+          <Section title="Visibilité du temps saisi" description={`Qui voit les temps de qui Le temps agrégé par projet et par ${V.action.one} reste lisible par tous ceux qui pilotent.`}>
             <AutoField model="settings" id="1" field="timeVisibility" type="select" value={settings.timeVisibility} options={refOpt("time_visibility")} allowEmpty={false} readOnly={!rw} testId="setting-time-visibility" />
           </Section>
           <Section title="Dossier de référence sur le serveur" description={`Gabarit du chemin proposé sur chaque ${V.edition.one} ; {code} et {annee} sont remplacés.`}>

@@ -10,7 +10,7 @@ import { Reveal } from "@/components/common/reveal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
-import { V } from "@/lib/vocab";
+import { V, cap, du } from "@/lib/vocab";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -31,9 +31,9 @@ export function AddActionForm({ editionId }: { editionId: string }) {
   const [name, setName] = useState("");
   const { pending, run } = useRun();
   return (
-    <Reveal label="Action" testId="add-action-open">
+    <Reveal label={cap(V.action)} testId="add-action-open">
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => addAction(editionId, name), () => setName("")); }}>
-        <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom de l'action (Entrée pour ajouter)" className="h-7 w-72" data-testid="add-action-input" />
+        <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={`Nom ${du(V.action)} (Entrée pour ajouter)`} className="h-7 w-72" data-testid="add-action-input" />
         <Button type="submit" size="sm" variant="outline" disabled={pending || !name.trim()} data-testid="add-action-submit"><Plus />Ajouter</Button>
       </form>
     </Reveal>

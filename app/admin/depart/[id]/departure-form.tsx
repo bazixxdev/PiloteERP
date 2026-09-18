@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/common/searchable-select";
 import { prepareDeparture } from "@/app/actions/people";
 import { cn } from "@/lib/utils";
-import { V, un, de, pl } from "@/lib/vocab";
+import { V, cap, un, de, pl } from "@/lib/vocab";
 
 type Other = { value: string; label: string; hint: string; poleId: string | null; role: string };
 type Blocks = { piloted: string[]; guaranteed: string[]; ledPoles: string[]; sponsored: string[]; actions: string[]; requests: string[]; teams: string[]; tasks: number };
@@ -61,7 +61,7 @@ export function DepartureForm({ person, others, blocks }: { person: { id: string
       <Block title="Garant de projet" items={blocks.guaranteed} value={guarantorTo} onChange={setGuarantorTo} others={sorted.filter((o) => o.role === "pole_lead" || o.role === "director")} testId="guaranteed" />
       <Block title={`Responsable ${de(V.pole)}`} items={blocks.ledPoles} value={poleLeadTo} onChange={setPoleLeadTo} others={sorted} testId="poles" />
       <Block title={`Sponsor d'${pl(V.edition)}`} items={blocks.sponsored} value={sponsorTo} onChange={setSponsorTo} others={sorted} testId="sponsored" />
-      <Block title="Actions à faire" items={blocks.actions} value={actionsTo} onChange={setActionsTo} others={sorted} testId="actions" />
+      <Block title={`${cap(pl(V.action))} à faire`} items={blocks.actions} value={actionsTo} onChange={setActionsTo} others={sorted} testId="actions" />
       <Block title="Demandes ouvertes qui lui sont confiées" items={blocks.requests} value={requestsTo} onChange={setRequestsTo} others={sorted} testId="requests" />
       {blocks.teams.length > 0 && (
         <label className="flex items-start gap-2 rounded-md border bg-card px-3 py-2.5 text-sm">

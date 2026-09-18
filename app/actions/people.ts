@@ -52,7 +52,7 @@ export async function prepareDeparture(input: DepartureInput): Promise<Result<{ 
   });
   // Les repreneurs sont prévenus de ce qui leur arrive.
   const notify = async (to: string | null, what: string) => { if (to) await prisma.notification.create({ data: { personId: to, senderId: me.id, kind: "info", title: `Départ de ${p.name} : ${what} vous reviennent`, link: "/ma-semaine" } }); };
-  await Promise.all([notify(input.pilotTo, "les projets pilotés"), notify(input.guarantorTo, "les garanties de projet"), notify(input.poleLeadTo, `la responsabilité ${de(V.pole)}`), notify(input.sponsorTo, `le parrainage des ${pl(V.edition)}`), notify(input.actionsTo, "les actions en cours"), notify(input.requestsTo, "les demandes ouvertes")]);
+  await Promise.all([notify(input.pilotTo, "les projets pilotés"), notify(input.guarantorTo, "les garanties de projet"), notify(input.poleLeadTo, `la responsabilité ${de(V.pole)}`), notify(input.sponsorTo, `le parrainage des ${pl(V.edition)}`), notify(input.actionsTo, `les ${pl(V.action)} en cours`), notify(input.requestsTo, "les demandes ouvertes")]);
   revalidatePath("/", "layout");
   return { ok: true, data: { moved } };
 }

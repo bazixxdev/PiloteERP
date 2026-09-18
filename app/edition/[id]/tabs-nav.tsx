@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { V, du } from "@/lib/vocab";
+import { V, cap, du, pl } from "@/lib/vocab";
 
 // Six onglets (revue du 15/09) : l'Aperçu atterrit sur l'état du projet ; Validations → Aperçu et Demandes ; Bilan → Fiche et Actions.
 export const TABS = [
   { key: "apercu", label: "Aperçu" },
   { key: "fiche", label: "Fiche" },
-  { key: "actions", label: "Actions" },
+  { key: "actions", label: `${cap(pl(V.action))}` },
   { key: "budget", label: "Budget" },
   { key: "temps", label: "Temps" },
   { key: "documents", label: "Documents" },

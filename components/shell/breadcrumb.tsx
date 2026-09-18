@@ -6,7 +6,7 @@ import { V, cap, un, pl } from "@/lib/vocab";
 
 // Fil d'Ariane de la barre haute : section / feuille de la barre latérale (même arbre, lib/navigation.ts), puis le
 // dernier maillon qui suit l'onglet ou la vue affichée. Les pages hors arbre (Mon compte, Proposer un projet…) ont leur libellé ici.
-const EDITION_TABS: Record<string, string> = { apercu: "Aperçu", fiche: "Fiche", actions: "Actions", financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };
+const EDITION_TABS: Record<string, string> = { apercu: "Aperçu", fiche: "Fiche", actions: `${cap(pl(V.action))}`, financements: "Financements", temps: "Temps", budget: "Budget", validations: "Validations", documents: "Documents", bilan: "Bilan" };
 const OUTSIDE: [RegExp, string][] = [
   [/^\/compte/, "Mon compte"],
   [/^\/admin\/depart/, "Préparer un départ"],

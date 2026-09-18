@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { NOTE_COLORS } from "@/lib/notes";
 import { dayjs } from "@/lib/format";
-import { V, cap, au } from "@/lib/vocab";
+import { V, cap, au, ce } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -49,7 +49,7 @@ export async function updateTask(id: string, patch: { label?: string; descriptio
   if (patch.actionId) {
     const a = await prisma.action.findUnique({ where: { id: patch.actionId } });
     const editionId = patch.editionId !== undefined ? patch.editionId : t.editionId;
-    if (!a || a.editionId !== editionId) return { ok: false, error: `Cette action n'appartient pas ${au(V.edition)} choisie.` };
+    if (!a || a.editionId !== editionId) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
   }
   // Tâche née d'une demande : la cocher fait la demande (le demandeur est prévenu), la décocher la rouvre.
   if (patch.done !== undefined && t.requestId) {

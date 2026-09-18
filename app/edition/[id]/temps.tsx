@@ -9,7 +9,7 @@ import type { TabCtx } from "./types";
 import { LoadPlanner } from "./load-planner";
 import { HelpTip } from "@/components/common/help-tip";
 import { ClickToEdit } from "@/components/inline/click-to-edit";
-import { V, le, du } from "@/lib/vocab";
+import { V, cap, le, du, pl } from "@/lib/vocab";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
@@ -28,7 +28,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <Section title={`Temps consommé / objectif · ${e.year}`} description="Le temps saisi sur le projet pendant l'année, par action." actions={<Link href="/temps" className="text-xs text-primary hover:underline">Saisir mes temps →</Link>}>
+      <Section title={`Temps consommé / objectif · ${e.year}`} description={`Le temps saisi sur le projet pendant l'année, par ${V.action.one}.`} actions={<Link href="/temps" className="text-xs text-primary hover:underline">Saisir mes temps →</Link>}>
         <div className="mb-4 flex items-center gap-4 rounded-xl bg-muted/50 p-3">
           <div>
             <div className="text-2xl font-bold tabular">{fmtNumber(total, 0)} h</div>
@@ -38,7 +38,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
         </div>
         <table className="w-full text-sm" data-testid="time-by-action">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-            <tr><th className="py-1.5">Action</th><th className="py-1.5 text-right">Consommé</th><th className="py-1.5 text-right">Objectif</th><th className="py-1.5 pl-4">Avancement</th></tr>
+            <tr><th className="py-1.5">{cap(V.action)}</th><th className="py-1.5 text-right">Consommé</th><th className="py-1.5 text-right">Objectif</th><th className="py-1.5 pl-4">Avancement</th></tr>
           </thead>
           <tbody className="divide-y">
             {e.actions.map((a) => {
@@ -54,10 +54,10 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
             })}
             {/* Le temps saisi sur le projet sans action est une information de pilotage, pas une note de bas de page (revue du 15/09). */}
             <tr className={cn(total > 0 && noAction / total > 0.25 ? "bg-warning-soft/60 text-warning-foreground" : "text-muted-foreground")} data-testid="time-no-action">
-              <td className="rounded-l-md py-1.5 pl-1 font-medium">Sans action{total > 0 && noAction > 0 && <span className="font-normal"> · {Math.round((noAction / total) * 100)} % du temps du projet</span>}</td>
+              <td className="rounded-l-md py-1.5 pl-1 font-medium">{`Sans ${V.action.one}`}{total > 0 && noAction > 0 && <span className="font-normal"> · {Math.round((noAction / total) * 100)} % du temps du projet</span>}</td>
               <td className="py-1.5 text-right tabular font-semibold">{fmtNumber(noAction, 1)} h</td>
               <td />
-              <td className="rounded-r-md py-1.5 pl-4 text-[11px]">{total > 0 && noAction / total > 0.25 ? "à rattacher aux actions dans la saisie hebdomadaire" : ""}</td>
+              <td className="rounded-r-md py-1.5 pl-4 text-[11px]">{total > 0 && noAction / total > 0.25 ? `à rattacher aux ${pl(V.action)} dans la saisie hebdomadaire` : ""}</td>
             </tr>
           </tbody>
         </table>
