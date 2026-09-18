@@ -55,6 +55,8 @@ if ! su postgres -c "psql -Atc \"select 1 from pg_database where datname='$DBNAM
   su postgres -c "createdb -O $DBUSER $DBNAME"
 fi
 # .env de production (créé une fois, jamais écrasé par le rsync). Passage SQLite → Postgres : la ligne DATABASE_URL est remplacée.
+# Première mise en ligne d'une instance : le dossier n'existe pas encore (il ne contiendra que le .env jusqu'à la bascule).
+mkdir -p "$DIR"
 if [ ! -f "$DIR/.env" ]; then
   cat > "$DIR/.env" <<ENV
 $(cat "$DIR.dburl")
@@ -88,8 +90,8 @@ echo "→ build"; npm run build >/dev/null
 if ! systemctl cat "$SERVICE" >/dev/null 2>&1; then
   cp "$NEW/deploy/systemd/pilote@.service" /etc/systemd/system/pilote@.service
   systemctl daemon-reload
-  systemctl enable "$SERVICE" >/dev/null 2>&1 || true
 fi
+systemctl is-enabled "$SERVICE" >/dev/null 2>&1 || systemctl enable "$SERVICE" >/dev/null 2>&1 || true # au boot, chaque instance
 # Bascule : maintenance, arrêt, échange des dossiers, démarrage.
 touch "$MAINTENANCE_FLAG"
 [ "$LEGACY_SERVICE" != "none" ] && systemctl stop "$LEGACY_SERVICE" 2>/dev/null || true
