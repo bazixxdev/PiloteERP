@@ -69,7 +69,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
           </div>
         </Section>
 
-        <Section title="Prochains jalons" description={milestones.length ? `${milestones.filter((m) => m.n !== null && m.n < 0).length} en retard · ${milestones.length} ${V.action.one}${milestones.length > 1 ? "s" : ""} à mener` : `Toutes les ${pl(V.action)} sont faites.`} actions={<Link href={`/edition/${e.id}?onglet=${pl(V.action)}`} className="text-xs text-primary hover:underline">{`${cap(pl(V.action))} →`}</Link>} testId="apercu-jalons">
+        <Section title="Prochains jalons" description={milestones.length ? `${milestones.filter((m) => m.n !== null && m.n < 0).length} en retard · ${milestones.length} ${V.action.one}${milestones.length > 1 ? "s" : ""} à mener` : `Toutes les ${pl(V.action)} sont faites.`} actions={<Link href={`/edition/${e.id}?onglet=actions`} className="text-xs text-primary hover:underline">{`${cap(pl(V.action))} →`}</Link>} testId="apercu-jalons">
           {milestones.length > 0 && (
             <ul className="divide-y text-sm">
               {milestones.slice(0, 6).map((a) => {
@@ -135,7 +135,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
           )}
         </Section>
 
-        <Section title="Réalisations et indicateurs" description={<>{e.achievements.length} réalisation{e.achievements.length > 1 ? "s" : ""} consignée{e.achievements.length > 1 ? "s" : ""}{e.indicators.length > 0 && <> · {reached}/{e.indicators.length} indicateur{e.indicators.length > 1 ? "s" : ""} atteint{e.indicators.length > 1 ? "s" : ""}</>}</>} actions={<Link href={`/edition/${e.id}?onglet=${pl(V.action)}#realisations`} className="text-xs text-primary hover:underline">{`${cap(pl(V.action))} →`}</Link>} testId="apercu-realisations">
+        <Section title="Réalisations et indicateurs" description={<>{e.achievements.length} réalisation{e.achievements.length > 1 ? "s" : ""} consignée{e.achievements.length > 1 ? "s" : ""}{e.indicators.length > 0 && <> · {reached}/{e.indicators.length} indicateur{e.indicators.length > 1 ? "s" : ""} atteint{e.indicators.length > 1 ? "s" : ""}</>}</>} actions={<Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">{`${cap(pl(V.action))} →`}</Link>} testId="apercu-realisations">
           {achievements.length > 0 ? (
             <ul className="divide-y text-sm">
               {achievements.map((a) => <li key={a.id} className="flex items-start gap-2 py-1.5"><span className="w-14 shrink-0 text-[11px] tabular text-muted-foreground">{dayjs(a.date).format("D MMM")}</span><span className="min-w-0 flex-1"><b className="tabular">{a.value != null ? `${new Intl.NumberFormat("fr-FR").format(a.value)}${a.unit ? ` ${a.unit}` : ""} · ` : ""}</b>{a.label}<span className="block text-[10px] text-muted-foreground">{kindLabel(a.kind)}</span></span></li>)}

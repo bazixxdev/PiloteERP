@@ -57,4 +57,5 @@ prisma/prototype.db-journal
 /.next-test*
 /.next-test.corrompu*
 /uploads-test/
+/uploads-test-tlst/
 /tests/.auth/

@@ -129,7 +129,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
                 <section id="indicateurs" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-indicators">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">◎</span><h4 className="text-sm font-bold">Indicateurs</h4><span className="text-[10px] text-muted-foreground">cible fixée à la rédaction · réalisé mis à jour dans l'année</span></div>
-                    <Link href={`/edition/${e.id}?onglet=${pl(V.action)}#realisations`} className="text-xs text-primary hover:underline">{`Mettre à jour dans ${cap(pl(V.action))} →`}</Link>
+                    <Link href={`/edition/${e.id}?onglet=actions#realisations`} className="text-xs text-primary hover:underline">{`Mettre à jour dans ${cap(pl(V.action))} →`}</Link>
                   </div>
                   {e.indicators.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">{`Aucun indicateur : ajoutez-les depuis l'onglet ${cap(pl(V.action))} (cible, imposé par un financeur ou propre au projet).`}</p> : (
                     <ul className="mt-2.5 grid gap-1 text-sm lg:ml-9">
