@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getRefs } from "@/lib/session";
 import { ficheInclude, ficheParagraphs } from "@/lib/fiche-docx";
 import { fmtDate } from "@/lib/format";
+import { V } from "@/lib/vocab";
 
 // Plan opérationnel assemblé (retour du 14/09, S15) : toutes les fiches d'une année en un seul Word, par pôle puis mission,
 // à la place des 2-3 heures de copier-coller de l'assistante. Une fiche par page, un sommaire en tête. Comme l'export d'une fiche :
@@ -21,10 +22,10 @@ export async function GET(req: Request) {
   const byPole = new Map<string, typeof editions>();
   for (const e of editions) byPole.set(e.project.pole.name, [...(byPole.get(e.project.pole.name) ?? []), e]);
   const children: Paragraph[] = [
-    new Paragraph({ text: `Plan opérationnel ${year} — CRESS Centre-Val de Loire`, heading: HeadingLevel.TITLE }),
+    new Paragraph({ text: `Plan opérationnel ${year} — ${V.orgLong}`, heading: HeadingLevel.TITLE }),
     new Paragraph({ text: `${editions.length} fiche${editions.length > 1 ? "s" : ""} projet · assemblé le ${fmtDate(new Date())} depuis Pilote (prototype). Chaque fiche est au format du gabarit « Fiche projet ».` }),
     new Paragraph({ text: "Sommaire", heading: HeadingLevel.HEADING_1 }),
-    ...[...byPole.entries()].flatMap(([pole, list]) => [new Paragraph({ text: pole, heading: HeadingLevel.HEADING_2 }), ...list.map((e) => new Paragraph({ text: `• ${e.project.name} — ${e.project.mission.name} — pilote ${e.project.pilot.name}` }))]),
+    ...[...byPole.entries()].flatMap(([pole, list]) => [new Paragraph({ text: pole, heading: HeadingLevel.HEADING_2 }), ...list.map((e) => new Paragraph({ text: `• ${e.project.name} — ${e.project.mission.name} — ${V.pilote.one} ${e.project.pilot.name}` }))]),
     ...editions.flatMap((e) => ficheParagraphs(e, refs, { nested: true })),
   ];
   const doc = new Document({ sections: [{ children }] });

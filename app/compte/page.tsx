@@ -14,6 +14,7 @@ import { modulesOf } from "@/lib/modules";
 import { ModulesForm } from "./modules-form";
 import { PasswordForm } from "./password-form";
 import { getSessionUser } from "@/lib/session";
+import { V, cap } from "@/lib/vocab";
 
 // Mon compte : ce que l'outil sait de moi (rôle, pôle, rythme, codes de temps) et mon flux agenda. Rien ne se modifie ici :
 // les personnes et leurs rythmes se règlent dans l'admin. Le compte de connexion (mot de passe) se gère ici (lot F).
@@ -46,7 +47,7 @@ export default async function ComptePage() {
             {row("E-mail", me.email ?? "—")}
             {me.arrivedAt && row("Dans l'équipe depuis", fmtDate(me.arrivedAt))}
             {row("Rôle", refLabel(refs, "role", me.role))}
-            {row("Pôle", me.pole?.name ?? "Fonction transversale")}
+            {row(`${cap(V.pole)}`, me.pole?.name ?? "Fonction transversale")}
             {row("Rythme de travail", rhythm ? rhythm.label : "Non configuré")}
             {row("Jours disponibles par an", full?.availableDays ?? "—")}
             {row("Codes de temps", full?.timeCodes.length ? full.timeCodes.map((c) => c.timeCode.label).join(", ") : "Aucun code hors projet")}

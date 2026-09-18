@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { exportAllowed } from "@/lib/export-auth";
 import { budgetOf } from "@/lib/budget";
-import { V } from "@/lib/vocab";
 
 // Export CSV par table, ou JSON complet (ENF-5).
 function csv(rows: Record<string, unknown>[]): string {
@@ -33,7 +32,7 @@ export async function GET(req: Request) {
   if (table === "tout" || format === "json") {
     const all: Record<string, unknown> = {};
     for (const [k, fn] of Object.entries(loaders)) all[k] = await fn();
-    return new NextResponse(JSON.stringify(all, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="${V.pilote.one}-export.json"` } });
+    return new NextResponse(JSON.stringify(all, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="pilote-export.json"` } }); // vocab-ok : nom de fichier
   }
   const fn = loaders[table];
   if (!fn) return new NextResponse("Table inconnue", { status: 400 });

@@ -17,6 +17,7 @@ import type { ListView } from "@/lib/tasks";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
 import { SearchableSelect } from "@/components/common/searchable-select";
+import { V, cap } from "@/lib/vocab";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void;
 
@@ -67,7 +68,7 @@ export function ListHeader({ list, editions, count }: { list: ListView; editions
             <label className="grid gap-1"><span className="font-semibold">Nom</span><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name !== list.name) run(() => updateList(list.id, { name })); }} aria-label="Nom de la liste" className="h-8" disabled={pending} data-testid={`list-name-${list.id}`} /></label>
             <div className="grid gap-1"><span className="font-semibold">Couleur</span><ColorDots value={list.color} disabled={pending} onChange={(v) => run(() => updateList(list.id, { color: v }))} testPrefix={`list-color-${list.id}`} /></div>
             <label className="grid gap-1"><span className="font-semibold">Projet suivi</span>
-              <SearchableSelect aria-label="Édition rattachée" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateList(list.id, { editionId: v || null }))} emptyOption="Sans projet — une catégorie à moi" className="w-full text-xs" data-testid={`list-edition-${list.id}`} />
+              <SearchableSelect aria-label={`${cap(V.edition)} rattachée`} options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateList(list.id, { editionId: v || null }))} emptyOption="Sans projet — une catégorie à moi" className="w-full text-xs" data-testid={`list-edition-${list.id}`} />
             </label>
             <fieldset className="grid gap-1">
               <legend className="mb-1 font-semibold">Qui peut la lire ?</legend>

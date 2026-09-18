@@ -18,6 +18,7 @@ import { WeekSplit } from "./split";
 import { FocusMode } from "@/components/common/focus-mode";
 import { Maximize2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { V, le, pl } from "@/lib/vocab";
 
 export default async function TempsPage({ searchParams }: { searchParams: Promise<{ semaine?: string; personne?: string; equipe?: string; mode?: string; focus?: string }> }) {
   const sp = await searchParams;
@@ -98,8 +99,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
         <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
         <PageHeader title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"} />
         <div className="rounded-md border bg-mint-soft px-4 py-4 text-sm" data-testid="fixed-share-banner">
-          <b>Part fixe.</b> {person.fixedShareNote || "Pourcentage déclaré sur lettre de mission"} : aucune répartition hebdomadaire n'est attendue {readOnly ? "de cette personne" : "de vous"}. Le pourcentage est porté par la lettre de mission et par la couche « moyens » des éditions concernées ; la RAF l'applique dans son export.
-          <p className="mt-2 text-xs text-muted-foreground">Référence : règlement (UE) 2021/1060, art. 55 §5 — frais de personnel déclarés à pourcentage fixe, sans système d'enregistrement du temps. À confirmer avec le gestionnaire du FSE.</p>
+          <b>Part fixe.</b> {person.fixedShareNote || "Pourcentage déclaré sur lettre de mission"} : aucune répartition hebdomadaire n'est attendue {readOnly ? "de cette personne" : "de vous"}{`. Le pourcentage est porté par la lettre de mission et par la couche « moyens » des ${pl(V.edition)} concernées ; ${le(V.raf)} l'applique dans son export.`}<p className="mt-2 text-xs text-muted-foreground">Référence : règlement (UE) 2021/1060, art. 55 §5 — frais de personnel déclarés à pourcentage fixe, sans système d'enregistrement du temps. À confirmer avec le gestionnaire du FSE.</p>
         </div>
       </div>
     );
@@ -128,13 +128,13 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
               <Button asChild variant="outline" className="h-11 px-4 md:h-7 md:px-2.5" size="sm"><Link href={qs(weekKey(dayjs()))}>Cette semaine</Link></Button>
               <Button asChild variant="outline" className="size-11 md:size-8" size="icon" aria-label="Semaine suivante"><Link href={qs(nextKey)}><ChevronRight /></Link></Button>
             </nav>
-            <span className="hidden md:inline">{weekLocked ? <StatusBadge label={`${start.format("MMMM")} verrouillé par la RAF`} color="muted" dot={false} /> : <StatusBadge label={`${start.format("MMMM").replace(/^./, (c) => c.toUpperCase())} ouvert à la saisie`} color="mint" />}</span>
+            <span className="hidden md:inline">{weekLocked ? <StatusBadge label={`${start.format("MMMM")} verrouillé par ${le(V.raf)}`} color="muted" dot={false} /> : <StatusBadge label={`${start.format("MMMM").replace(/^./, (c) => c.toUpperCase())} ouvert à la saisie`} color="mint" />}</span>
           </div>
         }
       />
 
       {weekLocked && (
-        <div className="mb-4 flex items-start gap-2.5 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground"><Lock className="mt-0.5 size-3.5" /><span><b>{start.format("MMMM YYYY").replace(/^./, (c) => c.toUpperCase())} verrouillé par la RAF.</b><br />Pour corriger une valeur, contactez la RAF.</span></div>
+        <div className="mb-4 flex items-start gap-2.5 rounded-md bg-muted px-3 py-3 text-xs text-muted-foreground"><Lock className="mt-0.5 size-3.5" /><span><b>{start.format("MMMM YYYY").replace(/^./, (c) => c.toUpperCase())}{` verrouillé par ${le(V.raf)}.`}</b><br />{`Pour corriger une valeur, contactez ${le(V.raf)}.`}</span></div>
       )}
 
       {/* Aide à la saisie : ce que j'ai laissé comme traces cette semaine dans l'outil (tâches, créneaux, notes, jalons). Un rappel, pas une durée. */}
@@ -172,13 +172,13 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
 
       {/* Les règles détaillées restent accessibles, mais repliées : elles ne prennent plus la place des saisies. */}
       <details className="group mt-5 rounded-2xl border bg-card p-4 md:p-5" data-testid="time-help">
-        <summary className="cursor-pointer list-none text-[15px] font-bold">Aide et règles de saisie <span className="text-xs font-normal text-muted-foreground">· fixées par la direction, pour que tout le monde saisisse pareil · <span className="text-primary group-open:hidden">afficher</span><span className="text-primary hidden group-open:inline">replier</span></span></summary>
+        <summary className="cursor-pointer list-none text-[15px] font-bold">Aide et règles de saisie <span className="text-xs font-normal text-muted-foreground">{`· fixées par ${le(V.direction)}, pour que tout le monde saisisse pareil · `}<span className="text-primary group-open:hidden">afficher</span><span className="text-primary hidden group-open:inline">replier</span></span></summary>
         <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_360px]">
           <p className="whitespace-pre-line text-xs">{settings.timeRules || "Aucune règle renseignée dans l'admin."}</p>
           <ul className="space-y-1.5 text-xs text-muted-foreground">
             <li>Total réparti : <strong className="text-foreground tabular">{fmtNumber(total, 1)} h</strong>{expected !== null ? ` pour ${fmtNumber(expected, 2)} h attendues` : ""} (semaine {start.isoWeek() % 2 === 0 ? "paire" : "impaire"}). C'est une clé de répartition de votre temps entre projets, pas votre temps de travail effectif : aucun solde, aucune récupération, les heures supplémentaires se traitent ailleurs.</li>
             <li>Pas de sous-catégorie obligatoire. L'objectif du projet reste une aide à la saisie ; il ne devient pas un objectif d'heures personnel.</li>
-            <li>Une fois le mois verrouillé par la RAF, les saisies passent en lecture seule.</li>
+            <li>{`Une fois le mois verrouillé par ${le(V.raf)}, les saisies passent en lecture seule.`}</li>
             <li>Rythme de {readOnly ? "la personne" : "votre poste"} : {rhythmLabel}.</li>
           </ul>
         </div>

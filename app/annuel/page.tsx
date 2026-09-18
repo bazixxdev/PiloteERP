@@ -13,6 +13,7 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AnnuelFilters } from "./filters";
+import { V, cap, du, de, aucun, pl } from "@/lib/vocab";
 
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
 const STATE_DOT: Record<string, string> = { done: "bg-mint", doing: "bg-primary", todo: "bg-muted-foreground/40" };
@@ -37,12 +38,12 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et éditions de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} actions={<Button asChild variant="outline" size="sm"><Link href={`/matrice?annee=${year}`} data-testid="to-matrix"><Grid3x3 />Qui finance quoi</Link></Button>} />
+      <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et ${pl(V.edition)} de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} actions={<Button asChild variant="outline" size="sm"><Link href={`/matrice?annee=${year}`} data-testid="to-matrix"><Grid3x3 />Qui finance quoi</Link></Button>} />
       <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} allValue={isTransversal(me) ? "" : "tous"} />
 
       {sp.pole && (
-        <Section title="Éditions du pôle" description="Pour la réunion de pôle : statut et alertes de chaque édition." className="mb-4">
-          {poleEditions.length === 0 ? <p className="text-sm text-muted-foreground">Aucune édition cette année.</p> : (
+        <Section title={`${cap(pl(V.edition))} ${du(V.pole)}`} description={`Pour la réunion ${de(V.pole)} : statut et alertes de chaque ${V.edition.one}.`} className="mb-4">
+          {poleEditions.length === 0 ? <p className="text-sm text-muted-foreground">{`${cap(aucun(V.edition))} cette année.`}</p> : (
             <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {poleEditions.map((e) => (
                 <li key={e.id} className="rounded-xl border p-3 text-sm">
@@ -50,7 +51,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                     <Link href={`/edition/${e.id}`} className="font-medium text-primary hover:underline">{e.project.name}</Link>
                     <StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} />
                   </div>
-                  <div className="mb-2 text-xs text-muted-foreground">pilote {e.project.pilot.name}</div>
+                  <div className="mb-2 text-xs text-muted-foreground">{`${V.pilote.one} `}{e.project.pilot.name}</div>
                   <AlertChips alerts={e.alerts} max={2} />
                 </li>
               ))}
@@ -81,7 +82,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                 <tr key={p.id} className="align-top hover:bg-muted/30">
                   <td className="sticky left-0 z-10 bg-card px-3 py-2">
                     <div className="font-medium text-sm">{p.name}</div>
-                    <div className="text-muted-foreground">{p.pole?.name ?? "transversal"} · {myEditions.length} édition{myEditions.length > 1 ? "s" : ""}</div>
+                    <div className="text-muted-foreground">{p.pole?.name ?? "transversal"} · {myEditions.length}{` ${V.edition.one}`}{myEditions.length > 1 ? "s" : ""}</div>
                     <div className="mt-1 flex flex-wrap gap-0.5">
                       {myEditions.slice(0, 4).map((e) => <Link key={e.id} href={`/edition/${e.id}`} className="rounded bg-secondary px-1 text-[10px] text-primary hover:underline" title={e.project.name}>{e.project.analyticCode}</Link>)}
                       {myEditions.length > 4 && <span className="text-[10px] text-muted-foreground">+{myEditions.length - 4}</span>}
@@ -113,7 +114,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Chaque pastille est un jalon d'action dont la personne est responsable ; les jours prévus (charge) se règlent sur chaque édition, onglet Temps, ou au séminaire.</p>
+      <p className="mt-3 text-xs text-muted-foreground">{`Chaque pastille est un jalon d'action dont la personne est responsable ; les jours prévus (charge) se règlent sur chaque ${V.edition.one}, onglet Temps, ou au séminaire.`}</p>
     </div>
   );
 }

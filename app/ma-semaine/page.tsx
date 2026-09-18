@@ -20,6 +20,7 @@ import { loadMyTasks } from "@/lib/tasks";
 import { TaskList } from "@/components/tasks/task-list";
 import { hasModule } from "@/lib/modules";
 import { loadMyLists } from "@/lib/tasks";
+import { V, cap, aucun, pl } from "@/lib/vocab";
 
 // Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
 // les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
@@ -59,7 +60,7 @@ export default async function MaSemainePage() {
 
   // Une seule liste d'échéances, découpée en trois horizons.
   const items: Item[] = [
-    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · Édition ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
+    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · ${cap(V.edition)} ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
     ...myDeliverables.map((d): Item => ({ id: `d-${d.id}`, kind: "deliverable", title: d.label, sub: `${d.fundingLine.edition.project.name} · Livrable pour ${d.fundingLine.funder.name}`, href: `/edition/${d.fundingLine.editionId}?onglet=budget#recettes`, date: d.dueDate, daysLeft: d.daysLeft })),
     ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
     // Les tâches datées en retard rejoignent le retard ; les autres vivent dans « Mes tâches » (pas de doublon).
@@ -239,8 +240,8 @@ export default async function MaSemainePage() {
         </div>
       </div>
 
-      <Section title="Mes éditions" description="Les éditions où je pilote ou contribue, avec leurs alertes." className="mt-5">
-        {myEditions.length === 0 ? <Note>Aucune édition en cours pour moi.</Note> : (
+      <Section title={`Mes ${pl(V.edition)}`} description={`Les ${pl(V.edition)} où je pilote ou contribue, avec leurs alertes.`} className="mt-5">{/* vocab-ok : verbe */}
+        {myEditions.length === 0 ? <Note>{`${cap(aucun(V.edition))} en cours pour moi.`}</Note> : (
           <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {myEditions.map((e) => (
               <li key={e.id} className="rounded-md border p-3 text-xs">
@@ -248,7 +249,7 @@ export default async function MaSemainePage() {
                   <Link href={`/edition/${e.id}`} className="font-semibold text-primary hover:underline">{e.project.name} · {e.year}</Link>
                   <StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} />
                 </div>
-                <div className="mb-2 text-[10px] text-muted-foreground">{e.project.pilotId === me.id ? "je pilote" : "je contribue"} · {e.project.pole.name}</div>
+                <div className="mb-2 text-[10px] text-muted-foreground">{e.project.pilotId === me.id ? "je pilote" /* vocab-ok : verbe */ : "je contribue"} · {e.project.pole.name}</div>
                 <AlertChips alerts={e.alerts} max={2} />
               </li>
             ))}

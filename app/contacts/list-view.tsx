@@ -264,7 +264,7 @@ function PushDialog({ list }: { list: ContactListFull }) {
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{list.brevoListId ? "Mettre à jour dans Brevo" : "Envoyer vers Brevo"}</DialogTitle></DialogHeader>
         <div className="grid gap-2 text-xs" data-testid="push-summary">
-          <p>{list.brevoListId ? <>La liste Brevo liée est mise à jour avec le contenu de « {list.name} ».</> : <>Une liste « {list.name}{` » est créée dans Brevo (dossier « ${cap(V.pilote)} »).`}</>}</p>
+          <p>{list.brevoListId ? <>La liste Brevo liée est mise à jour avec le contenu de « {list.name} ».</> : <>Une liste « {list.name}{` » est créée dans Brevo (dossier « Pilote »).`}</>}</p>
           <ul className="grid gap-1 text-muted-foreground">
             <li>· <b className="text-foreground">{sendable}</b> contact{sendable > 1 ? "s" : ""} avec e-mail : créé{sendable > 1 ? "s" : ""} ou complété{sendable > 1 ? "s" : ""} dans Brevo (nom, prénom, téléphone, structure…), puis inscrit{sendable > 1 ? "s" : ""} à la liste.</li>
             {noEmail > 0 && <li>· {noEmail} sans e-mail : ignoré{noEmail > 1 ? "s" : ""}.</li>}

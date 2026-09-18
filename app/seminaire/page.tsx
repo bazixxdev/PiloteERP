@@ -11,6 +11,7 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BatchForm } from "./batch-form";
+import { V, cap, le, de, aucun, pl } from "@/lib/vocab";
 
 // Séminaire : création en série des éditions N+1 puis contrôle de charge (EF-A5, EF-B3b, EF-H4).
 export default async function SeminairePage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
@@ -39,9 +40,9 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={`Séminaire · éditions ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur édition ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
+      <PageHeader title={`Séminaire · ${pl(V.edition)} ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur ${V.edition.one} ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
 
-      <Section title="1 · Décisions par projet" description="Reconduire copie l'édition précédente (couches 1 à 3, actions, financements, équipe). Ajuster fait pareil et marque l'édition « re-challengée ». Arrêter ne crée rien." className="mb-4">
+      <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, actions, financements, équipe). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien.`} className="mb-4">
         <BatchForm
           year={target}
           canRun={codir}
@@ -54,7 +55,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
         />
       </Section>
 
-      <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes éditions) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."} Le détail mois par mois est dans le plan de charge.`} testId="load-control">
+      <Section title="2 · Contrôle de charge" description={`Charge planifiée ${target} (jours prévus, toutes ${pl(V.edition)}) contre les jours disponibles ; les jours conventionnés sont une référence de financement, pas une charge — 20 jours cofinancés restent 20 jours. ${over.length ? `${over.length} personne${over.length > 1 ? "s" : ""} en dépassement.` : "Personne en dépassement."} Le détail mois par mois est dans le plan de charge.`} testId="load-control">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <table className="w-full text-sm" data-testid="load-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
@@ -83,7 +84,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
           </table>
 
           <div>
-            <div className="mb-2 text-[10px] font-semibold text-muted-foreground">Détail par édition · prévus / conventionnés {canDays ? "(modifiable)" : "(saisi par la RAF et les responsables de pôle)"}</div>
+            <div className="mb-2 text-[10px] font-semibold text-muted-foreground">{`Détail par ${V.edition.one} · prévus / conventionnés `}{canDays ? "(modifiable)" : `(saisi par ${le(V.raf)} et les responsables ${de(V.pole)})`}</div>
             <div className="max-h-[520px] overflow-y-auto rounded-xl border">
               <table className="w-full text-sm">
                 <tbody className="divide-y">
@@ -97,7 +98,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
                       </tr>
                     )),
                   )}
-                  {people.every((p) => p.personDays.length === 0) && <tr><td className="px-3 py-3 text-muted-foreground">Aucune édition {target} : créez-les à l'étape 1.</td></tr>}
+                  {people.every((p) => p.personDays.length === 0) && <tr><td className="px-3 py-3 text-muted-foreground">{`${cap(aucun(V.edition))} `}{target} : créez-les à l'étape 1.</td></tr>}
                 </tbody>
               </table>
             </div>

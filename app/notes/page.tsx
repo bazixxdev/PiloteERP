@@ -12,6 +12,7 @@ import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NoteEditor } from "./editor";
 import { Select } from "@/components/common/searchable-select";
+import { V, tout } from "@/lib/vocab";
 
 // Notes (retour du 14/09) : prise de notes propre, rattachée à un projet ou transverse, privée ou partagée. Remplace le OneNote « défouloir ».
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string; vue?: string }> }) {
@@ -67,7 +68,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
     <div className={cn("p-4 md:p-6", inFocus && "min-h-screen")}>
       <FocusMode on={inFocus} exitHref={current ? `/notes?note=${current.id}` : "/notes"} />
       {!inFocus && (
-        <PageHeader title="Notes" subtitle="Vos notes de réunion, rattachées à un projet ou transverses. Privées par défaut ; partagez-les à votre pôle ou à toute la CRESS." actions={<Button asChild data-testid="new-note"><Link href="/notes?note=nouvelle"><Plus />Nouvelle note</Link></Button>} />
+        <PageHeader title="Notes" subtitle={`Vos notes de réunion, rattachées à un projet ou transverses. Privées par défaut ; partagez-les à votre ${V.pole.one} ou à ${tout(V.org)}.`} actions={<Button asChild data-testid="new-note"><Link href="/notes?note=nouvelle"><Plus />Nouvelle note</Link></Button>} />
       )}
       <div className={cn("grid gap-4", !inFocus && "lg:grid-cols-[300px_minmax(0,1fr)]")}>
         {!inFocus && (

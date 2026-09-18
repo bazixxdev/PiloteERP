@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { saveTime, copyPreviousWeek, declareWeek } from "@/app/actions/time";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { V, cap, le, du } from "@/lib/vocab";
 
 export type GridRow = { label: string; sub: string; projectId: string | null; actionId: string | null; timeCodeId: string | null; kind: "project" | "action" | "code" };
 type Entry = { date: string; projectId: string | null; actionId: string | null; timeCodeId: string | null; hours: number; comment: string | null };
@@ -60,7 +61,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
   };
 
   if (p.rows.length === 0) {
-    return <div className="rounded-md border border-dashed border-[#d3dfe3] p-10 text-center text-xs text-muted-foreground">Aucun projet ni code de temps pour cette personne cette semaine. Le pilote ajoute les membres de l'équipe depuis la fiche de l'édition ; l'admin règle les codes de temps par poste.</div>;
+    return <div className="rounded-md border border-dashed border-[#d3dfe3] p-10 text-center text-xs text-muted-foreground">{`Aucun projet ni code de temps pour cette personne cette semaine. ${cap(le(V.pilote))} ajoute les membres de l'équipe depuis la fiche ${du(V.edition)} ; l'admin règle les codes de temps par poste.`}</div>;
   }
 
   const todayIdx = p.days.findIndex((d) => dayjs(d).isSame(dayjs(), "day"));
@@ -259,7 +260,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
               <span className="flex items-center gap-1.5 text-mint"><CheckCircle2 className="size-4" />Répartition déclarée complète le {p.declaredAt}. Une correction annule la déclaration.</span>
             ) : (
               <>
-                <span>Quand tout est réparti, déclarez-le : la RAF le voit dans la clôture.</span>
+                <span>{`Quand tout est réparti, déclarez-le : ${le(V.raf)} le voit dans la clôture.`}</span>
                 <Button size="sm" variant="outline" disabled={pending || weekTotal === 0} data-testid="declare-week" onClick={() => start(async () => { const r = await declareWeek(p.weekKey); if (!r.ok) toast.error(r.error); else { toast.success("Semaine déclarée complète"); router.refresh(); } })}>
                   <CheckCircle2 />Ma répartition de la semaine est faite
                 </Button>

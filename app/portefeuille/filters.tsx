@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Select } from "@/components/common/searchable-select";
+import { V, cap, pl } from "@/lib/vocab";
 
 type Opt = { value: string; label: string };
 
@@ -23,9 +24,9 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, 
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3" data-testid="portfolio-filters">
       <div className="flex flex-wrap items-center gap-2">
         {showPole && (
-          <Filter label="Pôle">
-            <Select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label="Filtrer le portefeuille par pôle">
-              <option value="">Tous les pôles</option>
+          <Filter label={cap(V.pole)}>
+            <Select className={sel} value={current.pole} onChange={(e) => set("pole", e.target.value)} aria-label={`Filtrer le portefeuille par ${V.pole.one}`}>
+              <option value="">{`Tous les ${pl(V.pole)}`}</option>
               {poles.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </Select>
           </Filter>
@@ -38,7 +39,7 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, 
         </Filter>
         <Filter label="Afficher">
           <Select className={sel} value={current.alerte} onChange={(e) => set("alerte", e.target.value)} aria-label="Filtrer le portefeuille par alerte">
-            <option value="">Toutes les éditions</option>
+            <option value="">{`Toutes les ${pl(V.edition)}`}</option>
             <option value="oui">Avec une alerte</option>
             <option value="danger">Avec une alerte forte</option>
             <option value="calme">Sans alerte</option>

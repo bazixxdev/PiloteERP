@@ -6,6 +6,7 @@ import { Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { freezeLoad } from "@/app/actions/load";
+import { V, du, au } from "@/lib/vocab";
 
 // Figer le plan de charge d'une année (au séminaire) : après, on modifie encore, mais tracé et signalé — rien ne bouge en silence.
 export function FreezeControl({ year, frozen, canFreeze }: { year: number; frozen: { at: string; by: string; note: string | null } | null; canFreeze: boolean }) {
@@ -16,7 +17,7 @@ export function FreezeControl({ year, frozen, canFreeze }: { year: number; froze
   if (frozen) {
     return (
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/60 px-3.5 py-2 text-xs" data-testid="load-frozen">
-        <span className="inline-flex items-center gap-1.5"><Lock className="size-3.5 text-muted-foreground" /><b>Plan de charge {year} validé le {frozen.at}</b> par {frozen.by}{frozen.note ? ` — ${frozen.note}` : ""}. Les modifications restent possibles ; chacune est tracée dans l'historique de l'édition et signalée à la RAF et à la direction.</span>
+        <span className="inline-flex items-center gap-1.5"><Lock className="size-3.5 text-muted-foreground" /><b>Plan de charge {year} validé le {frozen.at}</b> par {frozen.by}{frozen.note ? ` — ${frozen.note}` : ""}{`. Les modifications restent possibles ; chacune est tracée dans l'historique ${du(V.edition)} et signalée ${au(V.raf)} et ${au(V.direction)}.`}</span>
         {canFreeze && <Button size="xs" variant="ghost" disabled={pending} onClick={() => run(false)} data-testid="load-unfreeze"><LockOpen />Rouvrir</Button>}
       </div>
     );

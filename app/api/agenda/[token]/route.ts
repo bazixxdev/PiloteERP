@@ -18,6 +18,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   }
   if (!feed) return new NextResponse("Flux introuvable", { status: 404 });
   return new NextResponse(buildIcs(feed.name, feed.events), {
-    headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `inline; filename="pilote-agenda.ics"`, "Cache-Control": "no-cache" },
+    headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `inline; filename="pilote-agenda.ics"`, "Cache-Control": "no-cache" }, // vocab-ok : nom de fichier
   });
 }

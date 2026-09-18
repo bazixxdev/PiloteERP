@@ -21,7 +21,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Fiche projet au format du gabarit Word : construction partagée avec le plan opérationnel assemblé (lib/fiche-docx.ts).
   if (format === "fiche") {
     const fe = await loadFiche(id);
-    const doc = new Document({ sections: [{ children: [...ficheParagraphs(fe!, refs), new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype), au format du gabarit « Fiche projet ».` })] }] });
+    const doc = new Document({ sections: [{ children: [...ficheParagraphs(fe!, refs), new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype), au format du gabarit « Fiche projet ».` })] }] });
     const buffer = await Packer.toBuffer(doc);
     return new NextResponse(new Uint8Array(buffer), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="fiche-${e.project.analyticCode}-${e.year}.docx"` } });
   }
@@ -52,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           ...(e.achievements.length ? e.achievements.map((a) => new Paragraph({ text: `• ${achLine(a)}` })) : [new Paragraph({ text: "—" })]),
           new Paragraph({ text: "Actions", heading: HeadingLevel.HEADING_1 }),
           ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}` })),
-          new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype).` }),
+          new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype).` }),
         ],
       }],
     });
@@ -68,7 +68,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ...e.indicators.map((i) => `| ${i.label} | ${i.target ?? ""} | ${i.actual ?? ""} | ${i.imposed ? "oui" : ""} |`), "",
     "## Réalisations consignées", "", ...(e.achievements.length ? e.achievements.map((a) => `- ${achLine(a)}`) : ["—"]), "",
     "## Actions", "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
-    `_Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype)._`, "",
+    `_Exporté le ${fmtDate(new Date())} depuis Pilote (prototype)._`, "",
   ].join("\n");
   return new NextResponse(md, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}.md"` } });
 }

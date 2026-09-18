@@ -13,6 +13,7 @@ import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PersonLoad } from "@/lib/load";
 import { SearchableSelect } from "@/components/common/searchable-select";
+import { V, un, du } from "@/lib/vocab";
 
 type Row = PersonLoad;
 export type EditionOpt = { id: string; label: string; year: number; editable: boolean };
@@ -104,7 +105,7 @@ export function LoadGrid({ rows, months, today, groupByPole, editions, changedPe
                 );
               }),
               <tr key={`t-${gid}`} className="border-t bg-[#eef1e8] font-semibold">
-                <td className="sticky left-0 z-[1] bg-[#eef1e8] px-3 py-1.5">{groupByPole ? "Total du pôle" : "Total"}</td>
+                <td className="sticky left-0 z-[1] bg-[#eef1e8] px-3 py-1.5">{groupByPole ? `Total ${du(V.pole)}` : "Total"}</td>
                 {sub.map((t, i) => <td key={i} className={cn("px-1 py-1.5 text-center tabular", t.planned > t.capacity && "text-danger")}>{fmtNumber(t.planned, 0)}<small className="block text-[9px] font-normal text-muted-foreground">/ {fmtNumber(t.capacity, 0)}</small></td>)}
                 <td className="px-2 py-1.5 text-right tabular">{fmtNumber(sub.reduce((s, t) => s + t.planned, 0), 0)} / {fmtNumber(sub.reduce((s, t) => s + t.capacity, 0), 0)} j</td>
               </tr>,
@@ -130,7 +131,7 @@ function AddLoad({ editions, pending, onAdd }: { editions: EditionOpt[]; pending
   if (editions.length === 0) return null;
   return (
     <form className="mt-2 flex items-center gap-1 border-t pt-2" onSubmit={(e) => { e.preventDefault(); const d = Number(days.replace(",", ".")); if (!id || !Number.isFinite(d) || d <= 0) return; onAdd(id, d); setId(""); setDays(""); }}>
-      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder="+ Ajouter une édition…" className="h-7 min-w-0 flex-1 rounded px-1 text-xs" aria-label="Ajouter une édition" data-testid="load-add-edition" />
+      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder={`+ Ajouter ${un(V.edition)}…`} className="h-7 min-w-0 flex-1 rounded px-1 text-xs" aria-label={`Ajouter ${un(V.edition)}`} data-testid="load-add-edition" />
       <Input value={days} onChange={(e) => setDays(e.target.value)} placeholder="j" inputMode="decimal" aria-label="Jours" className="h-7 w-14 px-1 text-right text-xs" data-testid="load-add-days" />
       <Button type="submit" size="xs" variant="outline" disabled={pending || !id || !days} data-testid="load-add-submit"><Plus /></Button>
     </form>

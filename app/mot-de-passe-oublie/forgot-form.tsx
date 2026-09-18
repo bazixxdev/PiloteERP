@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { withBase } from "@/lib/base-path";
+import { V } from "@/lib/vocab";
 
 export function ForgotForm() {
   const [email, setEmail] = useState("");
@@ -15,7 +16,7 @@ export function ForgotForm() {
   if (done) return (
     <div className="grid gap-3 text-sm" data-testid="forgot-done">
       <p>Si cette adresse correspond à un compte, un lien a été préparé.</p>
-      <p className="text-muted-foreground">Les mails ne sont pas encore branchés dans le prototype : le lien est dans la boîte d&apos;envoi de l&apos;administration (direction, RAF), qui vous le remet.</p>
+      <p className="text-muted-foreground">{`Les mails ne sont pas encore branchés dans le prototype : le lien est dans la boîte d'envoi de l'administration (${V.direction.one}, ${V.raf.one}), qui vous le remet.`}</p>
       <Link href="/connexion" className="text-primary hover:underline">Retour à la connexion</Link>
     </div>
   );

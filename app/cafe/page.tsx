@@ -10,6 +10,7 @@ import { Presentation } from "./presentation";
 import { IcsCard } from "@/components/common/ics-card";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
+import { V, le, de } from "@/lib/vocab";
 
 // Écran projetable du café du lundi (EF-H1) : la quinzaine à venir, blocages, qui attend quoi de qui.
 export default async function CafePage({ searchParams }: { searchParams: Promise<{ plein?: string }> }) {
@@ -89,7 +90,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
               <ul className="grid gap-1.5">
                 {agenda.validations.map((v) => (
                   <li key={v.id}>
-                    <span className="font-medium">{v.requester.name}</span> attend <span className="font-medium">{["", "le pilote", "le responsable de pôle", "la direction"][v.requiredLevel]}</span>
+                    <span className="font-medium">{v.requester.name}</span> attend <span className="font-medium">{["", `${le(V.pilote)}`, `le responsable ${de(V.pole)}`, `${le(V.direction)}`][v.requiredLevel]}</span>
                     <span className="text-muted-foreground"> · {refLabel(refs, "validation_kind", v.kind).toLowerCase()} « {v.label} » · {v.age} j</span>
                   </li>
                 ))}
@@ -100,7 +101,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
           <div className="rounded-2xl border bg-card p-5">
             <h2 className={cn("mb-2 font-semibold", big ? "text-2xl" : "text-base")}>Temps à saisir</h2>
             {agenda.missingTime.length === 0 ? <p className="text-muted-foreground">Tout le monde est à jour.</p> : (
-              <p>{agenda.missingTime.length} personne{agenda.missingTime.length > 1 ? "s ont" : " a"} des jours sans saisie sur la quinzaine. <span className="text-muted-foreground">Chacun voit les siens dans « Ma semaine » ; la RAF a le détail dans la clôture.</span></p>
+              <p>{agenda.missingTime.length} personne{agenda.missingTime.length > 1 ? "s ont" : " a"} des jours sans saisie sur la quinzaine. <span className="text-muted-foreground">{`Chacun voit les siens dans « Ma semaine » ; ${le(V.raf)} a le détail dans la clôture.`}</span></p>
             )}
           </div>
         </div>

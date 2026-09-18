@@ -15,11 +15,12 @@ import { dayjs } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V, cap, mon, tout } from "@/lib/vocab";
 
 const VIS = [
   { value: "private", label: "Privée", icon: Lock },
-  { value: "pole", label: "Mon pôle", icon: Eye },
-  { value: "all", label: "Toute la CRESS", icon: Users },
+  { value: "pole", label: `${cap(mon(V.pole))}`, icon: Eye },
+  { value: "all", label: `${cap(tout(V.org))}`, icon: Users },
 ];
 
 // Éditeur de note : texte mis en forme (Tiptap), enregistré à la volée. En lecture pour une note partagée par un collègue.

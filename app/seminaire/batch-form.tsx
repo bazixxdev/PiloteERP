@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
 import { batchCreateEditions } from "@/app/actions/edition";
 import { cn } from "@/lib/utils";
+import { V, cap, au, pl } from "@/lib/vocab";
 
 type Row = { projectId: string; name: string; pole: string; pilot: string; sourceId: string | null; sourceYear: number | null; sourceStatus: string | null; nextId: string | null; nextStatus: string | null; nextColor: string | null; decision: string | null };
 type Decision = "renew" | "adjust" | "stop";
@@ -31,7 +32,7 @@ export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; c
       <div className="overflow-x-auto">
         <table className="w-full text-sm" data-testid="seminar-table">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-            <tr><th className="py-1.5">Projet</th><th className="py-1.5">Pôle · pilote</th><th className="py-1.5">Édition {year - 1}</th><th className="py-1.5">Décision</th><th className="py-1.5">Édition {year}</th></tr>
+            <tr><th className="py-1.5">Projet</th><th className="py-1.5">{`${cap(V.pole)} · ${V.pilote.one}`}</th><th className="py-1.5">{`${cap(V.edition)} `}{year - 1}</th><th className="py-1.5">Décision</th><th className="py-1.5">{`${cap(V.edition)} `}{year}</th></tr>
           </thead>
           <tbody className="divide-y">
             {rows.map((r) => (
@@ -72,14 +73,14 @@ export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; c
               start(async () => {
                 const res = await batchCreateEditions(year, todo.map((r) => ({ editionId: r.sourceId!, decision: dec[r.projectId] })));
                 if (!res.ok) { toast.error(res.error); return; }
-                toast.success(`${res.data!.created} édition(s) ${year} créée(s), ${res.data!.stopped} projet(s) arrêté(s)${res.data!.skipped.length ? ` · ${res.data!.skipped.length} ignorée(s)` : ""}`);
+                toast.success(`${res.data!.created} ${V.edition.one}(s) ${year} créée(s), ${res.data!.stopped} projet(s) arrêté(s)${res.data!.skipped.length ? ` · ${res.data!.skipped.length} ignorée(s)` : ""}`);
                 router.refresh();
               })
             }
           >
-            <Layers />{pending ? "Création…" : `Créer les éditions ${year} en lot`}
+            <Layers />{pending ? "Création…" : `Créer les ${pl(V.edition)} ${year} en lot`}
           </Button>
-          {!canRun && <span className="text-xs text-muted-foreground">Réservé au CODIR.</span>}
+          {!canRun && <span className="text-xs text-muted-foreground">{`Réservé ${au(V.codir)}.`}</span>}
         </div>
       )}
     </div>
