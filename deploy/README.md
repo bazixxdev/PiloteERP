@@ -6,7 +6,7 @@ dans `deploy/instances/<instance>.env` (aucun secret : ils vivent dans le `.env`
 | Instance | URL | Service | Port |
 |---|---|---|---|
 | `cress` | https://cress.bazixx.fr/outilcli/cress/pilote (rideau `auth_basic`, hors moteurs de recherche) | `pilote@cress` (ex-`cress-pilote`) | 3002 |
-| `tlst` | https://tlst.bazixx.fr/outilcli/tlst/pilote (rideau `auth_basic`, fiche `CRESS/tlst-acces-demo.txt` hors git) — déployée le 18/09 (démo TLST), nginx et rideau en place ; **reste le DNS `tlst` → 195.35.25.148 et `certbot --nginx -d tlst.bazixx.fr`** | `pilote@tlst` | 3003 |
+| `tlst` | https://tlst.bazixx.fr/outilcli/tlst/pilote (rideau `auth_basic`, fiche `CRESS/tlst-acces-demo.txt` hors git) — **en ligne depuis le 18/09** (démo TLST ; DNS, certificat Let's Encrypt, rideau) | `pilote@tlst` | 3003 |
 
 ## À chaque mise à jour (depuis le poste de travail)
 `./deploy/deploy.sh <instance>` — et `./deploy/deploy.sh <instance> --seed` pour remettre la base de démo à zéro.
