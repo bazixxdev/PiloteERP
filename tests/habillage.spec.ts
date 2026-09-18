@@ -10,8 +10,9 @@ test("titre, logo, favicon, thème, police", async ({ page }) => {
   await page.goto("/portefeuille");
   await expect(page).toHaveTitle(/Pilote · Tiers-Lieu Nourricier du Sud Touraine/);
   await expect(page.locator('aside img[alt="Tiers-Lieu Nourricier du Sud Touraine"]').first()).toBeVisible();
-  const icon = await page.request.get("/icon");
-  expect(icon.ok()).toBeTruthy();
+  // Le favicon est public : la page de connexion l'affiche aussi (sans session, le middleware redirigeait vers /connexion).
+  const icon = await page.request.get("/icon", { maxRedirects: 0 });
+  expect(icon.status()).toBe(200);
   expect(icon.headers()["content-type"]).toContain("image/png");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--primary").trim())).toBe("#3f6b4a");
   expect(await page.evaluate(() => getComputedStyle(document.querySelector("h1")!).fontFamily)).toMatch(/Nunito/);
