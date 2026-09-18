@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Briefcase, CalendarDays, CalendarClock, Clock, FileSignature, Inbox, Landmark, PanelLeftClose, PanelLeftOpen, Settings, ChevronRight, Users, Wallet, type LucideIcon } from "lucide-react";
+import { Briefcase, CalendarDays, CalendarClock, Clock, FileSignature, Inbox, Landmark, PanelLeftClose, PanelLeftOpen, Package, Settings, ChevronRight, Users, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBase } from "@/lib/base-path";
 import { locate, type NavSection } from "@/lib/navigation";
@@ -24,6 +24,7 @@ const SECTION_ICONS: Record<NavSection["id"], LucideIcon> = {
   projets: FileSignature,
   adherents: Users,
   tresorerie: Wallet,
+  materiel: Package,
   echeances: CalendarClock,
   direction: Landmark,
   admin: Settings,

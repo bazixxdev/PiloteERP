@@ -49,6 +49,18 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   await rule.locator("[data-testid^=rule-active-]").uncheck();
   await expect(page.getByTestId("row-out-Prestataires")).toHaveCount(0);
   await expect(rule).toBeVisible();
+  // Un changement qui ne vaut qu'à partir d'un mois (embauche, loyer qui augmente) : l'ancien montant reste avant.
+  const salaires = page.locator('[data-testid^=rule-][data-label="Salaires et charges sociales"]');
+  await salaires.locator("[data-testid^=rule-edit-]").click();
+  await page.getByTestId("rule-amount").fill("37000");
+  await page.getByTestId("rule-from-mode").check();
+  await page.getByTestId("rule-from").fill(ym(4));
+  await page.getByTestId("rule-submit").click();
+  await expect(page.getByText(/Nouveau montant à partir de/)).toBeVisible();
+  await expect(page.locator('[data-testid^=rule-][data-label="Salaires et charges sociales"]')).toHaveCount(2);
+  const row = page.getByTestId("row-out-Salaires et charges");
+  await expect(row).toContainText("33 500");
+  await expect(row).toContainText("37 000");
   // Solde de départ : tout le plan se décale ; un seuil haut fait passer des mois sous le seuil.
   await page.getByTestId("treasury-opening").click();
   await page.getByTestId("opening-balance").fill("20000");

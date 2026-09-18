@@ -15,7 +15,7 @@ export type NavLeaf = {
 };
 
 export type NavSection = {
-  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "tresorerie" | "echeances" | "direction" | "admin";
+  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "tresorerie" | "materiel" | "echeances" | "direction" | "admin";
   label: string;
   badge?: number;
   items: NavLeaf[];
@@ -28,6 +28,7 @@ export type NavContext = Actor & {
   veille: boolean; // module d'instance « appels à projets »
   adherents: boolean; // module d'instance « adhérents »
   tresorerie: boolean; // module d'instance « trésorerie »
+  materiel: boolean; // module d'instance « matériel »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
@@ -81,6 +82,14 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       id: "tresorerie" as const,
       label: "Trésorerie",
       items: [{ label: "Plan de trésorerie", href: "/tresorerie", path: "/tresorerie" }],
+    }] : []),
+    ...(ctx.materiel ? [{
+      id: "materiel" as const,
+      label: "Matériel",
+      items: [
+        { label: "Inventaire", href: "/materiel", path: "/materiel", absent: ["vue"] },
+        { label: "Prêts en cours", href: "/materiel?vue=prets", path: "/materiel", present: ["vue"] },
+      ],
     }] : []),
     {
       id: "demandes",

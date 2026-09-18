@@ -75,6 +75,8 @@ async function reset() {
   await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
+  await prisma.loan.deleteMany();
+  await prisma.equipment.deleteMany();
   await prisma.cashRule.deleteMany();
   await prisma.membership.deleteMany();
   await prisma.contactListItem.deleteMany();
@@ -1030,7 +1032,7 @@ async function main() {
     { personId: director.id, senderId: leadB.id, kind: "info", title: "Pour information · Devis intervenant conférence 2 approuvé (600 €)", body: `Par ${leadB.name}, niveau 2.`, link: `/edition/${ed("TES-02").id}?onglet=budget`, createdAt: d(-97), readAt: d(-96) },
   ] });
 
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents,tresorerie" } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents,tresorerie,materiel" } });
 
   const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
   // Contacts et listes (18/09) : quelques personnes extérieures fictives, une liste « Réseau développeurs ESS » à Thomas
@@ -1089,6 +1091,23 @@ async function main() {
     { label: "Subvention de fonctionnement Région (solde 2026)", direction: "in", category: "Subvention de fonctionnement", amount: 38000, period: "once", startMonth: `${year}-${String(new Date().getMonth() + 2 > 12 ? 12 : new Date().getMonth() + 2).padStart(2, "0")}` },
     { label: "FDVA fonctionnement (État)", direction: "in", category: "Subvention de fonctionnement", amount: 12000, period: "quarterly", notes: "quatre versements dans l'année" },
   ]) await prisma.cashRule.create({ data: { startMonth: ym, ...r, createdById: rafId } });
+
+  // Matériel et prêts (module « materiel », 18/09) : l'inventaire prêtable, deux prêts en cours (dont un en retard), un rendu.
+  const eq = async (name: string, category: string, quantity: number, location: string, extra: { reference?: string; state?: string; value?: number; notes?: string } = {}) => prisma.equipment.create({ data: { name, category, quantity, location, ...extra } });
+  const videoproj = await eq("Vidéoprojecteur Epson EB-X49", "Audiovisuel", 2, "Réserve, étagère du haut", { reference: "AV-01", value: 540, notes: "Câble HDMI et télécommande dans la housse." });
+  const kakemono = await eq("Kakemono CRESS (roll-up 85 × 200)", "Signalétique", 3, "Réserve, tube à côté de la porte", { reference: "SIG-01" });
+  const enceinte = await eq("Enceinte portable + micro HF", "Audiovisuel", 1, "Bureau de l'assistante", { reference: "AV-02", value: 690, notes: "Charger la veille : 6 h d'autonomie." });
+  await eq("Ordinateur portable de prêt", "Informatique", 1, "Armoire fermée (clé chez Nadia)", { reference: "INF-03", state: "worn", value: 850, notes: "Session invité, pas de données." });
+  await eq("Tables pliantes", "Mobilier", 6, "Sous-sol", { reference: "MOB-01" });
+  await eq("Rallonges et multiprises", "Animation", 4, "Réserve, bac bleu");
+  await eq("Urne et boîte à idées", "Animation", 1, "Réserve");
+  await eq("Appareil photo", "Audiovisuel", 1, "Bureau de la communication", { reference: "AV-03", state: "broken", notes: "Obturateur bloqué : devis de réparation demandé." });
+  const nowD = new Date();
+  const dOff = (n: number) => new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate() + n);
+  const forum = ed("SEN-03");
+  await prisma.loan.create({ data: { equipmentId: kakemono.id, quantity: 2, personId: byName("Hugo Lemaire").id, editionId: forum.id, outAt: dOff(-3), dueAt: dOff(4), notes: "pour le forum, remise sur place", createdById: byName("Léa Morin").id } });
+  await prisma.loan.create({ data: { equipmentId: videoproj.id, quantity: 1, contactId: extContacts[2].id, organisationId: null, outAt: dOff(-20), dueAt: dOff(-6), notes: "assemblée générale de Coop'Alim", createdById: byName("Léa Morin").id } });
+  await prisma.loan.create({ data: { equipmentId: enceinte.id, quantity: 1, personId: byName("Inès Cabral").id, editionId: ed("OBS-01").id, outAt: dOff(-40), dueAt: dOff(-35), returnedAt: dOff(-34), returnNote: "RAS", createdById: byName("Léa Morin").id } });
 
   // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
   for (const [code, name, role] of [["TES-02", "Université de Tours", "Co-organise le cycle, accueille deux conférences"], ["TES-05", "France Active Centre-Val de Loire", "Intervient sur le financement des coopérations"], ["SEN-03", "Tours Métropole Val de Loire", "Accueille le forum"], ["OBS-01", "Mouvement associatif Centre-Val de Loire", "Partage ses données associatives"], ["SEN-03", "ESS France", "Relaie le forum au niveau national"]] as const) {

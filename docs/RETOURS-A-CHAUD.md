@@ -392,6 +392,21 @@ Gaël : « ok go trésorerie ».
 - **Seed** : solde 148 500 € au mois courant, seuil 30 000 €, neuf règles (salaires, loyer, fonctionnement, prêt, assurances, prestations, subventions de fonctionnement).
 - Pas fait (consigné) : scénarios, rapprochement bancaire (Pennylane), relevés importés, échéancier des dépenses par date de paiement prévue (les engagements tombent sur le premier mois).
 
+### AI. Matériel et prêts (18/09) — fait
+
+Gaël : « ok go matériel » (dernier des quatre modules validés le matin).
+- **Modèle** : `Equipment` (nom, catégorie libre avec suggestions — Audiovisuel, Signalétique, Mobilier, Informatique, Animation… —, référence, rangement, quantité, état, valeur, notes) ; `Loan` (matériel × quantité, personne de l'équipe *ou* contact *ou* organisation, édition facultative, sorti le, retour attendu, rendu le + note). Disponible = quantité − sorti ; en retard = retour attendu dépassé et pas rendu.
+- **Rubrique « Matériel »** : Inventaire (recherche, catégorie, « disponible seulement », état, disponible / quantité, sorti chez qui avec la date de retour et le retard en rouge, « Prêter » par ligne — refusé au-delà du disponible) ; Prêts en cours (retards en tête, « Rendu » avec note d'état) ; fiche en panneau `?materiel=` (champs modifiables en place — droit —, historique des 30 derniers prêts, « effacer » un prêt saisi par erreur, sortie / remise dans l'inventaire).
+- **Droits** : `equipment.manage` (direction, RAF, assistant·e — migration sur les rôles) pour l'inventaire ; tout le monde enregistre un prêt et un retour.
+- **Seed** : 8 matériels, un prêt en cours pour le forum (kakemonos, Hugo), un en retard chez un contact (vidéoprojecteur), un rendu.
+- Pas fait (consigné) : réservation à l'avance (calendrier), rappel automatique du retour (pourrait rejoindre les notifications d'échéance), photos.
+
+### AJ. Trésorerie : charges à venir (18/09) — fait
+
+Gaël (en regardant la démo) : « comment je dis qu'à partir de janvier 2027 je paie telle charge, un leasing dès février, une embauche en mars ? j'ai l'impression que je ne peux pas le gérer ». C'était possible (une ligne a un premier mois) mais invisible.
+- Bouton **« Nouvelle charge ou recette »** (au lieu de « Nouvelle règle »), dialogue qui l'explique (« un leasing dès février, une embauche dès mars, une subvention en juin : le montant, la fréquence, le premier mois — et le dernier si ça s'arrête »), bloc renommé « Charges et recettes saisies » avec la même phrase.
+- **Modifier « à partir d'un mois »** : dans le dialogue de modification, une case « ce changement ne vaut qu'à partir d'un mois » → l'ancienne ligne s'arrête le mois d'avant, une nouvelle prend le relais avec le nouveau montant (`updateCashRule(id, form, from)`). Un salaire qui change en mars, un loyer qui augmente en janvier : l'historique reste juste. Testé.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

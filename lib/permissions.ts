@@ -4,7 +4,7 @@
 // Ajouter une permission : une entrée ici (module, libellé, explication), puis la donner aux rôles par défaut ci-dessous ;
 // les installations existantes la reçoivent par l'écran Admin › Rôles et droits (ou au reseed).
 
-export type PermissionModule = "perimetre" | "editions" | "financements" | "adherents" | "tresorerie" | "temps" | "demandes" | "validations" | "direction" | "admin";
+export type PermissionModule = "perimetre" | "editions" | "financements" | "adherents" | "tresorerie" | "materiel" | "temps" | "demandes" | "validations" | "direction" | "admin";
 
 export const PERMISSION_MODULES: Record<PermissionModule, string> = {
   perimetre: "Périmètre",
@@ -12,6 +12,7 @@ export const PERMISSION_MODULES: Record<PermissionModule, string> = {
   financements: "Financements",
   adherents: "Adhérents",
   tresorerie: "Trésorerie",
+  materiel: "Matériel",
   temps: "Temps et charge",
   demandes: "Demandes et dépenses",
   validations: "Validations et décisions",
@@ -37,6 +38,7 @@ export const PERMISSIONS = [
   { key: "members.manage", module: "adherents", label: "Gère les adhésions", help: "Crée et règle les adhésions (cotisation, collège, paiement), reconduit une année, synchronise HelloAsso. Tout le monde lit les adhérents." },
   { key: "treasury.view", module: "tresorerie", label: "Consulte la trésorerie", help: "Plan de trésorerie mensuel : solde, point bas, versements attendus, règles de flux. Donnée sensible : par défaut direction, RAF, responsables de pôle." },
   { key: "treasury.manage", module: "tresorerie", label: "Tient la trésorerie", help: "Solde de départ, seuil d'alerte, règles de flux (salaires, loyer, subventions de fonctionnement…)." },
+  { key: "equipment.manage", module: "materiel", label: "Tient l'inventaire du matériel", help: "Crée et modifie le matériel prêtable, le sort de l'inventaire. Tout le monde enregistre un prêt et un retour." },
   { key: "time.declare", module: "temps", label: "Saisit son temps", help: "Attendu·e en clôture mensuelle ; sans ce droit, la personne n'apparaît pas dans les retardataires." },
   { key: "time.view_all", module: "temps", label: "Voit les temps de tous", help: "Selon la visibilité réglée dans les paramètres (« Visibilité du temps »)." },
   { key: "time.lock", module: "temps", label: "Clôture les mois", help: "Verrouille un mois de saisie, relance les retardataires." },
@@ -66,9 +68,9 @@ const ALL_EDITIONS: PermissionKey[] = ["edition.contribute", "edition.edit_all",
 
 export const DEFAULT_ROLES: RoleDef[] = [
   { code: "director", label: "Direction", description: "Voit tout, intervient partout, valide au niveau 3, administre l'outil.", validationLevel: 3,
-    permissions: ["scope.all", ...ALL_EDITIONS, "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
+    permissions: ["scope.all", ...ALL_EDITIONS, "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
   { code: "raf", label: "RAF", description: "Financements, budget, clôture des temps, suivi des factures ; siège au CODIR, administre l'outil ; informée des validations, pas valideuse.", validationLevel: 0,
-    permissions: ["scope.all", "edition.contribute", "edition.status", "fiche.means", "fiche.budget", "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
+    permissions: ["scope.all", "edition.contribute", "edition.status", "fiche.means", "fiche.budget", "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
   { code: "pole_lead", label: "Responsable de pôle", description: "Agit sur les éditions et les demandes de son pôle, valide au niveau 2, siège au CODIR.", validationLevel: 2,
     permissions: ["pole.manage", "edition.contribute", "calls.edit", "treasury.view", "time.declare", "load.plan_all", "codir.access"] },
   { code: "pilot", label: "Chargé·e de mission (pilote)", description: "Pilote ses éditions : proposition, fil de l'année, actions, validations de niveau 1 sur ses éditions.", validationLevel: 1,
@@ -76,7 +78,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
   { code: "contributor", label: "Contributeur·rice", description: "Contribue aux éditions où il ou elle est dans l'équipe, saisit son temps.", validationLevel: 0,
     permissions: ["edition.contribute", "time.declare"] },
   { code: "assistant", label: "Assistant·e", description: "Voit toute la CRESS, suit les factures et les dépenses ; pas de saisie de temps attendue.", validationLevel: 0,
-    permissions: ["scope.all", "expenses.track"] },
+    permissions: ["scope.all", "expenses.track", "equipment.manage"] },
 ];
 
 // Rôles dont le code sert d'identité dans l'outil (« qui est la directrice », « le responsable du pôle », destinataires des

@@ -101,6 +101,11 @@ export function canManageTreasury(me: Actor): boolean {
   return has(me, "treasury.manage");
 }
 
+// Matériel (module materiel) : tenir l'inventaire (direction, RAF, assistant·e) ; tout le monde emprunte et rend.
+export function canManageEquipment(me: Actor): boolean {
+  return has(me, "equipment.manage");
+}
+
 export function canAdmin(me: Actor): boolean {
   return has(me, "admin.manage");
 }

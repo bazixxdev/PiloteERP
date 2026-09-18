@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canManageTreasury } from "@/lib/rights";
-import { DIRECTIONS, isMonth, PERIODS } from "@/lib/treasury";
+import { addMonths, DIRECTIONS, isMonth, PERIODS } from "@/lib/treasury";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 const DENIED = "La trésorerie se tient par la direction ou la RAF (droit « Tient la trésorerie »).";
@@ -39,12 +39,23 @@ export async function createCashRule(input: CashRuleForm): Promise<Result<{ id: 
   return { ok: true, data: { id: r.id } };
 }
 
-export async function updateCashRule(id: string, input: CashRuleForm): Promise<Result> {
-  const { denied } = await guard(); if (denied) return { ok: false, error: denied };
-  const v = validate(input); if (!v.ok) return v;
+// Modifier une règle. Avec `from` (AAAA-MM, après le premier mois) : le changement ne vaut qu'à partir de ce mois — l'ancienne
+// règle s'arrête le mois d'avant, une nouvelle porte les valeurs modifiées (une embauche en mars, un loyer qui augmente en
+// janvier : l'historique reste juste).
+export async function updateCashRule(id: string, input: CashRuleForm, from?: string | null): Promise<Result<{ id: string }>> {
+  const { me, denied } = await guard(); if (denied) return { ok: false, error: denied };
+  const v = validate({ ...input, startMonth: from && isMonth(from) ? from : input.startMonth }); if (!v.ok) return v;
+  const old = await prisma.cashRule.findUnique({ where: { id } });
+  if (!old) return { ok: false, error: "Règle introuvable." };
+  if (from && isMonth(from) && from > old.startMonth && old.period !== "once") {
+    await prisma.cashRule.update({ where: { id }, data: { endMonth: addMonths(from, -1) } });
+    const r = await prisma.cashRule.create({ data: { ...v.data, startMonth: from, createdById: me.id } });
+    revalidatePath("/tresorerie");
+    return { ok: true, data: { id: r.id } };
+  }
   await prisma.cashRule.update({ where: { id }, data: { ...v.data, ...(input.active !== undefined ? { active: Boolean(input.active) } : {}) } });
   revalidatePath("/tresorerie");
-  return { ok: true };
+  return { ok: true, data: { id } };
 }
 
 export async function toggleCashRule(id: string, active: boolean): Promise<Result> {

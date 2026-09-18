@@ -87,6 +87,8 @@ model Person {
   contactLists       ContactList[]      @relation("ContactListOwner")
   membershipsCreated Membership[]       @relation("MembershipCreator")
   cashRulesCreated   CashRule[]         @relation("CashRuleCreator")
+  loans              Loan[]             @relation("LoanBorrower")
+  loansCreated       Loan[]             @relation("LoanCreator")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
@@ -228,6 +230,7 @@ model Organisation {
   contacts    Contact[]
   calls       Call[]
   memberships Membership[]
+  loans       Loan[]
   validations ValidationRequest[]
   editions    EditionPartner[]
 }
@@ -265,6 +268,7 @@ model Contact {
   conventions      Convention[]
   listItems        ContactListItem[]
   memberships      Membership[]
+  loans            Loan[]
 
   @@index([organisationId])
   @@index([email])
@@ -427,6 +431,7 @@ model Edition {
   partners              String?
   partnerLinks          EditionPartner[]
   contactLists          ContactList[]
+  loans                 Loan[]
   method                String?
   governance            String?
   ownIndicators         String?
@@ -709,7 +714,7 @@ model Settings {
   billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
-  modules                   String  @default("veille,adherents,tresorerie")
+  modules                   String  @default("veille,adherents,tresorerie,materiel")
   // Réalisé comptable (lot D) : quelle source alimente le « réalisé » des alertes d'enveloppe et du portefeuille —
   // raf = saisi par la RAF sur les dépenses (Expense.spent) ; ledger = le grand livre analytique importé. L'autre s'affiche en regard.
   realizedSource            String  @default("raf")
@@ -1166,3 +1171,49 @@ model FieldRemark {
   @@index([editionId, resolvedAt])
 }
 
+// Matériel et prêts (module « materiel », 18/09) : l'inventaire du matériel prêtable (vidéoprojecteur, kakemonos, enceinte…)
+// et le registre des prêts — à une personne de l'équipe, à un contact ou une organisation de l'annuaire, pour une édition.
+model Equipment {
+  id          String   @id @default(cuid())
+  name        String
+  category    String? // libellé libre avec suggestions (Audiovisuel, Signalétique, Mobilier, Informatique…)
+  reference   String? // numéro d'inventaire
+  location    String? // où il est rangé
+  quantity    Int      @default(1)
+  state       String   @default("ok") // ok | worn (fatigué) | broken (en panne) | retired (sorti de l'inventaire)
+  purchasedAt DateTime?
+  value       Float? // valeur d'achat, indicative
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  loans       Loan[]
+
+  @@index([category])
+}
+
+model Loan {
+  id             String        @id @default(cuid())
+  equipmentId    String
+  equipment      Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  quantity       Int           @default(1)
+  personId       String? // emprunteur de l'équipe
+  person         Person?       @relation("LoanBorrower", fields: [personId], references: [id], onDelete: SetNull)
+  contactId      String? // emprunteur extérieur (annuaire des contacts)
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  organisationId String?
+  organisation   Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  editionId      String? // pour quel projet / événement
+  edition        Edition?      @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  outAt          DateTime      @default(now())
+  dueAt          DateTime?
+  returnedAt     DateTime?
+  returnNote     String? // état au retour, incident
+  notes          String?
+  createdById    String?
+  createdBy      Person?       @relation("LoanCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+
+  @@index([equipmentId])
+  @@index([returnedAt])
+}
