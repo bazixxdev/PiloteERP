@@ -11,7 +11,8 @@
     "db:reset": "prisma migrate reset --force",
     "test": "playwright test",
     "postinstall": "prisma generate",
-    "screenshots": "tsx scripts/screenshots.ts"
+    "screenshots": "tsx scripts/screenshots.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
