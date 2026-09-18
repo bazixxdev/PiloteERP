@@ -37,6 +37,8 @@ export const ce = (w: Word): string => `${w.gender === "f" ? "cette" : elide(w.o
 // « mon pôle » / « mon équipe » (mon devant une voyelle, même au féminin) / « ma coordination ».
 export const mon = (w: Word): string => `${w.gender === "f" && !elide(w.one) ? "ma" : "mon"} ${w.one}`;
 export const son = (w: Word): string => `${w.gender === "f" && !elide(w.one) ? "sa" : "son"} ${w.one}`;
+// « seule la RAF » / « seul le trésorier » (sujet singulier en tête de phrase : cap(seul(V.raf))).
+export const seul = (w: Word): string => `${w.gender === "f" ? "seule" : "seul"} ${le(w)}`;
 // « aucune édition » / « aucun pôle ».
 export const aucun = (w: Word): string => `${w.gender === "f" ? "aucune" : "aucun"} ${w.one}`;
 export const tout = (w: Word): string => `${w.gender === "f" ? "toute" : "tout"} ${le(w)}`;

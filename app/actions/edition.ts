@@ -9,7 +9,7 @@ import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
-import { V, cap, le, un, du, de, au, ce, adj } from "@/lib/vocab";
+import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -34,7 +34,7 @@ export async function addAction(editionId: string, name: string): Promise<Result
 
 export async function addFundingLine(editionId: string, funderId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
+  if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
   await prisma.fundingLine.create({ data: { editionId, funderId } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -44,7 +44,7 @@ export async function addDeliverable(fundingLineId: string, label: string, dueDa
   const line = await prisma.fundingLine.findUnique({ where: { id: fundingLineId } });
   if (!line) return { ok: false, error: "Ligne introuvable" };
   const c = await ctx(line.editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute un livrable.` };
+  if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) ajoute un livrable.` };
   await prisma.deliverable.create({ data: { fundingLineId, label: label.trim() || "Livrable", dueDate: new Date(dueDate) } });
   revalidatePath(path(line.editionId));
   return { ok: true };
@@ -77,7 +77,7 @@ export async function addComment(editionId: string, body: string): Promise<Resul
 
 export async function setTeam(editionId: string, personIds: string[]): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: `Seul ${le(V.pilote)} (ou ${le(V.direction)}) compose l'équipe.` };
+  if (!canWriteLayer(c.me, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: `${cap(seul(V.pilote))} (ou ${le(V.direction)}) compose l'équipe.` };
   await prisma.editionTeam.deleteMany({ where: { editionId, personId: { notIn: personIds } } });
   for (const personId of personIds) {
     await prisma.editionTeam.upsert({ where: { editionId_personId: { editionId, personId } }, create: { editionId, personId }, update: {} });
@@ -252,7 +252,7 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
 // Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé.
 export async function addExpense(editionId: string, label: string, spent: number, reference: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) enregistre une dépense.` };
+  if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) enregistre une dépense.` };
   if (!reference.trim()) return { ok: false, error: "Une référence (facture, ligne du suivi) est requise." };
   await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed" } });
   revalidatePath(path(editionId));
@@ -277,7 +277,7 @@ export async function recordDecision(input: { editionId: string; instance: strin
 // Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.
 export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null; form?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) enregistre un financement obtenu.` };
+  if (!canEditFunding(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) enregistre un financement obtenu.` };
   const reference = input.reference.trim();
   if (!reference) return { ok: false, error: "Référence obligatoire (ex. FSE-2026-2028)." };
   if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez le financement existant.` };
@@ -292,7 +292,7 @@ export async function createConvention(input: { funderId: string; reference: str
 // si elle est vide (ni montant, ni livrable, ni pièce), elle est supprimée.
 export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) modifie les affectations.` };
+  if (!canEditFunding(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) modifie les affectations.` };
   const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true } });
   if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
   const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0;
@@ -304,7 +304,7 @@ export async function detachFundingLineFromConvention(lineId: string): Promise<R
 
 export async function addFundingLineFromConvention(editionId: string, conventionId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
+  if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
   const conv = await prisma.convention.findUnique({ where: { id: conventionId } });
   if (!conv) return { ok: false, error: "Convention introuvable" };
   if (c.e.year < conv.startYear || c.e.year > conv.endYear) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };

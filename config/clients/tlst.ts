@@ -41,7 +41,7 @@ export const tlst: Client = {
     action: { one: "étape", many: "étapes", gender: "f" },
     pole: { one: "équipe", many: "équipes", gender: "f" },
     codir: { one: "bureau", many: "bureaux", gender: "m" },
-    raf: { one: "trésorier·e", many: "trésorier·es", gender: "f" },
+    raf: { one: "trésorier", many: "trésoriers", gender: "m" }, // « trésorier·e » + article ne se lit pas : masculin générique, à revoir avec TLST
     direction: { one: "coordination", many: "coordinations", gender: "f" },
     pilote: { one: "responsable", many: "responsables", gender: "m" },
   },

@@ -8,7 +8,7 @@ import { instanceHas } from "@/lib/modules";
 import { CALL_STATUSES, suggestedReference } from "@/lib/calls";
 import { findOrCreateOrganisation } from "@/lib/organisations";
 import { dayjs } from "@/lib/format";
-import { V, le, de, au } from "@/lib/vocab";
+import { V, cap, le, de, au, seul } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -61,7 +61,7 @@ export async function setCallStatus(id: string, status: string | null): Promise<
 export async function promoteCall(id: string): Promise<Result<{ conventionId: string; existed: boolean }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ouvre un dossier depuis un appel.` };
+  if (!canEditFunding(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) ouvre un dossier depuis un appel.` };
   const c = await prisma.call.findUnique({ where: { id }, include: { funder: true } });
   if (!c) return { ok: false, error: "Appel introuvable" };
   if (c.conventionId) return { ok: true, data: { conventionId: c.conventionId, existed: true } };

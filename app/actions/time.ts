@@ -6,7 +6,7 @@ import { getCurrentPerson } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
 import { dayjs, monthKey } from "@/lib/format";
 import { weekKey } from "@/lib/time";
-import { V, le, au } from "@/lib/vocab";
+import { V, cap, le, au, seul } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -72,7 +72,7 @@ export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copi
 // Verrouillage mensuel par la RAF (EF-D5) ; déverrouillage possible.
 export async function lockMonth(personId: string, month: string, lock: boolean): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canLockMonths(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) verrouille un mois.` };
+  if (!canLockMonths(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) verrouille un mois.` };
   const start = dayjs(month + "-01");
   const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
   if (lock) {

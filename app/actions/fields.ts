@@ -8,7 +8,7 @@ import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageEquipm
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
-import { V, cap, le, de, ce } from "@/lib/vocab";
+import { V, cap, le, de, ce, seul } from "@/lib/vocab";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
@@ -25,7 +25,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const ctx = await editionContext(id, personId);
     const layer = def.layer ?? "proposal";
     if (field === "status" || field === "decisionDate" || field === "conditionalStart") {
-      return canSetEditionStatus(me) ? null : `Seules ${le(V.direction)} et ${le(V.raf)} changent le statut.`;
+      return canSetEditionStatus(me) ? null : `${cap(le(V.direction))} et ${le(V.raf)} changent le statut.`;
     }
     // Fiche validée : les couches 1 à 3 ne se modifient plus en direct, seulement par proposition acceptée (retour du 14/09).
     if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return `Fiche validée : proposez une modification, elle sera acceptée par ${le(V.pilote)} ou ${le(V.direction)} et tracée.`;
@@ -48,8 +48,8 @@ async function allowed(model: Model, id: string, field: string, personId: string
   }
   if (model === "equipment") return canManageEquipment(me) ? null : `L'inventaire se tient par ${le(V.direction)}, ${le(V.raf)} ou l'assistant·e (droit « Tient l'inventaire du matériel »).`;
   if (model === "membership") return canManageMembers(me) ? null : `Les adhésions se tiennent par ${le(V.raf)} ou ${le(V.direction)} (droit « Gère les adhésions »).`;
-  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : `Seule ${le(V.raf)} (ou ${le(V.direction)}) modifie les financements et les financeurs.`;
-  if (model === "expense") return canEditFunding(me) ? null : `Seule ${le(V.raf)} (ou ${le(V.direction)}) met à jour les dépenses.`;
+  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : `${cap(seul(V.raf))} (ou ${le(V.direction)}) modifie les financements et les financeurs.`;
+  if (model === "expense") return canEditFunding(me) ? null : `${cap(seul(V.raf))} (ou ${le(V.direction)}) met à jour les dépenses.`;
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
     if (!ind) return "Indicateur introuvable";
