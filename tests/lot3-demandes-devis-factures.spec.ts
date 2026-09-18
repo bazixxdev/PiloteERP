@@ -55,7 +55,7 @@ test("un devis approuvé produit un bon pour accord ; la facture est reçue, le 
   await iAm(page, "Julien Barbot");
   await expect(page.locator("aside").first().getByRole("link", { name: /Validations/ })).toHaveCount(0);
   await page.goto("/demandes");
-  const card = page.getByTestId("requests-open").locator("[data-testid^=validation-line-]", { hasText: "Devis impression de la lettre AIESSE" });
+  const card = page.getByTestId("requests-open").locator("[data-testid^=validation-]", { hasText: "Devis impression de la lettre AIESSE" });
   await card.getByTestId("approve").click();
   await expect(page.getByText("Approuvée : le montant est engagé")).toBeVisible();
   await iAm(page, "Inès Cabral");
@@ -101,36 +101,43 @@ test("chacun ne voit que les demandes qui le concernent : son pôle pour un resp
   await pick(page, "request-to", "Léa Morin");
   await page.getByTestId("request-submit").click();
   await expect(page.getByText("Demande envoyée")).toBeVisible();
-  // Un pilote d'un autre pôle : pas d'onglet « Toute la CRESS », et la demande n'apparaît nulle part.
+  // Un pilote d'un autre pôle : pas d'onglet « Toute la CRESS » (réservé à la direction), et la demande n'apparaît nulle part.
   await iAm(page, "Hugo Lemaire");
   await page.goto("/demandes?vue=toutes");
-  await expect(page.getByTestId("requests-view-toutes")).toContainText("Mes projets");
+  await expect(page.getByTestId("requests-view-toutes")).toHaveCount(0);
   await expect(page.getByTestId("requests-open")).not.toContainText("Commander les badges du jury");
-  // L'assistante destinataire n'a que « À traiter par moi » et « Mes demandes ».
+  // L'assistante destinataire n'a que « Qu'on me fait » et « Que j'ai faites ».
   await iAm(page, "Léa Morin");
   await page.goto("/demandes");
   await expect(page.getByTestId("requests-view-toutes")).toHaveCount(0);
   await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
-  // Le responsable du pôle d'Inès la voit dans « Mon pôle ».
+  // Le responsable de pôle n'a pas non plus l'onglet ; l'autre responsable de pôle ne la voit pas.
   await iAm(page, "Julien Barbot");
-  await page.goto("/demandes?vue=toutes");
-  await expect(page.getByTestId("requests-view-toutes")).toContainText("Mon pôle");
-  await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
-  // Le responsable de l'autre pôle, non.
+  await page.goto("/demandes");
+  await expect(page.getByTestId("requests-view-toutes")).toHaveCount(0);
   await iAm(page, "Sophie Delaunay");
-  await page.goto("/demandes?vue=toutes");
+  await page.goto("/demandes");
   await expect(page.getByTestId("requests-open")).not.toContainText("Commander les badges du jury");
-  // La direction voit tout.
+  // La direction voit tout, et ne peut que réaiguiller : la demande passe à Élise, Inès (à l'origine) est prévenue.
   await iAm(page, "Claire Vasseur");
   await page.goto("/demandes?vue=toutes");
   await expect(page.getByTestId("requests-view-toutes")).toContainText("Toute la CRESS");
-  await expect(page.getByTestId("requests-open")).toContainText("Commander les badges du jury");
+  const line = page.getByTestId("requests-open").locator("[data-testid^=request-line-]", { hasText: "Commander les badges du jury" });
+  await expect(line).toBeVisible();
+  await expect(line.locator("[data-testid^=request-done-]")).toHaveCount(0);
+  await pick(page, line.locator("[data-testid^=request-reassign-]").getByRole("combobox"), "Élise Fontaine");
+  await expect(page.getByText("Demande réaiguillée")).toBeVisible();
+  await expect(line).toContainText("Élise Fontaine");
+  await iAm(page, "Inès Cabral");
+  await page.goto("/ma-semaine");
+  await expect(page.getByTestId("unread-notifications")).toContainText("Demande réaiguillée : Commander les badges du jury");
 });
 
 test("une validation se demande depuis Demandes, en choisissant l'édition ; le fournisseur se cherche dans la base ou s'y ajoute", async ({ page }) => {
   await page.goto("/demandes");
   await iAm(page, "Inès Cabral");
-  await page.getByTestId("request-validation-open").click();
+  await page.getByTestId("new-request").click();
+  await page.getByTestId("request-kind-validation").click();
   // Une édition sans devis en attente dans le jeu de démo (les tests des pièces jointes s'appuient sur ceux de l'ORESS).
   await pick(page, "rv-edition", "Réseau Femmes et ESS");
   await page.getByTestId("rv-label").fill("Devis relecture de la note de conjoncture");

@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { dayjs } from "./format";
-import { canDecideValidation, canTreatAllRequests, has, validationLevelOf, type Actor } from "./rights";
+import { canDecideValidation, canTreatAllRequests, has, type Actor } from "./rights";
 
 // Demandes internes (retour du 14/09) : un seul canal pour « retour sur le site », « j'ai besoin de chiffres », « réserve-moi une salle »…
 export const REQUEST_KINDS = [
@@ -48,12 +48,10 @@ export function canSeeValidation(me: Viewer, v: { requesterId: string; requiredL
   return canDecideValidation(me, v);
 }
 
-// Libellé du troisième onglet de /demandes selon ce que la personne peut voir ; null quand il n'apporterait rien de plus.
-export function wideViewLabel(me: Actor): string | null {
-  if (canTreatAllRequests(me)) return "Toute la CRESS";
-  if (has(me, "pole.manage")) return "Mon pôle";
-  if (validationLevelOf(me) >= 1) return "Mes projets";
-  return null;
+// Troisième onglet de /demandes : « Toute la CRESS », pour la direction seulement (retour de Gaël, 18/09) — la seule action y
+// est le réaiguillage. Les responsables de pôle et les pilotes voient leurs demandes dans les deux premiers onglets.
+export function wideViewLabel(me: Actor & { role?: string }): string | null {
+  return me.role === "director" ? "Toute la CRESS" : null;
 }
 
 export async function loadRequests(me: Viewer) {

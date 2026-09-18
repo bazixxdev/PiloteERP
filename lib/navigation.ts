@@ -108,10 +108,9 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       label: "Demandes",
       badge: ctx.badges.requests,
       items: [
-        { label: "À traiter par moi", href: "/demandes", badge: ctx.badges.requests, path: "/demandes", param: { key: "vue", oneOf: ["moi", null] } },
-        { label: "Mes demandes", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
+        { label: "Qu'on me fait", href: "/demandes", badge: ctx.badges.requests, path: ["/demandes", "/validations"], param: { key: "vue", oneOf: ["moi", null] } },
+        { label: "Que j'ai faites", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
         ...(ctx.wide ? [{ label: ctx.wide, href: "/demandes?vue=toutes", path: "/demandes", param: { key: "vue", oneOf: ["toutes"] } }] : []),
-        ...(codir ? [{ label: "Validations par niveau", href: "/validations", path: "/validations" }] : []),
       ],
     },
     {

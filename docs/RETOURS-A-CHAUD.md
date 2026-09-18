@@ -464,6 +464,14 @@ Gaël (retour vocal du 18/09) : on n'est pas toujours conventionné (mécénat, 
 - **Appels à projets** : montant visé en chiffres + nature (annuel / global) + durée + projet visé ; financeur créé par son nom ; « Étudier » devient **« Ouvrir un dossier »** (dossier « à étudier », prérempli : montant, durée, cible, échéance, description, lien) ; la colonne montre l'étape du dossier.
 - Tests : `tests/dossiers.spec.ts` (cycle complet, écarté avec pourquoi, vues, lecture seule) ; appels / conventions / versements adaptés.
 
+### AQ. Lot 3 « Demandes » (19/09) — fait
+
+Gaël (retour vocal du 18/09) : un seul bouton « Nouvelle demande », la validation est un type de demande (avec une icône) ; à l'étroit dans la modale, un panneau à droite ; titre « Mes demandes » ; deux parties nettes — ce qu'on me fait / ce que j'ai fait — ; « Toute la CRESS » réservé à la direction avec une seule action, réaiguiller (la personne à l'origine est prévenue) ; les validations par niveau se lisent dans ces onglets, pas ailleurs.
+- **Nouvelle demande** (`app/demandes/new-demand.tsx`) : un panneau à droite ; le type d'abord, en cartes — **« Une validation »** en tête, bouclier, sur toute la largeur (achat, devis, dépense, envoi, changement de périmètre, jalon financeur) —, puis le formulaire. La validation réutilise le formulaire existant en mode intégré (`RequestValidationDialog` `embedded`, mêmes repères `rv-*`). Plus de bouton « Nouvelle validation » à part.
+- **Page « Mes demandes »** : onglets **« Qu'on me fait »** (demandes adressées à moi ou à mon pôle + validations de mon niveau, en cartes de validation avec approuver / refuser) et **« Que j'ai faites »** ; « Terminées récemment » dessous. **« Toute la CRESS »** : direction seulement ; les lignes n'ont qu'un contrôle, **réaiguiller** (`ReassignControl` → `assignRequest`, qui prévient désormais aussi la personne à l'origine). Les vues « Mon pôle » / « Mes projets » disparaissent (les responsables de pôle voient leurs demandes dans les deux premiers onglets ; la visibilité des lignes ne change pas).
+- **Validations par niveau** : la page `/validations` redirige vers `/demandes` ; la feuille du menu disparaît ; les bons pour accord restent sous `/validations/[id]`. Menu Demandes : « Qu'on me fait » (badge), « Que j'ai faites », « Toute la CRESS » (direction).
+- Tests adaptés (lot3-demandes, recette-3, scénario collectif, revue-ux, rail) ; le réaiguillage et la notification du demandeur sont testés.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

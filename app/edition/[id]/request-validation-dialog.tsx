@@ -24,7 +24,7 @@ export type EditionChoice = { id: string; name: string; year: number; actions: {
 
 const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-export function RequestValidationDialog({ editionId: fixedEditionId, actions: fixedActions, kinds, recipients: fixedRecipients, canOverride, defaultOpen, suppliers = [], editions, afterHref, triggerLabel, variant }: { editionId?: string; actions?: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients?: Recipients; canOverride?: boolean; defaultOpen?: boolean; suppliers?: SupplierOpt[]; editions?: EditionChoice[]; afterHref?: string; triggerLabel?: string; variant?: "default" | "outline" }) {
+export function RequestValidationDialog({ editionId: fixedEditionId, actions: fixedActions, kinds, recipients: fixedRecipients, canOverride, defaultOpen, suppliers = [], editions, afterHref, triggerLabel, variant, embedded, onClose }: { embedded?: boolean; onClose?: () => void; editionId?: string; actions?: { id: string; name: string }[]; kinds: { value: string; label: string }[]; recipients?: Recipients; canOverride?: boolean; defaultOpen?: boolean; suppliers?: SupplierOpt[]; editions?: EditionChoice[]; afterHref?: string; triggerLabel?: string; variant?: "default" | "outline" }) {
   const [open, setOpen] = useState(Boolean(defaultOpen)); // ?validation=1 depuis « Nouvelle demande › Achat / devis »
   const [chosenEditionId, setChosenEditionId] = useState("");
   const editionId = fixedEditionId ?? chosenEditionId;
@@ -64,16 +64,12 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
   const amountNumber = amount === "" ? null : Number(amount.replace(",", "."));
   const reset = () => { setLabel(""); setAmount(""); setUrl(""); setFileName(""); setSupplier(""); setSupplierEmail(""); setSupplierId(null); setActionId(""); if (fileRef.current) fileRef.current.value = ""; };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button data-testid="request-validation-open" variant={variant ?? (editions ? "outline" : "default")}><ShieldCheck />{triggerLabel ?? "Demander une validation"}</Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+  const body = (
+    <>
+        {!embedded && <DialogHeader>
           <DialogTitle>Demander une validation</DialogTitle>
           <DialogDescription>Dites ce que vous demandez, joignez la pièce ; la demande part au bon valideur selon le montant.</DialogDescription>
-        </DialogHeader>
+        </DialogHeader>}
         <div className="grid gap-3">
           {editions && (
             <div className="grid gap-1">
@@ -180,7 +176,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button variant="ghost" onClick={() => { setOpen(false); onClose?.(); }}>Annuler</Button>
           <Button
             data-testid="rv-submit"
             disabled={pending || !label.trim() || !editionId}
@@ -196,7 +192,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
                   if (!up.ok) toast.error(`Demande envoyée, mais la pièce n'a pas été déposée : ${up.error}`);
                 }
                 toast.success(`Demande transmise à ${recipient ?? LEVEL_ROLE[res.data!.requiredLevel]}${file ? ", pièce jointe" : ""}`);
-                setOpen(false); reset();
+                setOpen(false); reset(); onClose?.();
                 router.push(afterHref ?? `/edition/${editionId}?onglet=apercu`);
                 router.refresh();
               })
@@ -205,6 +201,17 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
             {pending ? "Envoi…" : "Envoyer la demande"}
           </Button>
         </DialogFooter>
+    </>
+  );
+  // Intégré au panneau « Nouvelle demande » (lot 3 du 19/09) : même formulaire, sans sa propre fenêtre.
+  if (embedded) return <div className="grid gap-3" data-testid="request-validation-embedded">{body}</div>;
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button data-testid="request-validation-open" variant={variant ?? (editions ? "outline" : "default")}><ShieldCheck />{triggerLabel ?? "Demander une validation"}</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+        {body}
       </DialogContent>
     </Dialog>
   );

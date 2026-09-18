@@ -16,8 +16,8 @@ test("le rail ouvre un sous-menu flottant par section, un seul à la fois, qui s
   const panel = page.getByTestId("rail-panel-demandes");
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("Demandes");
-  await expect(panel).toContainText("À traiter par moi");
-  await expect(panel).toContainText("Validations par niveau");
+  await expect(panel).toContainText("Qu'on me fait");
+  await expect(panel).toContainText("Toute la CRESS");
   await expect(panel.locator("a").first()).toContainText(/\d+/);
   await expect(page.getByRole("button", { name: "Déployer le menu" })).toBeVisible();
 

@@ -70,8 +70,7 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   await page.goto("/portefeuille");
   await expect(page.getByTestId("codir-mode")).toHaveCount(0);
   await page.goto("/validations");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("File des validations");
-  await expect(page.getByText(/0 à traiter par moi/)).toBeVisible();
+  await expect(page).toHaveURL(/\/demandes/); // la file par niveau a rejoint « Mes demandes »
 
   // CODIR : 3 à 5 sujets regroupés par édition, avec problème, décision attendue, responsable, échéance.
   await iAm(page, "Claire Vasseur");

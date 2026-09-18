@@ -39,3 +39,16 @@ export function RequestActions({ id, status, canTreat, canWithdraw, people, assi
     </div>
   );
 }
+
+
+// Réaiguiller (direction, vue « Toute la CRESS ») : changer à qui on demande, rien d'autre ; la personne à l'origine est prévenue.
+export function ReassignControl({ id, assigneeId, people }: { id: string; assigneeId: string | null; people: { id: string; name: string }[] }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground" title="Réaiguiller : la personne à l'origine de la demande est prévenue" data-testid={`request-reassign-${id}`}>
+      <UserPlus className="size-3" aria-hidden />Réaiguiller à
+      <SearchableSelect options={people.map((p) => ({ value: p.id, label: p.name, hint: p.id === assigneeId ? "en charge" : undefined }))} value={assigneeId ?? ""} disabled={pending} onChange={(v) => start(async () => { const r = await assignRequest(id, v || null); if (!r.ok) toast.error(r.error); else { toast.success("Demande réaiguillée, le demandeur est prévenu"); router.refresh(); } })} emptyOption="— à qui —" aria-label="Réaiguiller la demande" className="h-7 w-48 text-[11px]" />
+    </span>
+  );
+}

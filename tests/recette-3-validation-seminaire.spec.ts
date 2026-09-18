@@ -25,7 +25,7 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
 
   // 2. Le responsable de pôle (niveau 2) l'approuve depuis la file.
   await iAm(page, "Julien Barbot");
-  await page.goto("/validations");
+  await page.goto("/demandes");
   const card = page.getByTestId("for-me").locator("[data-testid^=validation-]", { hasText: "Devis recette prestataire" });
   await card.getByTestId("approve").click();
   await expect(page.getByText("Approuvée : le montant est engagé")).toBeVisible();

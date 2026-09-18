@@ -6,16 +6,17 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { canDecideValidation } from "@/lib/rights";
 import { refLabel } from "@/lib/refs";
-import { ageDays, canSeeValidation, canTreatRequest, kindLabel, loadRequests, statusOf, wideViewLabel } from "@/lib/requests";
+import { ageDays, canSeeValidation, canTreatRequest, kindLabel, loadRequests, statusOf } from "@/lib/requests";
 import { loadEditionOpts, loadEditionChoices, loadSuppliers } from "@/lib/tasks";
-import { RequestValidationDialog } from "@/app/edition/[id]/request-validation-dialog";
 import { REF_DEFAULTS } from "@/lib/refs";
 import { dayjs, fmtDate, fmtEuro } from "@/lib/format";
+import { attachmentInclude } from "@/lib/attachments";
 import { cn } from "@/lib/utils";
-import { NewRequestDialog } from "./new-request";
-import { RequestActions } from "./request-row";
+import { NewDemandPanel } from "./new-demand";
+import { ReassignControl, RequestActions } from "./request-row";
+import { ValidationCard } from "@/components/common/validation-card";
 import { DecideButtons } from "@/components/common/decide-buttons";
-import { isCodir } from "@/lib/rights";
+
 
 // Demandes (retour du 14/09) : un seul tableau pour tout ce qu'on demande à quelqu'un — demandes internes et validations —
 // côté « à traiter par moi » et côté « mes demandes ». Un achat / devis reste une validation ; il apparaît ici aussi.
@@ -27,7 +28,7 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
   const [editionChoices, suppliers] = await Promise.all([loadEditionChoices(me, settings), loadSuppliers()]);
   const [requests, validations, poles, editions] = await Promise.all([
     loadRequests(me),
-    prisma.validationRequest.findMany({ include: { requester: true, decider: true, edition: { include: { project: { include: { secondaryPoles: true } } } } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] }).then((vs) => vs.filter((v) => canSeeValidation(me, v))),
+    prisma.validationRequest.findMany({ include: { requester: true, decider: true, action: true, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } }, edition: { include: { project: { include: { pole: true, secondaryPoles: true } }, team: true } } }, orderBy: [{ status: "desc" }, { createdAt: "asc" }] }).then((vs) => vs.filter((v) => canSeeValidation(me, v))),
     prisma.pole.findMany({ orderBy: { name: "asc" } }),
     loadEditionOpts(me, settings),
   ]);
@@ -47,16 +48,24 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
       actions: v.status === "pending" && canDecideValidation(me, v) ? <div className="mt-1.5" data-testid={`decide-${v.id}`}><DecideButtons id={v.id} /></div> : v.status === "approved" && (v.kind === "quote" || v.kind === "expense") ? <Link href={`/validations/${v.id}/bon-pour-accord`} className="mt-1 inline-block text-xs text-primary hover:underline">Bon pour accord →</Link> : undefined,
     })),
   ];
+  // « Qu'on me fait » = à traiter par moi (demandes adressées à moi ou à mon pôle, validations de mon niveau) ; « Que j'ai
+  // faites » = mes demandes ; « Toute la CRESS » : la direction seulement, pour réaiguiller (retour de Gaël, 18/09).
   const forMe = lines.filter((l) => l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : canDecideValidation(me, validations.find((v) => v.id === l.id)!)));
+  const doneForMe = lines.filter((l) => !l.open && (l.family === "request" ? canTreat(requests.find((r) => r.id === l.id)!) : validations.find((v) => v.id === l.id)!.deciderId === me.id));
   const mine = lines.filter((l) => (l.family === "request" ? requests.find((r) => r.id === l.id)!.requesterId === me.id : validations.find((v) => v.id === l.id)!.requesterId === me.id));
   const all = lines;
-  const wide = wideViewLabel(me);
+  const wide = me.role === "director" ? "Toute la CRESS" : null;
   const view = vue === "mes" ? "mes" : vue === "toutes" && wide ? "toutes" : "moi";
-  const shown = view === "mes" ? mine : view === "toutes" ? all : forMe;
+  const shown = view === "mes" ? mine : view === "toutes" ? all : [...forMe, ...doneForMe];
   const openShown = shown.filter((l) => l.open).sort((a, b) => (a.due?.getTime() ?? 9e15) - (b.due?.getTime() ?? 9e15));
   const closedShown = shown.filter((l) => !l.open).slice(0, 15);
+  const validationById = new Map(validations.map((v) => [v.id, v]));
 
   const Row = ({ l }: { l: Line }) => {
+    if (l.family === "validation" && view !== "toutes") {
+      const v = validationById.get(l.id)!;
+      return <div className="border-b px-4 py-3 last:border-b-0"><ValidationCard v={v} refs={refs} canDecide={l.open && canDecideValidation(me, v)} showEdition index={l.open ? forMe.filter((x) => x.family === "validation").findIndex((x) => x.id === l.id) : undefined} attachments={v.attachments} /></div>;
+    }
     const late = l.open && l.due && dayjs(l.due).isBefore(dayjs(), "day");
     return (
       <div className={cn("grid gap-2 border-b px-4 py-3 last:border-b-0 sm:grid-cols-[150px_1fr_150px_110px_100px]", late && "bg-[#fff8f0]")} data-testid={`${l.family}-line-${l.id}`}>
@@ -70,24 +79,25 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
         <div className={cn("text-xs", late ? "font-semibold text-danger" : "text-muted-foreground")}>{l.due ? `pour le ${fmtDate(l.due, "D MMM")}` : "—"}</div>
         <div><StatusBadge label={l.status.label} color={l.status.color} /></div>
         {/* Les actions prennent toute la largeur sous le titre : dans la colonne du titre, elles s'empilaient à 1024 px. */}
-        {l.actions && <div className="min-w-0 sm:col-span-4 sm:col-start-2">{l.actions}</div>}
+        {view === "toutes"
+          ? (l.family === "request" && l.open && <div className="min-w-0 sm:col-span-4 sm:col-start-2"><ReassignControl id={l.id} assigneeId={requests.find((r) => r.id === l.id)!.assigneeId} people={peopleOpts} /></div>)
+          : l.actions && <div className="min-w-0 sm:col-span-4 sm:col-start-2">{l.actions}</div>}
       </div>
     );
   };
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Demandes et validations" subtitle={<>{forMe.length} à traiter par moi · {mine.filter((l) => l.open).length} de mes demandes en cours · demandes internes et validations au même endroit.{isCodir(me) && <> <Link href="/validations" className="text-primary hover:underline">File complète des validations par niveau →</Link></>}</>} actions={<>
-        <RequestValidationDialog editions={editionChoices} suppliers={suppliers} kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))} afterHref="/demandes?vue=mes" triggerLabel="Nouvelle validation" />
-        <NewRequestDialog people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} />
-      </>} />
+      <PageHeader title="Mes demandes" subtitle={<>{forMe.length} qu&apos;on me fait, à traiter · {mine.filter((l) => l.open).length} que j&apos;ai faites, en cours · demandes internes et validations au même endroit.</>} actions={
+        <NewDemandPanel people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} validation={{ editions: editionChoices, suppliers, kinds: REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) })), afterHref: "/demandes?vue=mes" }} />
+      } />
       <div className="subnav mb-3 flex flex-wrap gap-1">
-        {[["moi", `À traiter par moi (${forMe.length})`], ["mes", `Mes demandes (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
+        {[["moi", `Qu'on me fait (${forMe.length})`], ["mes", `Que j'ai faites (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
           <Link key={k} href={`/demandes?vue=${k}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
         ))}
       </div>
-      <Section title={view === "moi" ? "À traiter par moi" : view === "mes" ? "Mes demandes" : `En cours · ${wide}`} description={view === "toutes" ? "Ce que vous pouvez suivre au-delà de vos propres demandes : vos projets, votre pôle, ou toute la CRESS selon votre rôle." : "Demandes internes et validations dans le même tableau, les plus urgentes en premier."} className="mb-4" testId="requests-open">
-        {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{view === "moi" ? "Rien à traiter. Les demandes qui vous sont adressées, ou adressées à votre pôle, arriveront ici." : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
+      <Section title={view === "moi" ? "Qu'on me fait · en cours" : view === "mes" ? "Que j'ai faites · en cours" : "Toute la CRESS · en cours"} description={view === "toutes" ? "Pour la direction : toutes les demandes en cours. Une seule action ici — réaiguiller (changer à qui on demande) ; la personne à l'origine est prévenue." : view === "moi" ? "Les demandes qui vous sont adressées (ou à votre pôle), et les validations de votre niveau. Prendre, faire, décliner, confier ; approuver ou refuser." : "Ce que vous avez demandé, validations comprises ; retirez une demande si elle n'a plus lieu d'être."} testId="for-me">
+        {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground" data-testid="requests-open">{view === "moi" ? "Rien à traiter — rien à valider pour vous. Les demandes qui vous sont adressées, ou adressées à votre pôle, arriveront ici." : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl" data-testid="requests-open">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
       </Section>
       {closedShown.length > 0 && (
         <Section title="Terminées récemment" testId="requests-closed"><div className="-mx-4 -mb-4">{closedShown.map((l) => <Row key={l.id} l={l} />)}</div></Section>

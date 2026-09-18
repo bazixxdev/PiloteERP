@@ -119,7 +119,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await iAm(page, "Julien Barbot");
   await page.goto("/ma-semaine");
   await expect(page.getByRole("link", { name: "Devis impression du plaidoyer" })).toBeVisible();
-  await page.goto("/validations");
+  await page.goto("/demandes");
   const card = page.getByTestId("for-me").locator("[data-testid^=validation-]", { hasText: "Devis impression du plaidoyer" });
   await card.getByTestId("decide-comment").click(); // le champ s'ouvre à la demande (critique du 16/09)
   await card.getByPlaceholder("Commentaire (facultatif)").fill("OK dans l'enveloppe.");
@@ -128,11 +128,11 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
 
   // Un autre responsable de pôle ne voit pas cette demande ; la RAF ne valide pas.
   await iAm(page, "Sophie Delaunay");
-  await page.goto("/validations");
+  await page.goto("/demandes");
   await expect(page.getByTestId("for-me")).not.toContainText("Devis impression du plaidoyer");
   await iAm(page, "Nadia Ferrand");
-  await page.goto("/validations");
-  await expect(page.getByTestId("for-me")).toContainText("Rien à valider pour vous");
+  await page.goto("/demandes");
+  await expect(page.getByTestId("for-me")).not.toContainText("Devis impression du plaidoyer");
 
   // 6. Le CODIR : le portefeuille montre l'édition avec le livrable proche et l'engagé ; le café montre le jalon de Lucas et le livrable.
   await iAm(page, "Claire Vasseur");

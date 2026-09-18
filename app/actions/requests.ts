@@ -53,6 +53,11 @@ export async function assignRequest(id: string, assigneeId: string | null): Prom
   if (!canTreat) return { ok: false, error: "Vous ne pouvez pas réattribuer cette demande." };
   await prisma.request.update({ where: { id }, data: { assigneeId } });
   if (assigneeId && assigneeId !== me.id) await prisma.notification.create({ data: { personId: assigneeId, senderId: me.id, kind: "info", title: `Demande confiée : ${r.title}`, link: "/demandes" } });
+  // Réaiguillage (retour de Gaël, 18/09) : la personne à l'origine de la demande est prévenue du changement de destinataire.
+  if (r.requesterId !== me.id && assigneeId !== r.assigneeId) {
+    const to = assigneeId ? await prisma.person.findUnique({ where: { id: assigneeId }, select: { name: true } }) : null;
+    await prisma.notification.create({ data: { personId: r.requesterId, senderId: me.id, kind: "info", title: `Demande réaiguillée : ${r.title}`, body: to ? `${me.name} a confié votre demande à ${to.name}.` : `${me.name} a retiré le destinataire de votre demande.`, link: "/demandes?vue=mes" } });
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }
