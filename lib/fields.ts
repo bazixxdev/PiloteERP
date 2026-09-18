@@ -64,7 +64,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     arrivedAt: { type: "date", label: "Arrivée" }, leftAt: { type: "date", label: "Départ" }, note: { type: "textarea", label: "Note" },
     role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" }, email: { type: "text" },
   },
-  project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" } },
+  project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" }, archived: { type: "bool" } },
   editionPersonDays: { soldDays: { type: "number" }, plannedDays: { type: "number" }, availableDays: { type: "number" } },
   expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" } },
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },

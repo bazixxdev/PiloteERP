@@ -1,10 +1,10 @@
-import { Briefcase, CalendarDays, CalendarClock, Clock, LayoutGrid, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox, Settings, UserCircle, Lightbulb, type LucideIcon } from "lucide-react";
+import { BookUser, HandCoins, CalendarDays, CalendarClock, Clock, LayoutGrid, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox, Settings, UserCircle, Lightbulb, type LucideIcon } from "lucide-react";
 
 // Une seule iconographie pour un même écran : barre latérale, navigation basse, titre de page (retour du 15/09).
 // L'ordre compte : le premier motif qui correspond gagne.
 const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/projets\/proposer/, Lightbulb],
-  [/^\/(portefeuille|edition)/, Briefcase],
+  [/^\/(portefeuille|edition|projets)/, FileSignature],
   [/^\/ma-semaine/, CalendarDays],
   [/^\/taches/, ListTodo],
   [/^\/notes/, NotebookPen],
@@ -13,7 +13,8 @@ const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/cafe/, Coffee],
   [/^\/annuel/, LayoutGrid],
   [/^\/plan-de-charge/, BarChart3],
-  [/^\/(projets|conventions|financeurs|matrice|appels)/, FileSignature],
+  [/^\/(conventions|matrice|appels)/, HandCoins],
+  [/^\/(organisations|contacts|financeurs)/, BookUser],
   [/^\/(rappels|echeances)/, CalendarClock],
   [/^\/notifications/, Bell],
   [/^\/codir/, Gavel],

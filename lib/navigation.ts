@@ -16,7 +16,7 @@ export type NavLeaf = {
 };
 
 export type NavSection = {
-  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "tresorerie" | "materiel" | "echeances" | "direction" | "admin";
+  id: "travail" | "temps" | "projets" | "financements" | "annuaire" | "demandes" | "adherents" | "tresorerie" | "materiel" | "echeances" | "direction" | "admin";
   label: string;
   badge?: number;
   items: NavLeaf[];
@@ -48,27 +48,35 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         ...(ctx.modules.includes("notes") ? [{ label: "Notes", href: "/notes", path: "/notes" }] : []),
       ],
     },
+    // Retour de Gaël (18/09) : « ce qu'on fait » (projets, éditions) d'un côté, « comment c'est payé » de l'autre, et l'annuaire
+    // (organisations dont les financeurs, contacts) ailleurs — ce n'est pas là qu'on pilote.
     {
-      id: "portefeuille",
-      label: codir ? "Portefeuille" : "Mes projets",
+      id: "projets",
+      label: "Projets",
       also: ["/edition"],
       items: [
+        { label: "Projets", href: "/projets", path: "/projets" },
         { label: codir ? "Portefeuille" : "Mes projets", href: "/portefeuille", path: "/portefeuille" },
         { label: "Vue annuelle", href: "/annuel", path: "/annuel" },
         { label: "Plan de charge", href: "/plan-de-charge", path: "/plan-de-charge" },
       ],
     },
     {
-      id: "projets",
-      label: "Projets et financements",
+      id: "financements",
+      label: "Financements",
       items: [
-        { label: "Projets et éditions", href: "/projets", path: "/projets" },
         { label: "Conventions", href: "/conventions", path: "/conventions" },
-        { label: "Financeurs", href: "/financeurs", path: "/financeurs" },
-        { label: "Organisations", href: "/organisations", path: "/organisations" },
-        { label: "Contacts", href: "/contacts", path: "/contacts" },
         { label: "Qui finance quoi", href: "/matrice", path: "/matrice" },
         ...(ctx.veille ? [{ label: "Appels à projets", href: "/appels", path: "/appels" }] : []),
+      ],
+    },
+    {
+      id: "annuaire",
+      label: "Annuaire",
+      also: ["/financeurs"],
+      items: [
+        { label: "Organisations", href: "/organisations", path: "/organisations" },
+        { label: "Contacts", href: "/contacts", path: "/contacts" },
       ],
     },
     ...(ctx.adherents ? [{

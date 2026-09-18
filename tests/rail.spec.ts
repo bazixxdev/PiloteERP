@@ -36,11 +36,11 @@ test("le rail ouvre un sous-menu flottant par section, un seul à la fois, qui s
   await expect(page.getByTestId("rail-panel-projets")).toHaveCount(0);
 
   // Choisir une feuille : navigation, panneau fermé, icône marquée comme la page active.
-  await page.getByTestId("rail-projets").click();
-  await page.getByTestId("rail-panel-projets").getByRole("link", { name: "Qui finance quoi" }).click();
+  await page.getByTestId("rail-financements").click();
+  await page.getByTestId("rail-panel-financements").getByRole("link", { name: "Qui finance quoi" }).click();
   await expect(page).toHaveURL(/\/matrice/);
-  await expect(page.getByTestId("rail-panel-projets")).toHaveCount(0);
-  await expect(page.getByTestId("rail-projets")).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("rail-panel-financements")).toHaveCount(0);
+  await expect(page.getByTestId("rail-financements")).toHaveAttribute("aria-current", "page");
 
   // Clic dehors ferme ; le menu déplié retrouve son fonctionnement.
   await page.getByTestId("rail-demandes").click();

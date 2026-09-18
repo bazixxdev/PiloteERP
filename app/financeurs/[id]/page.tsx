@@ -12,7 +12,7 @@ import { deadlineState, callStatusLabel, sortCalls } from "@/lib/calls";
 import { canEditFunding } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
-import { daysFromNow, fmtDate, fmtEuro } from "@/lib/format";
+import { fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { FunderContacts } from "@/components/funders/contacts";
 
@@ -37,7 +37,6 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
   const main = f.contacts.find((c) => c.primary) ?? null;
   const active = f.conventions.filter((c) => c.startYear <= year && year <= c.endYear);
   const granted = f.lines.filter((l) => l.edition.year === year).reduce((s, l) => s + (l.amountGranted ?? 0), 0);
-  const obligations = f.lines.flatMap((l) => l.deliverables.filter((d) => !d.done).map((d) => ({ d, l }))).sort((x, y) => x.d.dueDate.getTime() - y.d.dueDate.getTime());
   const card = (label: string, value: string, hint?: string) => (
     <div className="rounded-md border bg-card px-3 py-4"><small className="text-xs text-muted-foreground">{label}</small><b className="mt-2 block text-[25px] font-semibold leading-tight tracking-[-0.7px] tabular">{value}</b>{hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}</div>
   );
@@ -46,7 +45,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
     <div className="p-4 md:p-6" data-testid={`funder-page-${f.name}`}>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/financeurs" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Tous les financeurs</Link>
+          <Link href="/organisations?genre=funder" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Annuaire · financeurs</Link>
           <div className="flex flex-wrap items-center gap-2">
             <SectionIcon />
             {rw ? <AutoField model="funder" id={f.id} field="name" type="text" value={f.name} inputClassName="text-[25px] font-bold leading-tight tracking-[-0.7px]" className="min-w-[280px]" label="Nom du financeur" /> : <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{f.name}</h1>}
@@ -125,15 +124,6 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
           )}
           <Section title="Notes" description="Périmètre, habitudes, calendrier des appels à projets…">
             <AutoField model="funder" id={f.id} field="notes" type="textarea" value={f.notes} readOnly={!rw} placeholder={rw ? "À compléter…" : "Aucune note"} rows={4} label="Notes sur le financeur" />
-          </Section>
-          <Section title="Obligations à venir" description="Livrables non remis dus à ce financeur, les plus proches d'abord." testId="funder-obligations">
-            {obligations.length === 0 ? <p className="text-sm text-muted-foreground">Aucun livrable en attente.</p> : (
-              <ul className="divide-y text-sm">
-                {obligations.slice(0, 12).map(({ d, l }) => { const n = daysFromNow(d.dueDate); return (
-                  <li key={d.id} className="py-2"><div className="font-medium">{d.label}</div><div className="text-xs text-muted-foreground"><Link href={`/edition/${l.editionId}?onglet=budget#recettes`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> · {fmtDate(d.dueDate)} · <span className={cn(n < 0 ? "font-semibold text-danger" : n <= 30 ? "text-warning-foreground" : "")}>{n < 0 ? `${-n} j de retard` : n === 0 ? "aujourd'hui" : `dans ${n} j`}</span></div></li>
-                ); })}
-              </ul>
-            )}
           </Section>
         </div>
       </div>

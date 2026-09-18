@@ -17,7 +17,7 @@ test("la RAF repère, le CODIR statue, « Étudier » crée la convention une se
   await expect(radar.first()).toContainText("Nadia Ferrand, Claire Vasseur");
 
   await page.goto("/appels");
-  await expect(page.getByTestId("dossiers-nav-appels")).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("dossiers-title-appels")).toBeVisible();
   const table = page.getByTestId("calls-table");
   // Le FDVA, repéré avant-hier et pas encore regardé, est « Nouveau » ; l'écarté DREETS est masqué par défaut.
   await expect(table.locator(FDVA)).toContainText("Nouveau");
@@ -62,8 +62,8 @@ test("la RAF repère, le CODIR statue, « Étudier » crée la convention une se
   await expect(page.getByTestId("calls-table").locator('tr[data-label="AAP test mobilité durable"]')).toContainText("Retiré");
 
   // La fiche financeur liste ses appels.
-  await page.goto("/financeurs");
-  await page.getByTestId("funders-table").getByRole("link", { name: "Région", exact: true }).click();
+  await page.goto("/organisations?genre=funder");
+  await page.getByTestId("funder-page-Région").click();
   await expect(page.getByTestId("funder-calls")).toContainText("Appel à manifestation d'intérêt");
   await expect(page.getByTestId("funder-calls")).toContainText("REGION-2026");
 });
@@ -82,7 +82,7 @@ test("un contributeur lit la veille sans agir ; la direction éteint le module e
   await page.getByTestId("instance-module-veille").uncheck();
   await expect(page.getByText("Module « Appels à projets (veille) » désactivé — les données restent")).toBeVisible();
   await page.goto("/conventions");
-  await expect(page.getByTestId("dossiers-nav-appels")).toHaveCount(0);
+  await expect(page.locator("aside").getByRole("link", { name: "Appels à projets" })).toHaveCount(0);
   const res = await page.goto("/appels");
   expect(res?.status()).toBe(404);
   // On rallume : les appels sont toujours là.

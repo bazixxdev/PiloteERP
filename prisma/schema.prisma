@@ -380,6 +380,7 @@ model Project {
   mission       Mission   @relation(fields: [missionId], references: [id])
   strategicAxis String?
   recurring     Boolean   @default(true)
+  archived      Boolean   @default(false) // projet rangé : plus dans la liste courante, ses éditions restent lisibles
   createdAt     DateTime  @default(now())
   editions      Edition[]
   timeEntries   TimeEntry[]

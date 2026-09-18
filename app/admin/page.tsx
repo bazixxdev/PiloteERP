@@ -187,7 +187,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
       {current === "referentiels" && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans « Projets et financements ».">
+          <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans l'Annuaire (Organisations, genre Financeur).">
             <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>. Les projets et leurs éditions sont aussi dans <Link href="/projets" className="text-primary hover:underline">Projets et éditions</Link>.</p>
           </Section>
           <Section title="Fournisseurs" description={<>Organisations de genre « fournisseur » (lot E2) : alimentées depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher), tenues dans l'<Link href="/organisations" className="text-primary hover:underline">annuaire des organisations</Link>.</>} actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
@@ -203,7 +203,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </ul>
             )}
           </Section>
-          <Section title="Missions du plan opérationnel" actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle mission" compact /> : undefined}>
+          <Section title="Raisons d'être (missions du plan opérationnel)" description="Pourquoi la CRESS porte un projet : chaque projet s'y rattache." actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle raison d'être" compact /> : undefined}>
             <ul className="divide-y text-sm">{missions.map((m) => <li key={m.id}><AutoField model="mission" id={m.id} field="name" type="text" value={m.name} readOnly={!rw} /></li>)}</ul>
           </Section>
           <Section title="Codes de temps hors projet" actions={rw ? <AddSimpleForm kind="timeCode" placeholder="Nouveau code" compact /> : undefined}>

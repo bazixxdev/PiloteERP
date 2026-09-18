@@ -35,6 +35,7 @@ export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: {
     if (leaf && leaf.label !== section?.label) parts.push(leaf.label);
     else if (!leaf && outside) parts.push(outside);
     if (/^\/materiel\/pret\/./.test(pathname)) parts.push("Fiche de prêt");
+    else if (/^\/projets\/[^/]+$/.test(pathname) && !pathname.startsWith("/projets/proposer")) parts.push("Fiche projet");
     else if (/^\/conventions\/./.test(pathname)) parts.push("Convention");
     else if (/^\/financeurs\/./.test(pathname)) parts.push("Financeur");
     else if (pathname.startsWith("/portefeuille") && sp.get("mode") === "codir") parts.push("Mode CODIR");

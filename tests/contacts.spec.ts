@@ -112,9 +112,9 @@ test("une liste partagée au pôle se lit chez un collègue du pôle, en lecture
 // 18/09, retour de Gaël : les contacts d'un financeur sont ceux de l'annuaire (une seule fiche), et une liste de base non
 // supprimable réunit les interlocuteurs des financeurs (une par genre d'organisation).
 test("les contacts d'un financeur sont ceux de l'annuaire : rattachement, pas de doublon par e-mail, liste de base des financeurs", async ({ page }) => {
-  await page.goto("/financeurs");
+  await page.goto("/organisations?genre=funder");
   await iAm(page, "Nadia Ferrand");
-  await page.getByTestId("funders-table").getByRole("link", { name: "Région", exact: true }).click();
+  await page.getByTestId("funder-page-Région").click();
   await expect(page.getByLabel("Nom du financeur")).toHaveValue("Région");
   // Rattacher quelqu'un déjà dans l'annuaire (sans organisation).
   await page.getByTestId("contact-attach-open").click();

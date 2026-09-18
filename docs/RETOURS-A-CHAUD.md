@@ -442,6 +442,17 @@ Gaël : pas de bascule encaissement / décaissement dans le dialogue d'une charg
 - **Catégorie** : la même liste déroulante que partout (catalogue + catégories en usage), « Autre… » ouvre un champ libre.
 - **Menu** : la feuille « Inventaire » ne reconnaît que son adresse exacte (`exact`) ; sur une fiche de prêt, c'est « Prêts en cours » qui est marqué, fil d'Ariane « Prêts / Prêts en cours / Fiche de prêt ».
 
+### AO. Lot 1 « Menu et projets » (19/09) — fait
+
+Gaël (retour vocal du 18/09 au soir) : dissocier ce qu'on fait (projets, éditions) de comment c'est payé ; les onglets sous le titre doublent le menu de gauche ; « Projets et financements » → onglet « Projets et éditions » → titre « Projets et financements », on ne comprend pas ; la liste des projets porte le paramétrage (pôle, pilote…) et pas de fiche ; « mission » → raison d'être ; les financeurs et les organisations sont de l'annuaire, pas un écran de pilotage, et le tableau des financeurs déborde d'infos rattachées (versements en retard : ça se pilote ailleurs).
+- **Menu** : « Projets et financements » et « Portefeuille » deviennent **Projets** (Projets, Portefeuille, Vue annuelle, Plan de charge — les éditions y restent), **Financements** (Conventions, Qui finance quoi, Appels à projets) et **Annuaire** (Organisations, Contacts). Icônes et fil d'Ariane suivent (« Projets / Fiche projet », « Annuaire / Organisations / Financeur »).
+- **Plus d'onglets sous le titre** : chaque page porte son propre titre (Projets, Conventions, Organisations, Contacts, Qui finance quoi, Appels à projets) puis la ligne compacte (`DossiersHeader` sans navigation).
+- **Liste des projets** sobre : nom + code, **état** (en cours / à l'étude / terminé / sans édition / archivé — déduit des éditions, `lib/projects.ts`), raison d'être, pôle, pilote, éditions par année (colorées par statut) ; recherche, filtre par état (par défaut : tout sauf archivés), tri par colonne. Plus aucun champ modifiable dans le tableau.
+- **Fiche projet `/projets/[id]`** : nom, état, résumé ; **Éditions** (année, statut, enveloppe, actions, équipe, ajout d'une année), **Financements** (lignes de toutes les éditions : année, financeur, dispositif, statut, demandé, obtenu), **Identité** (raison d'être = mission du plan opérationnel, axe stratégique, pôle principal et pôles associés, pilote, garant, code analytique, récurrent, **archivé** — nouveau champ `Project.archived`), **Équipe** (pilote, garant, équipes d'édition).
+- **« Mission » → « Raison d'être (mission du plan opérationnel) »** partout (fiche, création, admin référentiel).
+- **Financeurs → Annuaire** : `/financeurs` redirige vers Organisations filtré sur le genre Financeur ; le lien « fiche financeur » est sur chaque ligne ; la fiche financeur garde contacts, conventions, éditions financées, appels, notes, et perd « Obligations à venir » (les livrables en attente se pilotent dans Échéances).
+- Test `tests/projets.spec.ts` ; tests rail / matrice / appels / financeurs / contacts adaptés au nouveau menu.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

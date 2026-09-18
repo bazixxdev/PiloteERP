@@ -102,7 +102,7 @@ export function CreateProjectDialog({ poles, people, missions }: { poles: Opt[];
             <label className={field}><span className="font-semibold">Pôle principal</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={poleId} onChange={(e) => setPoleId(e.target.value)} aria-label="Pôle">{poles.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
           </div>
           <div className="grid grid-cols-[1fr_6rem] gap-3">
-            <label className={field}><span className="font-semibold">Mission du plan opérationnel</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
+            <label className={field}><span className="font-semibold">Raison d&apos;être (mission du plan opérationnel)</span><Select className="h-8 w-full rounded-lg border bg-card px-2 text-sm" value={missionId} onChange={(e) => setMissionId(e.target.value)} aria-label="Mission">{missions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></label>
             <label className={field}><span className="font-semibold">Première édition</span><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-8" aria-label="Année" /></label>
           </div>
           <DialogFooter>

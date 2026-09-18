@@ -45,7 +45,7 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
                     <td className="px-3 py-2"><Link href={`/organisations?${new URLSearchParams({ ...(kind ? { genre: kind } : {}), ...(q ? { q } : {}), organisation: o.id }).toString()}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline" data-testid={`organisation-open-${o.id}`}>{o.name}</Link>{!o.active && <span className="ml-1 rounded-sm bg-muted px-1 text-[10px]">inactive</span>}{o.website && <div className="text-[11px] text-muted-foreground">{o.website.replace(/^https?:\/\//, "")}</div>}</td>
                     <td className="px-3 py-2"><div className="flex flex-wrap gap-1">{kindsOf(o).map((k) => <span key={k} className={cn("rounded-sm px-1.5 text-[10px] font-semibold", k === "funder" ? "bg-info-soft text-primary" : k === "supplier" ? "bg-sand text-[#574f3f]" : "bg-muted text-muted-foreground")}>{kindLabel(k)}</span>)}</div></td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{main ? <>{[main.firstName, main.lastName].filter(Boolean).join(" ")}{main.role ? ` · ${main.role}` : ""}</> : "—"}</td>
-                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">{dossiers || "—"}</td>
+                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">{dossiers || "—"}{kindsOf(o).includes("funder") && <> · <Link href={`/financeurs/${o.id}`} className="text-primary hover:underline" data-testid={`funder-page-${o.name}`}>fiche financeur</Link></>}</td>
                   </tr>
                 );
               })}
