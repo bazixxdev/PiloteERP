@@ -7,6 +7,7 @@ import { paymentSummary } from "@/lib/payments";
 import { fmtDate, fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
+import { V, le, du } from "@/lib/vocab";
 
 // Réalisé comptable de l'édition (lot D) : ce que la compta a enregistré sur ses codes analytiques — charges par poste (avec les
 // pièces), produits, frais de déplacement, par action et par financement quand un code le permet. Composant serveur : il lit
@@ -31,8 +32,8 @@ export async function LedgerBlock({ e, settings, canAdmin }: Pick<TabCtx, "e" | 
       title="Réalisé comptable"
       description={<span className="inline-flex flex-wrap items-center gap-1.5">Ce que la compta a enregistré sur les codes {codes.map((c) => <code key={c} className="rounded bg-muted px-1 font-mono text-[11px]">{c}</code>)} en {e.year}{lastImport && <> · {SOURCE_LABEL[lastImport.source] ?? lastImport.source} du {fmtDate(lastImport.importedAt)}</>}
         <HelpTip title="D'où viennent ces chiffres" testId="ledger-help">
-          <p>Le grand livre analytique du logiciel de compta est importé (fichier exporté, ou Pennylane) et rapproché de l&apos;édition par ses codes analytiques : celui du projet, ceux de ses lignes de financement, et les correspondances posées dans l&apos;admin (une action, un code particulier). Aucun lien en dur : une écriture sans code connu apparaît dans « codes à rapprocher » de l&apos;admin.</p>
-          <p className="mt-1">Charges = comptes 6 (débit − crédit), produits = comptes 7, frais = comptes 625 (déplacements, missions, réceptions — les notes de frais quand elles viennent d&apos;un autre outil). <b>Un seul réalisé compte dans les alertes d&apos;enveloppe</b> : {fromLedger ? "la compta (réglage actuel) ; le réalisé saisi par la RAF s'affiche en regard" : "le réalisé saisi par la RAF (réglage actuel) ; la compta s'affiche en regard"}. Réglable dans admin › Paramètres.</p>
+          <p>{`Le grand livre analytique du logiciel de compta est importé (fichier exporté, ou Pennylane) et rapproché ${du(V.edition)} par ses codes analytiques : celui du projet, ceux de ses lignes de financement, et les correspondances posées dans l'admin (une action, un code particulier). Aucun lien en dur : une écriture sans code connu apparaît dans « codes à rapprocher » de l'admin.`}</p>
+          <p className="mt-1">Charges = comptes 6 (débit − crédit), produits = comptes 7, frais = comptes 625 (déplacements, missions, réceptions — les notes de frais quand elles viennent d&apos;un autre outil). <b>Un seul réalisé compte dans les alertes d&apos;enveloppe</b> : {fromLedger ? `la compta (réglage actuel) ; le réalisé saisi par ${le(V.raf)} s'affiche en regard` : `le réalisé saisi par ${le(V.raf)} (réglage actuel) ; la compta s'affiche en regard`}. Réglable dans admin › Paramètres.</p>
         </HelpTip></span>}
       testId="ledger-block"
     >
@@ -41,10 +42,10 @@ export async function LedgerBlock({ e, settings, canAdmin }: Pick<TabCtx, "e" | 
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-4">
-            {card("Charges comptabilisées", fmtEuro(r.charges), fromLedger ? "compte dans les alertes d'enveloppe" : `réalisé saisi par la RAF : ${fmtEuro(rafRealized)} (c'est lui qui compte)`, fromLedger ? "border-primary/40" : undefined, "ledger-charges")}
+            {card("Charges comptabilisées", fmtEuro(r.charges), fromLedger ? "compte dans les alertes d'enveloppe" : `réalisé saisi par ${le(V.raf)} : ${fmtEuro(rafRealized)} (c'est lui qui compte)`, fromLedger ? "border-primary/40" : undefined, "ledger-charges")}
             {card("dont frais de déplacement et missions", fmtEuro(r.travel), "comptes 625 · notes de frais", undefined, "ledger-travel")}
             {card("Produits comptabilisés", fmtEuro(r.products), "comptes 7 · subventions, prestations", undefined, "ledger-products")}
-            {card("Écart compta / saisie", fmtEuro(Math.abs(r.charges - rafRealized)), r.charges > rafRealized ? "la compta a plus que la saisie RAF" : r.charges < rafRealized ? "la saisie RAF a plus que la compta" : "identiques", Math.abs(r.charges - rafRealized) > 1 ? "border-warning/40" : undefined, "ledger-gap")}
+            {card("Écart compta / saisie", fmtEuro(Math.abs(r.charges - rafRealized)), r.charges > rafRealized ? `la compta a plus que la saisie ${V.raf.one}` : r.charges < rafRealized ? `la saisie ${V.raf.one} a plus que la compta` : "identiques", Math.abs(r.charges - rafRealized) > 1 ? "border-warning/40" : undefined, "ledger-gap")}
           </div>
 
           {r.byAccount.length > 0 && (

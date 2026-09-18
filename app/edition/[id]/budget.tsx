@@ -11,6 +11,7 @@ import { ClickToEdit } from "@/components/inline/click-to-edit";
 import { InvoiceCell } from "./invoice-cell";
 import { RowPanel } from "@/components/common/row-panel";
 import Link from "next/link";
+import { V, cap, le, du, ce } from "@/lib/vocab";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
 export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
@@ -40,8 +41,8 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
   return (
     <div className="grid gap-4">
       {/* Une phrase au plus sous le titre ; la règle de calcul et l'exemple se lisent dans le « ? » (revue du 15/09). */}
-      <Section title="Enveloppe de dépenses directes" description={<span className="inline-flex items-center gap-1.5">Tenue par la RAF · réalisé + engagements restants, sans double comptage <HelpTip title="Comment se calcule le reste" testId="budget-help">
-        <p className="mt-1">Réalisé = factures (y compris celles rattachées à un devis) + réalisé hors devis saisi par la RAF. Engagements restant à réaliser = devis approuvés non encore facturés. Reste = enveloppe − réalisé − engagements restants. Le même calcul sert au portefeuille, à l'en-tête de l'édition et à l'écran CODIR.</p>
+      <Section title="Enveloppe de dépenses directes" description={<span className="inline-flex items-center gap-1.5">{`Tenue par ${le(V.raf)} · réalisé + engagements restants, sans double comptage `}<HelpTip title="Comment se calcule le reste" testId="budget-help">
+        <p className="mt-1">{`Réalisé = factures (y compris celles rattachées à un devis) + réalisé hors devis saisi par ${le(V.raf)}. Engagements restant à réaliser = devis approuvés non encore facturés. Reste = enveloppe − réalisé − engagements restants. Le même calcul sert au portefeuille, à l'en-tête ${du(V.edition)} et à l'écran ${V.codir.one}.`}</p>
         <p className="mt-2">Exemple : enveloppe 8 000 €, devis validé 1 000 € → réalisé 0, engagement restant 1 000, reste 7 000. Facture partielle de 400 € → réalisé 400, engagement restant 600, reste toujours 7 000. Facture finale 900 € et reliquat soldé → réalisé 900, engagement restant 0, reste 7 100.</p>
         {lastUpdate && <p className="mt-2 text-muted-foreground">Dernière actualisation {fmtDate(lastUpdate)}.</p>}
       </HelpTip></span>}>
@@ -71,7 +72,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
       </Section>
 
       <Section title="Dépenses" description={<span className="inline-flex items-center gap-1.5">Devis approuvés et factures ; la facture arrive à l'adresse de facturation <HelpTip title="Le circuit d'une dépense" testId="expenses-help">
-        <p className="mt-1">Un devis approuvé crée l'engagement une seule fois. La RAF rattache le réalisé (les factures) à cette ligne, la marque reçue puis payée ; le pilote est prévenu et confirme le service fait, sans bloquer. Aucun fichier facture ici : la facture arrive à l'adresse de facturation.</p>
+        <p className="mt-1">{`Un devis approuvé crée l'engagement une seule fois. ${cap(le(V.raf))} rattache le réalisé (les factures) à cette ligne, la marque reçue puis payée ; ${le(V.pilote)} est prévenu et confirme le service fait, sans bloquer. Aucun fichier facture ici : la facture arrive à l'adresse de facturation.`}</p>
       </HelpTip></span>} actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
         {/* Un devis encore en attente de validation n'est pas une dépense : on le dit ici, sans l'engager (revue du 15/09). */}
         {pendingQuotes.length > 0 && (
@@ -79,7 +80,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
             {pendingQuotes.length} devis en attente de validation, non engagé{pendingQuotes.length > 1 ? "s" : ""} : {pendingQuotes.map((v) => `${v.label}${v.amount != null ? ` (${fmtEuro(v.amount)})` : ""}`).join(", ")} · <Link href={`/edition/${e.id}?onglet=apercu`} className="underline">à décider dans l'Aperçu</Link>
           </p>
         )}
-        {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">Aucune dépense sur cette édition.</p> : (
+        {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">{`Aucune dépense sur ${ce(V.edition)}.`}</p> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm" data-testid="expenses">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
@@ -98,7 +99,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
                       <td className={cn("w-24 py-1.5 pr-2 text-right tabular", x.spent > x.committed && x.committed > 0 && "text-danger font-medium")} title={x.spent > x.committed && x.committed > 0 ? "Facture supérieure à l'engagement : écart à faire remonter" : undefined}>{fmtEuro(rest)}</td>
                       <td className="min-w-[210px] py-1.5 pr-2"><InvoiceCell id={x.id} receivedAt={x.invoiceReceivedAt ? fmtDate(x.invoiceReceivedAt) : null} paidAt={x.paidAt ? fmtDate(x.paidAt) : null} serviceDoneAt={x.serviceDoneAt ? fmtDate(x.serviceDoneAt) : null} serviceDoneBy={x.serviceDoneBy?.name ?? null} canTrack={canTrack} canConfirm={canConfirm} /></td>
                       <td className="py-1.5 text-right">
-                        <RowPanel testId={`expense-panel-${x.id}`} label={rw ? "Gérer" : "Détail"} title={x.label} description={x.validation ? <>Devis validé · {x.validation.requester.name} · {fmtDate(x.validation.decidedAt)} · <Link href={`/validations/${x.validation.id}/bon-pour-accord`} className="text-primary hover:underline">bon pour accord</Link></> : "Dépense saisie par la RAF, sans devis."}>
+                        <RowPanel testId={`expense-panel-${x.id}`} label={rw ? "Gérer" : "Détail"} title={x.label} description={x.validation ? <>Devis validé · {x.validation.requester.name} · {fmtDate(x.validation.decidedAt)} · <Link href={`/validations/${x.validation.id}/bon-pour-accord`} className="text-primary hover:underline">bon pour accord</Link></> : `Dépense saisie par ${le(V.raf)}, sans devis.`}>
                           <div className="grid gap-2 sm:grid-cols-2">
                             <Field label="Objet"><AutoField model="expense" id={x.id} field="label" type="text" value={x.label} readOnly={!rw} inputClassName="font-medium" /></Field>
                             <Field label="Fournisseur"><AutoField model="expense" id={x.id} field="supplier" type="text" value={x.supplier} readOnly={!rw} placeholder="—" /></Field>

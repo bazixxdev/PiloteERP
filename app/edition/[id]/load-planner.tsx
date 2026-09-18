@@ -11,6 +11,7 @@ import { setPlannedLoad } from "@/app/actions/load";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/common/searchable-select";
+import { V, le } from "@/lib/vocab";
 
 // Répartir par mois les jours prévus d'une personne sur l'édition : un total et une période (l'outil lisse), puis mois par mois.
 export function LoadPlanner({ editionId, personId, personName, year, plannedDays, loads, readOnly }: { editionId: string; personId: string; personName: string; year: number; plannedDays: number; loads: Record<string, number>; readOnly: boolean }) {
@@ -48,7 +49,7 @@ export function LoadPlanner({ editionId, personId, personName, year, plannedDays
       <PopoverContent className="w-[420px]" align="start">
         <div className="text-xs font-semibold">{personName} · {year} · jours prévus par mois</div>
         {readOnly ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">{ventilated ? "Répartition posée par le pilote ou la RAF." : "Total annuel lissé sur 12 mois (pas de répartition posée)."}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{ventilated ? `Répartition posée par ${le(V.pilote)} ou ${le(V.raf)}.` : "Total annuel lissé sur 12 mois (pas de répartition posée)."}</p>
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md bg-muted/50 p-2 text-[11px]">
             <span>Répartir</span><Input value={total} onChange={(e) => setTotal(e.target.value)} className="h-7 w-16 text-xs" aria-label="Total de jours" inputMode="decimal" data-testid="load-total" /><span>j de</span>

@@ -8,6 +8,7 @@ import { instanceHas } from "@/lib/modules";
 import { CALL_STATUSES, suggestedReference } from "@/lib/calls";
 import { findOrCreateOrganisation } from "@/lib/organisations";
 import { dayjs } from "@/lib/format";
+import { V, le, de, au } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -23,7 +24,7 @@ function canSpot(me: Actor): boolean {
 export async function addCall(input: { funderId: string; funderName?: string | null; label: string; scheme?: string | null; deadline?: string | null; rolling?: boolean; recurring?: boolean; amountHint?: string | null; amountValue?: number | string | null; amountKind?: string; durationYears?: number | string | null; targetProjectId?: string | null; link?: string | null; note?: string | null }): Promise<Result<{ id: string }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me)) return { ok: false, error: "Un appel à projets se repère par la RAF, la direction ou un responsable de pôle." };
+  if (!canSpot(me)) return { ok: false, error: `Un appel à projets se repère par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.` };
   // Un financeur qui n'est pas encore dans l'annuaire se crée par son nom (retour de Gaël : « on ne peut pas en ajouter »).
   let funderId = input.funderId || "";
   if (!funderId && input.funderName?.trim()) funderId = (await findOrCreateOrganisation(input.funderName, "funder")).id;
@@ -46,7 +47,7 @@ export async function addCall(input: { funderId: string; funderName?: string | n
 export async function setCallStatus(id: string, status: string | null): Promise<Result> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!isCodir(me)) return { ok: false, error: "Le statut d'un appel se pose en CODIR (direction, RAF, responsables de pôle)." };
+  if (!isCodir(me)) return { ok: false, error: `Le statut d'un appel se pose en ${V.codir.one} (${V.direction.one}, ${V.raf.one}, responsables ${de(V.pole)}).` };
   if (status !== null && !CALL_STATUSES.some((s) => s.value === status)) return { ok: false, error: "Statut inconnu." };
   const c = await prisma.call.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Appel introuvable" };
@@ -60,7 +61,7 @@ export async function setCallStatus(id: string, status: string | null): Promise<
 export async function promoteCall(id: string): Promise<Result<{ conventionId: string; existed: boolean }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) ouvre un dossier depuis un appel." };
+  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ouvre un dossier depuis un appel.` };
   const c = await prisma.call.findUnique({ where: { id }, include: { funder: true } });
   if (!c) return { ok: false, error: "Appel introuvable" };
   if (c.conventionId) return { ok: true, data: { conventionId: c.conventionId, existed: true } };
@@ -83,7 +84,7 @@ export async function promoteCall(id: string): Promise<Result<{ conventionId: st
 export async function renewCall(id: string): Promise<Result<{ id: string }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
+  if (!canSpot(me)) return { ok: false, error: `Réservé ${au(V.raf)}, ${au(V.direction)} et aux responsables ${de(V.pole)}.` };
   const c = await prisma.call.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Appel introuvable" };
   if (!c.deadline) return { ok: false, error: "Un appel au fil de l'eau ne se reconduit pas : il reste ouvert." };
@@ -100,7 +101,7 @@ export async function renewCall(id: string): Promise<Result<{ id: string }>> {
 export async function setCallActive(id: string, active: boolean): Promise<Result> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!canSpot(me)) return { ok: false, error: "Réservé à la RAF, à la direction et aux responsables de pôle." };
+  if (!canSpot(me)) return { ok: false, error: `Réservé ${au(V.raf)}, ${au(V.direction)} et aux responsables ${de(V.pole)}.` };
   await prisma.call.update({ where: { id }, data: { active } });
   revalidatePath("/", "layout");
   return { ok: true };

@@ -16,6 +16,7 @@ import { hasModule } from "@/lib/modules";
 import { inMyPole } from "@/lib/scope";
 import type { TabCtx } from "./types";
 import { AddDocLinkForm } from "./add-forms";
+import { V, du, ce } from "@/lib/vocab";
 
 // Documents (revue du 15/09) : une liste de chemins et de liens avec leur famille, les pièces qui font foi, les notes.
 // La discussion est dans le Fil (en-tête) ; l'adresse pour Teams dans le menu « … ».
@@ -32,11 +33,11 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
     <div className="grid gap-4 lg:grid-cols-2">
       <Section
         title="Fichiers et liens"
-        description={<span className="inline-flex items-center gap-1.5">Chemins sur le serveur de la CRESS et adresses web (Teams, OneNote, convention en ligne) <HelpTip title="Où va quoi ? Trois familles, une règle chacune" testId="documents-rule">
+        description={<span className="inline-flex items-center gap-1.5">{`Chemins sur le serveur ${du(V.org)} et adresses web (Teams, OneNote, convention en ligne) `}<HelpTip title="Où va quoi ? Trois familles, une règle chacune" testId="documents-rule">
           <ol className="mt-1 grid gap-1.5">
             <li><b>Ce qui naît dans l'outil</b> — fiche, objectifs, indicateurs, actions, réalisations, décisions, remarques, bilan. <span className="text-muted-foreground">Ici seulement ; le Word est un export, jamais une source.</span></li>
             <li><b>Les pièces qui font foi</b> — devis validé, notification, convention signée, justificatif financeur, bilan remis. <span className="text-muted-foreground">Déposées ici, rattachées à leur objet, jamais supprimées : ce sont celles qu'un contrôle demande.</span></li>
-            <li><b>Tout le reste</b> — livrables produits, documents de travail, notes de service, comptes rendus. <span className="text-muted-foreground">Sur le serveur, dans le dossier de l'édition ; l'outil donne le chemin. Teams reste éphémère, OneDrive est arrêté.</span></li>
+            <li><b>Tout le reste</b> — livrables produits, documents de travail, notes de service, comptes rendus. <span className="text-muted-foreground">{`Sur le serveur, dans le dossier ${du(V.edition)} ; l'outil donne le chemin. Teams reste éphémère, OneDrive est arrêté.`}</span></li>
           </ol>
           <p className="mt-2 text-muted-foreground">Un chemin (\\serveur\…) est rangé comme « Serveur », une adresse https:// comme « Lien » : l'outil trie tout seul.</p>
         </HelpTip></span>}
@@ -62,7 +63,7 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <div className="min-w-0 flex-1"><AutoField model="docLink" id={d.id} field="label" type="text" value={d.label} readOnly={!rw} /></div>
-                    {d.codirOnly && <span className="inline-flex items-center gap-0.5 rounded-sm bg-coral/10 px-1 text-[10px] text-coral"><Lock className="size-2.5" />CODIR</span>}
+                    {d.codirOnly && <span className="inline-flex items-center gap-0.5 rounded-sm bg-coral/10 px-1 text-[10px] text-coral"><Lock className="size-2.5" />{`${V.codir.one}`}</span>}
                   </div>
                   {!web && <AutoField model="docLink" id={d.id} field="url" type="text" value={d.url} readOnly={!rw} inputClassName="font-mono text-xs text-muted-foreground" />}
                 </div>
@@ -75,10 +76,10 @@ export async function DocumentsTab({ e, me, settings, refs, isPilot, isTeam }: T
 
       <div className="grid content-start gap-4">
         <Section title="Pièces qui font foi" description="Devis, conventions, notifications, justificatifs, bilans remis (5 Mo au plus) ; le dossier complet reste sur le serveur." actions={(rw || canEditFunding(me)) ? <Reveal label="Pièce" size="sm" testId="upload-open"><UploadForm editionId={e.id} kinds={kinds} defaultKind="other" /></Reveal> : undefined} testId="pieces">
-          <AttachmentList items={e.attachments} refs={refs} emptyText="Aucune pièce déposée sur cette édition." />
+          <AttachmentList items={e.attachments} refs={refs} emptyText={`Aucune pièce déposée sur ${ce(V.edition)}.`} />
         </Section>
 
-        <Section title="Notes" description="Notes de réunion rattachées à cette édition : les vôtres, et celles que des collègues ont partagées." actions={hasModule(me, "notes") ? <Link href={`/notes?note=nouvelle&edition=${e.id}`} className="text-xs text-primary hover:underline" data-testid="edition-new-note">+ Prendre une note</Link> : undefined} testId="edition-notes">
+        <Section title="Notes" description={`Notes de réunion rattachées à ${ce(V.edition)} : les vôtres, et celles que des collègues ont partagées.`} actions={hasModule(me, "notes") ? <Link href={`/notes?note=nouvelle&edition=${e.id}`} className="text-xs text-primary hover:underline" data-testid="edition-new-note">+ Prendre une note</Link> : undefined} testId="edition-notes">
           {notes.length === 0 ? <p className="text-sm text-muted-foreground">Aucune note rattachée.</p> : (
             <ul className="divide-y text-sm">
               {notes.map((n) => (

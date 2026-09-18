@@ -5,9 +5,10 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canManageTreasury } from "@/lib/rights";
 import { addMonths, DIRECTIONS, HR_CATEGORY, isMonth, PERIODS } from "@/lib/treasury";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
-const DENIED = "La trésorerie se tient par la direction ou la RAF (droit « Tient la trésorerie »).";
+const DENIED = `La trésorerie se tient par ${le(V.direction)} ou ${le(V.raf)} (droit « Tient la trésorerie »).`;
 const clean = (v: unknown) => { const s = v == null ? "" : String(v).trim(); return s || null; };
 
 async function guard() {

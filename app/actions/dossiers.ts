@@ -12,9 +12,10 @@ import { findOrCreateOrganisation } from "@/lib/organisations";
 import { suggestedReference } from "@/lib/calls";
 import { TRANSITIONS, isWon } from "@/lib/dossiers";
 import { REF_DEFAULTS } from "@/lib/refs";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
-const DENIED = "Un dossier de financement se tient par la RAF ou la direction (droit « Gère les financements »).";
+const DENIED = `Un dossier de financement se tient par ${le(V.raf)} ou ${le(V.direction)} (droit « Gère les financements »).`;
 const clean = (v: unknown) => { const s = v == null ? "" : String(v).trim(); return s || null; };
 
 async function uniqueReference(base: string): Promise<string> {

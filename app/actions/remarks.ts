@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS } from "@/lib/fields";
 import { canActAsPilot, isCodir, type Actor } from "@/lib/rights";
+import { V, cap, le, du, de } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -19,9 +20,9 @@ const REASONS = ["funder", "strategy", "feasibility", "form", "other"];
 export async function addRemark(editionId: string, field: string, body: string, reason = "other"): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true, pilot: true } } } });
-  if (!e) return { ok: false, error: "Édition introuvable." };
+  if (!e) return { ok: false, error: `${cap(V.edition)} introuvable.` };
   if (!FIELDS.edition[field]) return { ok: false, error: "Rubrique inconnue." };
-  if (!(await canRemark(me))) return { ok: false, error: "Les remarques sur la fiche sont un droit du CODIR : direction, RAF, responsables de pôle." };
+  if (!(await canRemark(me))) return { ok: false, error: `Les remarques sur la fiche sont un droit ${du(V.codir)} : ${V.direction.one}, ${V.raf.one}, responsables ${de(V.pole)}.` };
   const text = body.trim();
   if (!text) return { ok: false, error: "Écrivez la remarque." };
   if (!REASONS.includes(reason)) return { ok: false, error: "Motif inconnu." };
@@ -42,7 +43,7 @@ export async function resolveRemark(id: string, resolved: boolean): Promise<Resu
   if (!r) return { ok: false, error: "Remarque introuvable." };
   const e = r.edition;
   const allowed = r.authorId === me.id || e.project.pilotId === me.id || e.team.some((t) => t.personId === me.id) || (await canRemark(me));
-  if (!allowed) return { ok: false, error: "Seuls le pilote, l'équipe ou l'auteur traitent une remarque." };
+  if (!allowed) return { ok: false, error: `Seuls ${le(V.pilote)}, l'équipe ou l'auteur traitent une remarque.` };
   await prisma.fieldRemark.update({ where: { id }, data: { resolvedAt: resolved ? new Date() : null, resolvedById: resolved ? me.id : null } });
   revalidatePath(`/edition/${r.editionId}`);
   return { ok: true };
@@ -52,7 +53,7 @@ export async function deleteRemark(id: string): Promise<Result> {
   const me = await getCurrentPerson();
   const r = await prisma.fieldRemark.findUnique({ where: { id } });
   if (!r) return { ok: false, error: "Remarque introuvable." };
-  if (r.authorId !== me.id && !canActAsPilot(me, false)) return { ok: false, error: "Seul l'auteur (ou la direction) supprime une remarque." };
+  if (r.authorId !== me.id && !canActAsPilot(me, false)) return { ok: false, error: `Seul l'auteur (ou ${le(V.direction)}) supprime une remarque.` };
   await prisma.fieldRemark.delete({ where: { id } });
   revalidatePath(`/edition/${r.editionId}`);
   return { ok: true };

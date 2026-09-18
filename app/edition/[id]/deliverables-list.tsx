@@ -4,6 +4,7 @@ import { daysFromNow, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DeliverableDone } from "./deliverable-done";
 import type { TabCtx } from "./types";
+import { V, au } from "@/lib/vocab";
 
 // Une seule liste des livrables à remettre pour l'édition, toutes lignes confondues, par date (revue du 15/09) :
 // remplace la colonne « Rappels » et évite de chercher ligne par ligne. Les livrables remis se replient.
@@ -52,7 +53,7 @@ export function DeliverablesList({ e, settings, canTick, canEdit, compact }: Pic
   );
   if (compact) return body;
   return (
-    <Section title="Livrables à remettre" description={<>{todo.length} à remettre{late > 0 && <span className="text-danger"> · {late} en retard</span>} · rappels à J-{settings.reminderDaysBefore.split(",").join(" et J-")} au pilote et à la RAF</>} testId="deliverables">
+    <Section title="Livrables à remettre" description={<>{todo.length} à remettre{late > 0 && <span className="text-danger"> · {late} en retard</span>} · rappels à J-{settings.reminderDaysBefore.split(",").join(" et J-")}{` ${au(V.pilote)} et ${au(V.raf)}`}</>} testId="deliverables">
       {body}
     </Section>
   );

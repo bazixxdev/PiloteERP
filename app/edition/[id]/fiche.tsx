@@ -21,15 +21,16 @@ import { isLocked, LOCKED_STATUSES } from "@/lib/lock";
 import type { RemarkView } from "./remarks";
 import { cn } from "@/lib/utils";
 import { isCodir } from "@/lib/rights";
+import { V, le, du, de } from "@/lib/vocab";
 
 // Les quatre couches de la fiche (numérotées comme dans la maquette V2), plus la logistique renseignée au fil de l'année.
 const LAYERS: { key: Layer; no: string; title: string; owner: string; fields: string[]; optional?: boolean }[] = [
-  { key: "strategic", no: "1", title: "Cadre stratégique", owner: "Propriétaire · direction", fields: ["stakes", "axis", "sressMeasure", "snessLink", "otherTexts", "yearPriorities", "expectedOutcome"] },
+  { key: "strategic", no: "1", title: "Cadre stratégique", owner: `Propriétaire · ${V.direction.one}`, fields: ["stakes", "axis", "sressMeasure", "snessLink", "otherTexts", "yearPriorities", "expectedOutcome"] },
   // Les indicateurs ne sont plus deux champs texte (couches 2 et 3) mais un objet vivant : cible à la rédaction, réalisé dans l'année (revue du 15/09).
-  { key: "means", no: "2", title: "Cadre de moyens", owner: "Propriétaires · RAF et direction", fields: ["plannedFunders", "directExpenseEnvelope", "fte", "sponsorId"] },
-  { key: "proposal", no: "3", title: "Proposition opérationnelle", owner: "Propriétaire · pilote", fields: ["operationalObjectives", "quantitativeObjectives", "content", "audience", "calendar", "deliveryDate", "partners", "method", "governance", "timeNeed", "budgetNeed"] },
-  { key: "validation", no: "4", title: "Validation", owner: "Propriétaires · CODIR puis CA", fields: ["codirDecision", "codirDate", "boardValidated", "boardDate"] },
-  { key: "year", no: "↻", title: "Logistique", owner: "Renseigné par le pilote au fil de l'année", fields: ["venues", "equipment", "evidenceToKeep"], optional: true },
+  { key: "means", no: "2", title: "Cadre de moyens", owner: `Propriétaires · ${V.raf.one} et ${V.direction.one}`, fields: ["plannedFunders", "directExpenseEnvelope", "fte", "sponsorId"] },
+  { key: "proposal", no: "3", title: "Proposition opérationnelle", owner: `Propriétaire · ${V.pilote.one}`, fields: ["operationalObjectives", "quantitativeObjectives", "content", "audience", "calendar", "deliveryDate", "partners", "method", "governance", "timeNeed", "budgetNeed"] },
+  { key: "validation", no: "4", title: "Validation", owner: `Propriétaires · ${V.codir.one} puis CA`, fields: ["codirDecision", "codirDate", "boardValidated", "boardDate"] },
+  { key: "year", no: "↻", title: "Logistique", owner: `Renseigné par ${le(V.pilote)} au fil de l'année`, fields: ["venues", "equipment", "evidenceToKeep"], optional: true },
 ];
 
 const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && v !== false;
@@ -85,23 +86,23 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
             <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
               <Lock className="size-3.5 text-muted-foreground" />
               <b>Validée</b>
-              {e.codirDecision && <span>· CODIR{validatedAt ? ` ${fmtDate(validatedAt)}` : ""} ({refLabel(refs, "codir_decision", e.codirDecision).toLowerCase()})</span>}
+              {e.codirDecision && <span>{`· ${V.codir.one}`}{validatedAt ? ` ${fmtDate(validatedAt)}` : ""} ({refLabel(refs, "codir_decision", e.codirDecision).toLowerCase()})</span>}
               {!e.codirDecision && validatedAt && <span>· le {fmtDate(validatedAt)}</span>}
               {e.boardValidated ? <span>· CA{e.boardDate ? ` ${fmtDate(e.boardDate)}` : ""}</span> : e.codirDecision ? <span>· en attente du CA</span> : null}
               <span className="text-muted-foreground">· verrouillée : les couches 1 à 3 changent par proposition, acceptée et tracée</span>
-              {canStatus && <span className="text-[10px] text-muted-foreground" title="Effacer la décision du CODIR (couche 4) et repasser le statut à « proposée » rouvre la fiche en direct — tracé.">(rouvrir : effacer la décision du CODIR)</span>}
+              {canStatus && <span className="text-[10px] text-muted-foreground" title={`Effacer la décision ${du(V.codir)} (couche 4) et repasser le statut à « proposée » rouvre la fiche en direct — tracé.`}>{`(rouvrir : effacer la décision ${du(V.codir)})`}</span>}
             </span>
             {canPropose && <ProposeChangeDialog editionId={e.id} fields={proposable} layerTitle="fiche validée" />}
           </div>
         ) : filledLayers === 4 ? (
-          <div className="flex items-center justify-between gap-3 rounded-md bg-mint-soft px-3.5 py-2 text-xs text-mint"><span><b>✓ Fiche complète</b> · en attente de la décision du CODIR (couche 4).</span><span>Suivi par {e.project.pilot.name}</span></div>
+          <div className="flex items-center justify-between gap-3 rounded-md bg-mint-soft px-3.5 py-2 text-xs text-mint"><span><b>✓ Fiche complète</b>{` · en attente de la décision ${du(V.codir)} (couche 4).`}</span><span>Suivi par {e.project.pilot.name}</span></div>
         ) : (
           <div className="flex items-start gap-2.5 rounded-md bg-warning-soft px-3 py-2.5 text-xs text-warning-foreground"><span>○</span><span><b>{filledLayers} couche{filledLayers > 1 ? "s" : ""} sur 4 renseignée{filledLayers > 1 ? "s" : ""}.</b>{nextEmpty ? ` La couche ${nextEmpty.no} (${nextEmpty.title.toLowerCase()}) est ${LAYER_OWNER_LABEL[nextEmpty.key]}.` : ""}</span></div>
         )}
         {/* Mode relecture : réservé à qui peut annoter, seulement quand il est actif ; sinon un lien discret dans le menu « … ». */}
         {canRemark && feedback && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/40 bg-info-soft px-3.5 py-2 text-xs text-primary" data-testid="feedback-bar">
-            <span><b>Mode relecture.</b> Cliquez « Remarque » sous une rubrique pour l'annoter ; le pilote la verra en place et sera prévenu.</span>
+            <span><b>Mode relecture.</b>{` Cliquez « Remarque » sous une rubrique pour l'annoter ; ${le(V.pilote)} la verra en place et sera prévenu.`}</span>
             <Button asChild size="xs" variant="outline"><Link href={`/edition/${e.id}?onglet=fiche`}><X />Quitter la relecture</Link></Button>
           </div>
         )}
@@ -140,7 +141,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
                 {/* Décisions d'instance : CODIR, réunion de pôle, revue trimestrielle, CA — datées, avec la suite à donner ; une décision peut régler une alerte. */}
                 <section id="decisions" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="instance-decisions">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">⚖</span><h4 className="text-sm font-bold">Décisions des instances</h4><span className="text-[10px] text-muted-foreground">CODIR, réunion de pôle, revue trimestrielle, CA</span></div>
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">⚖</span><h4 className="text-sm font-bold">Décisions des instances</h4><span className="text-[10px] text-muted-foreground">{`${V.codir.one}, réunion ${de(V.pole)}, revue trimestrielle, CA`}</span></div>
                     {isCodir(me) && <DecisionForm editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name }))} instances={instances} alerts={alertOpts} />}
                   </div>
                   {e.decisions.length === 0 ? <p className="mt-2 text-xs text-muted-foreground lg:ml-9">Aucune décision consignée.</p> : (
@@ -157,7 +158,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
                 {/* Bilan : le dernier chapitre du document de l'édition, rédigé en fin d'année, exporté tel quel. */}
                 <section id="bilan" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-bilan">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">✎</span><h4 className="text-sm font-bold">Bilan de l'édition</h4><span className="text-[10px] text-muted-foreground">{e.report ? "réutilisé tel quel pour le rapport d'activité et les bilans financeurs" : "à rédiger en fin d'année"}</span></div>
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">✎</span><h4 className="text-sm font-bold">{`Bilan ${du(V.edition)}`}</h4><span className="text-[10px] text-muted-foreground">{e.report ? "réutilisé tel quel pour le rapport d'activité et les bilans financeurs" : "à rédiger en fin d'année"}</span></div>
                     <Button asChild size="xs" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)} data-testid="export-docx"><FileDown />Exporter le bilan (Word)</a></Button>
                   </div>
                   <div className="mt-3 grid gap-3 lg:ml-9">

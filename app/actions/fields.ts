@@ -8,12 +8,13 @@ import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageEquipm
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
+import { V, cap, le, de } from "@/lib/vocab";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
 
 async function editionContext(editionId: string, personId: string) {
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
-  if (!e) throw new Error("Édition introuvable");
+  if (!e) throw new Error(`${cap(V.edition)} introuvable`);
   return { edition: e, isPilot: e.project.pilotId === personId, isTeam: e.team.some((t) => t.personId === personId), poleIds: projectPoleIds(e.project) };
 }
 
@@ -24,10 +25,10 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const ctx = await editionContext(id, personId);
     const layer = def.layer ?? "proposal";
     if (field === "status" || field === "decisionDate" || field === "conditionalStart") {
-      return canSetEditionStatus(me) ? null : "Seules la direction et la RAF changent le statut.";
+      return canSetEditionStatus(me) ? null : `Seules ${le(V.direction)} et ${le(V.raf)} changent le statut.`;
     }
     // Fiche validée : les couches 1 à 3 ne se modifient plus en direct, seulement par proposition acceptée (retour du 14/09).
-    if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return "Fiche validée : proposez une modification, elle sera acceptée par le pilote ou la direction et tracée.";
+    if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return `Fiche validée : proposez une modification, elle sera acceptée par ${le(V.pilote)} ou ${le(V.direction)} et tracée.`;
     return canWriteLayer(me, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {
@@ -37,18 +38,18 @@ async function allowed(model: Model, id: string, field: string, personId: string
     const own = a.ownerId === personId;
     return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : "Vous ne pouvez pas modifier cette action.";
   }
-  if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
+  if (model === "call") return canEditCalls(me) ? null : `Un appel à projets se modifie par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.`;
   // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.
   if (model === "contact") return null;
   if (model === "loan") {
     const l = await prisma.loan.findUnique({ where: { id } });
     if (!l) return "Prêt introuvable";
-    return l.createdById === personId || l.personId === personId || canManageEquipment(me) ? null : "Ce prêt a été enregistré par quelqu'un d'autre ; l'inventaire (direction, RAF, assistant·e) peut le modifier.";
+    return l.createdById === personId || l.personId === personId || canManageEquipment(me) ? null : `Ce prêt a été enregistré par quelqu'un d'autre ; l'inventaire (${V.direction.one}, ${V.raf.one}, assistant·e) peut le modifier.`;
   }
-  if (model === "equipment") return canManageEquipment(me) ? null : "L'inventaire se tient par la direction, la RAF ou l'assistant·e (droit « Tient l'inventaire du matériel »).";
-  if (model === "membership") return canManageMembers(me) ? null : "Les adhésions se tiennent par la RAF ou la direction (droit « Gère les adhésions »).";
-  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
-  if (model === "expense") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
+  if (model === "equipment") return canManageEquipment(me) ? null : `L'inventaire se tient par ${le(V.direction)}, ${le(V.raf)} ou l'assistant·e (droit « Tient l'inventaire du matériel »).`;
+  if (model === "membership") return canManageMembers(me) ? null : `Les adhésions se tiennent par ${le(V.raf)} ou ${le(V.direction)} (droit « Gère les adhésions »).`;
+  if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : `Seule ${le(V.raf)} (ou ${le(V.direction)}) modifie les financements et les financeurs.`;
+  if (model === "expense") return canEditFunding(me) ? null : `Seule ${le(V.raf)} (ou ${le(V.direction)}) met à jour les dépenses.`;
   if (model === "indicator") {
     const ind = await prisma.indicator.findUnique({ where: { id } });
     if (!ind) return "Indicateur introuvable";
@@ -60,9 +61,9 @@ async function allowed(model: Model, id: string, field: string, personId: string
     if (field === "plannedDays") {
       const d = await prisma.editionPersonDays.findUnique({ where: { id } });
       if (d) { const ctx = await editionContext(d.editionId, personId); if (ctx.isPilot) return null; }
-      return "La charge planifiée est proposée par le pilote et ajustée par la RAF ou le responsable de pôle.";
+      return `La charge planifiée est proposée par ${le(V.pilote)} et ajustée par ${le(V.raf)} ou le responsable ${de(V.pole)}.`;
     }
-    return "Les jours conventionnés sont saisis par la RAF et les responsables de pôle.";
+    return `Les jours conventionnés sont saisis par ${le(V.raf)} et les responsables ${de(V.pole)}.`;
   }
   if (model === "docLink") {
     const d = await prisma.docLink.findUnique({ where: { id } });
@@ -72,7 +73,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
   }
   // Chacun tient sa propre fonction et son téléphone (Mon compte) ; le reste de la fiche est à l'administration.
   if (model === "person" && id === personId && ["jobTitle", "phone"].includes(field)) return null;
-  return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
+  return canAdmin(me) ? null : `Réservé à l'administration (${V.direction.one}, ${V.raf.one}).`;
 }
 
 export async function saveField(model: Model, id: string, field: string, raw: unknown, revalidate?: string): Promise<SaveResult> {
@@ -113,7 +114,7 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       // Garde-fous : on ne se désactive pas soi-même, et il reste toujours une direction active.
       if (id === me.id) return { ok: false, error: "Vous ne pouvez pas vous désactiver vous-même." };
       const target = await prisma.person.findUnique({ where: { id } });
-      if (target?.role === "director" && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+      if (target?.role === "director" && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: `Il doit rester au moins une personne active avec le rôle ${cap(V.direction)}.` };
       // Désactiver = plus d'accès : les sessions ouvertes du compte tombent tout de suite (lot F).
       await prisma.person.update({ where: { id }, data: { active: false } });
       if (target?.userId) await prisma.session.deleteMany({ where: { userId: target.userId } });
@@ -132,7 +133,7 @@ export async function saveField(model: Model, id: string, field: string, raw: un
     } else if (model === "person" && field === "role") {
       // Même garde-fou qu'à la désactivation : il reste toujours une direction active (le rôle qui garde l'administration).
       const target = await prisma.person.findUnique({ where: { id } });
-      if (target?.role === "director" && value !== "director" && target.active && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+      if (target?.role === "director" && value !== "director" && target.active && (await prisma.person.count({ where: { role: "director", active: true, id: { not: id } } })) === 0) return { ok: false, error: `Il doit rester au moins une personne active avec le rôle ${cap(V.direction)}.` };
       if (!(await prisma.role.findUnique({ where: { code: String(value) } }))) return { ok: false, error: "Rôle inconnu." };
       await prisma.person.update({ where: { id }, data: { role: String(value) } });
     } else if (model === "person" && field === "email") {

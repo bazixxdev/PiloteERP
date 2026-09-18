@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { decideChange, proposeChange } from "@/app/actions/proposals";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/common/searchable-select";
+import { V, cap, le, du, au } from "@/lib/vocab";
 
 export type ProposalView = { id: string; field: string; fieldLabel: string; proposed: string; reason: string; author: string; authorId: string; createdAt: string; status: string; decidedBy: string | null; decidedAt: string | null; comment: string | null };
 export type ProposableField = { key: string; label: string; current: string; multiline: boolean; group?: string };
@@ -28,8 +29,8 @@ export function ProposeChangeDialog({ editionId, fields, layerTitle, compact }: 
       <DialogTrigger asChild><Button size="xs" variant="outline" data-testid={`propose-${compact ? "compact" : "layer"}`}><GitPullRequestArrow />Proposer une modification</Button></DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Proposer une modification · {layerTitle}</DialogTitle></DialogHeader>
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await proposeChange(editionId, field, proposed, reason); if (!r.ok) toast.error(r.error); else { toast.success("Proposition envoyée au pilote, au garant et à la direction"); setOpen(false); setReason(""); router.refresh(); } }); }}>
-          <p className="text-xs text-muted-foreground">La fiche est validée : rien n'y change en silence. Le pilote (ou la direction) accepte, et l'historique garde qui a changé quoi, et pourquoi.</p>
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await proposeChange(editionId, field, proposed, reason); if (!r.ok) toast.error(r.error); else { toast.success(`Proposition envoyée ${au(V.pilote)}, au garant et ${au(V.direction)}`); setOpen(false); setReason(""); router.refresh(); } }); }}>
+          <p className="text-xs text-muted-foreground">{`La fiche est validée : rien n'y change en silence. ${cap(le(V.pilote))} (ou ${le(V.direction)}) accepte, et l'historique garde qui a changé quoi, et pourquoi.`}</p>
           <label className="grid gap-1 text-xs"><span className="font-semibold">Rubrique</span>
             <Select value={field} onChange={(e) => { setField(e.target.value); setProposed(fields.find((f) => f.key === e.target.value)?.current ?? ""); }} className="h-9 rounded-md border bg-card px-2 text-sm" data-testid="propose-field">
               {/* Un seul bouton pour toute la fiche (revue du 15/09) : les rubriques se choisissent par couche. */}
@@ -77,7 +78,7 @@ export function ProposalsPanel({ proposals, canDecide, meId, isDirector }: { pro
                 <Button size="xs" variant="outline" disabled={pending} onClick={() => decide(p.id, "refused")} data-testid={`proposal-refuse-${p.id}`}><X />Refuser</Button>
               </div>
             )}
-            {!canDecide && <p className="mt-1 text-[10px] text-muted-foreground">En attente du pilote ou de la direction.</p>}
+            {!canDecide && <p className="mt-1 text-[10px] text-muted-foreground">{`En attente ${du(V.pilote)} ou ${du(V.direction)}.`}</p>}
           </li>
         ))}
       </ul>

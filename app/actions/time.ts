@@ -6,6 +6,7 @@ import { getCurrentPerson } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
 import { dayjs, monthKey } from "@/lib/format";
 import { weekKey } from "@/lib/time";
+import { V, le, au } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -18,7 +19,7 @@ export async function saveTime(input: TimeCellKey & { date: string; hours: numbe
   if (personId !== me.id && !canLockMonths(me)) return { ok: false, error: "Vous ne saisissez que vos propres temps." };
   const date = dayjs(input.date).startOf("day");
   const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId, month: monthKey(date.toDate()) } } });
-  if (locked) return { ok: false, error: "Ce mois est verrouillé : demandez à la RAF de le déverrouiller." };
+  if (locked) return { ok: false, error: `Ce mois est verrouillé : demandez ${au(V.raf)} de le déverrouiller.` };
 
   const where = { personId, date: date.toDate(), projectId: input.projectId ?? null, actionId: input.actionId ?? null, timeCodeId: input.timeCodeId ?? null };
   const existing = await prisma.timeEntry.findFirst({ where });
@@ -71,7 +72,7 @@ export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copi
 // Verrouillage mensuel par la RAF (EF-D5) ; déverrouillage possible.
 export async function lockMonth(personId: string, month: string, lock: boolean): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canLockMonths(me)) return { ok: false, error: "Seule la RAF (ou la direction) verrouille un mois." };
+  if (!canLockMonths(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) verrouille un mois.` };
   const start = dayjs(month + "-01");
   const range = { gte: start.toDate(), lt: start.add(1, "month").toDate() };
   if (lock) {
@@ -111,7 +112,7 @@ export async function saveWeekSplit(weekStart: string, parts: { projectId: strin
   if (Math.abs(total - 100) > 0.01) return { ok: false, error: `Le total doit faire exactement 100 % (actuellement ${Math.round(total)} %).` };
   for (const d of days) {
     const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId: me.id, month: monthKey(d.d.toDate()) } } });
-    if (locked) return { ok: false, error: "Un mois de cette semaine est verrouillé par la RAF." };
+    if (locked) return { ok: false, error: `Un mois de cette semaine est verrouillé par ${le(V.raf)}.` };
   }
   const q = (x: number) => Math.round(x * 4) / 4; // pas de 0,25 h
   let written = 0;

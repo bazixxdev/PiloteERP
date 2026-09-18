@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import { explainRequiredLevel, requestValidation } from "@/app/actions/edition";
 import { uploadAttachment } from "@/app/actions/attachments";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V, cap, le, du, de } from "@/lib/vocab";
 
-const LEVELS = ["1 · pilote", "2 · responsable de pôle", "3 · direction"];
+const LEVELS = [`1 · ${V.pilote.one}`, `2 · responsable ${de(V.pole)}`, `3 · ${V.direction.one}`];
 
 // Qui reçoit la demande à chaque niveau : le circuit de validation, en noms.
 export type Recipients = { 1: string | null; 2: string | null; 3: string | null };
-const LEVEL_ROLE: Record<number, string> = { 1: "pilote de l'édition", 2: "responsable de pôle", 3: "direction" };
+const LEVEL_ROLE: Record<number, string> = { 1: `${V.pilote.one} ${du(V.edition)}`, 2: `responsable ${de(V.pole)}`, 3: "direction" };
 
 export type SupplierOpt = { id: string; name: string; email: string | null };
 // Depuis Demandes (retour du 15/09) : le même formulaire, avec le choix de l'édition en premier ; chaque édition apporte ses actions et son circuit.
@@ -73,8 +74,8 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
         <div className="grid gap-3">
           {editions && (
             <div className="grid gap-1">
-              <Label htmlFor="rv-edition">Édition concernée <span className="font-normal text-muted-foreground">(le montant s'engage sur son budget)</span></Label>
-              <SearchableSelect id="rv-edition" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={chosenEditionId} onChange={(v) => { setChosenEditionId(v); setActionId(""); }} placeholder="— choisir l'édition —" data-testid="rv-edition" className="w-full" />
+              <Label htmlFor="rv-edition">{`${cap(V.edition)} concernée `}<span className="font-normal text-muted-foreground">(le montant s'engage sur son budget)</span></Label>
+              <SearchableSelect id="rv-edition" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={chosenEditionId} onChange={(v) => { setChosenEditionId(v); setActionId(""); }} placeholder={`— choisir ${le(V.edition)} —`} data-testid="rv-edition" className="w-full" />
             </div>
           )}
           <div className="grid gap-1">
@@ -123,7 +124,7 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
           <div className="grid gap-1">
             <Label htmlFor="rv-action">Action concernée</Label>
             <Select id="rv-action" className={sel} value={actionId} onChange={(e) => setActionId(e.target.value)}>
-              <option value="">— l'édition entière —</option>
+              <option value="">{`— ${le(V.edition)} entière —`}</option>
               {actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
           </div>

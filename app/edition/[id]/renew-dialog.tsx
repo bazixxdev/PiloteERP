@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { renewEdition } from "@/app/actions/edition";
+import { V, cap, le } from "@/lib/vocab";
 
 // Reconduction N → N+1 avec relecture avant création (EF-A2).
 export function RenewDialog({ edition, disabled, open: openProp, onOpenChange, hideTrigger }: { edition: { id: string; year: number; projectName: string; actions: number; fundingLines: number; team: number }; disabled: boolean; open?: boolean; onOpenChange?: (o: boolean) => void; hideTrigger?: boolean }) {
@@ -21,13 +22,13 @@ export function RenewDialog({ edition, disabled, open: openProp, onOpenChange, h
     <Dialog open={open} onOpenChange={setOpen}>
       {!hideTrigger && (
         <DialogTrigger asChild>
-          <Button variant="outline" disabled={disabled} title={disabled ? `L'édition ${next} existe déjà` : undefined} data-testid="renew-open"><CopyPlus />Reconduire en {next}</Button>
+          <Button variant="outline" disabled={disabled} title={disabled ? `${cap(le(V.edition))} ${next} existe déjà` : undefined} data-testid="renew-open"><CopyPlus />Reconduire en {next}</Button>
         </DialogTrigger>
       )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reconduire « {edition.projectName} » en {next}</DialogTitle>
-          <DialogDescription>Relisez ce qui sera copié avant de créer l'édition {next}.</DialogDescription>
+          <DialogDescription>{`Relisez ce qui sera copié avant de créer ${le(V.edition)} `}{next}.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="rounded-xl bg-mint-soft p-3">
@@ -61,13 +62,13 @@ export function RenewDialog({ edition, disabled, open: openProp, onOpenChange, h
               start(async () => {
                 const res = await renewEdition(edition.id);
                 if (!res.ok) { toast.error(res.error); return; }
-                toast.success(`Édition ${next} créée`);
+                toast.success(`${cap(V.edition)} ${next} créée`);
                 setOpen(false);
                 router.push(`/edition/${res.data!.id}`);
               })
             }
           >
-            {pending ? "Création…" : `Créer l'édition ${next}`}
+            {pending ? "Création…" : `Créer ${le(V.edition)} ${next}`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canActAsPilot, canEditFunding, canTrackExpenses } from "@/lib/rights";
 import { fmtEuro } from "@/lib/format";
+import { V, cap, le } from "@/lib/vocab";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -16,7 +17,7 @@ async function load(id: string) {
 
 export async function markInvoice(id: string, step: "received" | "paid", undo = false): Promise<Result> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me) && !canTrackExpenses(me)) return { ok: false, error: "La RAF, la direction ou l'assistante suivent les factures." };
+  if (!canEditFunding(me) && !canTrackExpenses(me)) return { ok: false, error: `${cap(le(V.raf))}, ${le(V.direction)} ou l'assistante suivent les factures.` };
   const x = await load(id);
   if (!x) return { ok: false, error: "Dépense introuvable." };
   if (step === "paid" && !x.invoiceReceivedAt && !undo) return { ok: false, error: "Marquez d'abord la facture reçue." };
@@ -25,7 +26,7 @@ export async function markInvoice(id: string, step: "received" | "paid", undo = 
   if (!undo && pilotId !== me.id) {
     await prisma.notification.create({ data: { personId: pilotId, senderId: me.id, kind: "info",
       title: step === "received" ? `Facture reçue · ${x.label}${x.supplier ? ` (${x.supplier})` : ""}` : `Facture payée · ${x.label}`,
-      body: step === "received" ? (x.serviceDoneAt ? `${fmtEuro(x.spent || x.committed)} · service fait déjà confirmé.` : `${fmtEuro(x.spent || x.committed)} · la prestation est-elle conforme ? Dites-le dans l'onglet Budget (sans bloquer le paiement).`) : `${fmtEuro(x.spent || x.committed)} réglés par la CRESS.`,
+      body: step === "received" ? (x.serviceDoneAt ? `${fmtEuro(x.spent || x.committed)} · service fait déjà confirmé.` : `${fmtEuro(x.spent || x.committed)} · la prestation est-elle conforme ? Dites-le dans l'onglet Budget (sans bloquer le paiement).`) : `${fmtEuro(x.spent || x.committed)} réglés par ${le(V.org)}.`,
       link: `/edition/${x.editionId}?onglet=budget` } });
   }
   revalidatePath("/", "layout");
@@ -38,7 +39,7 @@ export async function markServiceDone(id: string, done: boolean): Promise<Result
   const x = await load(id);
   if (!x) return { ok: false, error: "Dépense introuvable." };
   const allowed = canActAsPilot(me, x.edition.project.pilotId === me.id, x.edition.team.some((t) => t.personId === me.id));
-  if (!allowed) return { ok: false, error: "Le pilote ou l'équipe confirme le service fait." };
+  if (!allowed) return { ok: false, error: `${cap(le(V.pilote))} ou l'équipe confirme le service fait.` };
   await prisma.expense.update({ where: { id }, data: { serviceDoneAt: done ? new Date() : null, serviceDoneById: done ? me.id : null } });
   revalidatePath("/", "layout");
   return { ok: true };

@@ -6,13 +6,14 @@ import { getCurrentPerson } from "@/lib/session";
 import { canAdmin, canEditFunding, canWriteLayer } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { findOrCreateOrganisation, kindsOf, ORGANISATION_KINDS, serializeKinds, type OrganisationKind } from "@/lib/organisations";
+import { V, cap, le, de, pl } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 // L'annuaire des organisations (lot E2) est tenu par qui gère les financements ou administre l'outil.
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
-  return canEditFunding(me) || canAdmin(me) ? null : "L'annuaire des organisations est tenu par la RAF et la direction.";
+  return canEditFunding(me) || canAdmin(me) ? null : `L'annuaire des organisations est tenu par ${le(V.raf)} et ${le(V.direction)}.`;
 }
 
 export async function createOrganisation(name: string, kinds: string[]): Promise<Result<{ id: string }>> {
@@ -37,7 +38,7 @@ export async function setOrganisationKind(id: string, kind: OrganisationKind, on
   if (!on) {
     if (kind === "funder" && (o._count.lines || o._count.conventions || o._count.calls)) return { ok: false, error: "Cette organisation finance encore des lignes, conventions ou appels : le genre financeur reste." };
     if (kind === "supplier" && o._count.validations) return { ok: false, error: "Des devis citent encore ce fournisseur : le genre reste." };
-    if (kind === "partner" && o._count.editions) return { ok: false, error: "Des éditions la citent encore comme partenaire : le genre reste." };
+    if (kind === "partner" && o._count.editions) return { ok: false, error: `Des ${pl(V.edition)} la citent encore comme partenaire : le genre reste.` };
     if (current.length <= 1) return { ok: false, error: "Une organisation garde au moins un genre." };
   }
   const next = on ? [...current, kind] : current.filter((k) => k !== kind);
@@ -60,9 +61,9 @@ export async function setContactLeft(id: string, left: boolean): Promise<Result>
 async function editionGuard(editionId: string): Promise<string | null> {
   const me = await getCurrentPerson();
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
-  if (!e) return "Édition introuvable.";
+  if (!e) return `${cap(V.edition)} introuvable.`;
   const ok = canWriteLayer(me, "year", e.project.pilotId === me.id, e.team.some((t) => t.personId === me.id), me.poleId !== null && projectPoleIds(e.project).includes(me.poleId));
-  return ok ? null : "Le pilote, l'équipe ou le responsable de pôle lient les partenaires.";
+  return ok ? null : `${cap(le(V.pilote))}, l'équipe ou le responsable ${de(V.pole)} lient les partenaires.`;
 }
 
 export async function addEditionPartner(editionId: string, input: { organisationId?: string | null; name?: string | null; role?: string | null }): Promise<Result<{ organisationId: string }>> {

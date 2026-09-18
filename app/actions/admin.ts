@@ -6,12 +6,13 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
 import { INSTANCE_MODULES } from "@/lib/modules";
+import { V, cap, le, adj, ppe } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
-  return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
+  return canAdmin(me) ? null : `Réservé à l'administration (${V.direction.one}, ${V.raf.one}).`;
 }
 
 // Modules de l'installation (lot 0) : allumer ou éteindre, rien ne se perd.
@@ -36,7 +37,7 @@ export async function createPerson(name: string): Promise<Result> {
 
 export async function createPole(name: string): Promise<Result> {
   const d = await guard(); if (d) return { ok: false, error: d };
-  await prisma.pole.create({ data: { name: name.trim() || "Nouveau pôle" } });
+  await prisma.pole.create({ data: { name: name.trim() || `${cap(adj(V.pole, "nouveau", "nouvelle"))}` } });
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -55,7 +56,7 @@ export async function createProject(input: { name: string; analyticCode: string;
 export async function createEdition(projectId: string, year: number): Promise<Result<{ editionId: string }>> {
   const d = await guard(); if (d) return { ok: false, error: d };
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId, year } } });
-  if (exists) return { ok: false, error: `L'édition ${year} existe déjà.` };
+  if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
   const p = await prisma.project.findUnique({ where: { id: projectId } });
   if (!p) return { ok: false, error: "Projet introuvable" };
   const e = await prisma.edition.create({ data: { projectId, year, status: "proposed", team: { create: [{ personId: p.pilotId }] }, personDays: { create: [{ personId: p.pilotId, soldDays: 0 }] } } });
@@ -179,7 +180,7 @@ export async function toggleProjectPole(projectId: string, poleId: string, on: b
   const d = await guard(); if (d) return { ok: false, error: d };
   const p = await prisma.project.findUnique({ where: { id: projectId } });
   if (!p) return { ok: false, error: "Projet introuvable" };
-  if (p.poleId === poleId) return { ok: false, error: "C'est déjà le pôle principal du projet." };
+  if (p.poleId === poleId) return { ok: false, error: `C'est déjà le ${ppe(V.pole, "principal")} du projet.` };
   if (on) await prisma.projectPole.upsert({ where: { projectId_poleId: { projectId, poleId } }, create: { projectId, poleId }, update: {} });
   else await prisma.projectPole.deleteMany({ where: { projectId, poleId } });
   revalidatePath("/", "layout");

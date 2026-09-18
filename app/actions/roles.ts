@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canManageRoles } from "@/lib/rights";
 import { DEFAULT_ROLES, isPermissionKey, serializePermissions, type PermissionKey } from "@/lib/permissions";
+import { V, cap } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -24,7 +25,7 @@ export async function setRolePermission(code: string, key: string, on: boolean):
   if (!isPermissionKey(key)) return { ok: false, error: "Droit inconnu." };
   const r = await prisma.role.findUnique({ where: { code } });
   if (!r) return { ok: false, error: "Rôle introuvable." };
-  if (!on && LOCKED[code]?.includes(key)) return { ok: false, error: "Le rôle Direction garde toujours l'administration : sinon plus personne ne pourrait rouvrir la porte." };
+  if (!on && LOCKED[code]?.includes(key)) return { ok: false, error: `Le rôle ${cap(V.direction)} garde toujours l'administration : sinon plus personne ne pourrait rouvrir la porte.` };
   const set = new Set(r.permissions.split(",").filter(Boolean));
   if (on) set.add(key); else set.delete(key);
   await prisma.role.update({ where: { code }, data: { permissions: serializePermissions(Array.from(set)) } });

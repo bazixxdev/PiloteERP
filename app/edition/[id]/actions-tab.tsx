@@ -12,6 +12,7 @@ import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
 import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
+import { V, ce } from "@/lib/vocab";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
@@ -25,7 +26,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
     <div className="grid gap-4">
       <Section title="Actions" description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} /> : undefined}>
         {e.actions.length === 0 ? (
-          <EmptyState title="Aucune action" hint="Ajoutez la première action de cette édition : un nom, un responsable, un jalon." />
+          <EmptyState title="Aucune action" hint={`Ajoutez la première action de ${ce(V.edition)} : un nom, un responsable, un jalon.`} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm" data-testid="actions-table">

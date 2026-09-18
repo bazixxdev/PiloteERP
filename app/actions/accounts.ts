@@ -9,12 +9,13 @@ import { auth } from "@/lib/auth";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
 import { BASE_PATH } from "@/lib/base-path";
+import { V, cap } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function guard(): Promise<string | null> {
   const me = await getCurrentPerson();
-  return canAdmin(me) ? null : "Réservé à l'administration (direction, RAF).";
+  return canAdmin(me) ? null : `Réservé à l'administration (${V.direction.one}, ${V.raf.one}).`;
 }
 
 const normEmail = (e: string) => e.trim().toLowerCase();
@@ -55,7 +56,7 @@ async function prepareResetLink(email: string, kind: "invitation" | "password_re
   const origin = await appOrigin();
   await auth.api.requestPasswordReset({ body: { email, redirectTo: `${origin}/reinitialiser` } });
   const mail = await prisma.mailOutbox.findFirst({ where: { to: email, kind: "password_reset", handedAt: null }, orderBy: { createdAt: "desc" } });
-  if (mail && kind === "invitation") await prisma.mailOutbox.update({ where: { id: mail.id }, data: { kind: "invitation", subject: "Votre accès à Pilote", body: mail.body.replace("Pour choisir un nouveau mot de passe", "Votre compte est créé. Pour choisir votre mot de passe") } });
+  if (mail && kind === "invitation") await prisma.mailOutbox.update({ where: { id: mail.id }, data: { kind: "invitation", subject: `Votre accès à ${cap(V.pilote)}`, body: mail.body.replace("Pour choisir un nouveau mot de passe", "Votre compte est créé. Pour choisir votre mot de passe") } });
   return mail?.id ?? "";
 }
 

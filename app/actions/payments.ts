@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
-const DENIED = "Seule la RAF (ou la direction) tient les versements.";
+const DENIED = `Seule ${le(V.raf)} (ou ${le(V.direction)}) tient les versements.`;
 
 // Ajouter un versement attendu sur une ligne de financement (cas courant) ou sur une convention (tranches d'un accord partagé).
 export async function addPayment(input: { fundingLineId?: string | null; conventionId?: string | null; label: string; amount: number; expectedAt: string; received?: boolean }): Promise<Result<{ id: string }>> {

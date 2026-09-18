@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { V, du } from "@/lib/vocab";
 
 // Six onglets (revue du 15/09) : l'Aperçu atterrit sur l'état du projet ; Validations → Aperçu et Demandes ; Bilan → Fiche et Actions.
 export const TABS = [
@@ -18,7 +19,7 @@ export type TabKey = (typeof TABS)[number]["key"];
 // Onglets V2 : soulignement corail, compteur discret, défilement horizontal si l'écran est étroit.
 export function TabsNav({ editionId, current, counts }: { editionId: string; current: TabKey; counts: Partial<Record<TabKey, number>> }) {
   return (
-    <nav className="-mx-4 mb-5 flex overflow-x-auto border-b px-[6px] md:-mx-6 md:px-[14px]" role="tablist" aria-label="Contenu de l'édition" data-testid="edition-tabs">
+    <nav className="-mx-4 mb-5 flex overflow-x-auto border-b px-[6px] md:-mx-6 md:px-[14px]" role="tablist" aria-label={`Contenu ${du(V.edition)}`} data-testid="edition-tabs">
       {TABS.map((t) => (
         <Link
           key={t.key}

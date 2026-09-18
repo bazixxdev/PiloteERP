@@ -10,9 +10,10 @@ import { randomBytes } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ALLOWED_MIME, MAX_ATTACHMENT_BYTES, UPLOAD_DIR } from "@/lib/attachments";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
-const DENIED = "L'inventaire se tient par la direction, la RAF ou l'assistant·e (droit « Tient l'inventaire du matériel »).";
+const DENIED = `L'inventaire se tient par ${le(V.direction)}, ${le(V.raf)} ou l'assistant·e (droit « Tient l'inventaire du matériel »).`;
 const clean = (v: unknown) => { const s = v == null ? "" : String(v).trim(); return s || null; };
 
 export type EquipmentInput = { name: string; category?: string | null; reference?: string | null; location?: string | null; quantity?: number | string | null; state?: string; purchasedAt?: string | null; value?: number | string | null; notes?: string | null };

@@ -3,6 +3,7 @@ import { PaymentsList, type PaymentRow } from "@/components/funding/payments-lis
 import { fmtEuro } from "@/lib/format";
 import { paymentSummary } from "@/lib/payments";
 import type { TabCtx } from "./types";
+import { V, le, ce } from "@/lib/vocab";
 
 // Une seule liste des versements de l'édition, toutes lignes confondues (le miroir des livrables) : ce que la RAF attend
 // des financeurs de ce projet cette année, dans l'ordre des dates. Lecture et case « reçu » seulement : le détail (montant, date,
@@ -16,7 +17,7 @@ export function EditionPayments({ e, rw }: Pick<TabCtx, "e"> & { rw: boolean }) 
   return (
     <Section
       title="Versements"
-      description={<>Ce que les financeurs de cette édition ont versé et doivent encore verser{s.late.length > 0 && <span className="text-danger"> · {s.late.length} en retard</span>} · la RAF et la direction sont prévenues quand un versement attendu est dépassé ; le détail se modifie dans le panneau de la ligne.</>}
+      description={<>{`Ce que les financeurs de ${ce(V.edition)} ont versé et doivent encore verser`}{s.late.length > 0 && <span className="text-danger"> · {s.late.length} en retard</span>}{` · ${le(V.raf)} et ${le(V.direction)} sont prévenues quand un versement attendu est dépassé ; le détail se modifie dans le panneau de la ligne.`}</>}
       testId="edition-payments"
     >
       {payments.length > 0 && <PaymentsList payments={payments} reference={granted || null} rw={rw} showSource compact testId="edition-payments-list" />}

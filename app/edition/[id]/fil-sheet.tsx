@@ -5,6 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { AddCommentForm } from "./add-forms";
+import { V, du } from "@/lib/vocab";
 
 export type CommentView = { id: string; author: string; when: string; body: string };
 
@@ -15,11 +16,11 @@ export function FilSheet({ editionId, comments, defaultOpen = false }: { edition
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" data-testid="fil-open" title="Fil de l'édition : messages à l'équipe projet"><MessageCircle />Fil{comments.length > 0 && <span className="rounded-sm bg-info-soft px-1 text-[10px] font-semibold text-primary">{comments.length}</span>}</Button>
+        <Button variant="outline" data-testid="fil-open" title={`Fil ${du(V.edition)} : messages à l'équipe projet`}><MessageCircle />Fil{comments.length > 0 && <span className="rounded-sm bg-info-soft px-1 text-[10px] font-semibold text-primary">{comments.length}</span>}</Button>
       </SheetTrigger>
       <SheetContent side="right" className="flex w-full flex-col gap-0 data-[side=right]:sm:max-w-md">
         <SheetHeader className="border-b">
-          <SheetTitle>Fil de l'édition</SheetTitle>
+          <SheetTitle>{`Fil ${du(V.edition)}`}</SheetTitle>
           <SheetDescription>Messages à l'équipe projet, en lien ou à la place du canal Teams.</SheetDescription>
         </SheetHeader>
         <ul className="flex-1 space-y-2 overflow-y-auto p-4" data-testid="comments">

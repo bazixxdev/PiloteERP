@@ -9,6 +9,7 @@ import type { TabCtx } from "./types";
 import { LoadPlanner } from "./load-planner";
 import { HelpTip } from "@/components/common/help-tip";
 import { ClickToEdit } from "@/components/inline/click-to-edit";
+import { V, le, du } from "@/lib/vocab";
 
 export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
   const hpd = settings.hoursPerDay || 7;
@@ -62,16 +63,16 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
         </table>
       </Section>
 
-      <Section title="Ressources humaines de l'édition" description={<span className="inline-flex items-center gap-1.5">Charge en jours : prévus, conventionnés, réalisés <HelpTip title="Pourquoi des jours, et d'où viennent les chiffres" testId="hr-help">
+      <Section title={`Ressources humaines ${du(V.edition)}`} description={<span className="inline-flex items-center gap-1.5">Charge en jours : prévus, conventionnés, réalisés <HelpTip title="Pourquoi des jours, et d'où viennent les chiffres" testId="hr-help">
         <p className="mt-1">En jours, pas en pourcentage ni en euros : les rythmes changent, les pourcentages se recalculent. Réalisé = heures saisies ÷ {hpd} h (coefficient réglable dans l'admin).</p>
-        <p className="mt-2">« Par mois » ventile les jours prévus dans le <Link href="/plan-de-charge" className="text-primary hover:underline">plan de charge</Link> ; sans ventilation, le total se lisse sur les douze mois. La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel de la RAF : l'outil fournit les jours réalisés par personne et par édition, elle applique ses coûts.</p>
+        <p className="mt-2">« Par mois » ventile les jours prévus dans le <Link href="/plan-de-charge" className="text-primary hover:underline">plan de charge</Link>{` ; sans ventilation, le total se lisse sur les douze mois. La valorisation en euros du temps (coût journalier, clés de répartition) reste dans l'Excel ${du(V.raf)} : l'outil fournit les jours réalisés par personne et par ${V.edition.one}, elle applique ses coûts.`}</p>
         <p className="mt-2">« Part de l'année » = jours prévus ÷ jours disponibles de la personne dans l'année.</p>
       </HelpTip></span>}>
         <table className="w-full text-sm" data-testid="hr-table">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">
             <tr>
               <th className="py-1.5">Personne</th>
-              <th className="py-1.5 text-right" title="Charge de travail prévue sur l'édition (proposée par le pilote), à répartir par mois pour le plan de charge">Prévus · par mois</th>
+              <th className="py-1.5 text-right" title={`Charge de travail prévue sur ${le(V.edition)} (proposée par ${le(V.pilote)}), à répartir par mois pour le plan de charge`}>Prévus · par mois</th>
               <th className="py-1.5 text-right" title="Jours mentionnés dans les conventions : référence financeur, pas une charge">Conventionnés</th>
               <th className="py-1.5 text-right">Réalisés</th>
               <th className="py-1.5 text-right" title="Jours prévus ÷ jours disponibles de la personne dans l'année">Part de l'année</th>
@@ -100,7 +101,7 @@ export function TempsTab({ e, me, settings, people, isPilot }: TabCtx) {
                 </tr>
               );
             })}
-            {e.personDays.length === 0 && <tr><td colSpan={5} className="py-2 text-muted-foreground">Aucune personne dans l'équipe : le pilote la compose depuis la fiche.</td></tr>}
+            {e.personDays.length === 0 && <tr><td colSpan={5} className="py-2 text-muted-foreground">{`Aucune personne dans l'équipe : ${le(V.pilote)} la compose depuis la fiche.`}</td></tr>}
           </tbody>
           <tfoot>
             <tr className="font-semibold">

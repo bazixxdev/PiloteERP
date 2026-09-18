@@ -15,6 +15,7 @@ import { DeliverablesList } from "./deliverables-list";
 import { EditionPayments } from "./edition-payments";
 import { paymentSummary } from "@/lib/payments";
 import { FundingLinePanelBody, fundingPanelTitle, FUNDING_PANEL_DESCRIPTION } from "@/components/funding/line-panel";
+import { V, cap, le } from "@/lib/vocab";
 
 // Recettes (revue du 15/09) : un tableau compact des lignes de financement — ce que lit le pilote — et, par ligne, un panneau
 // de gestion — ce que tient la RAF (dates, codes, convention, contact du dossier, notes, pièces, livrables).
@@ -32,12 +33,12 @@ export function FinancementsTab({ e, me, refs, funders, conventions, settings, i
     <div className="grid gap-4">
       <Section
         title="Lignes de financement"
-        description={<span><b className="text-foreground">{fmtEuro(totalGranted)} obtenus</b> / {fmtEuro(totalRequested)} demandés · <span data-testid="funding-received-total">{fmtEuro(totalReceived)} versés</span> · {e.fundingLines.length} financeur{e.fundingLines.length > 1 ? "s" : ""}{pendingLines.length > 0 && <> · {pendingLines.map((f) => `${f.funder.name} : ${refLabel(refs, "funding_status", f.status).toLowerCase()}`).join(", ")}</>}{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}{rw && " · tenues par la RAF"}</span>}
+        description={<span><b className="text-foreground">{fmtEuro(totalGranted)} obtenus</b> / {fmtEuro(totalRequested)} demandés · <span data-testid="funding-received-total">{fmtEuro(totalReceived)} versés</span> · {e.fundingLines.length} financeur{e.fundingLines.length > 1 ? "s" : ""}{pendingLines.length > 0 && <> · {pendingLines.map((f) => `${f.funder.name} : ${refLabel(refs, "funding_status", f.status).toLowerCase()}`).join(", ")}</>}{e.fundingLines.length === 1 && <strong className="text-warning"> · projet mono-financeur</strong>}{rw && ` · tenues par ${le(V.raf)}`}</span>}
         actions={rw ? <AddFundingMenu editionId={e.id} funders={funders} conventions={covering.filter((c) => !c.lines.some((l) => l.editionId === e.id)).map((c) => ({ id: c.id, label: `${funders.find((f) => f.id === c.funderId)?.name ?? ""} · ${c.reference} (${c.startYear}-${c.endYear})` }))} /> : undefined}
         testId="funding-lines"
       >
         {e.fundingLines.length === 0 ? (
-          <EmptyState title="Aucune ligne de financement" hint="La RAF ajoute ici chaque financeur avec son dispositif, ses montants et ses livrables dus." />
+          <EmptyState title="Aucune ligne de financement" hint={`${cap(le(V.raf))} ajoute ici chaque financeur avec son dispositif, ses montants et ses livrables dus.`} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm" data-testid="funding-table">

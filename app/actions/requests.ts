@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { dayjs } from "@/lib/format";
 import { canTreatRequest, REQUEST_KINDS, REQUEST_STATUSES, kindLabel } from "@/lib/requests";
+import { V, un } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -14,7 +15,7 @@ export async function addRequest(input: { kind: string; title: string; body?: st
   const title = input.title.trim();
   if (!title) return { ok: false, error: "Dites ce que vous demandez." };
   if (!REQUEST_KINDS.some((k) => k.value === input.kind)) return { ok: false, error: "Type inconnu." };
-  if (!input.assigneeId && !input.poleId) return { ok: false, error: "À qui ? Une personne ou un pôle." };
+  if (!input.assigneeId && !input.poleId) return { ok: false, error: `À qui ? Une personne ou ${un(V.pole)}.` };
   const dueDate = input.dueDate ? dayjs(input.dueDate, "YYYY-MM-DD", true) : null;
   if (dueDate && !dueDate.isValid()) return { ok: false, error: "Date invalide." };
   const r = await prisma.request.create({ data: { kind: input.kind, title, body: input.body?.trim() || null, requesterId: me.id, assigneeId: input.assigneeId || null, poleId: input.assigneeId ? null : input.poleId || null, editionId: input.editionId || null, dueDate: dueDate ? dueDate.startOf("day").toDate() : null }, include: { pole: true } });

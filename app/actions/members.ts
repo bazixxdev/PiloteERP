@@ -7,9 +7,10 @@ import { canManageMembers } from "@/lib/rights";
 import { findOrCreateOrganisation, hasKind, kindsOf, serializeKinds } from "@/lib/organisations";
 import { MEMBERSHIP_METHODS, MEMBERSHIP_STATUS } from "@/lib/members";
 import { createContact, type ContactInput } from "./contacts";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
-const DENIED = "Les adhésions se tiennent par la RAF ou la direction (droit « Gère les adhésions »).";
+const DENIED = `Les adhésions se tiennent par ${le(V.raf)} ou ${le(V.direction)} (droit « Gère les adhésions »).`;
 const clean = (v: unknown) => { const s = v == null ? "" : String(v).trim(); return s || null; };
 
 async function guard() {

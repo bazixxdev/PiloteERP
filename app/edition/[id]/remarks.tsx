@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addRemark, deleteRemark, resolveRemark } from "@/app/actions/remarks";
 import { Select } from "@/components/common/searchable-select";
+import { V, cap, le, du } from "@/lib/vocab";
 
 export type RemarkView = { id: string; field: string; body: string; reason?: string; author: string; authorId: string; createdAt: string; resolvedAt: string | null; resolvedBy: string | null };
 
 // Motif d'une remarque (retour du 14/09, Simon : « je ne sais pas d'où ça vient, pourquoi, est-ce financier »).
 export const REMARK_REASONS = [
   { value: "funder", label: "Financeur", hint: "exigence ou cadre d'une convention" },
-  { value: "strategy", label: "Stratégie", hint: "orientation de la direction ou du CA" },
+  { value: "strategy", label: "Stratégie", hint: `orientation ${du(V.direction)} ou du CA` },
   { value: "feasibility", label: "Faisabilité", hint: "temps, budget, charge" },
   { value: "form", label: "Forme", hint: "rédaction, précision, lisibilité" },
   { value: "other", label: "Autre", hint: "" },
@@ -69,9 +70,9 @@ function AddRemark({ editionId, field, fieldLabel, pending, run }: { editionId: 
       <PopoverContent className="w-80" align="start">
         <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); run(() => addRemark(editionId, field, body, reason), () => { setBody(""); setOpen(false); }); }}>
           <div className="text-xs font-semibold">Remarque sur « {fieldLabel} »</div>
-          <p className="text-[11px] text-muted-foreground">Le pilote la verra ici, en place, et la marquera traitée. Une notification lui est envoyée.</p>
+          <p className="text-[11px] text-muted-foreground">{`${cap(le(V.pilote))} la verra ici, en place, et la marquera traitée. Une notification lui est envoyée.`}</p>
           <textarea autoFocus value={body} onChange={(e) => setBody(e.target.value)} rows={3} className="rounded-lg border bg-card p-2 text-sm" placeholder="À compléter : les dates jalons a minima…" aria-label="Remarque" data-testid={`remark-body-${field}`} />
-          <label className="grid gap-1 text-[11px]"><span className="font-semibold">Pourquoi ? <span className="font-normal text-muted-foreground">le pilote saura d'où ça vient</span></span>
+          <label className="grid gap-1 text-[11px]"><span className="font-semibold">Pourquoi ? <span className="font-normal text-muted-foreground">{`${le(V.pilote)} saura d'où ça vient`}</span></span>
             <Select value={reason} onChange={(e) => setReason(e.target.value)} className="h-8 rounded-md border bg-card px-2 text-xs" aria-label="Motif de la remarque" data-testid={`remark-reason-select-${field}`}>
               {REMARK_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}{r.hint ? ` — ${r.hint}` : ""}</option>)}
             </Select>

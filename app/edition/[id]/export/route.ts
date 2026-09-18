@@ -5,6 +5,7 @@ import { fmtDate } from "@/lib/format";
 import { getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
 import { ficheParagraphs, loadFiche } from "@/lib/fiche-docx";
+import { V, cap } from "@/lib/vocab";
 
 // Export du bilan (EF-I3) : .md ou .docx basique.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -20,13 +21,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Fiche projet au format du gabarit Word : construction partagée avec le plan opérationnel assemblé (lib/fiche-docx.ts).
   if (format === "fiche") {
     const fe = await loadFiche(id);
-    const doc = new Document({ sections: [{ children: [...ficheParagraphs(fe!, refs), new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype), au format du gabarit « Fiche projet ».` })] }] });
+    const doc = new Document({ sections: [{ children: [...ficheParagraphs(fe!, refs), new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype), au format du gabarit « Fiche projet ».` })] }] });
     const buffer = await Packer.toBuffer(doc);
     return new NextResponse(new Uint8Array(buffer), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Content-Disposition": `attachment; filename="fiche-${e.project.analyticCode}-${e.year}.docx"` } });
   }
 
   const title = `Bilan ${e.year} — ${e.project.name}`;
-  const meta = `Pôle ${e.project.pole.name} · Pilote ${e.project.pilot.name} · Code ${e.project.analyticCode} · Financeurs : ${e.fundingLines.map((f) => f.funder.name).join(", ") || "—"}`;
+  const meta = `${cap(V.pole)} ${e.project.pole.name} · ${cap(V.pilote)} ${e.project.pilot.name} · Code ${e.project.analyticCode} · Financeurs : ${e.fundingLines.map((f) => f.funder.name).join(", ") || "—"}`;
   const filename = `bilan-${e.project.analyticCode}-${e.year}`;
 
   if (format === "docx") {
@@ -51,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           ...(e.achievements.length ? e.achievements.map((a) => new Paragraph({ text: `• ${achLine(a)}` })) : [new Paragraph({ text: "—" })]),
           new Paragraph({ text: "Actions", heading: HeadingLevel.HEADING_1 }),
           ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}` })),
-          new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype).` }),
+          new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype).` }),
         ],
       }],
     });
@@ -67,7 +68,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ...e.indicators.map((i) => `| ${i.label} | ${i.target ?? ""} | ${i.actual ?? ""} | ${i.imposed ? "oui" : ""} |`), "",
     "## Réalisations consignées", "", ...(e.achievements.length ? e.achievements.map((a) => `- ${achLine(a)}`) : ["—"]), "",
     "## Actions", "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
-    `_Exporté le ${fmtDate(new Date())} depuis Pilote (prototype)._`, "",
+    `_Exporté le ${fmtDate(new Date())} depuis ${cap(V.pilote)} (prototype)._`, "",
   ].join("\n");
   return new NextResponse(md, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}.md"` } });
 }

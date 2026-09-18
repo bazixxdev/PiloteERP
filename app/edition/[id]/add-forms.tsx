@@ -10,6 +10,7 @@ import { Reveal } from "@/components/common/reveal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V } from "@/lib/vocab";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -111,7 +112,7 @@ export function AddDocLinkForm({ editionId, canCodir }: { editionId: string; can
       <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !url.trim()) return; run(() => addDocLink(editionId, label, url, codir), () => { setLabel(""); setUrl(""); setCodir(false); }); }}>
         <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Libellé" className="h-7 w-44 text-xs" data-testid="add-doclink-label" />
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="\\serveur\Partage\… ou https://…" className="h-7 w-72 text-xs" data-testid="add-doclink-url" title="Un chemin serveur (\\serveur\…) ou une adresse web (https://) : l'outil range chacun dans sa famille" />
-        {canCodir && <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={codir} onChange={(e) => setCodir(e.target.checked)} className="accent-primary" /> CODIR seulement</label>}
+        {canCodir && <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={codir} onChange={(e) => setCodir(e.target.checked)} className="accent-primary" />{` ${V.codir.one} seulement`}</label>}
         <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim() || !url.trim()} data-testid="add-doclink-submit"><Plus />Ajouter</Button>
       </form>
     </Reveal>

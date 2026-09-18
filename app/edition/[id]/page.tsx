@@ -31,6 +31,7 @@ import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
+import { V, cap, du, ppe } from "@/lib/vocab";
 
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string; champ?: string }> }) {
   const { id } = await params;
@@ -95,9 +96,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
               {/* La mission du plan opérationnel se lit dans la fiche (Cadre stratégique) ; ici elle doublait la ligne (critique du 16/09). */}
-              <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title="Pôles associés à ce projet commun">commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · <span title={`Mission : ${e.project.mission.name}`}>{e.project.analyticCode}</span></span>
+              <span>{e.project.pole.name}{e.project.secondaryPoles.length > 0 && <> · <span title={`${cap(ppe(V.pole, "associé") + "s")} à ce projet commun`}>commun avec {e.project.secondaryPoles.map((x) => x.pole.name).join(", ")}</span></>} · <span title={`Mission : ${e.project.mission.name}`}>{e.project.analyticCode}</span></span>
               <span aria-hidden className="hidden sm:inline">·</span>
-              <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} codir={codirRole(roles, owners.pilot.role)} className="size-5 text-[8px]" /> Pilote <b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
+              <span className="inline-flex items-center gap-1"><Avatar name={owners.pilot.name} codir={codirRole(roles, owners.pilot.role)} className="size-5 text-[8px]" />{` ${cap(V.pilote)} `}<b className="font-semibold text-foreground">{owners.pilot.name}</b></span>
               <span aria-hidden className="hidden sm:inline">·</span>
               <span className="inline-flex items-center gap-1">{owners.guarantor && <Avatar name={owners.guarantor.name} codir={codirRole(roles, owners.guarantor.role)} className="size-5 text-[8px]" />} Garant <b className="font-semibold text-foreground">{owners.guarantor?.name ?? "—"}</b></span>
             </p>
@@ -125,8 +126,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
 
       {!isTransversal(me) && !inMyScope(me, e.project, e.team.map((t) => t.personId)) && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
-          <Eye className="size-4 text-muted-foreground" />Édition du pôle <strong>{e.project.pole.name}</strong>, hors de votre pôle : vous la consultez, vous n'y intervenez pas.
-        </div>
+          <Eye className="size-4 text-muted-foreground" />{`${cap(V.edition)} ${du(V.pole)} `}<strong>{e.project.pole.name}</strong>{`, hors de votre ${V.pole.one} : vous la consultez, vous n'y intervenez pas.`}</div>
       )}
       <TabsNav editionId={e.id} current={tab} counts={counts} />
 

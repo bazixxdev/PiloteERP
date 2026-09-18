@@ -15,6 +15,7 @@ import { DeliverablesList } from "./deliverables-list";
 import { kindLabel } from "@/lib/achievements";
 import { CreateTaskButton } from "./create-task-button";
 import { TaskTick } from "./task-tick";
+import { V, du, ce } from "@/lib/vocab";
 
 // L'Aperçu (revue du 15/09) : où en est le projet, en un écran — jalons et retards, budget, temps, livrables, ce qui attend
 // une décision, la dernière décision d'instance, le fil, mes tâches, les réalisations. Il n'invente rien : il assemble.
@@ -39,7 +40,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
       <div className="grid content-start gap-4">
-        <Section title="État de l'édition" description={`${e.year} · ${e.actions.filter((a) => a.state === "done").length} action${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} faite${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} sur ${e.actions.length}`} testId="apercu-etat">
+        <Section title={`État ${du(V.edition)}`} description={`${e.year} · ${e.actions.filter((a) => a.state === "done").length} action${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} faite${e.actions.filter((a) => a.state === "done").length > 1 ? "s" : ""} sur ${e.actions.length}`} testId="apercu-etat">
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-md bg-muted/40 p-3">
               <dt className="flex items-baseline justify-between text-xs text-muted-foreground"><span>Budget de dépenses directes</span><Link href={`/edition/${e.id}?onglet=budget`} className="-my-1 inline-block px-1 py-1 text-primary hover:underline">Budget →</Link></dt>
@@ -87,7 +88,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
           )}
         </Section>
 
-        <Section title="Mes tâches sur cette édition" description={myTasks.length ? `${myTasks.length} à faire` : "Rien en cours pour vous sur cette édition."} actions={<CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} compact />} testId="apercu-taches">
+        <Section title={`Mes tâches sur ${ce(V.edition)}`} description={myTasks.length ? `${myTasks.length} à faire` : `Rien en cours pour vous sur ${ce(V.edition)}.`} actions={<CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} compact />} testId="apercu-taches">
           {myTasks.length > 0 && (
             <ul className="divide-y text-sm">
               {myTasks.map((t) => (

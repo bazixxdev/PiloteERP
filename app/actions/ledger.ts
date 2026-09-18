@@ -6,10 +6,11 @@ import { getCurrentPerson, getSettings } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
 import { aggregate, rowsToEntries, type Aggregated, type RawEntry } from "@/lib/ledger";
 import { entriesFromWorkbook, fetchAnalyticalLedger, pennylaneConfig, PennylaneError } from "@/lib/pennylane";
+import { V, le } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
-const DENIED = "Le réalisé comptable s'importe par la RAF ou la direction.";
+const DENIED = `Le réalisé comptable s'importe par ${le(V.raf)} ou ${le(V.direction)}.`;
 
 // Écriture du snapshot d'une source pour un exercice : remplace (purge + insertion) — rejouer donne le même résultat.
 async function writeSnapshot(source: string, year: number, agg: Aggregated[], meta: { fileName?: string | null; rows: number; byId: string }) {

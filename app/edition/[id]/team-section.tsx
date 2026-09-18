@@ -5,6 +5,7 @@ import { Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/shell/person-switcher";
 import { TeamPicker } from "./team-picker";
+import { V, le } from "@/lib/vocab";
 
 // L'équipe se lit (deux noms, pas quatorze chips) ; le sélecteur n'apparaît que sur « Modifier » (revue du 15/09).
 export function TeamSection({ editionId, people, selected, canEdit }: { editionId: string; people: { id: string; name: string; role: string; codir?: boolean }[]; selected: string[]; canEdit: boolean }) {
@@ -15,7 +16,7 @@ export function TeamSection({ editionId, people, selected, canEdit }: { editionI
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <h4 className="text-sm font-bold">Équipe projet</h4>
-          <span className="text-[10px] text-muted-foreground">{members.length ? `${members.length} personne${members.length > 1 ? "s" : ""} · choisie par le pilote` : "choisie par le pilote"}</span>
+          <span className="text-[10px] text-muted-foreground">{members.length ? `${members.length} personne${members.length > 1 ? "s" : ""} · choisie par ${le(V.pilote)}` : `choisie par ${le(V.pilote)}`}</span>
         </div>
         {canEdit && (editing
           ? <Button size="xs" variant="outline" onClick={() => setEditing(false)} data-testid="team-done"><Check />Terminer</Button>

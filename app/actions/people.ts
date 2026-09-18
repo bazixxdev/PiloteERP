@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
+import { V, cap, de, pl } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -24,11 +25,11 @@ export type DepartureInput = {
 // est datée et, si on le demande, désactivée. Rien n'est effacé : l'historique (temps, validations, remarques) reste à son nom.
 export async function prepareDeparture(input: DepartureInput): Promise<Result<{ moved: number }>> {
   const me = await getCurrentPerson();
-  if (!canAdmin(me)) return { ok: false, error: "Réservé à l'administration (direction, RAF)." };
+  if (!canAdmin(me)) return { ok: false, error: `Réservé à l'administration (${V.direction.one}, ${V.raf.one}).` };
   const p = await prisma.person.findUnique({ where: { id: input.personId } });
   if (!p) return { ok: false, error: "Personne introuvable." };
   if (input.deactivate && p.id === me.id) return { ok: false, error: "Vous ne pouvez pas vous désactiver vous-même." };
-  if (input.deactivate && p.role === "director" && p.active && (await prisma.person.count({ where: { role: "director", active: true, id: { not: p.id } } })) === 0) return { ok: false, error: "Il doit rester au moins une personne active avec le rôle Direction." };
+  if (input.deactivate && p.role === "director" && p.active && (await prisma.person.count({ where: { role: "director", active: true, id: { not: p.id } } })) === 0) return { ok: false, error: `Il doit rester au moins une personne active avec le rôle ${cap(V.direction)}.` };
   const targets = [input.pilotTo, input.guarantorTo, input.poleLeadTo, input.sponsorTo, input.actionsTo, input.requestsTo].filter((x): x is string => Boolean(x));
   if (targets.includes(p.id)) return { ok: false, error: "Le repreneur ne peut pas être la personne qui part." };
   const found = await prisma.person.findMany({ where: { id: { in: targets }, active: true }, select: { id: true } });
@@ -51,7 +52,7 @@ export async function prepareDeparture(input: DepartureInput): Promise<Result<{ 
   });
   // Les repreneurs sont prévenus de ce qui leur arrive.
   const notify = async (to: string | null, what: string) => { if (to) await prisma.notification.create({ data: { personId: to, senderId: me.id, kind: "info", title: `Départ de ${p.name} : ${what} vous reviennent`, link: "/ma-semaine" } }); };
-  await Promise.all([notify(input.pilotTo, "les projets pilotés"), notify(input.guarantorTo, "les garanties de projet"), notify(input.poleLeadTo, "la responsabilité de pôle"), notify(input.sponsorTo, "le parrainage des éditions"), notify(input.actionsTo, "les actions en cours"), notify(input.requestsTo, "les demandes ouvertes")]);
+  await Promise.all([notify(input.pilotTo, "les projets pilotés"), notify(input.guarantorTo, "les garanties de projet"), notify(input.poleLeadTo, `la responsabilité ${de(V.pole)}`), notify(input.sponsorTo, `le parrainage des ${pl(V.edition)}`), notify(input.actionsTo, "les actions en cours"), notify(input.requestsTo, "les demandes ouvertes")]);
   revalidatePath("/", "layout");
   return { ok: true, data: { moved } };
 }

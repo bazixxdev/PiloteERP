@@ -9,13 +9,14 @@ import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
+import { V, cap, le, un, du, de, au, ce } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 async function ctx(editionId: string) {
   const me = await getCurrentPerson();
   const raw = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true, expenses: true } });
-  if (!raw) throw new Error("Édition introuvable");
+  if (!raw) throw new Error(`${cap(V.edition)} introuvable`);
   const [e] = await attachLedgerSpent([raw], await getSettings());
   return { me, e, isPilot: e.project.pilotId === me.id, isTeam: e.team.some((t) => t.personId === me.id), samePole: inMyPole(me, e.project) };
 }
@@ -33,7 +34,7 @@ export async function addAction(editionId: string, name: string): Promise<Result
 
 export async function addFundingLine(editionId: string, funderId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
+  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
   await prisma.fundingLine.create({ data: { editionId, funderId } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -43,7 +44,7 @@ export async function addDeliverable(fundingLineId: string, label: string, dueDa
   const line = await prisma.fundingLine.findUnique({ where: { id: fundingLineId } });
   if (!line) return { ok: false, error: "Ligne introuvable" };
   const c = await ctx(line.editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute un livrable." };
+  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute un livrable.` };
   await prisma.deliverable.create({ data: { fundingLineId, label: label.trim() || "Livrable", dueDate: new Date(dueDate) } });
   revalidatePath(path(line.editionId));
   return { ok: true };
@@ -76,7 +77,7 @@ export async function addComment(editionId: string, body: string): Promise<Resul
 
 export async function setTeam(editionId: string, personIds: string[]): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canWriteLayer(c.me, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: "Seul le pilote (ou la direction) compose l'équipe." };
+  if (!canWriteLayer(c.me, "proposal", c.isPilot, c.isTeam)) return { ok: false, error: `Seul ${le(V.pilote)} (ou ${le(V.direction)}) compose l'équipe.` };
   await prisma.editionTeam.deleteMany({ where: { editionId, personId: { notIn: personIds } } });
   for (const personId of personIds) {
     await prisma.editionTeam.upsert({ where: { editionId_personId: { editionId, personId } }, create: { editionId, personId }, update: {} });
@@ -133,11 +134,11 @@ export async function explainRequiredLevel(editionId: string, amount: number | n
   const euro = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
   const a = amount ?? 0;
   const reason =
-    remaining !== null && remaining < 0 ? `enveloppe déjà dépassée de ${euro(-remaining)} : toute dépense passe par la direction`
+    remaining !== null && remaining < 0 ? `enveloppe déjà dépassée de ${euro(-remaining)} : toute dépense passe par ${le(V.direction)}`
     : remaining !== null && a > remaining ? `montant supérieur au reste de l'enveloppe (${euro(remaining)})`
     : a > settings.validationThresholdLevel2 ? `montant supérieur au seuil de niveau 3 (${euro(settings.validationThresholdLevel2)})`
     : a > settings.validationThresholdLevel1 ? `montant supérieur au seuil de niveau 2 (${euro(settings.validationThresholdLevel1)})`
-    : a > 0 ? `montant sous le seuil de niveau 2 (${euro(settings.validationThresholdLevel1)})` : "sans montant : validation du pilote";
+    : a > 0 ? `montant sous le seuil de niveau 2 (${euro(settings.validationThresholdLevel1)})` : `sans montant : validation ${du(V.pilote)}`;
   return { level, reason };
 }
 
@@ -173,12 +174,12 @@ export async function decideValidation(id: string, decision: "approved" | "refus
 // Reconduction N → N+1 (EF-A2) : couches 1 à 3, actions, financements, équipe ; couche 4, budget, temps et bilan vidés.
 export async function renewEdition(editionId: string): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
-  if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: "Seuls le pilote, le responsable de pôle, la RAF et la direction reconduisent une édition." };
+  if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: `Seuls ${le(V.pilote)}, le responsable ${de(V.pole)}, ${le(V.raf)} et ${le(V.direction)} reconduisent ${un(V.edition)}.` };
   const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
-  if (!src) return { ok: false, error: "Édition introuvable" };
+  if (!src) return { ok: false, error: `${cap(V.edition)} introuvable` };
   const year = src.year + 1;
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
-  if (exists) return { ok: false, error: `L'édition ${year} existe déjà.` };
+  if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
 
   const created = await prisma.edition.create({
     data: {
@@ -221,7 +222,7 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
   const d = await prisma.deliverable.findUnique({ where: { id }, include: { fundingLine: true } });
   if (!d) return { ok: false, error: "Livrable introuvable" };
   const c = await ctx(d.fundingLine.editionId);
-  if (!canEditFunding(c.me) && !c.isPilot) return { ok: false, error: "Réservé au pilote et à la RAF." };
+  if (!canEditFunding(c.me) && !c.isPilot) return { ok: false, error: `Réservé ${au(V.pilote)} et ${au(V.raf)}.` };
   await prisma.deliverable.update({ where: { id }, data: { done, doneAt: done ? new Date() : null } });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -230,7 +231,7 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
 // Séminaire (EF-A5, EF-H4) : création en série des éditions N+1 selon la décision prise sur chaque projet.
 export async function batchCreateEditions(year: number, decisions: { editionId: string; decision: "renew" | "adjust" | "stop" }[]): Promise<Result<{ created: number; stopped: number; skipped: string[] }>> {
   const me = await getCurrentPerson();
-  if (!isCodir(me)) return { ok: false, error: "La création en série est réservée au CODIR." };
+  if (!isCodir(me)) return { ok: false, error: `La création en série est réservée ${au(V.codir)}.` };
   let created = 0, stopped = 0;
   const skipped: string[] = [];
   for (const d of decisions) {
@@ -251,7 +252,7 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
 // Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé.
 export async function addExpense(editionId: string, label: string, spent: number, reference: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre une dépense." };
+  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) enregistre une dépense.` };
   if (!reference.trim()) return { ok: false, error: "Une référence (facture, ligne du suivi) est requise." };
   await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed" } });
   revalidatePath(path(editionId));
@@ -262,7 +263,7 @@ export async function addExpense(editionId: string, label: string, spent: number
 export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null; alertKind?: string | null }): Promise<Result> {
   const c = await ctx(input.editionId);
   const allowed = canConsignDecision(c.me, c.samePole, input.instance);
-  if (!allowed) return { ok: false, error: "Les décisions d'instance sont consignées par le CODIR." };
+  if (!allowed) return { ok: false, error: `Les décisions d'instance sont consignées par ${le(V.codir)}.` };
   if (!input.body.trim()) return { ok: false, error: "Décision vide." };
   await prisma.decision.create({
     // Une décision peut régler une alerte de l'édition (dépassement accepté, jalon reporté…) : elle s'éteint dans la bande d'état (revue du 15/09).
@@ -276,7 +277,7 @@ export async function recordDecision(input: { editionId: string; instance: strin
 // Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.
 export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null; form?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre un financement obtenu." };
+  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) enregistre un financement obtenu.` };
   const reference = input.reference.trim();
   if (!reference) return { ok: false, error: "Référence obligatoire (ex. FSE-2026-2028)." };
   if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez le financement existant.` };
@@ -291,7 +292,7 @@ export async function createConvention(input: { funderId: string; reference: str
 // si elle est vide (ni montant, ni livrable, ni pièce), elle est supprimée.
 export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) modifie les affectations." };
+  if (!canEditFunding(me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) modifie les affectations.` };
   const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true } });
   if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
   const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0;
@@ -303,11 +304,11 @@ export async function detachFundingLineFromConvention(lineId: string): Promise<R
 
 export async function addFundingLineFromConvention(editionId: string, conventionId: string): Promise<Result> {
   const c = await ctx(editionId);
-  if (!canEditFunding(c.me)) return { ok: false, error: "Seule la RAF (ou la direction) ajoute une ligne de financement." };
+  if (!canEditFunding(c.me)) return { ok: false, error: `Seule ${le(V.raf)} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
   const conv = await prisma.convention.findUnique({ where: { id: conventionId } });
   if (!conv) return { ok: false, error: "Convention introuvable" };
   if (c.e.year < conv.startYear || c.e.year > conv.endYear) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };
-  if (await prisma.fundingLine.findFirst({ where: { editionId, conventionId } })) return { ok: false, error: "Cette édition est déjà rattachée à cette convention." };
+  if (await prisma.fundingLine.findFirst({ where: { editionId, conventionId } })) return { ok: false, error: `${cap(ce(V.edition))} est déjà rattachée à cette convention.` };
   await prisma.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status: ["notified", "contracted", "justified"].includes(conv.status) ? "contracted" : conv.status, multiYear: conv.endYear > conv.startYear } });
   revalidatePath(path(editionId));
   return { ok: true };
@@ -336,9 +337,9 @@ export async function proposeProject(input: { name: string; missionId: string; y
   const mission = await prisma.mission.findUnique({ where: { id: input.missionId } });
   if (!mission) return { ok: false, error: "Mission introuvable." };
   const poleId = input.poleId || me.poleId;
-  if (!poleId) return { ok: false, error: "Choisissez le pôle qui portera le projet." };
+  if (!poleId) return { ok: false, error: `Choisissez ${le(V.pole)} qui portera le projet.` };
   const pole = await prisma.pole.findUnique({ where: { id: poleId } });
-  if (!pole) return { ok: false, error: "Pôle introuvable." };
+  if (!pole) return { ok: false, error: `${cap(V.pole)} introuvable.` };
   if (![2026, 2027, 2028].includes(input.year) && (input.year < new Date().getFullYear() || input.year > new Date().getFullYear() + 2)) return { ok: false, error: "Année hors de portée." };
   const n = (await prisma.project.count({ where: { analyticCode: { startsWith: "PROP-" } } })) + 1;
   const p = await prisma.project.create({ data: { name, analyticCode: `PROP-${String(n).padStart(2, "0")}`, poleId, pilotId: me.id, guarantorId: pole.leadId ?? null, missionId: mission.id, recurring: false } });
