@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookUser, Send, Users } from "lucide-react";
+import { BookUser, Building2, Send, Users } from "lucide-react";
 import { DossiersHeader } from "@/components/common/dossiers-nav";
 import { EmptyState } from "@/components/common/empty-state";
 import { UrlPanel } from "@/components/common/url-panel";
@@ -22,12 +22,12 @@ import { ContactListView } from "./list-view";
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ liste?: string; contact?: string; q?: string; tag?: string }> }) {
   const sp = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
-  const [{ mine, shared, brevo }, editions, organisations] = await Promise.all([loadContactLists(me), loadEditionOpts(me, settings), prisma.organisation.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
+  const [{ mine, shared, brevo, base }, editions, organisations] = await Promise.all([loadContactLists(me), loadEditionOpts(me, settings), prisma.organisation.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
   const list = sp.liste ? await loadContactList(sp.liste) : null;
   if (sp.liste && (!list || !canReadList(me, list))) return <div className="p-6 text-sm text-muted-foreground">Liste introuvable, ou non partagée avec vous.</div>;
   const contacts = list ? [] : await loadContacts({ q: sp.q, tag: sp.tag });
   const allTags = list ? [] : Array.from(new Set((await loadContacts()).flatMap(tagsOf))).sort((a, b) => a.localeCompare(b, "fr"));
-  const openContact = sp.contact ? await prisma.contact.findUnique({ where: { id: sp.contact }, include: { organisation: { select: { id: true, name: true } }, listItems: { include: { list: { select: { id: true, name: true, ownerId: true, visibility: true, owner: { select: { id: true, poleId: true } } } } } }, lines: { select: { id: true, edition: { select: { id: true, year: true, project: { select: { name: true } } } } } }, conventions: { select: { id: true, reference: true } } } }) : null;
+  const openContact = sp.contact ? await prisma.contact.findUnique({ where: { id: sp.contact }, include: { organisation: { select: { id: true, name: true, kinds: true } }, listItems: { include: { list: { select: { id: true, name: true, ownerId: true, visibility: true, owner: { select: { id: true, poleId: true } } } } } }, lines: { select: { id: true, edition: { select: { id: true, year: true, project: { select: { name: true } } } } } }, conventions: { select: { id: true, reference: true } } } }) : null;
   const navClass = (active: boolean) => cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-xs hover:bg-muted", active && "bg-info-soft font-semibold text-primary");
   const Count = ({ n }: { n: number }) => n > 0 ? <span className="ml-auto rounded-sm bg-muted px-1.5 text-[10px] text-muted-foreground">{n}</span> : null;
   const listLink = (l: (typeof mine)[number], owner?: string) => {
@@ -49,6 +49,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <div className="grid min-w-0 content-start gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <nav className="rounded-md border bg-card p-1.5" aria-label="Vues" data-testid="contacts-views">
             <Link href="/contacts" className={navClass(!list)} aria-current={!list ? "page" : undefined} data-testid="contacts-view-all"><BookUser className="size-3.5 text-muted-foreground" />Tous les contacts</Link>
+          </nav>
+          <nav className="rounded-md border bg-card p-1.5" aria-label="Listes de base" data-testid="base-contact-lists">
+            <div className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground"><Building2 className="size-3" aria-hidden />Listes de base</div>
+            {base.map((b) => (
+              <Link key={b.id} href={`/contacts?liste=${b.id}`} className={navClass(list?.id === b.id)} aria-current={list?.id === b.id ? "page" : undefined} data-testid={`contact-list-${b.kind}`} data-name={b.name}>
+                <span className="min-w-0 flex-1 truncate">{b.name}</span><Count n={b.count} />
+              </Link>
+            ))}
           </nav>
           <nav className="rounded-md border bg-card p-1.5" aria-label="Mes listes" data-testid="contact-lists">
             <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground">Mes listes · {mine.length}</div>
@@ -72,7 +80,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
         <div className="min-w-0" data-testid="contacts-main" data-view={list ? "liste" : "annuaire"} data-name={list?.name}>
           {list ? (
-            <ContactListView list={list} meId={me.id} canEdit={list.ownerId === me.id || (list.source === "brevo" && canAdmin(me))} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())} editions={editions} organisations={organisations} />
+            <ContactListView list={list} meId={me.id} canEdit={list.source !== "base" && (list.ownerId === me.id || (list.source === "brevo" && canAdmin(me)))} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())} editions={editions} organisations={organisations} />
           ) : (
             <div className="rounded-md border bg-card">
               <div className="px-4 pb-2 pt-3"><h2 className="text-[19px] font-bold">Tous les contacts</h2><p className="text-[11px] text-muted-foreground">{contacts.length} contact{contacts.length > 1 ? "s" : ""}{sp.q || sp.tag ? " pour cette recherche" : ""} · interlocuteurs des financeurs et fournisseurs, invités, membres des réseaux.</p></div>

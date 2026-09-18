@@ -2,12 +2,13 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { AutoField } from "@/components/inline/auto-field";
 import { fmtDate } from "@/lib/format";
-import { BREVO_STATUS, brevoAttributesOf, tagsOf } from "@/lib/contacts";
+import { baseListFor, BREVO_STATUS, brevoAttributesOf, tagsOf } from "@/lib/contacts";
+import { kindsOf } from "@/lib/organisations";
 import { ContactOrganisationPicker, DeleteContactButton } from "./panel-controls";
 
 type C = {
   id: string; firstName: string | null; lastName: string; role: string | null; email: string | null; phone: string | null; address: string | null; postcode: string | null; city: string | null; tags: string; notes: string | null; leftAt: Date | null; organisationName: string | null; createdById: string | null; createdAt: Date; brevoContactId: string | null; brevoStatus: string | null; brevoAttributes: string; brevoSyncedAt: Date | null;
-  organisation: { id: string; name: string } | null;
+  organisation: { id: string; name: string; kinds: string } | null;
   listItems: { role: string | null; list: { id: string; name: string } }[];
   lines: { id: string; edition: { id: string; year: number; project: { name: string } } }[];
   conventions: { id: string; reference: string }[];
@@ -41,6 +42,7 @@ export function ContactPanelBody({ contact: c, organisations, meId }: { contact:
       </section>
       <section className="grid gap-1 text-xs" data-testid="contact-where">
         <h3 className="text-xs font-semibold">Où il ou elle apparaît</h3>
+        {c.organisation && !c.leftAt && kindsOf(c.organisation).length > 0 && <div>Listes de base : {kindsOf(c.organisation).map((k) => baseListFor(k)).filter(Boolean).map((b) => <span key={b!.id}> · <Link href={`/contacts?liste=${b!.id}`} className="text-primary hover:underline">{b!.name}</Link></span>)}</div>}
         <div>Listes : {c.listItems.length === 0 ? <span className="text-muted-foreground">aucune</span> : c.listItems.map((i) => <span key={i.list.id}> · <Link href={`/contacts?liste=${i.list.id}`} className="text-primary hover:underline">{i.list.name}</Link>{i.role ? ` (${i.role})` : ""}</span>)}</div>
         {c.lines.length > 0 && <div>Contact du dossier : {c.lines.map((l) => <span key={l.id}> · <Link href={`/edition/${l.edition.id}?onglet=financements`} className="text-primary hover:underline">{l.edition.project.name} {l.edition.year}</Link></span>)}</div>}
         {c.conventions.length > 0 && <div>Conventions : {c.conventions.map((v) => <span key={v.id}> · <Link href={`/conventions/${v.id}`} className="text-primary hover:underline">{v.reference}</Link></span>)}</div>}

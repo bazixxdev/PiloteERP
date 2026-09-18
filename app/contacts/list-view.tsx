@@ -35,6 +35,7 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
   const [pending, run] = useRun();
   const router = useRouter();
   const mirror = list.source === "brevo"; // miroir d'une liste Brevo : membres et attributs tenus par la synchronisation
+  const base = list.source === "base"; // liste de base : calculée (interlocuteurs d'un genre d'organisation), sans auteur ni réglages
   const [q, setQ] = useState("");
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const rows = useMemo(() => { const n = norm(q.trim()); return n ? list.items.filter((i) => norm(`${contactName(i.contact)} ${i.contact.email ?? ""} ${i.contact.organisation?.name ?? i.contact.organisationName ?? ""} ${i.contact.city ?? ""} ${i.role ?? ""}`).includes(n)) : list.items; }, [q, list.items]);
@@ -47,13 +48,14 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-[19px] font-bold">{color && <span className="size-2.5 shrink-0 rounded-full" style={{ background: color.hex }} aria-hidden />}<span className="truncate">{list.name}</span></h2>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-            {!canEdit && <span>Liste de {list.owner.name} ·</span>}
+            {!canEdit && !base && <span>Liste de {list.owner.name} ·</span>}
             <span className="inline-flex items-center gap-1" title={vis?.hint} data-testid={`contact-list-visibility-${list.id}`} data-value={list.visibility}><Icon className="size-3" aria-hidden />{vis?.label}</span>
-            {list.edition ? <span>· <Link href={`/edition/${list.edition.id}`} className="text-primary hover:underline">{list.edition.project.name} · {list.edition.year}</Link></span> : <span>· sans projet</span>}
-            {list.description && <span>· {list.description}</span>}
+            {!base && (list.edition ? <span>· <Link href={`/edition/${list.edition.id}`} className="text-primary hover:underline">{list.edition.project.name} · {list.edition.year}</Link></span> : <span>· sans projet</span>)}
+            {list.description && !base && <span>· {list.description}</span>}
             {mirror && <span data-testid="contact-list-mirror">· synchronisée {list.brevoSyncedAt ? `le ${fmtDate(list.brevoSyncedAt)}` : "pas encore"} · membres tenus par Brevo</span>}
             {!mirror && list.brevoListId && <span data-testid="contact-list-pushed">· dans Brevo{list.brevoSyncedAt ? ` depuis le ${fmtDate(list.brevoSyncedAt)}` : ""}</span>}
-            {!canEdit && <span>· en lecture</span>}
+            {base && <span data-testid="contact-list-base">· liste de base, tenue automatiquement : pour la compléter, rattachez un contact à son organisation (fiche du contact, ou fiche de l&apos;organisation)</span>}
+            {!canEdit && !base && <span>· en lecture</span>}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -78,21 +80,21 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
           <table className="w-full text-[13px]" data-testid="contact-list-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
-                <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th><th className="px-2 py-1.5">Rôle dans la liste</th>
+                <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th>{!base && <th className="px-2 py-1.5">Rôle dans la liste</th>}
                 {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`} title={f.brevo ? "Attribut Brevo, en lecture" : undefined}>{f.label}{canEdit && !f.brevo && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
                 {canEdit && !mirror && <th className="px-2 py-1.5"></th>}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? "Aucun contact dans cette liste Brevo pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? "Aucun contact dans cette liste Brevo pour l'instant." : base ? "Aucun contact rattaché à une organisation de ce genre pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
               {rows.map((i) => {
                 const c = i.contact;
                 return (
                   <tr key={c.id} data-testid={`contact-item-${c.id}`}>
                     <td className="px-4 py-1.5"><Link href={`/contacts?liste=${list.id}&contact=${c.id}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline">{contactName(c)}</Link>{c.brevoStatus && c.brevoStatus !== "active" && <span className="ml-1.5 inline-block whitespace-nowrap rounded-sm bg-warning-soft px-1 text-[10px] text-warning" title={BREVO_STATUS[c.brevoStatus]?.hint} data-testid={`brevo-status-${c.id}`}>{BREVO_STATUS[c.brevoStatus]?.label}</span>}{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}{tagsOf(c).length > 0 && <div className="mt-0.5 flex flex-wrap gap-1">{tagsOf(c).map((t) => <span key={t} className="rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t}</span>)}</div>}</td>
-                    <td className="px-2 py-1.5 text-xs">{c.organisation?.name ?? c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-2 py-1.5 text-xs">{c.organisation ? <Link href={`/organisations?organisation=${c.organisation.id}`} className="hover:underline">{c.organisation.name}</Link> : c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-2 py-1.5 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && <br />}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
-                    <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>
+                    {!base && <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>}
                     {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.brevo} pending={pending} run={run} /></td>)}
                     {canEdit && !mirror && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
                   </tr>

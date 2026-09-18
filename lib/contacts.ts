@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { canReadShared } from "./modules";
 import type { Viewer } from "./scope";
+import { kindFilter, ORGANISATION_KINDS, type OrganisationKind } from "./organisations";
 
 // Contacts et listes (18/09). Un contact = une personne extérieure ; une liste = une sélection de contacts à son auteur,
 // avec ses propres colonnes. Les colonnes propres sont bornées à quatre types : ce qui couvre les Excel de l'équipe
@@ -55,9 +56,18 @@ export const CONTACT_COLUMNS: { key: string; label: string; aliases: string[] }[
   { key: "notes", label: "Notes", aliases: ["notes", "note", "commentaire", "remarques", "observations"] },
 ];
 
-// Qui lit une liste : son auteur, et qui la visibilité désigne (même règle que les listes de tâches et les notes).
-export function canReadList(me: Viewer, list: { ownerId: string; visibility: string; owner: { id: string; poleId: string | null } }): boolean {
-  return list.ownerId === me.id || canReadShared(me, list.owner, list.visibility);
+// Listes de base (18/09, Gaël : « une liste non supprimable des financeurs, par souci de logique ») : une par genre
+// d'organisation, calculée — les interlocuteurs en poste des organisations de ce genre. Pas de ligne en base, pas d'auteur,
+// lisible de tous, exportable ; on la complète en rattachant un contact à son organisation.
+export const BASE_LIST_PREFIX = "base:";
+export const BASE_LISTS = ORGANISATION_KINDS.map((k) => ({ id: `${BASE_LIST_PREFIX}${k.key}`, kind: k.key as OrganisationKind, name: `Interlocuteurs · ${k.plural.toLowerCase()}`, description: `Les contacts en poste des organisations de genre « ${k.label} », à jour automatiquement.` }));
+export const isBaseListId = (id: string) => id.startsWith(BASE_LIST_PREFIX);
+export const baseListFor = (kind: string) => BASE_LISTS.find((b) => b.kind === kind) ?? null;
+
+// Qui lit une liste : son auteur, et qui la visibilité désigne (même règle que les listes de tâches et les notes). Une liste de
+// base se lit de tous.
+export function canReadList(me: Viewer, list: { ownerId: string; visibility: string; owner: { id: string; poleId: string | null }; source?: string }): boolean {
+  return list.source === "base" || list.ownerId === me.id || canReadShared(me, list.owner, list.visibility);
 }
 
 const listInclude = { owner: { select: { id: true, name: true, poleId: true } }, edition: { select: { id: true, year: true, project: { select: { name: true } } } }, _count: { select: { items: true } } };
@@ -69,7 +79,9 @@ export async function loadContactLists(me: Viewer) {
   const own = rows.filter((l) => l.source !== "brevo");
   const mine = own.filter((l) => l.ownerId === me.id);
   const shared = own.filter((l) => l.ownerId !== me.id && canReadList(me, l));
-  return { mine, shared, brevo };
+  const orgs = await prisma.organisation.findMany({ where: { active: true }, select: { kinds: true, _count: { select: { contacts: { where: { leftAt: null } } } } } });
+  const base = BASE_LISTS.map((b) => ({ ...b, count: orgs.filter((o) => o.kinds.split(",").includes(b.kind)).reduce((n, o) => n + o._count.contacts, 0) }));
+  return { mine, shared, brevo, base };
 }
 
 export type ContactRow = Awaited<ReturnType<typeof loadContacts>>[number];
@@ -82,11 +94,24 @@ export async function loadContacts(opts: { q?: string; tag?: string } = {}) {
   return rows.filter((c) => (!q || norm(`${contactName(c)} ${c.email ?? ""} ${c.organisation?.name ?? c.organisationName ?? ""} ${c.city ?? ""}`).includes(q)) && (!opts.tag || tagsOf(c).includes(opts.tag)));
 }
 
-// Une liste avec ses lignes (contact + valeurs propres), prête pour l'écran.
+// Une liste avec ses lignes (contact + valeurs propres), prête pour l'écran. Une liste de base est calculée à la volée.
 export async function loadContactList(id: string) {
+  if (isBaseListId(id)) return loadBaseList(id);
   const list = await prisma.contactList.findUnique({ where: { id }, include: { ...listInclude, items: { include: { contact: { include: { organisation: { select: { id: true, name: true } } } } }, orderBy: [{ contact: { lastName: "asc" } }, { contact: { firstName: "asc" } }] } } });
   if (!list) return null;
   return { ...list, fields: parseFields(list.fields), items: list.items.map((i) => ({ ...i, values: parseValues(i.values) })) };
+}
+
+async function loadBaseList(id: string) {
+  const b = BASE_LISTS.find((x) => x.id === id);
+  if (!b) return null;
+  const contacts = await prisma.contact.findMany({ where: { leftAt: null, organisation: { active: true, ...kindFilter(b.kind) } }, include: { organisation: { select: { id: true, name: true } } }, orderBy: [{ organisation: { name: "asc" } }, { lastName: "asc" }, { firstName: "asc" }] });
+  const now = new Date();
+  return {
+    id: b.id, ownerId: "", name: b.name, description: b.description, visibility: "all", color: null, editionId: null, fields: [] as ListField[], source: "base", brevoListId: null, brevoSyncedAt: null, createdAt: now, updatedAt: now,
+    owner: { id: "", name: "Outil", poleId: null }, edition: null, _count: { items: contacts.length },
+    items: contacts.map((c) => ({ listId: b.id, contactId: c.id, role: null, values: {} as Record<string, string | boolean | null>, addedAt: c.createdAt, contact: c })),
+  };
 }
 
 export type ContactListFull = NonNullable<Awaited<ReturnType<typeof loadContactList>>>;

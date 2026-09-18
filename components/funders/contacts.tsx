@@ -2,12 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Phone, Plus, Star, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { BookUser, Link2, Mail, Phone, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AutoField } from "@/components/inline/auto-field";
-import { addFunderContact, deleteFunderContact, setPrimaryFunderContact } from "@/app/actions/funders";
+import { SearchableSelect } from "@/components/common/searchable-select";
+import { addFunderContact, attachFunderContact, deleteFunderContact, setPrimaryFunderContact } from "@/app/actions/funders";
+import { withBase } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
 export type ContactView = { id: string; firstName: string | null; lastName: string; role: string | null; email: string | null; phone: string | null; notes: string | null; primary: boolean };
@@ -30,6 +33,10 @@ export function ContactLine({ c, label, className }: { c: ContactView | { firstN
 // Contacts d'un financeur : ajout en ligne, champs modifiables en place (RAF), contact principal, suppression.
 export function FunderContacts({ funderId, contacts, readOnly }: { funderId: string; contacts: ContactView[]; readOnly: boolean }) {
   const [form, setForm] = useState({ firstName: "", lastName: "", role: "", email: "", phone: "" });
+  // Rattacher depuis l'annuaire : les contacts sans organisation (les autres se déplacent depuis leur fiche).
+  const [free, setFree] = useState<{ id: string; label: string }[] | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const loadFree = async () => { if (free) return; const r = await fetch(withBase("/contacts/export?annuaire=1")); const all = (await r.json()) as { id: string; label: string; organisationId: string | null }[]; setFree(all.filter((c) => !c.organisationId)); };
   const [pending, start] = useTransition();
   const router = useRouter();
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => start(async () => { const r = await fn(); if (!r.ok) { toast.error(r.error ?? "Erreur"); return; } after?.(); router.refresh(); });
@@ -42,7 +49,7 @@ export function FunderContacts({ funderId, contacts, readOnly }: { funderId: str
       {sorted.length === 0 && <p className="mb-2 text-sm text-muted-foreground">Aucun contact renseigné.</p>}
       <ul className="divide-y">
         {sorted.map((c) => (
-          <li key={c.id} className="grid gap-1 py-2 md:grid-cols-[auto_0.8fr_1fr_1.2fr_1.6fr_0.9fr_auto] md:items-center" data-testid={`contact-${c.id}`} data-contact={c.lastName}>
+          <li key={c.id} className="grid gap-1 py-2 md:grid-cols-[auto_0.8fr_1fr_1.2fr_1.6fr_0.9fr_auto_auto] md:items-center" data-testid={`contact-${c.id}`} data-contact={c.lastName}>
             <button type="button" disabled={readOnly || pending || c.primary} onClick={() => run(() => setPrimaryFunderContact(c.id))} title={c.primary ? "Contact principal" : "Définir comme contact principal"} aria-label={c.primary ? "Contact principal" : `Définir ${contactName(c)} comme contact principal`} className={cn("rounded p-1", c.primary ? "text-warning" : "text-muted-foreground/40 hover:text-warning", readOnly && "cursor-default")} data-testid={`contact-primary-${c.id}`}>
               <Star className={cn("size-4", c.primary && "fill-current")} />
             </button>
@@ -54,10 +61,11 @@ export function FunderContacts({ funderId, contacts, readOnly }: { funderId: str
               <F id={c.id} field="email" value={c.email} placeholder="Email" label={`Email, ${c.lastName}`} />
             </div>
             <F id={c.id} field="phone" value={c.phone} placeholder="Téléphone" label={`Téléphone, ${c.lastName}`} />
+            <Link href={`/contacts?contact=${c.id}`} title="Sa fiche dans l'annuaire des contacts (mots-clés, listes, notes)" aria-label={`Fiche de ${contactName(c)} dans l'annuaire`} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-primary" data-testid={`contact-fiche-${c.id}`}><BookUser className="size-3.5" /></Link>
             {!readOnly ? (
               <button type="button" disabled={pending} onClick={() => { if (confirm(`Supprimer le contact ${contactName(c)} ?`)) run(() => deleteFunderContact(c.id)); }} aria-label={`Supprimer ${contactName(c)}`} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-delete-${c.id}`}><Trash2 className="size-3.5" /></button>
             ) : <span />}
-            <div className="md:col-span-7 md:pl-8"><AutoField model="contact" id={c.id} field="notes" type="text" value={c.notes} readOnly={readOnly} placeholder={readOnly ? "" : "Note : créneaux, habitudes, sujets suivis…"} inputClassName="text-[11px] text-muted-foreground" label={`Note, ${c.lastName}`} /></div>
+            <div className="md:col-span-8 md:pl-8"><AutoField model="contact" id={c.id} field="notes" type="text" value={c.notes} readOnly={readOnly} placeholder={readOnly ? "" : "Note : créneaux, habitudes, sujets suivis…"} inputClassName="text-[11px] text-muted-foreground" label={`Note, ${c.lastName}`} /></div>
           </li>
         ))}
       </ul>
@@ -70,6 +78,16 @@ export function FunderContacts({ funderId, contacts, readOnly }: { funderId: str
           <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Téléphone" aria-label="Téléphone" className="h-8 text-xs" />
           <Button type="submit" size="sm" variant="outline" disabled={pending || !form.lastName.trim()} data-testid="contact-submit"><Plus />Ajouter</Button>
         </form>
+      )}
+      {!readOnly && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          {attaching ? (
+            <SearchableSelect options={(free ?? []).map((c) => ({ value: c.id, label: c.label }))} value="" onChange={(v) => { if (v) run(() => attachFunderContact(funderId, v), () => { setAttaching(false); setFree(null); toast.success("Contact rattaché"); }); }} emptyOption={free ? "— choisir dans l'annuaire (contacts sans organisation) —" : "Lecture de l'annuaire…"} searchFrom={1} aria-label="Contact de l'annuaire à rattacher" className="h-8 w-full max-w-md text-xs" data-testid="contact-attach" />
+          ) : (
+            <button type="button" onClick={() => { setAttaching(true); void loadFree(); }} className="inline-flex items-center gap-1 text-primary hover:underline" data-testid="contact-attach-open"><Link2 className="size-3" />Rattacher un contact déjà dans l&apos;annuaire</button>
+          )}
+          <span>· même personne, une seule fiche : l&apos;annuaire des contacts est commun.</span>
+        </div>
       )}
     </div>
   );

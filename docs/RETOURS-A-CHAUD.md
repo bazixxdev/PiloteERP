@@ -366,6 +366,13 @@ Gaël : « fait 1 2 3 4 : à traiter en module ? » puis « Adhérents, Brevo et
 - **Envoyer vers Brevo** (auteur de la liste ou admin, listes manuelles) : dialogue qui annonce ce qui part (avec e-mail), ce qui ne part pas (sans e-mail ; désinscrits / supprimés, jamais renvoyés). Première fois : liste créée dans le dossier « Pilote » (créé au besoin) ; puis contacts créés ou complétés (`updateEnabled`, seulement les attributs que le compte connaît), inscrits ; ceux retirés ici sortent de la liste Brevo (restent dans Brevo). Identifiant Brevo posé sur le contact au passage ; « dans Brevo depuis le … » dans l'en-tête.
 - Pas de synchro planifiée (un bouton ; cron plus tard si l'usage le demande), pas de fusion de contacts, pas de HelloAsso (viendra avec Adhérents).
 
+### AF. Contacts des financeurs = annuaire ; listes de base (18/09) — fait
+
+Gaël : « un contact dans une fiche financeur ne fait pas lien avec les contacts unifiés ? d'ailleurs faudrait peut-être faire une liste de base (non supprimable) des financeurs par souci de logique ».
+- C'était déjà la même table (`Contact`, `organisationId`) depuis E2, mais l'écran ne le montrait pas. Désormais, dans le bloc Contacts d'un financeur ou d'une organisation : **lien vers la fiche unique** de chaque contact (annuaire : mots-clés, listes, notes, Brevo), **« Rattacher un contact déjà dans l'annuaire »** (ceux sans organisation ; les autres se déplacent depuis leur fiche), et le formulaire d'ajout **ne duplique plus** : un e-mail déjà connu rattache le contact existant (ou dit chez qui il est).
+- **Listes de base** (`lib/contacts.ts`, `BASE_LISTS`, identifiants `base:<genre>`) : une par genre d'organisation — Interlocuteurs · financeurs / fournisseurs / partenaires / réseaux / collectivités —, calculées à la volée (contacts en poste des organisations actives du genre), sans ligne en base, sans auteur, non supprimables, lisibles de tous, exportables ; pas de rôle ni de colonnes propres, pas d'ajout (on complète en rattachant un contact à son organisation). Groupe « Listes de base » en tête de la colonne de gauche ; la fiche d'un contact cite ses listes de base.
+- Test : `tests/contacts.spec.ts` (4e test).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

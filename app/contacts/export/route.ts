@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   if (url.searchParams.get("annuaire")) {
     const rows = await prisma.contact.findMany({ where: { leftAt: null }, include: { organisation: { select: { name: true } } }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }] });
-    return NextResponse.json(rows.map((c) => ({ id: c.id, label: `${contactName(c)}${c.organisation?.name ?? c.organisationName ? ` · ${c.organisation?.name ?? c.organisationName}` : ""}${c.email ? ` · ${c.email}` : ""}` })));
+    return NextResponse.json(rows.map((c) => ({ id: c.id, organisationId: c.organisationId, label: `${contactName(c)}${c.organisation?.name ?? c.organisationName ? ` · ${c.organisation?.name ?? c.organisationName}` : ""}${c.email ? ` · ${c.email}` : ""}` })));
   }
   const id = url.searchParams.get("liste");
   const list = id ? await loadContactList(id) : null;

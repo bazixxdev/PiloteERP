@@ -108,3 +108,44 @@ test("une liste partagée au pôle se lit chez un collègue du pôle, en lecture
   await expect(page.locator("[data-testid^=contact-list-settings-]")).toHaveCount(0);
   await expect(page.locator("tr", { hasText: "Fatou Diallo" }).locator("[data-testid^=cell-charte-]")).toBeDisabled();
 });
+
+// 18/09, retour de Gaël : les contacts d'un financeur sont ceux de l'annuaire (une seule fiche), et une liste de base non
+// supprimable réunit les interlocuteurs des financeurs (une par genre d'organisation).
+test("les contacts d'un financeur sont ceux de l'annuaire : rattachement, pas de doublon par e-mail, liste de base des financeurs", async ({ page }) => {
+  await page.goto("/financeurs");
+  await iAm(page, "Nadia Ferrand");
+  await page.getByTestId("funders-table").getByRole("link", { name: "Région", exact: true }).click();
+  await expect(page.getByLabel("Nom du financeur")).toHaveValue("Région");
+  // Rattacher quelqu'un déjà dans l'annuaire (sans organisation).
+  await page.getByTestId("contact-attach-open").click();
+  await pick(page, "contact-attach", "Olivier Renaud");
+  const renaud = page.locator('li[data-contact="Renaud"]');
+  await expect(renaud).toBeVisible();
+  // Le formulaire avec un e-mail déjà connu rattache le contact existant au lieu de le dupliquer.
+  await page.getByTestId("contact-lastname").fill("Kervella");
+  await page.getByTestId("contact-email").fill("y.kervella@exemple.fr");
+  await page.getByTestId("contact-submit").click();
+  await expect(page.locator('li[data-contact="Kervella"]')).toBeVisible();
+  // Chaque contact mène à sa fiche unique dans l'annuaire, où sa structure est bien la Région.
+  await renaud.locator("[data-testid^=contact-fiche-]").click();
+  await expect(page.getByTestId("contact-panel")).toContainText("Olivier Renaud");
+  await expect(page.getByTestId("contact-organisation")).toContainText("Région");
+  await page.goto("/contacts?q=kervella");
+  await expect(page.locator("[data-testid^=contact-row-]")).toHaveCount(1);
+  // La liste de base des financeurs : calculée, sans réglages ni ajout, exportable.
+  await page.getByTestId("base-contact-lists").locator('[data-name="Interlocuteurs · financeurs"]').click();
+  await expect(page.getByTestId("contact-list-base")).toBeVisible();
+  const table = page.getByTestId("contact-list-table");
+  await expect(table).toContainText("Olivier Renaud");
+  await expect(table).toContainText("Yann Kervella");
+  await expect(table).toContainText("Hélène Marchand");
+  await expect(page.getByTestId("contact-list-add")).toHaveCount(0);
+  await expect(page.locator("[data-testid^=contact-list-settings-]")).toHaveCount(0);
+  const href = (await page.getByTestId("contact-list-export").getAttribute("href"))!;
+  const csv = await (await page.request.get(href)).text();
+  expect(csv).toContain("Renaud;Olivier");
+  // La fiche d'Olivier cite la liste de base.
+  await page.goto("/contacts?q=renaud");
+  await page.locator("[data-testid^=contact-open-]").click();
+  await expect(page.getByTestId("contact-where")).toContainText("Interlocuteurs · financeurs");
+});
