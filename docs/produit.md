@@ -45,6 +45,8 @@ Rien d'autre : jamais de patch d'instance.
 
 ## Déjà en place (15/09)
 
+- **Habillage par client** (18/09, lot I) : `config/clients/<client>.ts` — nom court / long avec genre, quatre images (`public/clients/<client>/`), thème complet (tous les tokens de `globals.css`), polices (pile locale ou Google via `next/font`), modules et réglages posés au seed, **vocabulaire** (projet, édition, action, pôle, CODIR, RAF, direction, pilote). Sélection au build par `NEXT_PUBLIC_CLIENT` (`config/clients/index.ts`, imports statiques). `lib/vocab.ts` fournit `V` et les helpers d'article / d'accord (`le`, `un`, `du`, `de`, `au`, `ce`, `mon`, `son`, `tout`, `aucun`, `seul`, `adj`, `ppe`, `nb`…) ; `npm run check:vocab` (AST TypeScript, chaînes et texte JSX seulement) interdit tout mot en dur. `lib/branding.ts` est le seul point d'entrée du layout, du `<Logo>` et du favicon (`app/icon.tsx`) : l'écran admin › Apparence (feuille de route) viendra s'y brancher en surchargeant le fichier par la base. Seeds : `prisma/seeds/common.ts` (tronc), `cress.ts`, `tlst.ts` (`--skeleton`). Déploiement : `./deploy/deploy.sh <instance>` avec `deploy/instances/<instance>.env`, unité `pilote@.service`. Recette : projet Playwright `tlst`.
+
 - **PostgreSQL** (17/09) : un moteur pour toutes les instances ; une base par instance (`cress_pilote`, demain `tlst_pilote`), sauvegarde `pg_dump` par déploiement, base de test séparée.
 - **Organisations** (18/09, lot E2) : un annuaire par instance, genres cumulables (financeur, fournisseur, partenaire, réseau, collectivité) — le module Adhérents de TLST viendra s'y greffer (une organisation ou une personne adhérente).
 - **Rôles et droits** (17/09, lot F2) : catalogue de permissions en code, rôles en base par instance (chaque structure règle ses droits, crée ses rôles), contexte en code.
@@ -53,4 +55,4 @@ Rien d'autre : jamais de patch d'instance.
 
 ## Ce qui sera fait quand le produit sera lancé (pas avant)
 
-auth better-auth (+ Entra ID) → permissions par module en base (matrice) au-dessus des droits contextuels → `Person` → `Personne` élargie (externes, contacts) → modules activables par instance → `config/clients/` → `deploy.sh` paramétré par instance → portage des modules TLST (Adhérents/HelloAsso, Pennylane, Trésorerie, Matériel) → archivage d'`erp-tlst`.
+Entra ID (second fournisseur better-auth) → instance TLST en ligne et reprise des données d'erp-tlst → archivage d'`erp-tlst` → écran admin › Apparence (surcharge en base de `config/clients/`, Gaël vise plus de deux clients). Fait : auth, permissions, `Person` / contacts, modules par instance, `config/clients/`, `deploy.sh` par instance, portage des modules TLST.

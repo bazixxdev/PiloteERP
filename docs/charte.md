@@ -19,6 +19,6 @@ Direction V2 donnée le 13/09/2026 (maquette `CRESS/maquette V2.html`, inspirée
 - Rayons : 8 px pour les cartes (`rounded-2xl`), 6 px pour les champs et boutons, 4 px pour les badges (`rounded-sm`).
 - Badges de statut : symbole écrit avant le libellé (○ ◐ ✓ ! ↻ ◷), jamais la couleur seule.
 - Jauges fines (5 px) avec le pourcentage écrit ; jauge scindée réalisé / engagé sur le budget.
-- Logo : `public/logo-cress.png` (465 × 187, fond transparent, retravaillé depuis le JPG fourni) en haut de la barre latérale ; `public/logo-cress-mark.png` (tourbillon seul) pour la barre réduite et la barre haute mobile.
+- Logo : `public/clients/cress/logo.png` (lot I : par client, avec `logo-white.png`, `mark.png`, `favicon.png` ; ex-`public/logo-cress.png`) (465 × 187, fond transparent, retravaillé depuis le JPG fourni) en haut de la barre latérale ; `public/logo-cress-mark.png` (tourbillon seul) pour la barre réduite et la barre haute mobile.
 - Mobile (< 768 px) : barre latérale masquée, navigation basse à trois entrées (Ma semaine / Mes temps / Projets), saisie des temps jour par jour avec la semaine visible ; cibles tactiles 44 px.
 - Statuts d'édition : re-challengée (ocre), proposée (gris), validée (vert), en cours (bleu), bilan fait (gris).

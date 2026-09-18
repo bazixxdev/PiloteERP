@@ -472,6 +472,14 @@ Gaël (retour vocal du 18/09) : un seul bouton « Nouvelle demande », la valida
 - **Validations par niveau** : la page `/validations` redirige vers `/demandes` ; la feuille du menu disparaît ; les bons pour accord restent sous `/validations/[id]`. Menu Demandes : « Qu'on me fait » (badge), « Que j'ai faites », « Toute la CRESS » (direction).
 - Tests adaptés (lot3-demandes, recette-3, scénario collectif, revue-ux, rail) ; le réaiguillage et la notification du demandeur sont testés.
 
+### AR. Lot I « Multi-instance » (18/09) — fait
+
+- Un seul dépôt pour plusieurs clients : `config/clients/cress.ts` et `tlst.ts` (nom, genre, quatre images, thème complet, polices, vocabulaire), `NEXT_PUBLIC_CLIENT` au build, `lib/vocab.ts`, `lib/branding.ts`, `app/icon.tsx`, `<Logo variant>`.
+- Vocabulaire passé sur **tous** les écrans (≈ 180 fichiers, 700 chaînes) par un transformeur AST puis relecture ; `npm run check:vocab` au vert. Le mot « action » (jalon) devient aussi un mot du client (« étape » chez TLST). « Pilote » avec majuscule reste le produit. Les commentaires de code gardent les mots CRESS.
+- Sous `cress`, rien ne change à l'écran (suite Playwright verte sans toucher aux attentes). Un test préexistant, `relances`, échoue déjà sur `d1265cd` (le lot 3 Demandes laisse une notification à Élise Fontaine : le compteur de la cloche vaut 2, le test attend 1) — à corriger dans le lot 3, pas dans le lot I.
+- **À valider par Gaël / avec TLST** : la table des mots TLST (`config/clients/tlst.ts` — `raf` = « trésorier » au masculin, « trésorier·e » avec article ne se lisait pas), la palette verts / terre proposée, les logos placeholders (« TLST » en Trebuchet) à remplacer par le vrai logo puis `python3 scripts/make-brand-images.py`.
+- Seeds : tronc commun + CRESS (empreinte identique) + TLST (squelette + petite démo ; `NEXT_PUBLIC_CLIENT=tlst npm run seed -- -- --skeleton` pour la reprise des vraies données). `deploy.sh <instance>`, `pilote@.service`, conf nginx TLST prête (DNS et certificat à poser). Captures dans `docs/screens/tlst/`.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
