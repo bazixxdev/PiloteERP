@@ -6,6 +6,10 @@ import { fmtDate, fmtEuro } from "@/lib/format";
 import { kindsOf } from "@/lib/organisations";
 import { KindToggles } from "./controls";
 import { LeftContacts } from "./left-contacts";
+import { MembershipList } from "@/components/members/membership-list";
+import { getCurrentPerson, getSettings } from "@/lib/session";
+import { instanceHas } from "@/lib/modules";
+import { canManageMembers } from "@/lib/rights";
 
 // Fiche d'une organisation (lot E2), en panneau sur l'annuaire : identité, genres, contacts, et tout ce qui la cite dans l'outil.
 export async function OrganisationPanelBody({ id, rw }: { id: string; rw: boolean }) {
@@ -18,8 +22,11 @@ export async function OrganisationPanelBody({ id, rw }: { id: string; rw: boolea
       validations: { select: { id: true, label: true, amount: true, status: true, createdAt: true, edition: { select: { id: true, project: { select: { name: true } } } } }, orderBy: { createdAt: "desc" }, take: 8 },
       editions: { include: { edition: { select: { id: true, year: true, project: { select: { name: true } } } } }, orderBy: { createdAt: "desc" } },
       calls: { where: { active: true }, select: { id: true, label: true, teamStatus: true } },
+      memberships: { orderBy: { year: "desc" } },
     },
   });
+  const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
+  const membersOn = instanceHas(settings, "adherents");
   if (!o) return <p className="text-sm text-muted-foreground">Organisation introuvable.</p>;
   const kinds = kindsOf(o);
   const F = ({ field, label, type = "text", value }: { field: string; label: string; type?: "text" | "textarea"; value: unknown }) => (
@@ -50,6 +57,12 @@ export async function OrganisationPanelBody({ id, rw }: { id: string; rw: boolea
         <FunderContacts funderId={o.id} contacts={live} readOnly={!rw} />
         <LeftContacts contacts={[...live.map((c) => ({ id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(" "), leftAt: null })), ...left.map((c) => ({ id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(" "), leftAt: fmtDate(c.leftAt!) }))]} readOnly={!rw} />
       </section>
+      {membersOn && (kinds.includes("member") || canManageMembers(me)) && (
+        <section className="grid gap-2" data-testid="organisation-memberships">
+          <h3 className="text-xs font-semibold">Adhésions <span className="text-[10px] font-normal text-muted-foreground">· une ligne par année ; le détail sur la page Adhérents</span></h3>
+          <MembershipList memberships={o.memberships} rw={canManageMembers(me)} organisationId={o.id} />
+        </section>
+      )}
       <section className="grid gap-2" data-testid="organisation-dossiers">
         <h3 className="text-xs font-semibold">Dans l&apos;outil</h3>
         <ul className="grid gap-1 text-xs">

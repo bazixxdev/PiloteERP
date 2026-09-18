@@ -85,6 +85,7 @@ model Person {
   decisionsTaken     Decision[]         @relation("DecisionAuthor")
   contactsCreated    Contact[]          @relation("ContactCreator")
   contactLists       ContactList[]      @relation("ContactListOwner")
+  membershipsCreated Membership[]       @relation("MembershipCreator")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
@@ -225,6 +226,7 @@ model Organisation {
   conventions Convention[]
   contacts    Contact[]
   calls       Call[]
+  memberships Membership[]
   validations ValidationRequest[]
   editions    EditionPartner[]
 }
@@ -261,6 +263,7 @@ model Contact {
   lines            FundingLine[]
   conventions      Convention[]
   listItems        ContactListItem[]
+  memberships      Membership[]
 
   @@index([organisationId])
   @@index([email])
@@ -282,9 +285,10 @@ model ContactList {
   fields      String   @default("[]")
   // Connecteur Brevo : une liste `source = brevo` est le miroir d'une liste Brevo (membres tenus par la synchronisation, colonnes
   // = attributs Brevo, en lecture) ; une liste `manual` envoyée vers Brevo garde l'identifiant de la liste créée là-bas.
-  source        String    @default("manual") // manual | brevo
+  source        String    @default("manual") // manual | brevo | helloasso
   brevoListId   Int?      @unique
   brevoSyncedAt DateTime? // dernière synchronisation (source brevo) ou dernier envoi (source manual)
+  helloAssoForm String?   @unique // source helloasso : slug du formulaire (événement) dont les inscrits sont tenus en miroir
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
   items       ContactListItem[]
@@ -704,7 +708,7 @@ model Settings {
   billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
-  modules                   String  @default("veille")
+  modules                   String  @default("veille,adherents")
   // Réalisé comptable (lot D) : quelle source alimente le « réalisé » des alertes d'enveloppe et du portefeuille —
   // raf = saisi par la RAF sur les dépenses (Expense.spent) ; ledger = le grand livre analytique importé. L'autre s'affiche en regard.
   realizedSource            String  @default("raf")
@@ -713,6 +717,38 @@ model Settings {
   // Connecteur Brevo (clé dans l'environnement, BREVO_API_KEY) : dernière synchronisation et son compte rendu.
   brevoSyncedAt             DateTime?
   brevoSyncReport           String?
+  // Connecteur HelloAsso (identifiants dans l'environnement) : dernière synchronisation et son compte rendu.
+  helloAssoSyncedAt         DateTime?
+  helloAssoSyncReport       String?
+}
+
+// Adhésions (module « adherents », 18/09) : une adhésion = une organisation (ou une personne de l'annuaire) × une année,
+// avec son collège, sa cotisation et son règlement. Le membre lui-même reste une organisation de l'annuaire (genre
+// « member ») ou un contact : pas de table à part pour l'identité. Une adhésion venue de HelloAsso garde l'identifiant de
+// l'item (idempotence) ; les autres sont saisies à la main.
+model Membership {
+  id              String        @id @default(cuid())
+  organisationId  String?
+  organisation    Organisation? @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  contactId       String? // personne physique adhérente, ou référent·e de la structure
+  contact         Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  year            Int
+  college         String? // collège ou tarif (référentiel « college », texte libre accepté)
+  amount          Float         @default(0)
+  status          String        @default("due") // due (à régler) | paid (réglée) | exempt (exonérée) | cancelled (annulée)
+  paidAt          DateTime?
+  method          String? // helloasso | transfer | cheque | cash | other
+  helloAssoItemId String?       @unique
+  helloAssoForm   String? // slug du formulaire HelloAsso d'origine
+  notes           String?
+  createdById     String?
+  createdBy       Person?       @relation("MembershipCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now()) @updatedAt
+
+  @@index([year])
+  @@index([organisationId])
+  @@index([contactId])
 }
 
 // Réalisé comptable (lot D) : snapshot agrégé du grand livre analytique, par source (fichier importé, Pennylane…), rapproché

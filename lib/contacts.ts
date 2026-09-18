@@ -8,8 +8,8 @@ import { kindFilter, ORGANISATION_KINDS, type OrganisationKind } from "./organis
 // (« Charte », « Séminaire 2025 », « Territoire »…) sans refaire un tableur.
 
 export type ListFieldType = "bool" | "text" | "date" | "select";
-// `brevo` : colonne posée par la synchronisation Brevo (un attribut du compte) — en lecture, ne se retire pas.
-export type ListField = { key: string; label: string; type: ListFieldType; options?: string[]; brevo?: boolean };
+// `synced` : colonne posée par une synchronisation (attribut Brevo, champ HelloAsso) — en lecture, ne se retire pas.
+export type ListField = { key: string; label: string; type: ListFieldType; options?: string[]; synced?: boolean };
 export const FIELD_TYPES: { value: ListFieldType; label: string }[] = [
   { value: "bool", label: "Case à cocher" },
   { value: "text", label: "Texte court" },
@@ -20,7 +20,7 @@ export const FIELD_TYPES: { value: ListFieldType; label: string }[] = [
 export function parseFields(s: string | null | undefined): ListField[] {
   try {
     const v = JSON.parse(s || "[]");
-    return Array.isArray(v) ? v.filter((f) => f && typeof f.key === "string" && typeof f.label === "string" && ["bool", "text", "date", "select"].includes(f.type)).map((f) => ({ key: f.key, label: f.label, type: f.type, options: Array.isArray(f.options) ? f.options.map(String) : undefined, ...(f.brevo ? { brevo: true } : {}) })) : [];
+    return Array.isArray(v) ? v.filter((f) => f && typeof f.key === "string" && typeof f.label === "string" && ["bool", "text", "date", "select"].includes(f.type)).map((f) => ({ key: f.key, label: f.label, type: f.type, options: Array.isArray(f.options) ? f.options.map(String) : undefined, ...(f.synced || f.brevo ? { synced: true } : {}) })) : [];
   } catch { return []; }
 }
 export const serializeFields = (fields: ListField[]) => JSON.stringify(fields);
@@ -61,6 +61,10 @@ export const CONTACT_COLUMNS: { key: string; label: string; aliases: string[] }[
 // lisible de tous, exportable ; on la complète en rattachant un contact à son organisation.
 export const BASE_LIST_PREFIX = "base:";
 export const BASE_LISTS = ORGANISATION_KINDS.map((k) => ({ id: `${BASE_LIST_PREFIX}${k.key}`, kind: k.key as OrganisationKind, name: `Interlocuteurs · ${k.plural.toLowerCase()}`, description: `Les contacts en poste des organisations de genre « ${k.label} », à jour automatiquement.` }));
+// Une liste de base de plus, calculée sur le module Adhérents : les interlocuteurs des adhérents à jour (réglés ou exonérés)
+// de l'année, et les personnes physiques adhérentes à jour.
+export const MEMBERS_CURRENT_ID = `${BASE_LIST_PREFIX}members_current`;
+export const MEMBERS_CURRENT_LIST = (year: number) => ({ id: MEMBERS_CURRENT_ID, kind: "member" as OrganisationKind, name: `Adhérents à jour · ${year}`, description: `Les interlocuteurs des structures à jour de cotisation ${year} (réglée ou exonérée), et les personnes adhérentes à jour.` });
 export const isBaseListId = (id: string) => id.startsWith(BASE_LIST_PREFIX);
 export const baseListFor = (kind: string) => BASE_LISTS.find((b) => b.kind === kind) ?? null;
 
@@ -76,12 +80,19 @@ const listInclude = { owner: { select: { id: true, name: true, poleId: true } },
 export async function loadContactLists(me: Viewer) {
   const rows = await prisma.contactList.findMany({ include: listInclude, orderBy: [{ name: "asc" }] });
   const brevo = rows.filter((l) => l.source === "brevo" && canReadList(me, l));
-  const own = rows.filter((l) => l.source !== "brevo");
+  const helloasso = rows.filter((l) => l.source === "helloasso" && canReadList(me, l));
+  const own = rows.filter((l) => l.source !== "brevo" && l.source !== "helloasso");
   const mine = own.filter((l) => l.ownerId === me.id);
   const shared = own.filter((l) => l.ownerId !== me.id && canReadList(me, l));
   const orgs = await prisma.organisation.findMany({ where: { active: true }, select: { kinds: true, _count: { select: { contacts: { where: { leftAt: null } } } } } });
   const base = BASE_LISTS.map((b) => ({ ...b, count: orgs.filter((o) => o.kinds.split(",").includes(b.kind)).reduce((n, o) => n + o._count.contacts, 0) }));
-  return { mine, shared, brevo, base };
+  const currentYear = new Date().getFullYear();
+  const current = await prisma.membership.findMany({ where: { year: currentYear, status: { in: ["paid", "exempt"] } }, select: { organisationId: true, contactId: true } });
+  const currentOrgIds = new Set(current.map((m) => m.organisationId).filter(Boolean));
+  const currentContacts = new Set(current.filter((m) => !m.organisationId && m.contactId).map((m) => m.contactId));
+  const orgContacts = await prisma.contact.count({ where: { leftAt: null, organisationId: { in: Array.from(currentOrgIds) as string[] } } });
+  base.push({ ...MEMBERS_CURRENT_LIST(currentYear), count: orgContacts + currentContacts.size });
+  return { mine, shared, brevo, helloasso, base };
 }
 
 export type ContactRow = Awaited<ReturnType<typeof loadContacts>>[number];
@@ -103,9 +114,20 @@ export async function loadContactList(id: string) {
 }
 
 async function loadBaseList(id: string) {
-  const b = BASE_LISTS.find((x) => x.id === id);
+  const year = new Date().getFullYear();
+  const b = id === MEMBERS_CURRENT_ID ? MEMBERS_CURRENT_LIST(year) : BASE_LISTS.find((x) => x.id === id);
   if (!b) return null;
-  const contacts = await prisma.contact.findMany({ where: { leftAt: null, organisation: { active: true, ...kindFilter(b.kind) } }, include: { organisation: { select: { id: true, name: true } } }, orderBy: [{ organisation: { name: "asc" } }, { lastName: "asc" }, { firstName: "asc" }] });
+  const include = { organisation: { select: { id: true, name: true } } };
+  const orderBy = [{ organisation: { name: "asc" as const } }, { lastName: "asc" as const }, { firstName: "asc" as const }];
+  let contacts;
+  if (id === MEMBERS_CURRENT_ID) {
+    const current = await prisma.membership.findMany({ where: { year, status: { in: ["paid", "exempt"] } }, select: { organisationId: true, contactId: true } });
+    const orgIds = Array.from(new Set(current.map((m) => m.organisationId).filter((x): x is string => Boolean(x))));
+    const personIds = Array.from(new Set(current.filter((m) => !m.organisationId && m.contactId).map((m) => m.contactId as string)));
+    contacts = await prisma.contact.findMany({ where: { leftAt: null, OR: [{ organisationId: { in: orgIds } }, { id: { in: personIds } }] }, include, orderBy });
+  } else {
+    contacts = await prisma.contact.findMany({ where: { leftAt: null, organisation: { active: true, ...kindFilter(b.kind) } }, include, orderBy });
+  }
   const now = new Date();
   return {
     id: b.id, ownerId: "", name: b.name, description: b.description, visibility: "all", color: null, editionId: null, fields: [] as ListField[], source: "base", brevoListId: null, brevoSyncedAt: null, createdAt: now, updatedAt: now,

@@ -9,7 +9,8 @@
 # Base : PostgreSQL local du VPS (rôle et base créés une fois par ce script, mot de passe généré et gardé dans le .env serveur).
 # Comptes (lot F) : BETTER_AUTH_SECRET généré une fois dans le .env serveur ; mot de passe de démo commun « pilote-demo-2026 ».
 # Brevo (18/09) : le connecteur s'active en ajoutant BREVO_API_KEY="…" au .env serveur (à la main, jamais par ce script ni par un
-# agent), puis `systemctl restart cress-pilote`. Sans clé, l'admin affiche « non configuré ».
+# agent), puis `systemctl restart cress-pilote`. Sans clé, l'admin affiche « non configuré ». Idem HelloAsso (module Adhérents) :
+# HELLOASSO_CLIENT_ID, HELLOASSO_CLIENT_SECRET, HELLOASSO_ORG_SLUG.
 set -euo pipefail
 
 HOST=bazixx-vps

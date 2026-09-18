@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.PW_PORT ?? 3100);
 // Faux Brevo (tests/brevo-mock.mjs) : le serveur de test pointe dessus, la clé est fictive.
 const BREVO_MOCK_PORT = PORT + 199;
+const HELLOASSO_MOCK_PORT = PORT + 198;
 export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgresql://pilote:pilote@localhost:5432/pilote_test";
 process.env.DATABASE_URL = TEST_DATABASE_URL;
 
@@ -37,11 +38,18 @@ export default defineConfig({
       env: { BREVO_MOCK_PORT: String(BREVO_MOCK_PORT) },
     },
     {
+      command: `node tests/helloasso-mock.mjs`,
+      url: `http://localhost:${HELLOASSO_MOCK_PORT}/v5/ping`,
+      reuseExistingServer: true,
+      timeout: 20_000,
+      env: { HELLOASSO_MOCK_PORT: String(HELLOASSO_MOCK_PORT) },
+    },
+    {
       command: `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test npm run dev -- -p ${PORT}`,
       url: `http://localhost:${PORT}/matrice/export`,
       reuseExistingServer: true,
       timeout: 120_000,
-      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3` },
+      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "cress-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
     },
   ],
 });

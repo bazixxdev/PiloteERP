@@ -75,6 +75,7 @@ async function reset() {
   await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
+  await prisma.membership.deleteMany();
   await prisma.contactListItem.deleteMany();
   await prisma.contactList.deleteMany();
   await prisma.contact.deleteMany();
@@ -1028,7 +1029,7 @@ async function main() {
     { personId: director.id, senderId: leadB.id, kind: "info", title: "Pour information · Devis intervenant conférence 2 approuvé (600 €)", body: `Par ${leadB.name}, niveau 2.`, link: `/edition/${ed("TES-02").id}?onglet=budget`, createdAt: d(-97), readAt: d(-96) },
   ] });
 
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille" } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents" } });
 
   const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
   // Contacts et listes (18/09) : quelques personnes extérieures fictives, une liste « Réseau développeurs ESS » à Thomas
@@ -1045,6 +1046,32 @@ async function main() {
   for (const [i, c] of extContacts.slice(0, 4).entries()) await prisma.contactListItem.create({ data: { listId: reseau.id, contactId: c.id, role: i === 3 ? "Élue référente" : "Membre", values: JSON.stringify({ charte: i !== 2, seminaire_2025: i < 2, territoire: ["Loiret", "Indre-et-Loire", "Cher", "Indre-et-Loire"][i] }) } });
   const invites = await prisma.contactList.create({ data: { ownerId: byName("Élise Fontaine").id, name: "Invités · soirée de remise des prix", visibility: "private", color: "corail", editionId: ed("SEN-01").id, fields: JSON.stringify([{ key: "confirme", label: "Confirmé", type: "bool" }, { key: "table", label: "Table", type: "text" }]) } });
   for (const c of [extContacts[3], extContacts[4]]) await prisma.contactListItem.create({ data: { listId: invites.id, contactId: c.id, role: "Invité·e", values: JSON.stringify({ confirme: c === extContacts[3], table: c === extContacts[3] ? "Table d'honneur" : "" }) } });
+
+  // Adhérents (module « adherents », 18/09) : des structures adhérentes de l'annuaire (genre member), leurs référents, des
+  // adhésions 2025 réglées et 2026 en cours de campagne (réglées, à régler, une exonérée), deux personnes physiques.
+  const year = new Date().getFullYear();
+  const memberOrgs = await Promise.all([
+    ["Coop'Alim Berry", "member", "Coopératives", 180, "Bourges", "Bastien", "Lefort"],
+    ["Initiative Loiret", "member,network", "Réseaux et fédérations", 250, "Orléans", "Camille", "Nguyen"],
+    ["Mutuelle Solidaire du Centre", "member", "Mutuelles", 400, "Tours", "Inès", "Barbier"],
+    ["Fondation Val Solidaire", "member", "Fondations", 400, "Blois", "Paul", "Lemoine"],
+    ["La Ressourcerie du Cher", "member", "Associations", 90, "Vierzon", "Awa", "Sy"],
+    ["Scop Bâti Loire", "member", "Coopératives", 180, "Orléans", "Nadège", "Roussel"],
+    ["Emploi Solidaire 41", "member", "Associations", 90, "Blois", "Kevin", "Marchal"],
+    ["Ateliers du Réemploi", "member", "Entreprises sociales (ESUS)", 150, "Châteauroux", "Sophie", "Dubreuil"],
+  ].map(async ([name, kinds, college, amount, city, firstName, lastName]) => {
+    const o = await prisma.organisation.create({ data: { name: name as string, kinds: kinds as string, address: city as string } });
+    const contact = await prisma.contact.create({ data: { organisationId: o.id, firstName: firstName as string, lastName: lastName as string, email: `${String(firstName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")[0]}.${String(lastName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s/g, "")}@exemple.fr`, role: "Référent·e adhésion", primary: true, createdById: byName("Nadia Ferrand").id } });
+    return { o, contact, college: college as string, amount: amount as number };
+  }));
+  for (const [i, m] of memberOrgs.entries()) {
+    await prisma.membership.create({ data: { organisationId: m.o.id, contactId: m.contact.id, year: year - 1, college: m.college, amount: m.amount, status: "paid", paidAt: new Date(`${year - 1}-0${(i % 4) + 2}-1${i}`), method: i % 3 === 0 ? "helloasso" : i % 3 === 1 ? "transfer" : "cheque", createdById: byName("Nadia Ferrand").id } });
+    const status = i < 4 ? "paid" : i === 4 ? "exempt" : "due";
+    await prisma.membership.create({ data: { organisationId: m.o.id, contactId: m.contact.id, year, college: m.college, amount: i === 4 ? 0 : m.amount, status, paidAt: status === "paid" ? new Date(`${year}-0${(i % 3) + 1}-2${i}`) : null, method: status === "paid" ? (i % 2 ? "transfer" : "helloasso") : null, notes: i === 4 ? "Exonérée : partenariat 2026 (décision du CA du 12/01)." : i === 6 ? "Relancée par mail le 3 septembre." : null, createdById: byName("Nadia Ferrand").id } });
+  }
+  // Deux personnes physiques : Léna (à jour), Olivier (à régler).
+  await prisma.membership.create({ data: { contactId: extContacts[5].id, year, college: "Personnes physiques", amount: 30, status: "paid", paidAt: new Date(`${year}-02-03`), method: "helloasso", createdById: byName("Nadia Ferrand").id } });
+  await prisma.membership.create({ data: { contactId: extContacts[4].id, year, college: "Personnes physiques", amount: 30, status: "due", createdById: byName("Nadia Ferrand").id } });
 
   // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
   for (const [code, name, role] of [["TES-02", "Université de Tours", "Co-organise le cycle, accueille deux conférences"], ["TES-05", "France Active Centre-Val de Loire", "Intervient sur le financement des coopérations"], ["SEN-03", "Tours Métropole Val de Loire", "Accueille le forum"], ["OBS-01", "Mouvement associatif Centre-Val de Loire", "Partage ses données associatives"], ["SEN-03", "ESS France", "Relaie le forum au niveau national"]] as const) {

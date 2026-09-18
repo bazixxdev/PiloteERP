@@ -15,7 +15,7 @@ export type NavLeaf = {
 };
 
 export type NavSection = {
-  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "echeances" | "direction" | "admin";
+  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "echeances" | "direction" | "admin";
   label: string;
   badge?: number;
   items: NavLeaf[];
@@ -26,6 +26,7 @@ export type NavSection = {
 export type NavContext = Actor & {
   modules: string[]; // modules de la personne (Mon compte)
   veille: boolean; // module d'instance « appels à projets »
+  adherents: boolean; // module d'instance « adhérents »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
@@ -67,6 +68,14 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         ...(ctx.veille ? [{ label: "Appels à projets", href: "/appels", path: "/appels" }] : []),
       ],
     },
+    ...(ctx.adherents ? [{
+      id: "adherents" as const,
+      label: "Adhérents",
+      items: [
+        { label: "Adhérents", href: "/adherents", path: "/adherents", absent: ["vue"] },
+        { label: "Cotisations", href: "/adherents?vue=cotisations", path: "/adherents", present: ["vue"] },
+      ],
+    }] : []),
     {
       id: "demandes",
       label: "Demandes",

@@ -61,9 +61,9 @@ export async function syncBrevo(cfg: BrevoConfig, byId: string, f: typeof fetch 
     const fields = parseFields(list.fields);
     const wanted = new Map<string, string>();
     for (const m of members) for (const name of Object.keys(readAttributes(m.attributes).others)) wanted.set(name, name);
-    const next: ListField[] = fields.filter((x) => !x.brevo || wanted.has(x.label));
-    for (const name of wanted.keys()) if (!next.some((x) => x.brevo && x.label === name)) next.push({ key: `brevo_${fieldKey(name)}`, label: name, type: "text", brevo: true });
-    const keyOf = new Map(next.filter((x) => x.brevo).map((x) => [x.label, x.key]));
+    const next: ListField[] = fields.filter((x) => !x.synced || wanted.has(x.label));
+    for (const name of wanted.keys()) if (!next.some((x) => x.synced && x.label === name)) next.push({ key: `brevo_${fieldKey(name)}`, label: name, type: "text", synced: true });
+    const keyOf = new Map(next.filter((x) => x.synced).map((x) => [x.label, x.key]));
     const memberIds = new Set(members.map((m) => idOf.get(m.id)).filter(Boolean) as string[]);
     const current = new Map(list.items.map((i) => [i.contactId, i]));
     for (const m of members) {

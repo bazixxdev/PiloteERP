@@ -12,7 +12,8 @@ export type RefFamily =
   | "work_rhythm"
   | "time_visibility"
   | "attachment_kind"
-  | "decision_instance";
+  | "decision_instance"
+  | "college";
 
 export type RefDef = { code: string; label: string; color?: string };
 
@@ -75,6 +76,15 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "quarterly", label: "Revue trimestrielle" },
     { code: "board", label: "Bureau / CA" },
   ],
+  college: [
+    { code: "associations", label: "Associations" },
+    { code: "cooperatives", label: "Coopératives" },
+    { code: "mutuelles", label: "Mutuelles" },
+    { code: "fondations", label: "Fondations" },
+    { code: "entreprises_sociales", label: "Entreprises sociales (ESUS)" },
+    { code: "reseaux", label: "Réseaux et fédérations" },
+    { code: "personnes", label: "Personnes physiques" },
+  ],
   time_visibility: [
     { code: "self", label: "La personne seule" },
     { code: "self_pole_lead_raf", label: "La personne, son responsable de pôle, la RAF et la direction" },
@@ -95,6 +105,7 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   time_visibility: "Visibilité du temps",
   attachment_kind: "Natures de pièces jointes",
   decision_instance: "Instances de décision",
+  college: "Collèges d'adhésion",
 };
 
 export type RefMap = Record<string, Record<string, RefDef>>;

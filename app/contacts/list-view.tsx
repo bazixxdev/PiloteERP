@@ -13,6 +13,7 @@ import { visibilityIcon } from "@/components/common/visibility-icon";
 import { addListField, addToList, deleteContactList, previewImport, removeFromList, removeListField, runImport, setItemValue, updateContactList, type ImportMapping, type ImportPreview } from "@/app/actions/contacts";
 import { BREVO_STATUS, CONTACT_COLUMNS, contactName, FIELD_TYPES, tagsOf, type ContactListFull, type ListField, type ListFieldType } from "@/lib/contacts";
 import { pushListToBrevo, syncBrevo, unfollowBrevoList } from "@/app/actions/brevo";
+import { syncHelloAsso, unfollowHelloAssoForm } from "@/app/actions/helloasso";
 import { fmtDate } from "@/lib/format";
 import { VISIBILITIES } from "@/lib/modules";
 import { NOTE_COLORS, noteColor } from "@/lib/notes";
@@ -34,7 +35,8 @@ function useRun(): [boolean, Run] {
 export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editions, organisations }: { list: ContactListFull; meId: string; canEdit: boolean; isAdmin: boolean; brevoConfigured: boolean; editions: EditionOpt[]; organisations: { id: string; name: string }[] }) {
   const [pending, run] = useRun();
   const router = useRouter();
-  const mirror = list.source === "brevo"; // miroir d'une liste Brevo : membres et attributs tenus par la synchronisation
+  const mirror = list.source === "brevo" || list.source === "helloasso"; // miroir : membres et colonnes tenus par la synchronisation
+  const sourceLabel = list.source === "helloasso" ? "HelloAsso" : "Brevo";
   const base = list.source === "base"; // liste de base : calculée (interlocuteurs d'un genre d'organisation), sans auteur ni réglages
   const [q, setQ] = useState("");
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -52,15 +54,15 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
             <span className="inline-flex items-center gap-1" title={vis?.hint} data-testid={`contact-list-visibility-${list.id}`} data-value={list.visibility}><Icon className="size-3" aria-hidden />{vis?.label}</span>
             {!base && (list.edition ? <span>· <Link href={`/edition/${list.edition.id}`} className="text-primary hover:underline">{list.edition.project.name} · {list.edition.year}</Link></span> : <span>· sans projet</span>)}
             {list.description && !base && <span>· {list.description}</span>}
-            {mirror && <span data-testid="contact-list-mirror">· synchronisée {list.brevoSyncedAt ? `le ${fmtDate(list.brevoSyncedAt)}` : "pas encore"} · membres tenus par Brevo</span>}
+            {mirror && <span data-testid="contact-list-mirror">· synchronisée {list.brevoSyncedAt ? `le ${fmtDate(list.brevoSyncedAt)}` : "pas encore"} · membres tenus par {sourceLabel}</span>}
             {!mirror && list.brevoListId && <span data-testid="contact-list-pushed">· dans Brevo{list.brevoSyncedAt ? ` depuis le ${fmtDate(list.brevoSyncedAt)}` : ""}</span>}
             {base && <span data-testid="contact-list-base">· liste de base, tenue automatiquement : pour la compléter, rattachez un contact à son organisation (fiche du contact, ou fiche de l&apos;organisation)</span>}
             {!canEdit && !base && <span>· en lecture</span>}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {mirror && isAdmin && <Button variant="outline" size="sm" className="text-xs" disabled={pending} onClick={() => run(() => syncBrevo(), (r) => toast.success(`Brevo : ${(r.data as { contacts: number }).contacts} contacts lus`))} data-testid="brevo-sync-list"><RefreshCw className="size-3.5" />Mettre à jour</Button>}
-          {mirror && isAdmin && <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" disabled={pending} onClick={() => { if (confirm(`Ne plus suivre « ${list.name} » ? Les contacts restent dans l'annuaire.`)) run(() => unfollowBrevoList(list.id), () => router.push("/contacts")); }} data-testid="brevo-unfollow">Ne plus suivre</Button>}
+          {mirror && isAdmin && <Button variant="outline" size="sm" className="text-xs" disabled={pending} onClick={() => run(() => list.source === "helloasso" ? syncHelloAsso() : syncBrevo(), () => toast.success(`${sourceLabel} : liste mise à jour`))} data-testid="brevo-sync-list"><RefreshCw className="size-3.5" />Mettre à jour</Button>}
+          {mirror && isAdmin && <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" disabled={pending} onClick={() => { if (confirm(`Ne plus suivre « ${list.name} » ? Les contacts restent dans l'annuaire.`)) run(() => list.source === "helloasso" ? unfollowHelloAssoForm(list.id) : unfollowBrevoList(list.id), () => router.push("/contacts")); }} data-testid="brevo-unfollow">Ne plus suivre</Button>}
           {canEdit && <ListSettings list={list} editions={editions} pending={pending} run={run} />}
         </div>
       </div>
@@ -81,12 +83,12 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
                 <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th>{!base && <th className="px-2 py-1.5">Rôle dans la liste</th>}
-                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`} title={f.brevo ? "Attribut Brevo, en lecture" : undefined}>{f.label}{canEdit && !f.brevo && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
+                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`} title={f.synced ? "Colonne synchronisée, en lecture" : undefined}>{f.label}{canEdit && !f.synced && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
                 {canEdit && !mirror && <th className="px-2 py-1.5"></th>}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? "Aucun contact dans cette liste Brevo pour l'instant." : base ? "Aucun contact rattaché à une organisation de ce genre pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? `Aucun contact dans cette liste ${sourceLabel} pour l'instant.` : base ? "Aucun contact rattaché à une organisation de ce genre pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
               {rows.map((i) => {
                 const c = i.contact;
                 return (
@@ -95,7 +97,7 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
                     <td className="px-2 py-1.5 text-xs">{c.organisation ? <Link href={`/organisations?organisation=${c.organisation.id}`} className="hover:underline">{c.organisation.name}</Link> : c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-2 py-1.5 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && <br />}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
                     {!base && <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>}
-                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.brevo} pending={pending} run={run} /></td>)}
+                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.synced} pending={pending} run={run} /></td>)}
                     {canEdit && !mirror && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
                   </tr>
                 );
@@ -149,7 +151,7 @@ function ListSettings({ list, editions, pending, run }: { list: ContactListFull;
           </fieldset>
           <div className="grid gap-1.5 border-t pt-2">
             <span className="font-semibold">Colonnes propres à cette liste</span>
-            {list.fields.length > 0 && <ul className="grid gap-0.5 text-[11px] text-muted-foreground">{list.fields.map((f) => <li key={f.key}>· {f.label} <span className="opacity-70">({f.brevo ? "attribut Brevo" : FIELD_TYPES.find((t) => t.value === f.type)?.label}{f.options ? ` : ${f.options.join(", ")}` : ""})</span></li>)}</ul>}
+            {list.fields.length > 0 && <ul className="grid gap-0.5 text-[11px] text-muted-foreground">{list.fields.map((f) => <li key={f.key}>· {f.label} <span className="opacity-70">({f.synced ? "colonne synchronisée" : FIELD_TYPES.find((t) => t.value === f.type)?.label}{f.options ? ` : ${f.options.join(", ")}` : ""})</span></li>)}</ul>}
             <form className="grid gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addListField(list.id, { label, type, options }), () => { setLabel(""); setOptions(""); toast.success("Colonne ajoutée"); }); }} data-testid="add-field-form">
               <div className="grid grid-cols-[1fr_auto] gap-1.5">
                 <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom de la colonne (Charte, Séminaire 2025…)" className="h-8" data-testid="add-field-label" />

@@ -5,6 +5,7 @@ import { fmtDate } from "@/lib/format";
 import { baseListFor, BREVO_STATUS, brevoAttributesOf, tagsOf } from "@/lib/contacts";
 import { kindsOf } from "@/lib/organisations";
 import { ContactOrganisationPicker, DeleteContactButton } from "./panel-controls";
+import { MembershipList, type MembershipView } from "@/components/members/membership-list";
 
 type C = {
   id: string; firstName: string | null; lastName: string; role: string | null; email: string | null; phone: string | null; address: string | null; postcode: string | null; city: string | null; tags: string; notes: string | null; leftAt: Date | null; organisationName: string | null; createdById: string | null; createdAt: Date; brevoContactId: string | null; brevoStatus: string | null; brevoAttributes: string; brevoSyncedAt: Date | null;
@@ -12,10 +13,11 @@ type C = {
   listItems: { role: string | null; list: { id: string; name: string } }[];
   lines: { id: string; edition: { id: string; year: number; project: { name: string } } }[];
   conventions: { id: string; reference: string }[];
+  memberships: MembershipView[];
 };
 
 // Fiche d'un contact, en panneau sur l'annuaire (?contact=) : identité, structure, coordonnées, mots-clés, et où il apparaît.
-export function ContactPanelBody({ contact: c, organisations, meId }: { contact: C; organisations: { id: string; name: string }[]; meId: string }) {
+export function ContactPanelBody({ contact: c, organisations, meId, members }: { contact: C; organisations: { id: string; name: string }[]; meId: string; members?: { on: boolean; rw: boolean } }) {
   const F = ({ field, label, type = "text", value, placeholder }: { field: string; label: string; type?: "text" | "textarea"; value: string | null; placeholder?: string }) => (
     <label className="grid gap-0.5"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span><AutoField model="contact" id={c.id} field={field} type={type} value={value} label={label} placeholder={placeholder} testId={`contact-${field}`} /></label>
   );
@@ -48,6 +50,12 @@ export function ContactPanelBody({ contact: c, organisations, meId }: { contact:
         {c.conventions.length > 0 && <div>Conventions : {c.conventions.map((v) => <span key={v.id}> · <Link href={`/conventions/${v.id}`} className="text-primary hover:underline">{v.reference}</Link></span>)}</div>}
         <div className="text-muted-foreground">Créé le {fmtDate(c.createdAt)}{c.leftAt ? ` · parti·e le ${fmtDate(c.leftAt)}` : ""}</div>
       </section>
+      {members?.on && (c.memberships.length > 0 || (members.rw && !c.organisation)) && (
+        <section className="grid gap-1 text-xs" data-testid="contact-memberships">
+          <h3 className="text-xs font-semibold">Adhésions <span className="text-[10px] font-normal text-muted-foreground">· à titre personnel</span></h3>
+          <MembershipList memberships={c.memberships} rw={members.rw} contactId={c.id} />
+        </section>
+      )}
       {c.brevoContactId && (
         <section className="grid gap-1 text-xs" data-testid="contact-brevo">
           <h3 className="text-xs font-semibold">Brevo</h3>

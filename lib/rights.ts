@@ -88,6 +88,11 @@ export function canConsignDecision(me: Actor, samePole: boolean, instance = ""):
   return has(me, "decisions.consign_all") || (has(me, "pole.manage") && (instance === "codir" || samePole));
 }
 
+// Adhésions (module adherents) : créer, régler, reconduire, synchroniser HelloAsso.
+export function canManageMembers(me: Actor): boolean {
+  return has(me, "members.manage");
+}
+
 export function canAdmin(me: Actor): boolean {
   return has(me, "admin.manage");
 }

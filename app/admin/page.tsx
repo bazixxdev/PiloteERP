@@ -18,12 +18,14 @@ import { AddSimpleForm, TimeCodeToggle, ImportForm, RhythmPeriodForm } from "./f
 import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 import { InstanceModulesForm } from "./instance-modules-form";
-import { modulesOf } from "@/lib/modules";
+import { instanceHas, modulesOf } from "@/lib/modules";
 import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
 import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
 import { brevoConfig } from "@/lib/brevo";
 import { BrevoPanel } from "./brevo-forms";
+import { helloAssoConfig } from "@/lib/helloasso";
+import { HelloAssoPanel } from "./helloasso-forms";
 import { SOURCE_LABEL } from "@/lib/ledger";
 import { AccountActions, OutboxRow } from "./account-forms";
 import { PersonPanelBody, personPanelTitle } from "./person-panel";
@@ -348,6 +350,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           {current === "donnees" && (
             <Section title="Brevo" description="Le connecteur lit tous les contacts du compte Brevo et leurs attributs dans l'annuaire (Projets et financements › Contacts), et tient en miroir les listes Brevo suivies. Sens Brevo → outil ; l'inverse se fait liste par liste (« Envoyer vers Brevo »). Désinscrits et supprimés sont marqués, jamais effacés.">
               {rw ? <BrevoPanel configured={!!brevoConfig()} syncedAt={settings.brevoSyncedAt ? fmtDate(settings.brevoSyncedAt) : null} report={settings.brevoSyncReport} inBrevo={await prisma.contact.count({ where: { brevoContactId: { not: null } } })} /> : <p className="text-xs text-muted-foreground">Réservé à l&apos;administration.</p>}
+            </Section>
+          )}
+          {current === "donnees" && instanceHas(settings, "adherents") && (
+            <Section title="HelloAsso" description="Le connecteur lit les commandes du compte HelloAsso : une adhésion par item « Adhésion » (structure = organisation de l'annuaire, référent = payeur ; sans structure = personne physique), et, pour les événements suivis, les inscrits en liste de contacts. Sens HelloAsso → outil ; HelloAsso fait foi pour ses propres items.">
+              {rw ? <HelloAssoPanel configured={!!helloAssoConfig()} syncedAt={settings.helloAssoSyncedAt ? fmtDate(settings.helloAssoSyncedAt) : null} report={settings.helloAssoSyncReport} /> : <p className="text-xs text-muted-foreground">Réservé à l&apos;administration.</p>}
             </Section>
           )}
           {ledger && (

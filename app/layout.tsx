@@ -51,6 +51,7 @@ async function counters() {
       validationLevel: me.validationLevel,
       modules,
       veille: instanceHas(settings, "veille"),
+      adherents: instanceHas(settings, "adherents"),
       showTeam: people.some((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)),
       wide: wideViewLabel(me),
       badges,

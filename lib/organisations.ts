@@ -8,6 +8,7 @@ export const ORGANISATION_KINDS = [
   { key: "partner", label: "Partenaire", plural: "Partenaires", hint: "Co-porte ou contribue à une édition." },
   { key: "network", label: "Réseau", plural: "Réseaux", hint: "Tête de réseau, fédération, membre ou adhérent." },
   { key: "authority", label: "Collectivité", plural: "Collectivités", hint: "Commune, intercommunalité, département, région, État — quand elle ne finance pas." },
+  { key: "member", label: "Adhérent", plural: "Adhérents", hint: "Adhère à la CRESS : au moins une adhésion enregistrée (module Adhérents)." },
 ] as const;
 
 export type OrganisationKind = (typeof ORGANISATION_KINDS)[number]["key"];

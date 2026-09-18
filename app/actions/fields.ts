@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce, type Model } from "@/lib/fields";
-import { canAdmin, canEditActions, canEditCalls, canEditFunding, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
+import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageMembers, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
@@ -40,6 +40,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
   if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
   // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.
   if (model === "contact") return null;
+  if (model === "membership") return canManageMembers(me) ? null : "Les adhésions se tiennent par la RAF ou la direction (droit « Gère les adhésions »).";
   if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";
   if (model === "expense") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) met à jour les dépenses.";
   if (model === "indicator") {
