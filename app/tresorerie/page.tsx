@@ -12,7 +12,7 @@ import { withBase } from "@/lib/base-path";
 import { addMonths, buildPlan, HR_CATEGORY, isMonth, loadActuals, loadCashRules, loadDerivedFlows, monthLabel, PERIODS, thisMonth, usualAmounts, type ActualCell } from "@/lib/treasury";
 import { cn } from "@/lib/utils";
 import { BalanceChart } from "./chart";
-import { NewRuleDialog, OpeningDialog, RuleRowActions } from "./controls";
+import { FlowsTable, NewRuleDialog, OpeningDialog, RuleRowActions, type FlowRow } from "./controls";
 
 // Trésorerie (module « tresorerie », 18/09 ; sous-onglets et réel : retour de Gaël le soir même). Douze mois de plan depuis le
 // solde de départ, précédés des trois derniers mois **réels** (grand livre) ; le mois en cours en évidence. Onglets : le plan,
@@ -42,6 +42,14 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
   const rows = [...plan.rows, ...extraRows];
   const inRows = rows.filter((r) => r.direction === "in"); const outRows = rows.filter((r) => r.direction === "out");
   const hrRules = rules.filter((r) => r.kind === "hr"); const flowRules = rules.filter((r) => r.kind !== "hr");
+  const categories = { in: Array.from(new Set(flowRules.filter((r) => r.direction === "in").map((r) => r.category))), out: Array.from(new Set(flowRules.filter((r) => r.direction === "out").map((r) => r.category))) };
+  const monthly = (r: (typeof rules)[number]) => { const step = PERIODS.find((p) => p.value === r.period)?.step ?? 1; return step === 0 ? 0 : r.amount / step; };
+  const monthLabels: Record<string, string> = {};
+  for (const m of [...pastMonths, ...plan.months, ...rules.flatMap((r) => [r.startMonth, r.endMonth ?? ""]), ...derived.map((f) => f.month)]) if (m && !monthLabels[m]) monthLabels[m] = monthLabel(m);
+  const flowRows = (direction: "in" | "out"): FlowRow[] => [
+    ...flowRules.filter((r) => r.direction === direction).map((r) => ({ id: r.id, source: "saisie", label: r.label, category: r.category, period: r.period, startMonth: r.startMonth, endMonth: r.endMonth, amount: r.amount, monthly: monthly(r), notes: r.notes, active: r.active, rule: r })),
+    ...derived.filter((f) => f.direction === direction).map((f) => ({ id: f.key, source: f.key.startsWith("pay:") ? "versement" : f.key.startsWith("due:") ? "cotisation" : f.category === "Factures à payer" ? "facture" : "engagement", label: f.label, category: f.category, period: null, startMonth: null, endMonth: null, amount: f.amount, monthly: 0, notes: null, active: true, href: f.href, month: f.month, late: f.late })),
+  ];
   const late = derived.filter((f) => f.late);
   const Tile = ({ label, value, hint, tone, testId }: { label: string; value: string; hint?: string; tone?: string; testId?: string }) => <div className={cn("rounded-md border bg-card px-4 py-3", tone)} data-testid={testId}><div className="text-[22px] font-bold leading-tight tabular">{value}</div><div className="text-[11px] text-muted-foreground">{label}{hint ? ` · ${hint}` : ""}</div></div>;
   const cell = (n: number, strong?: boolean) => <span className={cn("tabular", n === 0 && "text-muted-foreground/50", strong && "font-semibold")}>{n === 0 ? "—" : fmtEuro(n)}</span>;
@@ -57,9 +65,6 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
       ))}
     </ul>
   );
-  const DerivedList = ({ keyPrefix, testId }: { keyPrefix: string; testId: string }) => { const flows = derived.filter((f) => f.key.startsWith(keyPrefix)); return flows.length === 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">Rien pour l&apos;instant.</p> : (
-    <ul className="divide-y text-xs" data-testid={testId}>{flows.map((f) => <li key={f.key} className="flex flex-wrap items-center justify-between gap-2 px-4 py-1"><span className="min-w-0">{f.href ? <Link href={f.href} className="text-primary hover:underline">{f.label}</Link> : f.label}<span className="text-muted-foreground"> · {monthLabel(f.month)}{f.late ? <span className="text-danger"> · en retard</span> : ""}{f.hint ? ` · ${f.hint}` : ""}</span></span><span className="tabular whitespace-nowrap">{fmtEuro(f.amount)}</span></li>)}</ul>
-  ); };
   return (
     <div className="p-4 md:p-6">
       <PageHeader
@@ -68,10 +73,10 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
         actions={<>
           <Button asChild variant="outline" size="sm"><a href={withBase("/tresorerie/export")} data-testid="treasury-export"><Download />Exporter</a></Button>
           {rw && <OpeningDialog balance={settings.cashOpeningBalance} month={openingMonth} threshold={settings.cashAlertThreshold} />}
-          {rw && vue === "recettes" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} testId="new-rule-in" />}
+          {rw && vue === "recettes" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} categories={categories} testId="new-rule-in" />}
           {rw && vue === "rh" && <NewRuleDialog defaultMonth={current} preset="hr" usual={usual} people={people} testId="new-rule-hr" />}
-          {rw && vue === "plan" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} testId="new-rule-in" />}
-          {rw && (vue === "charges" || vue === "plan" || vue === "reel") && <NewRuleDialog defaultMonth={current} preset="out" usual={usual} testId="new-rule" />}
+          {rw && vue === "plan" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} categories={categories} testId="new-rule-in" />}
+          {rw && (vue === "charges" || vue === "plan" || vue === "reel") && <NewRuleDialog defaultMonth={current} preset="out" usual={usual} categories={categories} testId="new-rule" />}
         </>}
       />
       <div className="mb-3 flex flex-wrap items-center gap-1 border-b" data-testid="treasury-tabs">
@@ -110,26 +115,17 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
       )}
 
       {vue === "recettes" && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-md border bg-card" data-testid="treasury-in-rules">
-            <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Recettes saisies</h2><p className="text-[11px] text-muted-foreground">Une subvention de fonctionnement, du chiffre d&apos;affaires attendu, un remboursement : à une date, ou récurrentes. Chaque ligne porte un commentaire.</p></div>
-            <RuleList list={flowRules.filter((r) => r.direction === "in")} empty="Aucune recette saisie." testId="rules-in" />
-          </section>
-          <div className="grid content-start gap-4">
-            <section className="rounded-md border bg-card" data-testid="treasury-pay"><div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Versements attendus des financeurs <span className="text-xs font-normal text-muted-foreground">· {fmtEuro(derived.filter((f) => f.key.startsWith("pay:")).reduce((n, f) => n + f.amount, 0))} · calculé</span></h2><p className="text-[11px] text-muted-foreground">Tranches et versements non reçus des conventions et lignes de financement, à la date attendue ; en retard = attendus avant le mois de départ, placés sur le premier mois.</p></div><DerivedList keyPrefix="pay:" testId="derived-pay" /></section>
-            <section className="rounded-md border bg-card" data-testid="treasury-due"><div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Cotisations à régler <span className="text-xs font-normal text-muted-foreground">· calculé</span></h2><p className="text-[11px] text-muted-foreground">Adhésions à régler (module Adhérents), sur le premier mois.</p></div><DerivedList keyPrefix="due:" testId="derived-due" /></section>
-          </div>
-        </div>
+        <section className="rounded-md border bg-card" data-testid="treasury-in">
+          <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Recettes attendues</h2><p className="text-[11px] text-muted-foreground">Ce qu&apos;on attend d&apos;encaisser : les recettes saisies (subvention de fonctionnement, chiffre d&apos;affaires anticipé, remboursement… à une date ou récurrentes) et, calculés depuis les dossiers, les versements attendus des financeurs (à la date attendue ; en retard = placés sur le premier mois) et les cotisations à régler.</p></div>
+          <FlowsTable rows={flowRows("in")} rw={rw} usual={usual} people={people} categories={categories} monthLabels={monthLabels} testId="flows-in" />
+        </section>
       )}
 
       {vue === "charges" && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-md border bg-card" data-testid="treasury-out-rules">
-            <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Charges saisies</h2><p className="text-[11px] text-muted-foreground">Loyer, leasing, fonctionnement, prêt, assurances… chaque ligne a un premier mois (et un dernier si ça s&apos;arrête) et un commentaire. Les salaires sont dans l&apos;onglet Ressources humaines.</p></div>
-            <RuleList list={flowRules.filter((r) => r.direction === "out")} empty="Aucune charge saisie." testId="rules-out" />
-          </section>
-          <section className="rounded-md border bg-card" data-testid="treasury-exp"><div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Factures et engagements <span className="text-xs font-normal text-muted-foreground">· {fmtEuro(derived.filter((f) => f.key.startsWith("exp:")).reduce((n, f) => n + f.amount, 0))} · calculé</span></h2><p className="text-[11px] text-muted-foreground">Dépenses ouvertes des éditions : factures reçues non payées, devis approuvés à facturer — sur le premier mois, par prudence.</p></div><DerivedList keyPrefix="exp:" testId="derived-exp" /></section>
-        </div>
+        <section className="rounded-md border bg-card" data-testid="treasury-out">
+          <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Charges</h2><p className="text-[11px] text-muted-foreground">Ce qu&apos;on va décaisser : les charges saisies (loyer, leasing, fonctionnement, prêt, assurances… avec un premier mois et un dernier si ça s&apos;arrête) et, calculés depuis les éditions, les factures reçues non payées et les devis approuvés à facturer (sur le premier mois, par prudence). Les salaires sont dans l&apos;onglet Ressources humaines.</p></div>
+          <FlowsTable rows={flowRows("out")} rw={rw} usual={usual} people={people} categories={categories} monthLabels={monthLabels} testId="flows-out" />
+        </section>
       )}
 
       {vue === "rh" && (

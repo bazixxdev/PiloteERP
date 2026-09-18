@@ -9,6 +9,7 @@ export type NavLeaf = {
   badge?: number;
   // Reconnaissance de l'entrée active : préfixe(s) d'adresse, puis conditions sur la chaîne de requête.
   path: string | string[];
+  exact?: boolean; // l'adresse exacte seulement (pas ses sous-pages)
   param?: { key: string; oneOf: (string | null)[] }; // la valeur du paramètre (ou son absence, null) doit être dans la liste
   present?: string[]; // actif si l'un de ces paramètres est présent
   absent?: string[]; // actif seulement si aucun de ces paramètres n'est présent
@@ -89,7 +90,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       items: [
         { label: "Prêts en cours", href: "/materiel/prets", path: "/materiel/prets", absent: ["vue"] },
         { label: "Prêts terminés", href: "/materiel/prets?vue=termines", path: "/materiel/prets", present: ["vue"] },
-        { label: "Inventaire du matériel", href: "/materiel", path: "/materiel" },
+        { label: "Inventaire", href: "/materiel", path: "/materiel", exact: true },
       ],
       also: ["/materiel/pret"],
     }] : []),
@@ -155,7 +156,7 @@ function underPath(pathname: string, p: string): boolean {
 
 export function leafMatches(leaf: NavLeaf, pathname: string, params: URLSearchParams): boolean {
   const paths = Array.isArray(leaf.path) ? leaf.path : [leaf.path];
-  if (!paths.some((p) => underPath(pathname, p))) return false;
+  if (!paths.some((p) => (leaf.exact ? pathname === p : underPath(pathname, p)))) return false;
   if (leaf.param && !leaf.param.oneOf.includes(params.get(leaf.param.key))) return false;
   if (leaf.present && !leaf.present.some((k) => params.has(k))) return false;
   if (leaf.absent && leaf.absent.some((k) => params.has(k))) return false;

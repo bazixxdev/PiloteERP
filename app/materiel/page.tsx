@@ -39,7 +39,7 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Package className="size-5 text-primary" aria-hidden />Inventaire du matériel</span>}
+        title={<span className="inline-flex items-center gap-2"><Package className="size-5 text-primary" aria-hidden />Inventaire</span>}
         subtitle={<>{items.filter((i) => i.state !== "retired").length} matériel{items.length > 1 ? "s" : ""} · <Link href="/materiel/prets" className="text-primary hover:underline">{loans.length} prêt{loans.length > 1 ? "s" : ""} en cours</Link>{late.length ? <span className="text-danger"> · {late.length} retour{late.length > 1 ? "s" : ""} en retard</span> : ""}</>}
         actions={rw ? <NewEquipmentDialog categories={categories} /> : undefined}
       />

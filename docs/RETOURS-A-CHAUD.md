@@ -434,6 +434,14 @@ Gaël (retour vocal) : des sous-onglets pour retrouver les charges et recettes s
 - **Prêts** : la section du menu s'appelle « Prêts » — Prêts en cours, Prêts terminés, Inventaire du matériel ; page `/materiel/prets` avec **« Nouveau prêt »** (le matériel se choisit dans le dialogue, disponibilité affichée) ; les prêts terminés listent le retour et son commentaire. L'inventaire garde « Prêter » par ligne.
 - Non fait (consigné) : relevés bancaires importés et rapprochement ; reconduction automatique des dépenses récurrentes (la proposition « d'habitude » y répond à la main, comme Gaël l'envisageait).
 
+### AN. Trésorerie et prêts, finitions (18/09) — fait
+
+Gaël : pas de bascule encaissement / décaissement dans le dialogue d'une charge ; « un gros tableau bien fait avec filtre et group by dans Charges, deux colonnes c'est illisible » ; la liste déroulante de catégorie « pas comme les autres » ; depuis un prêt, le menu marque « Inventaire du matériel » — pas clair.
+- **Dialogues** : le sens vient du bouton (« Nouvelle charge », « Nouvelle recette », « Nouvelle ressource ») ; plus de bascule. Le Plan a les deux boutons.
+- **Charges et Recettes attendues** : un seul tableau (`FlowsTable`) — saisies et calculées ensemble — avec filtre texte, catégorie, source (saisie / versement attendu / cotisation / facture à payer / engagement à facturer), **regroupement** par catégorie (défaut), source, mois ou rien, sous-totaux par groupe (montant et par mois), total ; les lignes saisies se modifient / se décochent / se suppriment, les calculées renvoient à leur dossier.
+- **Catégorie** : la même liste déroulante que partout (catalogue + catégories en usage), « Autre… » ouvre un champ libre.
+- **Menu** : la feuille « Inventaire » ne reconnaît que son adresse exacte (`exact`) ; sur une fiche de prêt, c'est « Prêts en cours » qui est marqué, fil d'Ariane « Prêts / Prêts en cours / Fiche de prêt ».
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
