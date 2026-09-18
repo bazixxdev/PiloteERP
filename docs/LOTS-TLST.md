@@ -150,3 +150,21 @@ Tout le plan côté Pilote est livré (A, 0, B, C, D, P, F, F2, E1, E2, G-import
 | **Multi-instance (lot I)** | **attendre la revue du projet** lancée par Gaël | `config/clients/<client>.ts` (nom, logo, palette, vocabulaire — 31 fichiers citent encore « CRESS »), `deploy.sh` paramétré par instance (serveur, base, sous-chemin), un seed par client, modules TLST derrière `instanceHas`. Règle inchangée : un code, une branche `main`, jamais de `if (client === …)` ni de branche par client. |
 
 **Mises à jour à plusieurs instances** : oui, chaque évolution du code se déploie sur **chaque** serveur (même commit, `deploy.sh` par instance ou une boucle), et les migrations tournent sur chaque base. C'est le prix d'« une instance par client » — et la raison pour laquelle rien ne doit dépendre du client dans le code : sinon les deux déploiements divergent.
+
+## État au 19/09 — ce qui est fait, ce qui reste
+
+**Fait entre le 18 et le 19/09** (chaque lot : commit, tests, déploiement sur la démo ; détail dans `RETOURS-A-CHAUD.md` §AE à §AQ) :
+Brevo · Adhérents + HelloAsso · Trésorerie (plan, sous-onglets, ressources humaines, réel, charges à venir) · Matériel et prêts (fiche de prêt, prêts en tête) · contacts des financeurs = annuaire, listes de base · tests stabilisés (serveur de production, ≈ 4 min) · lot 1 Menu et projets (sections Projets / Financements / Annuaire, fiche projet) · lot 2 Dossiers de financement (cycle, forme, montants, réponse) · lot 3 Demandes (une entrée, deux onglets, réaiguillage direction).
+
+**Reste consigné, à ne pas engager sans go** :
+| Point | Statut |
+|---|---|
+| Notes de frais natives | à décider plus tard — ne pas reproposer spontanément (consigne de Gaël) |
+| Entra ID | plus tard |
+| Multi-instance (lot I, version TLST) | après la revue de Gaël sur `audit/initial-review` |
+| Trésorerie : relevés bancaires importés / rapprochement, reconduction automatique des récurrents | consigné (le « d'habitude » y répond à la main) |
+| Brevo / HelloAsso : synchronisation planifiée (cron) | consigné (bouton pour l'instant) |
+| Matériel : réservation à l'avance, rappel automatique du retour, photos | consigné |
+| Contacts : fusion de deux contacts, dédoublonnage assisté | consigné |
+| Annuaire : renommer « Mes projets » (feuille Portefeuille des non-CODIR) | réserve signalée à Gaël, pas tranchée |
+| Dépôt Git : purge de l'ancien `.env` de l'historique avant qu'un tiers clone | optionnel, non demandé |
