@@ -40,7 +40,7 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   const before = Number(await page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value"));
   // Une règle mensuelle de plus : chaque mois baisse d'autant.
   await page.getByTestId("new-rule").click();
-  await page.getByTestId("rule-direction-out").click();
+  await expect(page.locator("[data-testid^=rule-direction-]")).toHaveCount(0); // le sens vient du bouton, pas d'une bascule
   await page.getByTestId("rule-label").fill("Maintenance informatique");
   await page.getByTestId("rule-category").fill("Prestataires");
   await page.getByTestId("rule-amount").fill("1000");
@@ -53,14 +53,13 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   expect(before - after).toBe(2000); // deux mois écoulés (mois de départ et le suivant) × 1 000 €
   // Un flux ponctuel : seul son mois bouge.
   const m3before = Number(await page.getByTestId(`balance-${ym(3)}`).getAttribute("data-value"));
-  await page.getByTestId("new-rule").click();
-  await page.getByTestId("rule-direction-in").click();
+  await page.getByTestId("new-rule-in").click();
   await page.getByTestId("rule-label").fill("Remboursement formation OPCO");
   await page.getByTestId("rule-amount").fill("4000");
   await pick(page, "rule-period", "Une fois");
   await page.getByTestId("rule-start").fill(ym(3));
   await page.getByTestId("rule-submit").click();
-  await expect(page.getByText("Charge ajoutée")).toBeVisible();
+  await expect(page.getByText("Recette ajoutée")).toBeVisible();
   await expect(page.getByTestId("row-in-Autres encaissements")).toContainText("4 000");
   await expect.poll(async () => page.getByTestId(`balance-${ym(3)}`).getAttribute("data-value")).not.toBe(String(m3before));
   expect(Number(await page.getByTestId(`balance-${ym(1)}`).getAttribute("data-value"))).toBe(after); // avant le mois du flux : rien ne bouge

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
 import { createCashRule, deleteCashRule, setTreasuryOpening, toggleCashRule, updateCashRule, type CashRuleForm } from "@/app/actions/treasury";
-import { CASH_CATEGORIES, DIRECTIONS, PERIODS, type CashRuleInput } from "@/lib/treasury";
+import { CASH_CATEGORIES, PERIODS, type CashRuleInput } from "@/lib/treasury";
 import { cn } from "@/lib/utils";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: () => void) => void;
@@ -58,7 +58,7 @@ function RuleForm({ initial, onSubmit, pending, submitLabel, editing, usual = {}
     <form className="grid gap-3 text-xs" onSubmit={(e) => { e.preventDefault(); onSubmit(f, fromMode && from ? from : null); }}>
       {!editing && !hr && <p className="text-muted-foreground">Un leasing dès février, une subvention en juin, du chiffre d&apos;affaires attendu : le montant, la fréquence, le premier mois — et le dernier si ça s&apos;arrête.</p>}
       {!editing && hr && <p className="text-muted-foreground">Une personne de l&apos;équipe ou un poste à pourvoir : son coût mensuel chargé, depuis quand, jusqu&apos;à quand (fin de contrat). La ligne va dans « Salaires et charges ».</p>}
-      {!hr && <div className="flex gap-1 rounded-md bg-muted p-0.5">{DIRECTIONS.map((d) => <button key={d.value} type="button" onClick={() => setF({ ...f, direction: d.value, category: "" })} className={cn("flex-1 rounded px-2 py-1", f.direction === d.value && "bg-card font-semibold shadow-sm")} data-testid={`rule-direction-${d.value}`}>{d.label}</button>)}</div>}
+      {/* Le sens est donné par le dialogue (Nouvelle charge / Nouvelle recette) : pas de bascule à choisir. */}
       {hr && people.length > 0 && <div className="grid gap-1"><span className="font-semibold">Personne de l&apos;équipe <span className="font-normal text-muted-foreground">(facultatif : un poste à pourvoir n&apos;en a pas)</span></span><SearchableSelect options={people.map((p) => ({ value: p.id, label: p.name }))} value={f.personId ?? ""} onChange={(v) => setF({ ...f, personId: v || null, label: f.label || people.find((p) => p.id === v)?.name || "" })} emptyOption="— un poste, sans personne —" aria-label="Personne" className="h-8 w-full text-xs" data-testid="rule-person" /></div>}
       <label className="grid gap-1"><span className="font-semibold">{hr ? "Nom ou poste" : "Libellé"}</span><Input autoFocus value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} placeholder={hr ? "Chargé·e de mission transition (CDI), Alternance communication…" : "Leasing véhicule, Subvention de fonctionnement Région, Formations facturées…"} className="h-8" data-testid="rule-label" /></label>
       <div className={cn("grid gap-1.5", hr ? "grid-cols-1" : "grid-cols-[1fr_8rem]")}>
@@ -109,7 +109,7 @@ export function RuleRowActions({ rule, usual, people }: { rule: CashRuleInput & 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild><button type="button" className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-primary" aria-label={`Modifier ${rule.label}`} data-testid={`rule-edit-${rule.id}`}><Pencil className="size-3.5" /></button></DialogTrigger>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Modifier la ligne</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Modifier {rule.kind === "hr" ? "la ressource" : rule.direction === "in" ? "la recette" : "la charge"}</DialogTitle></DialogHeader>
           {open && <RuleForm editing initial={{ label: rule.label, direction: rule.direction, category: rule.category, amount: rule.amount, period: rule.period, startMonth: rule.startMonth, endMonth: rule.endMonth ?? "", notes: rule.notes ?? "", kind: rule.kind ?? "flow", personId: rule.personId ?? null }} pending={pending} submitLabel="Enregistrer" usual={usual} people={people} onSubmit={(f, from) => run(() => updateCashRule(rule.id, f, from), () => { setOpen(false); toast.success(from ? `Nouveau montant à partir de ${from}` : "Ligne modifiée"); })} />}
         </DialogContent>
       </Dialog>

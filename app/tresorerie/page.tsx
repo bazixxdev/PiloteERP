@@ -70,6 +70,7 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
           {rw && <OpeningDialog balance={settings.cashOpeningBalance} month={openingMonth} threshold={settings.cashAlertThreshold} />}
           {rw && vue === "recettes" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} testId="new-rule-in" />}
           {rw && vue === "rh" && <NewRuleDialog defaultMonth={current} preset="hr" usual={usual} people={people} testId="new-rule-hr" />}
+          {rw && vue === "plan" && <NewRuleDialog defaultMonth={current} preset="in" usual={usual} testId="new-rule-in" />}
           {rw && (vue === "charges" || vue === "plan" || vue === "reel") && <NewRuleDialog defaultMonth={current} preset="out" usual={usual} testId="new-rule" />}
         </>}
       />
