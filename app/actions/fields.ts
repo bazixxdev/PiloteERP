@@ -40,6 +40,11 @@ async function allowed(model: Model, id: string, field: string, personId: string
   if (model === "call") return canEditCalls(me) ? null : "Un appel à projets se modifie par la RAF, la direction ou un responsable de pôle.";
   // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.
   if (model === "contact") return null;
+  if (model === "loan") {
+    const l = await prisma.loan.findUnique({ where: { id } });
+    if (!l) return "Prêt introuvable";
+    return l.createdById === personId || l.personId === personId || canManageEquipment(me) ? null : "Ce prêt a été enregistré par quelqu'un d'autre ; l'inventaire (direction, RAF, assistant·e) peut le modifier.";
+  }
   if (model === "equipment") return canManageEquipment(me) ? null : "L'inventaire se tient par la direction, la RAF ou l'assistant·e (droit « Tient l'inventaire du matériel »).";
   if (model === "membership") return canManageMembers(me) ? null : "Les adhésions se tiennent par la RAF ou la direction (droit « Gère les adhésions »).";
   if (model === "fundingLine" || model === "deliverable" || model === "payment" || model === "convention" || model === "funder" || model === "organisation") return canEditFunding(me) ? null : "Seule la RAF (ou la direction) modifie les financements et les financeurs.";

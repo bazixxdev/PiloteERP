@@ -949,8 +949,12 @@ model Indicator {
 // et, au besoin, à une ligne de financement, un livrable ou une demande de validation. Pas de GED : le dossier reste sur le serveur.
 model Attachment {
   id            String             @id @default(cuid())
-  editionId     String
-  edition       Edition            @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId     String? // vide pour les pièces du matériel et des prêts (18/09)
+  edition       Edition?           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  equipmentId   String? // facture d'achat, devis, notice
+  equipment     Equipment?         @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  loanId        String? // fiche de prêt signée, état des lieux
+  loan          Loan?              @relation(fields: [loanId], references: [id], onDelete: Cascade)
   fundingLineId String?
   fundingLine   FundingLine?       @relation(fields: [fundingLineId], references: [id])
   deliverableId String?
@@ -1188,12 +1192,14 @@ model Equipment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
   loans       Loan[]
+  attachments Attachment[]
 
   @@index([category])
 }
 
 model Loan {
   id             String        @id @default(cuid())
+  number         Int           @unique @default(autoincrement()) // numéro de la fiche de prêt
   equipmentId    String
   equipment      Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   quantity       Int           @default(1)
@@ -1206,13 +1212,19 @@ model Loan {
   editionId      String? // pour quel projet / événement
   edition        Edition?      @relation(fields: [editionId], references: [id], onDelete: SetNull)
   outAt          DateTime      @default(now())
-  dueAt          DateTime?
+  dueAt          DateTime? // retour attendu (demandé à la saisie)
   returnedAt     DateTime?
-  returnNote     String? // état au retour, incident
+  returnNote     String? // commentaire de retour : état, incident, ce qui manque
   notes          String?
+  // Chèque de caution (facultatif) : montant, référence (banque, numéro), rendu le.
+  depositAmount  Float?
+  depositRef     String?
+  depositReturnedAt DateTime?
+  sentAt         DateTime? // fiche de prêt envoyée à l'emprunteur (mail)
   createdById    String?
   createdBy      Person?       @relation("LoanCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime      @default(now())
+  attachments    Attachment[]
 
   @@index([equipmentId])
   @@index([returnedAt])

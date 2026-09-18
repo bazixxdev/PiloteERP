@@ -14,7 +14,8 @@ import { fmtDate, fmtEuro } from "@/lib/format";
 import { loadEditionOpts } from "@/lib/tasks";
 import { borrowerName, equipmentCategories, EQUIPMENT_STATES, isLate, loadEquipment, loadEquipmentOne, loadOpenLoans, stateOf } from "@/lib/equipment";
 import { cn } from "@/lib/utils";
-import { DeleteLoanButton, EquipmentToolbar, LoanDialog, NewEquipmentDialog, RetireButton, ReturnButton } from "./controls";
+import { DeleteLoanButton, EquipmentToolbar, FilesBlock, LoanDialog, NewEquipmentDialog, RetireButton, ReturnButton } from "./controls";
+import { attachmentInclude } from "@/lib/attachments";
 
 // Matériel et prêts (module « materiel », 18/09) : l'inventaire (disponible = quantité − sorti), le registre des prêts en
 // cours avec les retours en retard, la fiche d'un matériel en panneau (?materiel=) avec son historique.
@@ -32,6 +33,7 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
     loadEditionOpts(me, settings),
   ]);
   const open = sp.materiel ? await loadEquipmentOne(sp.materiel) : null;
+  const openFiles = open ? await prisma.attachment.findMany({ where: { equipmentId: open.id }, include: attachmentInclude, orderBy: { createdAt: "desc" } }) : [];
   const late = loans.filter((l) => isLate(l));
   const closeHref = `/materiel${loansView ? "?vue=prets" : ""}`;
   const openOut = open ? open.loans.filter((l) => !l.returnedAt).reduce((n, l) => n + l.quantity, 0) : 0;
@@ -50,7 +52,7 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
               <tbody className="divide-y">
                 {loans.map((l) => (
                   <tr key={l.id} className={cn("align-top", isLate(l) && "bg-danger-soft/40")} data-testid={`loan-${l.id}`} data-late={isLate(l) ? "1" : "0"}>
-                    <td className="px-4 py-1.5"><Link href={`/materiel?vue=prets&materiel=${l.equipment.id}`} scroll={false} className="font-medium text-primary hover:underline">{l.equipment.name}</Link>{l.quantity > 1 && <span className="text-muted-foreground"> × {l.quantity}</span>}{l.notes && <div className="text-[11px] text-muted-foreground">{l.notes}</div>}</td>
+                    <td className="px-4 py-1.5"><Link href={`/materiel/pret/${l.id}`} className="font-medium text-primary hover:underline" data-testid={`loan-fiche-link-${l.id}`}>{l.equipment.name}</Link>{l.quantity > 1 && <span className="text-muted-foreground"> × {l.quantity}</span>}<span className="ml-1 font-mono text-[10px] text-muted-foreground">P-{String(l.number).padStart(4, "0")}</span>{l.notes && <div className="text-[11px] text-muted-foreground">{l.notes}</div>}</td>
                     <td className="px-2 py-1.5 text-xs">{borrowerName(l)}</td>
                     <td className="px-2 py-1.5 text-xs">{l.edition ? <Link href={`/edition/${l.edition.id}`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> : <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-2 py-1.5 text-xs whitespace-nowrap">{fmtDate(l.outAt)}</td>
@@ -109,11 +111,15 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
               <ul className="divide-y">
                 {open.loans.map((l) => (
                   <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-1" data-testid={`equipment-loan-${l.id}`} data-returned={l.returnedAt ? "1" : "0"}>
-                    <span><b className="font-medium">{borrowerName(l)}</b>{l.quantity > 1 ? ` × ${l.quantity}` : ""}{l.edition ? <span className="text-muted-foreground"> · {l.edition.project.name} {l.edition.year}</span> : ""}<span className="block text-[11px] text-muted-foreground">sorti le {fmtDate(l.outAt)}{l.returnedAt ? ` · rendu le ${fmtDate(l.returnedAt)}${l.returnNote ? ` (${l.returnNote})` : ""}` : l.dueAt ? ` · retour attendu le ${fmtDate(l.dueAt)}${isLate(l) ? " · en retard" : ""}` : " · en cours"}{l.notes ? ` · ${l.notes}` : ""}</span></span>
+                    <span><Link href={`/materiel/pret/${l.id}`} className="font-mono text-[10px] text-muted-foreground hover:text-primary">P-{String(l.number).padStart(4, "0")}</Link> <b className="font-medium">{borrowerName(l)}</b>{l.quantity > 1 ? ` × ${l.quantity}` : ""}{l.edition ? <span className="text-muted-foreground"> · {l.edition.project.name} {l.edition.year}</span> : ""}<span className="block text-[11px] text-muted-foreground">sorti le {fmtDate(l.outAt)}{l.returnedAt ? ` · rendu le ${fmtDate(l.returnedAt)}${l.returnNote ? ` (${l.returnNote})` : ""}` : l.dueAt ? ` · retour attendu le ${fmtDate(l.dueAt)}${isLate(l) ? " · en retard" : ""}` : " · en cours"}{l.notes ? ` · ${l.notes}` : ""}</span></span>
                     <span className="flex items-center gap-2">{!l.returnedAt && <ReturnButton loanId={l.id} label={open.name} />}<DeleteLoanButton loanId={l.id} /></span>
                   </li>
                 ))}
               </ul>
+            </section>
+            <section className="grid gap-1 text-xs" data-testid="equipment-files">
+              <h3 className="text-xs font-semibold">Pièces <span className="text-[10px] font-normal text-muted-foreground">· facture d&apos;achat, devis, notice</span></h3>
+              <FilesBlock files={openFiles} target={{ equipmentId: open.id }} canEdit={rw} />
             </section>
             {rw && <RetireButton id={open.id} retired={open.state === "retired"} />}
           </div>

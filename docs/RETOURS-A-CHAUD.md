@@ -407,6 +407,15 @@ Gaël (en regardant la démo) : « comment je dis qu'à partir de janvier 2027 j
 - Bouton **« Nouvelle charge ou recette »** (au lieu de « Nouvelle règle »), dialogue qui l'explique (« un leasing dès février, une embauche dès mars, une subvention en juin : le montant, la fréquence, le premier mois — et le dernier si ça s'arrête »), bloc renommé « Charges et recettes saisies » avec la même phrase.
 - **Modifier « à partir d'un mois »** : dans le dialogue de modification, une case « ce changement ne vaut qu'à partir d'un mois » → l'ancienne ligne s'arrête le mois d'avant, une nouvelle prend le relais avec le nouveau montant (`updateCashRule(id, form, from)`). Un salaire qui change en mars, un loyer qui augmente en janvier : l'historique reste juste. Testé.
 
+### AK. Matériel : la fiche de prêt (18/09) — fait
+
+Gaël (retour vocal sur la brique matériel) : un commentaire quand on rend ; une organisation emprunte toujours par un contact ; une **fiche de prêt** en tant que telle — une entité qu'on ouvre, qui dit tout du prêt —, exportable, **envoyée par mail** comme preuve, avec la date de retour prévue bien visible ; le **chèque de caution** ; joindre des documents (facture d'achat sur le matériel, fiche signée sur le prêt).
+- **Fiche de prêt `/materiel/pret/[id]`** : numéro `P-0001` (séquence), le matériel (réf., consignes, valeur), l'emprunteur (personne de l'équipe ou contact + organisation, e-mail, téléphone, pour quelle édition), dates (sorti le, **retour attendu** modifiable en place, rendu le, fiche envoyée le), note au prêt, **commentaire de retour** (le champ « état au retour » devient un vrai commentaire, saisi au « Rendu » et modifiable sur la fiche), **chèque de caution** (montant, référence, rendu le), **pièces** (fiche signée, état des lieux, photo). Statut en cours / en retard / rendu.
+- **Preuve** : « Envoyer par mail » ouvre la messagerie de la personne (mailto prérempli à l'emprunteur : matériel, quantité, dates, caution, engagement de retour) et trace `sentAt` — pas d'envoi depuis l'outil (pas de SMTP dans le prototype ; cohérent avec l'outil qui ne poste jamais de mail). « Imprimer / PDF » : impression de la fiche seule (`[data-print-root]`, coquille masquée, champs en texte, cartouche de signatures CRESS / emprunteur).
+- **Organisation → contact obligatoire** : dans « Prêter à une organisation », on choisit un contact de cette organisation ou on en crée un (nom, prénom, e-mail) ; refus côté serveur sinon. **Retour attendu obligatoire** à la saisie.
+- **Pièces jointes** : `Attachment.editionId` devient facultatif, `equipmentId` / `loanId` ajoutés (facture d'achat, devis, notice sur le matériel ; fiche signée sur le prêt) ; même stockage et même route que les pièces des éditions.
+- Numéro de fiche, lien vers la fiche depuis Prêts en cours et l'historique du matériel.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
