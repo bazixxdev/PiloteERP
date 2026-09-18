@@ -16,7 +16,7 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PortfolioFilters } from "./filters";
-import { V, cap, aucun, pl } from "@/lib/vocab";
+import { V, cap, aucun, pl, nb } from "@/lib/vocab";
 
 type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string };
 
@@ -68,7 +68,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         subtitle={
           codir
             ? `${rows.length} ${V.edition.one}${rows.length > 1 ? "s" : ""} en alerte ou avec des validations en attente · ${totalPending} validation${totalPending > 1 ? "s" : ""} à traiter`
-            : `${year} · ${all.length} ${pl(V.edition)} en cours · ${poles.length} ${pl(V.pole)}`
+            : `${year} · ${nb(all.length, V.edition)} en cours · ${nb(poles.length, V.pole)}`
         }
         actions={
           codir ? (

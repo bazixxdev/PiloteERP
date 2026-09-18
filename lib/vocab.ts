@@ -24,6 +24,8 @@ export const cap = (w: Word | string): string => {
 };
 export const Cap = cap;
 export const pl = (w: Word): string => w.many;
+// « 1 équipe » / « 3 équipes ».
+export const nb = (count: number, w: Word): string => `${count} ${count > 1 ? w.many : w.one}`;
 
 export const le = (w: Word): string => (elide(w.one) ? `l'${w.one}` : `${w.gender === "f" ? "la" : "le"} ${w.one}`);
 export const les = (w: Word): string => `les ${w.many}`;
