@@ -13,6 +13,8 @@ import { BASE_PATH } from "./base-path";
 // PILOTE_DEMO=1 (mode démo : « Changer d'utilisateur » reste disponible aux personnes connectées), AUTH_RATE_LIMIT=0 (tests).
 
 const isProd = process.env.NODE_ENV === "production";
+// Un serveur de production servi en http://localhost : ce sont les recettes (next build + next start), pas le déploiement.
+const localHttp = (process.env.BETTER_AUTH_URL ?? "").startsWith("http://");
 // `next build` charge les modules sans servir personne : un secret de circonstance suffit, le vrai est exigé au démarrage.
 const building = process.env.NEXT_PHASE === "phase-production-build";
 const secret = process.env.BETTER_AUTH_SECRET ?? (isProd && !building ? undefined : "pilote-dev-secret-ne-pas-utiliser-en-production");
@@ -53,14 +55,16 @@ export const auth = betterAuth({
   trustedOrigins: isProd ? [] : ["http://localhost:3001", "http://localhost:3100", "http://localhost:3200", "http://localhost:3300"],
 
   advanced: {
-    useSecureCookies: isProd,
+    // Cookies « Secure » seulement derrière https : un serveur de production servi en http://localhost (les recettes) garde des
+    // cookies ordinaires, sinon le navigateur les refuse.
+    useSecureCookies: isProd && !localHttp,
     cookiePrefix: "pilote",
   },
 
   // Anti-force brute : fenêtre glissante en mémoire, plus stricte sur la connexion et la demande de réinitialisation.
-  // AUTH_RATE_LIMIT=0 la coupe (tests automatisés, qui enchaînent les connexions) ; jamais en production.
+  // AUTH_RATE_LIMIT=0 la coupe (tests automatisés, qui enchaînent les connexions) ; jamais sur un déploiement (https).
   rateLimit: {
-    enabled: process.env.AUTH_RATE_LIMIT !== "0" || isProd,
+    enabled: !(process.env.AUTH_RATE_LIMIT === "0" && (!isProd || localHttp)),
     window: 60,
     max: 60,
     customRules: {

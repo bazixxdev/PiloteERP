@@ -416,6 +416,13 @@ Gaël (retour vocal sur la brique matériel) : un commentaire quand on rend ; un
 - **Pièces jointes** : `Attachment.editionId` devient facultatif, `equipmentId` / `loanId` ajoutés (facture d'achat, devis, notice sur le matériel ; fiche signée sur le prêt) ; même stockage et même route que les pièces des éditions.
 - Numéro de fiche, lien vers la fiche depuis Prêts en cours et l'historique du matériel.
 
+### AL. Tests stabilisés (18/09) — fait
+
+Gaël : « oui stabilise les tests maintenant ». Diagnostic : la suite tournait sur un serveur **de dev**, qui compile chaque page à sa première visite ; avec 67 tests et une trentaine de pages, sous charge, ces compilations dépassaient les 5 s d'attente par défaut et faisaient tomber 2 à 3 tests au hasard (versements, rail, personnes, scénario collectif, tâches…), toujours verts en isolation. Durée : 10 à 12 min.
+- La suite tourne désormais sur un **serveur de production** (`next build` + `next start` dans `.next-test`) : plus de compilation à la volée. **67 / 67 en 4 min 12**, deux fois de suite. `PW_DEV=1` garde le serveur de dev pour itérer sur un fichier.
+- Ce que le mode production a révélé (corrigé dans `lib/auth.ts`) : les cookies `__Secure-` refusés par le navigateur sur http://localhost → cookies sécurisés seulement derrière https (`localHttp`) ; la coupure du rate-limit (`AUTH_RATE_LIMIT=0`) désormais possible sur un serveur de production **local en http**, jamais sur un déploiement https. Un secret d'auth de recette est posé par `playwright.config.ts` (sans valeur).
+- Marges : `expect` à 10 s (au lieu de 5), test à 120 s.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

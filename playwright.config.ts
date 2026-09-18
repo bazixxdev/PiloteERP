@@ -1,8 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Les recettes tournent sur leur propre serveur de dev (port PW_PORT, 3100 par défaut, dossier .next-test) et sur leur propre
-// base Postgres (TEST_DATABASE_URL, `pilote_test` par défaut) : jamais celle du serveur de dev 3001. La base de test est
-// migrée puis reseedée avant la suite (tests/global-setup.ts).
+// Les recettes tournent sur leur propre serveur (port PW_PORT, 3100 par défaut, dossier .next-test) et sur leur propre base
+// Postgres (TEST_DATABASE_URL, `pilote_test` par défaut) : jamais celle du serveur de dev 3001. La base de test est migrée
+// puis reseedée avant la suite (tests/global-setup.ts).
+// Stabilité (18/09) : la suite complète tourne sur un **serveur de production** (next build + next start) — en mode dev, la
+// compilation à la première visite de chaque page dépassait les 5 s d'attente sous charge et faisait tomber des tests au
+// hasard. PW_DEV=1 garde le serveur de dev (itération rapide sur un seul fichier, avec reuseExistingServer).
 const PORT = Number(process.env.PW_PORT ?? 3100);
 // Faux Brevo (tests/brevo-mock.mjs) : le serveur de test pointe dessus, la clé est fictive.
 const BREVO_MOCK_PORT = PORT + 199;
@@ -12,7 +15,8 @@ process.env.DATABASE_URL = TEST_DATABASE_URL;
 
 export default defineConfig({
   testDir: "./tests",
-  timeout: 90_000,
+  timeout: 120_000,
+  expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -45,11 +49,12 @@ export default defineConfig({
       env: { HELLOASSO_MOCK_PORT: String(HELLOASSO_MOCK_PORT) },
     },
     {
-      command: `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test npm run dev -- -p ${PORT}`,
+      command: process.env.PW_DEV ? `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test npm run dev -- -p ${PORT}` : `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test npx next build && NEXT_DIST_DIR=.next-test npx next start -p ${PORT}`,
       url: `http://localhost:${PORT}/matrice/export`,
       reuseExistingServer: true,
-      timeout: 120_000,
-      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "cress-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
+      timeout: 300_000,
+      // Le serveur de production exige un secret d'auth : celui-ci ne sert qu'aux recettes locales.
+      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BETTER_AUTH_SECRET: "secret-de-recette-locale-sans-valeur-0000000000000000", BETTER_AUTH_URL: `http://localhost:${PORT}/api/auth`, BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "cress-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
     },
   ],
 });
