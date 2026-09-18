@@ -3,7 +3,13 @@ import { iAm } from "./helpers";
 
 // Retours à chaud C : la relance laisse une trace visible — cloche et « Ma semaine » côté personne, badge daté côté RAF.
 test("la relance de la RAF notifie la personne dans l'outil et reste tracée dans la clôture", async ({ page }) => {
-  await page.goto("/cloture?mois=2026-09");
+  // Les tests précédents (lot 3 : réaiguillage d'une demande vers Élise) lui laissent des notifications : on part d'une cloche
+  // vide pour compter la seule relance.
+  await page.goto("/notifications");
+  await iAm(page, "Élise Fontaine");
+  await page.goto("/notifications");
+  const markAll = page.getByTestId("mark-all-read");
+  if (await markAll.isEnabled()) { await markAll.click(); await expect(page.getByTestId("bell-count")).toHaveCount(0); }
   await iAm(page, "Nadia Ferrand");
   await page.goto("/cloture?mois=2026-09");
   await expect(page.getByTestId("time-nav-cloture")).toHaveAttribute("aria-current", "page");
