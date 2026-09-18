@@ -2,6 +2,7 @@ import { HeadingLevel, Paragraph, TextRun } from "docx";
 import { prisma } from "./db";
 import { fmtDate } from "./format";
 import { refLabel, type RefMap } from "./refs";
+import { V, du, de } from "@/lib/vocab";
 
 // Fiche projet au format du gabarit Word « À COPIER — FICHE PROJET » : mêmes rubriques, dans le même ordre, plus les remarques
 // ouvertes et les réalisations. Partagé entre l'export d'une fiche et le plan opérationnel assemblé (toutes les fiches d'une année).
@@ -37,13 +38,13 @@ export function ficheParagraphs(e: FicheEdition, refs: RefMap, opts?: { nested?:
     P(`Lien Plan stratégique : ${e.axis ?? "—"}`), ...rq("axis"),
     P(`Lien SNESS : ${e.snessLink ?? "—"}`), ...rq("snessLink"),
     P(`Autres : ${e.otherTexts ?? "—"}`), ...rq("otherTexts"),
-    H("Enjeux et priorités de l'année (direction)"), ...txt(e.stakes), ...rq("stakes"), ...txt(e.yearPriorities), ...rq("yearPriorities"),
+    H(`Enjeux et priorités de l'année (${V.direction.one})`), ...txt(e.stakes), ...rq("stakes"), ...txt(e.yearPriorities), ...rq("yearPriorities"),
     H("Contenu développé, valeur ajoutée"), ...txt(e.content), ...rq("content"),
     H("Public / Bénéficiaires"), ...txt(e.audience), ...rq("audience"),
     H("Modalités d'exécution"),
     P(`Pilote : ${e.project.pilot.name}`), P(`Équipe projet : ${e.team.map((t) => t.person.name).join(", ") || "—"}`),
     P(`Gouvernance du projet (GT, COPIL…) : ${e.governance ?? "—"}`), ...rq("governance"),
-    P(`Sponsor : ${e.sponsor?.name ?? "—"}`), P(`Responsable de pôle garant : ${e.project.guarantor?.name ?? "—"}`),
+    P(`Sponsor : ${e.sponsor?.name ?? "—"}`), P(`Responsable ${de(V.pole)} garant : ${e.project.guarantor?.name ?? "—"}`),
     P(`Méthode : ${e.method ?? "—"}`), ...rq("method"), P(`Partenaires : ${e.partners ?? "—"}`), ...rq("partners"),
     H("Lieux et animation"), ...txt(e.venues), ...rq("venues"),
     H("Matériel · outils, mobilier, services"), ...txt(e.equipment), ...rq("equipment"),
@@ -62,6 +63,6 @@ export function ficheParagraphs(e: FicheEdition, refs: RefMap, opts?: { nested?:
     H("Impacts attendus"), ...txt(e.expectedOutcome), ...rq("expectedOutcome"),
     H("Réalisations consignées"), ...(e.achievements.length ? e.achievements.map((a) => P(`• ${achLine(a)}`)) : [P("—")]),
     H("Évaluation"), ...txt(e.evaluation),
-    H("Validation"), P(`Décision du CODIR : ${e.codirDecision ? refLabel(refs, "codir_decision", e.codirDecision) : "—"} (${fmtDate(e.codirDate)}) · CA : ${e.boardValidated ? `validé le ${fmtDate(e.boardDate)}` : "en attente"}`),
+    H("Validation"), P(`Décision ${du(V.codir)} : ${e.codirDecision ? refLabel(refs, "codir_decision", e.codirDecision) : "—"} (${fmtDate(e.codirDate)}) · CA : ${e.boardValidated ? `validé le ${fmtDate(e.boardDate)}` : "en attente"}`),
   ];
 }

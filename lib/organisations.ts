@@ -1,14 +1,15 @@
 import { prisma } from "./db";
+import { V, un, au } from "@/lib/vocab";
 
 // Organisations (lot E2) : un annuaire, des genres cumulables. Les lectures par genre passent par ici pour que « les
 // financeurs » ou « les fournisseurs » restent une seule question dans tout l'outil.
 export const ORGANISATION_KINDS = [
   { key: "funder", label: "Financeur", plural: "Financeurs", hint: "Subventionne : lignes de financement, conventions, appels à projets." },
   { key: "supplier", label: "Fournisseur", plural: "Fournisseurs", hint: "Devis, factures, bons pour accord." },
-  { key: "partner", label: "Partenaire", plural: "Partenaires", hint: "Co-porte ou contribue à une édition." },
+  { key: "partner", label: "Partenaire", plural: "Partenaires", hint: `Co-porte ou contribue à ${un(V.edition)}.` },
   { key: "network", label: "Réseau", plural: "Réseaux", hint: "Tête de réseau, fédération, membre ou adhérent." },
   { key: "authority", label: "Collectivité", plural: "Collectivités", hint: "Commune, intercommunalité, département, région, État — quand elle ne finance pas." },
-  { key: "member", label: "Adhérent", plural: "Adhérents", hint: "Adhère à la CRESS : au moins une adhésion enregistrée (module Adhérents)." },
+  { key: "member", label: "Adhérent", plural: "Adhérents", hint: `Adhère ${au(V.org)} : au moins une adhésion enregistrée (module Adhérents).` },
 ] as const;
 
 export type OrganisationKind = (typeof ORGANISATION_KINDS)[number]["key"];

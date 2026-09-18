@@ -1,5 +1,6 @@
 // Champs modifiables en ligne : liste blanche par modèle, type et couche (pour les droits).
 import type { Layer } from "./rights";
+import { V, du } from "@/lib/vocab";
 
 export type FieldType = "text" | "textarea" | "number" | "date" | "bool" | "select";
 
@@ -21,7 +22,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     directExpenseEnvelope: { type: "number", layer: "means", label: "Budget prévisionnel · dépenses directes (€)" },
     fte: { type: "number", layer: "means", label: "ETP fléchés" },
     imposedIndicators: { type: "textarea", layer: "means", label: "Indicateurs imposés par les financeurs" },
-    sponsorId: { type: "select", layer: "means", label: "Sponsor (membre du CODIR)" },
+    sponsorId: { type: "select", layer: "means", label: `Sponsor (membre ${du(V.codir)})` },
     operationalObjectives: { type: "textarea", layer: "proposal", label: "Objectifs qualitatifs (quelle problématique)" },
     quantitativeObjectives: { type: "textarea", layer: "proposal", label: "Objectifs quantitatifs" },
     content: { type: "textarea", layer: "proposal", label: "Contenu développé, valeur ajoutée" },
@@ -34,7 +35,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     ownIndicators: { type: "textarea", layer: "proposal", label: "Indicateurs propres" },
     timeNeed: { type: "text", layer: "proposal", label: "Besoin en temps" },
     budgetNeed: { type: "text", layer: "proposal", label: "Besoin en budget" },
-    codirDecision: { type: "select", layer: "validation", label: "Décision du CODIR" },
+    codirDecision: { type: "select", layer: "validation", label: `Décision ${du(V.codir)}` },
     codirDate: { type: "date", layer: "validation", label: "Date du séminaire" },
     boardValidated: { type: "bool", layer: "validation", label: "Validé par le CA" },
     boardDate: { type: "date", layer: "validation", label: "Date du CA" },

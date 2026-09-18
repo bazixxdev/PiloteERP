@@ -17,6 +17,7 @@ import { noteColor } from "@/lib/notes";
 import { groupByDue } from "@/lib/tasks-group";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/common/searchable-select";
+import { V, cap, le, un, du, ce, aucun, adj, ppe, e, pl } from "@/lib/vocab";
 
 // Éditions proposables (« @ » dans la saisie, chip « Édition ») : les plus pertinentes pour la personne d'abord.
 export type EditionOpt = { id: string; name: string; year: number; actions: { id: string; name: string }[] };
@@ -105,14 +106,14 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
             {linkedEdition && !editionId && (
               <span className="inline-flex max-w-[200px] items-center gap-1 rounded-full bg-secondary px-2 py-px text-[10px] text-primary" data-testid="task-linked">
                 <AtSign className="size-3" aria-hidden /><span className="truncate">{linkedEdition.name} · {linkedEdition.year}</span>
-                <button type="button" aria-label="Retirer l'édition" onClick={() => setLinked(null)} className="rounded hover:bg-black/10"><X className="size-3" /></button>
+                <button type="button" aria-label={`Retirer ${le(V.edition)}`} onClick={() => setLinked(null)} className="rounded hover:bg-black/10"><X className="size-3" /></button>
               </span>
             )}
             {bangDue && <span className="inline-flex items-center gap-1 rounded-sm bg-warning-soft px-1.5 py-px text-[10px] text-warning-foreground" data-testid="task-bang-due"><CalendarDays className="size-3" aria-hidden />Pour {dayjs(bangDue).format("ddd D MMM")}</span>}
             {label.trim() && !at && <Button type="submit" size="xs" disabled={pending} data-testid="task-submit">Ajouter</Button>}
           </div>
           {at && suggestions.length > 0 && (
-            <ul className="absolute top-full left-8 z-40 mt-1 w-[min(420px,calc(100%-2rem))] overflow-hidden rounded-md border bg-card py-1 shadow-lg" role="listbox" aria-label="Éditions" data-testid="task-suggestions">
+            <ul className="absolute top-full left-8 z-40 mt-1 w-[min(420px,calc(100%-2rem))] overflow-hidden rounded-md border bg-card py-1 shadow-lg" role="listbox" aria-label={cap(pl(V.edition))} data-testid="task-suggestions">
               {suggestions.map((e, i) => (
                 <li key={e.id} role="option" aria-selected={i === cursor}>
                   <button type="button" onMouseDown={(ev) => { ev.preventDefault(); pick(e); }} onMouseEnter={() => setCursor(i)} className={cn("flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs", i === cursor && "bg-info-soft")}>
@@ -122,7 +123,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
               ))}
             </ul>
           )}
-          {at && suggestions.length === 0 && editions.length > 0 && <p className="mt-1 pl-6 text-[10px] text-muted-foreground">Aucune édition ne correspond à « {at[1].trim()} ».</p>}
+          {at && suggestions.length === 0 && editions.length > 0 && <p className="mt-1 pl-6 text-[10px] text-muted-foreground">{cap(aucun(V.edition))} ne correspond à « {at[1].trim()} ».</p>}
         </form>
       )}
       {open.length === 0 && <p className="px-4 py-3 text-[11px] text-muted-foreground">{emptyText ?? "Aucune tâche en cours. Une tâche, c'est à vous : ce n'est ni une action du projet, ni un jalon."}</p>}
@@ -270,7 +271,7 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
           </div>
           <aside className="min-w-0 border-t bg-muted/30 px-4 py-2 md:border-l md:border-t-0">
             <Field label="Liste">{lists.length > 0 ? <ListChip t={t} pending={pending} run={run} lists={lists} /> : t.list?.name ?? "À trier"}</Field>
-            <Field label="Édition">{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
+            <Field label={cap(V.edition)}>{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
             <Field label="Échéance"><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></Field>
             {t.requestId && <Field label="Demande d'origine"><Link href="/demandes" className="text-primary hover:underline">Ouvrir la demande</Link> · la cocher fait la demande</Field>}
             <Field label="Actions"><button type="button" disabled={pending} onClick={() => run(() => deleteTask(t.id), () => onOpenChange(false))} className="inline-flex items-center gap-1 text-danger hover:underline"><Trash2 className="size-3" />Supprimer la tâche</button></Field>
@@ -385,8 +386,8 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
         <PopoverTrigger asChild>
           <button
             type="button" data-testid={`task-edition-${t.id}`}
-            title={t.edition ? "Changer l'édition rattachée, choisir une action, ou détacher" : "Rattacher une édition"}
-            aria-label={t.edition ? `Édition : ${t.edition.name}` : "Rattacher une édition"}
+            title={t.edition ? `Changer ${le(V.edition)} rattaché${e(V.edition)}, choisir ${un(V.action)}, ou détacher` : `Rattacher ${un(V.edition)}`}
+            aria-label={t.edition ? `${cap(V.edition)} : ${t.edition.name}` : `Rattacher ${un(V.edition)}`}
             className={cn("inline-flex max-w-[220px] items-center gap-1 px-1.5 py-px hover:bg-muted", t.edition ? "rounded-l-full bg-secondary text-primary" : "rounded-sm text-muted-foreground/70")} style={{ maxWidth: "100%" }}
           >
             <AtSign className="size-3 shrink-0" aria-hidden />
@@ -395,22 +396,22 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
         </PopoverTrigger>
         <PopoverContent className="w-80" align="start">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold">{t.edition ? "Édition rattachée" : "Rattacher à une édition"}</span>
-            {t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="text-[11px] text-primary hover:underline">Ouvrir l'édition →</Link>}
+            <span className="text-xs font-semibold">{t.edition ? `${cap(ppe(V.edition, "rattaché"))}` : `Rattacher à ${un(V.edition)}`}</span>
+            {t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="text-[11px] text-primary hover:underline">Ouvrir {le(V.edition)} →</Link>}
           </div>
           {current && current.actions.length > 0 && (
             <div className="mb-2 border-b pb-2">
-              <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>Action de cette édition (facultatif)</label>
+              <label className="text-[10px] text-muted-foreground" htmlFor={`task-action-${t.id}`}>{cap(V.action)} de {ce(V.edition)} (facultatif)</label>
               <Select id={`task-action-${t.id}`} className="mt-1 h-8 w-full rounded-lg border bg-card px-2 text-xs" value={t.action?.id ?? ""} disabled={pending} onChange={(e) => set(current.id, e.target.value || null)}>
-                <option value="">— l'édition entière —</option>
+                <option value="">— {le(V.edition)} enti{V.edition.gender === "f" ? "ère" : "er"} —</option>
                 {current.actions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </Select>
             </div>
           )}
-          <div className="text-[10px] text-muted-foreground">{t.edition ? "Changer pour une autre édition" : "Choisir l'édition"}</div>
-          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Projet, année…" aria-label="Rechercher une édition" className="my-1.5 h-8" data-testid="task-edition-search" />
-          <ul className="max-h-48 overflow-y-auto" role="listbox" aria-label="Éditions">
-            {list.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">Aucune édition ne correspond.</li>}
+          <div className="text-[10px] text-muted-foreground">{t.edition ? `Changer pour ${adj(V.edition, "un autre", "une autre")}` : `Choisir ${le(V.edition)}`}</div>
+          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Projet, année…" aria-label={`Rechercher ${un(V.edition)}`} className="my-1.5 h-8" data-testid="task-edition-search" />
+          <ul className="max-h-48 overflow-y-auto" role="listbox" aria-label={cap(pl(V.edition))}>
+            {list.length === 0 && <li className="px-2 py-2 text-xs text-muted-foreground">{cap(aucun(V.edition))} ne correspond.</li>}
             {list.map((e) => (
               <li key={e.id} role="option" aria-selected={e.id === t.edition?.id}>
                 <button type="button" disabled={pending} onClick={() => set(e.id)} className={cn("flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted", e.id === t.edition?.id && "bg-info-soft font-semibold")}>
@@ -419,11 +420,11 @@ function TaskEditionPicker({ t, pending, run, editions }: { t: TaskView; pending
               </li>
             ))}
           </ul>
-          {t.edition && <div className="mt-2 flex justify-end border-t pt-2"><Button size="xs" variant="ghost" disabled={pending} onClick={() => set(null)} className="text-danger hover:text-danger">Détacher de l'édition</Button></div>}
+          {t.edition && <div className="mt-2 flex justify-end border-t pt-2"><Button size="xs" variant="ghost" disabled={pending} onClick={() => set(null)} className="text-danger hover:text-danger">Détacher {du(V.edition)}</Button></div>}
         </PopoverContent>
       </Popover>
       {t.edition && (
-        <button type="button" aria-label="Détacher de l'édition" title="Détacher de l'édition" disabled={pending} onClick={() => set(null)} className="rounded-r-full bg-secondary py-px pr-1.5 pl-0.5 text-primary hover:bg-danger-soft hover:text-danger" data-testid={`task-detach-${t.id}`}><X className="size-3" /></button>
+        <button type="button" aria-label={`Détacher ${du(V.edition)}`} title={`Détacher ${du(V.edition)}`} disabled={pending} onClick={() => set(null)} className="rounded-r-full bg-secondary py-px pr-1.5 pl-0.5 text-primary hover:bg-danger-soft hover:text-danger" data-testid={`task-detach-${t.id}`}><X className="size-3" /></button>
       )}
     </span>
   );

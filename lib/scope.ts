@@ -2,6 +2,7 @@
 // Un projet appartient à un pôle principal (celui du pilote) et, s'il est commun, à des pôles secondaires.
 
 import { has, type Actor } from "./rights";
+import { V, cap, mon, pl } from "@/lib/vocab";
 
 export type ProjectPoles = { poleId: string; secondaryPoles?: { poleId: string }[] };
 export type Viewer = Actor & { id: string; poleId: string | null };
@@ -35,7 +36,7 @@ export function perimeterFrom(me: Viewer, param: string | undefined): Perimeter 
 
 // Ordre de pertinence pour une personne : 0 je pilote · 1 je contribue (équipe ou action) · 2 mon pôle · 3 le reste.
 export type Tier = 0 | 1 | 2 | 3;
-export const TIER_LABEL: Record<Tier, string> = { 0: "Je pilote", 1: "Je contribue", 2: "Mon pôle", 3: "Autres pôles" };
+export const TIER_LABEL: Record<Tier, string> = { 0: "Je pilote", 1: "Je contribue" /* vocab-ok : verbe */, 2: cap(mon(V.pole)), 3: `Autres ${pl(V.pole)}` };
 
 export function relevanceTier(me: Viewer, p: ProjectPoles & { pilotId?: string; guarantorId?: string | null }, teamIds: string[] = [], actionOwnerIds: string[] = []): Tier {
   if (p.pilotId === me.id) return 0;

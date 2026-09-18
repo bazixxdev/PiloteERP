@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { V } from "@/lib/vocab";
 
 type P = { id: string; name: string; role: string; roleLabel: string; poleName: string | null; codir: boolean };
 
@@ -91,7 +92,7 @@ function PersonChooser({ open, onOpenChange, people, current }: { open: boolean;
         </DialogHeader>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, rôle ou pôle…" className="pl-8" aria-label="Rechercher une personne" data-testid="person-search" />
+          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Nom, rôle ou ${V.pole.one}…`} className="pl-8" aria-label="Rechercher une personne" data-testid="person-search" />
         </div>
         <ul className="-mx-1 max-h-[50vh] overflow-y-auto" role="listbox" aria-label="Personnes">
           {list.length === 0 && <li className="px-2 py-3 text-sm text-muted-foreground">Personne ne correspond.</li>}

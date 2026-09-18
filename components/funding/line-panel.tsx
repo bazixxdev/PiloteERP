@@ -13,6 +13,7 @@ import { PaymentsList } from "@/components/funding/payments-list";
 import { paymentSummary } from "@/lib/payments";
 import type { EditionFull } from "@/lib/queries";
 import type { TabCtx } from "@/app/edition/[id]/types";
+import { V, le, ce, pl } from "@/lib/vocab";
 
 // Le corps du panneau d'une ligne de financement : partagé par l'onglet Budget de l'édition et par la matrice « Qui finance
 // quoi » (qui l'ouvre sans quitter le tableau). `highlight` = le champ d'où l'on vient, surligné et focalisé — pratique à
@@ -51,7 +52,7 @@ export function FundingLinePanelBody({ e, f, i, rw, isPilot, refs, funders, conv
           <Field label="Réponse"><AutoField model="fundingLine" id={f.id} field="answeredAt" type="date" value={f.answeredAt} readOnly={!rw} /></Field>
           <Field label="Convention signée le"><AutoField model="fundingLine" id={f.id} field="contractedAt" type="date" value={f.contractedAt} readOnly={!rw} /></Field>
           <Field label="Code analytique"><AutoField model="fundingLine" id={f.id} field="analyticCode" type="text" value={f.analyticCode} readOnly={!rw} /></Field>
-          <Field label="Clé de répartition (référence)"><AutoField model="fundingLine" id={f.id} field="allocationKeyRef" type="text" value={f.allocationKeyRef} readOnly={!rw} placeholder="Onglet de l'Excel RAF" /></Field>
+          <Field label="Clé de répartition (référence)"><AutoField model="fundingLine" id={f.id} field="allocationKeyRef" type="text" value={f.allocationKeyRef} readOnly={!rw} placeholder={`Onglet de l'Excel ${V.raf.one}`} /></Field>
           <Field label="Pluriannuel"><div className="py-1"><AutoField model="fundingLine" id={f.id} field="multiYear" type="bool" value={f.multiYear} readOnly={!rw} placeholder="oui" /></div></Field>
         </div>
         <div className="mt-2"><Field label="Contact du dossier (sinon le contact principal du financeur)"><AutoField model="fundingLine" id={f.id} field="contactId" type="select" value={f.contactId} readOnly={!rw} placeholder="— contact principal —" options={f.funder.contacts.map((c) => ({ value: c.id, label: `${[c.firstName, c.lastName].filter(Boolean).join(" ")}${c.role ? ` · ${c.role}` : ""}` }))} label={`Contact du dossier, ${f.funder.name}`} /></Field></div>
@@ -61,7 +62,7 @@ export function FundingLinePanelBody({ e, f, i, rw, isPilot, refs, funders, conv
             options={conventions.filter((c) => c.funderId === f.funderId && conventionCovers(c, e.year)).map((c) => ({ value: c.id, label: `${c.reference} (${c.startYear}-${c.endYear})` }))} /></div>
           {f.convention && (() => { const a = allocationOf(f.convention); return (
             <span className="text-muted-foreground">
-              {f.convention.startYear}-{f.convention.endYear} · notifié {fmtEuro(f.convention.amountNotified)} · affecté {fmtEuro(a.granted)} sur {f.convention.lines.length} édition{f.convention.lines.length > 1 ? "s" : ""}
+              {f.convention.startYear}-{f.convention.endYear} · notifié {fmtEuro(f.convention.amountNotified)} · affecté {fmtEuro(a.granted)} sur {f.convention.lines.length} {f.convention.lines.length > 1 ? pl(V.edition) : V.edition.one}
               {a.remaining !== null && <> · <span className={cn(a.remaining < 0 ? "text-danger font-medium" : "text-mint")}>{a.remaining < 0 ? `dépassement ${fmtEuro(-a.remaining)}` : `reste à affecter ${fmtEuro(a.remaining)}`}</span></>}
               {" · "}<Link href="/conventions" className="text-primary hover:underline">toutes les conventions</Link>
             </span>
@@ -70,9 +71,9 @@ export function FundingLinePanelBody({ e, f, i, rw, isPilot, refs, funders, conv
         <div className="mt-2"><AutoField model="fundingLine" id={f.id} field="notes" type="textarea" rows={1} value={f.notes} readOnly={!rw} placeholder="Notes, justificatifs à conserver, lieu de stockage…" /></div>
       </details>
       <div className="rounded-lg border p-2" data-testid={`funding-payments-${i}`}>
-        <div className="mb-1 text-[10px] font-semibold text-muted-foreground">Versements (attendus, reçus) · posés par la RAF ou la direction</div>
+        <div className="mb-1 text-[10px] font-semibold text-muted-foreground">Versements (attendus, reçus) · posés par {le(V.raf)} ou {le(V.direction)}</div>
         {f.convention && f.payments.length === 0 && f.convention.payments.length > 0
-          ? <p className="text-xs text-muted-foreground">Cette ligne est versée par tranches sur la convention <Link href={`/conventions/${f.convention.id}`} className="text-primary hover:underline">{f.convention.reference}</Link> ({fmtEuro(paymentSummary(f.convention.amountNotified, f.convention.payments).received)} reçus sur {fmtEuro(f.convention.amountNotified)}). Ajoutez un versement ici seulement s'il est propre à cette édition.</p>
+          ? <p className="text-xs text-muted-foreground">Cette ligne est versée par tranches sur la convention <Link href={`/conventions/${f.convention.id}`} className="text-primary hover:underline">{f.convention.reference}</Link> ({fmtEuro(paymentSummary(f.convention.amountNotified, f.convention.payments).received)} reçus sur {fmtEuro(f.convention.amountNotified)}). Ajoutez un versement ici seulement s'il est propre à {ce(V.edition)}.</p>
           : null}
         <PaymentsList payments={f.payments} reference={f.amountGranted} rw={rw} target={{ fundingLineId: f.id }} compact testId={`payments-line-${i}`} />
       </div>
@@ -95,7 +96,7 @@ export function fundingPanelTitle(e: { project: { name: string }; year: number }
   return `${f.funder.name} · ${e.project.name} ${e.year}`;
 }
 
-export const FUNDING_PANEL_DESCRIPTION = { rw: "Ligne tenue par la RAF : montants, dates, convention, contact, pièces, livrables.", ro: "Lecture seule : ligne tenue par la RAF." };
+export const FUNDING_PANEL_DESCRIPTION = { rw: `Ligne tenue par ${le(V.raf)} : montants, dates, convention, contact, pièces, livrables.`, ro: `Lecture seule : ligne tenue par ${le(V.raf)}.` };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

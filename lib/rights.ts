@@ -5,6 +5,7 @@
 
 import type { PermissionKey } from "./permissions";
 import type { Actor } from "./roles";
+import { V, le } from "@/lib/vocab";
 
 export type { Actor };
 
@@ -13,12 +14,12 @@ export const has = (me: Actor, key: PermissionKey): boolean => me.permissions.in
 export type Layer = "strategic" | "means" | "proposal" | "validation" | "year" | "budget";
 
 export const LAYER_OWNER_LABEL: Record<Layer, string> = {
-  strategic: "à remplir par la direction",
-  means: "à remplir par la RAF et la direction",
-  proposal: "à remplir par le pilote",
-  validation: "renseigné par le CODIR",
-  year: "renseigné par le pilote au fil de l'année",
-  budget: "renseigné par la RAF",
+  strategic: `à remplir par ${le(V.direction)}`,
+  means: `à remplir par ${le(V.raf)} et ${le(V.direction)}`,
+  proposal: `à remplir par ${le(V.pilote)}`,
+  validation: `renseigné par ${le(V.codir)}`,
+  year: `renseigné par ${le(V.pilote)} au fil de l'année`,
+  budget: `renseigné par ${le(V.raf)}`,
 };
 
 // Siège au CODIR : montants, page CODIR, séminaire, écran café.

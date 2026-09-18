@@ -2,6 +2,7 @@
 // active se déplie d'après l'adresse, une seule à la fois. Tout est calculé ici, côté serveur, à partir des droits et des
 // modules ; la barre latérale ne fait qu'afficher et reconnaître l'entrée active. Module pur : pas de base, pas de React.
 import { canAdmin, canLockMonths, canViewTreasury, isCodir, type Actor } from "./rights";
+import { V, cap } from "@/lib/vocab";
 
 export type NavLeaf = {
   label: string;
@@ -135,9 +136,9 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
   if (codir) {
     sections.push({
       id: "direction",
-      label: "Direction",
+      label: cap(V.direction),
       items: [
-        { label: "Écran CODIR", href: "/codir", path: "/codir" },
+        { label: `Écran ${V.codir.one}`, href: "/codir", path: "/codir" },
         { label: "Séminaire", href: "/seminaire", path: "/seminaire" },
         { label: "Écran café", href: "/cafe", path: "/cafe" },
       ],

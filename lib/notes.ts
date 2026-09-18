@@ -2,11 +2,12 @@ import { type Viewer } from "./scope";
 import { prisma } from "./db";
 import { dayjs } from "./format";
 import { canReadShared } from "./modules";
+import { V, de } from "@/lib/vocab";
 
 export const NOTE_CONTEXTS = [
   { value: "project", label: "Réunion de projet" },
   { value: "team", label: "Réunion d'équipe" },
-  { value: "pole", label: "Réunion de pôle" },
+  { value: "pole", label: `Réunion ${de(V.pole)}` },
   { value: "cafe", label: "Café du lundi" },
   { value: "partner", label: "Rendez-vous partenaire" },
   { value: "other", label: "Note libre" },

@@ -1,5 +1,6 @@
 // Listes de valeurs : codes stables en anglais, libellés français modifiables dans l'admin (table RefValue).
 // Les valeurs ci-dessous servent de défaut au seed et de secours si une valeur manque en base.
+import { V, cap, le, de, tout } from "@/lib/vocab";
 
 export type RefFamily =
   | "edition_status"
@@ -73,8 +74,8 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "other", label: "Autre pièce" },
   ],
   decision_instance: [
-    { code: "codir", label: "CODIR" },
-    { code: "pole", label: "Réunion de pôle" },
+    { code: "codir", label: V.codir.one },
+    { code: "pole", label: `Réunion ${de(V.pole)}` },
     { code: "quarterly", label: "Revue trimestrielle" },
     { code: "board", label: "Bureau / CA" },
   ],
@@ -108,14 +109,14 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
   ],
   time_visibility: [
     { code: "self", label: "La personne seule" },
-    { code: "self_pole_lead_raf", label: "La personne, son responsable de pôle, la RAF et la direction" },
-    { code: "codir", label: "Tout le CODIR" },
+    { code: "self_pole_lead_raf", label: `La personne, son responsable ${de(V.pole)}, ${le(V.raf)} et ${le(V.direction)}` },
+    { code: "codir", label: cap(tout(V.codir)) },
     { code: "all", label: "Toute l'équipe" },
   ],
 };
 
 export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
-  edition_status: "Statuts d'édition",
+  edition_status: `Statuts ${de(V.edition)}`,
   action_state: "États d'action",
   funding_status: "Statuts de financement",
   validation_kind: "Natures de validation",

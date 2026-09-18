@@ -3,6 +3,7 @@ import { dayjs } from "./format";
 import { actorOf } from "./roles";
 import { canDecideValidation, canEditFunding, validationLevelOf } from "./rights";
 import { randomBytes } from "node:crypto";
+import { V } from "@/lib/vocab";
 
 // Flux agenda iCal (sens outil → Outlook). Événements « journée entière », format standard, sans dépendance Microsoft.
 
@@ -27,7 +28,7 @@ export type IcsEvent = { uid: string; date: Date; end?: Date; busy?: boolean; su
 export function buildIcs(name: string, events: IcsEvent[]): string {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const lines = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRESS Centre-Val de Loire//Pilote prototype//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${V.orgLong}//Pilote//FR`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
     `X-WR-CALNAME:${esc(name)}`, "X-WR-TIMEZONE:Europe/Paris", "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H",
   ];
   for (const e of events) {
@@ -104,7 +105,7 @@ export async function publicEvents(): Promise<{ name: string; events: IcsEvent[]
   const from = dayjs().subtract(30, "day").toDate();
   const actions = await prisma.action.findMany({ where: { isPublic: true, milestoneDate: { gte: from }, edition: { status: { in: LIVE } } }, include: { edition: { include: { project: true } } }, orderBy: { milestoneDate: "asc" } });
   return {
-    name: "CRESS Centre-Val de Loire · agenda",
-    events: actions.map((a) => ({ uid: `public-${a.id}`, date: a.milestoneDate!, summary: a.name, description: a.edition.project.name, category: "CRESS" })),
+    name: `${V.orgLong} · agenda`,
+    events: actions.map((a) => ({ uid: `public-${a.id}`, date: a.milestoneDate!, summary: a.name, description: a.edition.project.name, category: V.org.one })),
   };
 }

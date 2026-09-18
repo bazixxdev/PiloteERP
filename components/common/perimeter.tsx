@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { Perimeter } from "@/lib/scope";
+import { V, cap, mon, tout } from "@/lib/vocab";
 
 // Bascule « Mon pôle / Toute la CRESS » : le quotidien d'une personne, c'est son pôle ; le reste se consulte sur demande.
 export function PerimeterChips({ current, poleName, hrefFor }: { current: Perimeter; poleName: string | null; hrefFor: (p: Perimeter) => string }) {
@@ -10,8 +11,8 @@ export function PerimeterChips({ current, poleName, hrefFor }: { current: Perime
   );
   return (
     <div className="flex items-center gap-1" data-testid="perimeter">
-      {chip("pole", `Mon pôle · ${poleName}`)}
-      {chip("cress", "Toute la CRESS")}
+      {chip("pole", `${cap(mon(V.pole))} · ${poleName}`)}
+      {chip("cress", cap(tout(V.org)))}
     </div>
   );
 }

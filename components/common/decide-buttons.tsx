@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { decideValidation } from "@/app/actions/edition";
+import { V, le } from "@/lib/vocab";
 
 // Compact (critique du 16/09) : Approuver et Refuser seulement ; le champ de commentaire s'ouvre à la demande, ou au premier
 // clic sur Refuser (un refus mérite un mot, on le propose sans l'imposer). Onze demandes affichées ne font plus onze formulaires.
@@ -20,7 +21,7 @@ export function DecideButtons({ id }: { id: string }) {
     start(async () => {
       const res = await decideValidation(id, decision, comment);
       if (!res.ok) { toast.error(res.error); return; }
-      toast.success(decision === "approved" ? "Approuvée : le montant est engagé sur l'édition." : "Refusée.");
+      toast.success(decision === "approved" ? `Approuvée : le montant est engagé sur ${le(V.edition)}.` : "Refusée.");
       router.refresh();
     });
   return (

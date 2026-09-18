@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { isWebLink } from "@/lib/docs";
 import { AttachmentList, type AttachmentRow } from "@/components/attachments/attachment-list";
 import type { ReactNode } from "react";
+import { V, de } from "@/lib/vocab";
 
 export type ValidationForCard = {
   id: string; kind: string; label: string; amount: number | null; attachmentUrl: string | null; requiredLevel: number; status: string;
@@ -16,7 +17,7 @@ export type ValidationForCard = {
   edition?: { id: string; year: number; project: { name: string } };
 };
 
-const LEVEL_LABEL = ["", "niveau 1 · pilote", "niveau 2 · responsable de pôle", "niveau 3 · direction"];
+const LEVEL_LABEL = ["", `niveau 1 · ${V.pilote.one}`, `niveau 2 · responsable ${de(V.pole)}`, `niveau 3 · ${V.direction.one}`];
 
 export function ValidationCard({ v, refs, canDecide, showEdition, index, attachments = [], upload }: { v: ValidationForCard; refs: RefMap; canDecide: boolean; showEdition?: boolean; index?: number; attachments?: AttachmentRow[]; upload?: ReactNode }) {
   const age = dayjs().diff(dayjs(v.createdAt), "day");
