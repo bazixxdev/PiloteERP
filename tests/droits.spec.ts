@@ -17,7 +17,7 @@ test("donner « Gère les financements » aux contributeurs rend les versements 
 
   // Lucas (contributeur) peut maintenant ajouter un versement.
   await iAm(page, "Lucas Perrin");
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await page.getByTestId("open-convention-FSE-2026-2028").click();
   await expect(page.getByTestId("convention-payments-list-add-open")).toBeVisible();
 
@@ -27,7 +27,7 @@ test("donner « Gère les financements » aux contributeurs rend les versements 
   await page.getByTestId("perm-contributor-funding.edit").uncheck();
   await page.waitForTimeout(600);
   await iAm(page, "Lucas Perrin");
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await page.getByTestId("open-convention-FSE-2026-2028").click();
   await expect(page.getByTestId("convention-payments-list")).toContainText("Acompte 2027");
   await expect(page.getByTestId("convention-payments-list-add-open")).toHaveCount(0);

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { addCall, promoteCall, renewCall, setCallActive, setCallStatus } from "@/app/actions/calls";
 import { CALL_STATUSES } from "@/lib/calls";
+import { AMOUNT_KINDS } from "@/lib/dossiers";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
 
 type Opt = { value: string; label: string };
@@ -23,9 +24,14 @@ function useRun() {
 }
 
 // Nouvel appel repéré : financeur, intitulé, échéance (ou fil de l'eau), montant indicatif, lien. Le reste se complète en place.
-export function AddCallDialog({ funders, defaultFunderId }: { funders: Opt[]; defaultFunderId?: string }) {
+export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { funders: Opt[]; defaultFunderId?: string; projects?: Opt[] }) {
   const [open, setOpen] = useState(false);
   const [funderId, setFunderId] = useState(defaultFunderId ?? funders[0]?.value ?? "");
+  const [funderName, setFunderName] = useState("");
+  const [amountValue, setAmountValue] = useState("");
+  const [amountKind, setAmountKind] = useState("total");
+  const [years, setYears] = useState("1");
+  const [targetProjectId, setTargetProjectId] = useState("");
   const [label, setLabel] = useState("");
   const [scheme, setScheme] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -40,13 +46,13 @@ export function AddCallDialog({ funders, defaultFunderId }: { funders: Opt[]; de
       <DialogTrigger asChild><Button data-testid="call-add-open"><Plus />Nouvel appel</Button></DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={(e) => { e.preventDefault(); start(async () => {
-          const r = await addCall({ funderId, label, scheme, deadline: deadline || null, rolling, recurring, amountHint, link });
+          const r = await addCall({ funderId, funderName, label, scheme, deadline: deadline || null, rolling, recurring, amountHint, amountValue: amountValue || null, amountKind, durationYears: years || null, targetProjectId: targetProjectId || null, link });
           if (!r.ok) { toast.error(r.error); return; }
-          toast.success("Appel à projets repéré"); setOpen(false); setLabel(""); setScheme(""); setDeadline(""); setAmountHint(""); setLink(""); router.refresh();
+          toast.success("Appel à projets repéré"); setOpen(false); setLabel(""); setScheme(""); setDeadline(""); setAmountHint(""); setLink(""); setFunderName(""); setAmountValue(""); setTargetProjectId(""); router.refresh();
         }); }}>
           <DialogHeader><DialogTitle>Nouvel appel à projets</DialogTitle><DialogDescription>Une opportunité repérée, avant toute décision. Le CODIR dira ensuite « à étudier », « on dépose » ou « écarté ».</DialogDescription></DialogHeader>
           <div className="grid gap-3 py-3">
-            <div className="grid gap-1"><Label htmlFor="call-funder">Financeur</Label><SearchableSelect id="call-funder" options={funders} value={funderId} onChange={setFunderId} data-testid="call-funder" className="w-full" /></div>
+            <div className="grid gap-1"><Label htmlFor="call-funder">Financeur</Label><SearchableSelect id="call-funder" options={funders} value={funderId} onChange={setFunderId} emptyOption="— nouveau financeur, ci-dessous —" data-testid="call-funder" className="w-full" />{!funderId && <Input value={funderName} onChange={(e) => setFunderName(e.target.value)} placeholder="Nom du nouveau financeur (créé dans l'annuaire)" className="h-8 text-xs" data-testid="call-funder-name" />}</div>
             <div className="grid gap-1"><Label htmlFor="call-label">Intitulé</Label><Input id="call-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="AAP Transition écologique 2027" required data-testid="call-label" /></div>
             <div className="grid gap-1"><Label htmlFor="call-scheme">Dispositif, axe (facultatif)</Label><Input id="call-scheme" value={scheme} onChange={(e) => setScheme(e.target.value)} placeholder="Axe 2 · économie circulaire" /></div>
             <div className="grid grid-cols-[1fr_auto] items-end gap-2">
@@ -54,10 +60,16 @@ export function AddCallDialog({ funders, defaultFunderId }: { funders: Opt[]; de
               <label className="flex h-8 items-center gap-1.5 text-xs"><input type="checkbox" checked={rolling} onChange={(e) => setRolling(e.target.checked)} className="accent-primary" data-testid="call-rolling" /> au fil de l&apos;eau</label>
             </div>
             <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="accent-primary" /> revient chaque année</label>
-            <div className="grid gap-1"><Label htmlFor="call-amount">Montant indicatif (facultatif)</Label><Input id="call-amount" value={amountHint} onChange={(e) => setAmountHint(e.target.value)} placeholder="jusqu'à 30 000 €, 50 % des dépenses…" /></div>
+            <div className="grid grid-cols-[7rem_1fr_5rem] gap-2">
+              <div className="grid gap-1"><Label htmlFor="call-amount-value">Montant visé (€)</Label><Input id="call-amount-value" inputMode="decimal" value={amountValue} onChange={(e) => setAmountValue(e.target.value)} className="text-right" data-testid="call-amount-value" /></div>
+              <div className="grid gap-1"><Label htmlFor="call-amount-kind">Ce montant est</Label><Select id="call-amount-kind" value={amountKind} onChange={(e) => setAmountKind(e.target.value)} className="h-9 text-sm" data-testid="call-amount-kind">{AMOUNT_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}</Select></div>
+              <div className="grid gap-1"><Label htmlFor="call-years">Durée (ans)</Label><Input id="call-years" type="number" min={1} max={10} value={years} onChange={(e) => setYears(e.target.value)} data-testid="call-years" /></div>
+            </div>
+            <div className="grid gap-1"><Label htmlFor="call-project">Projet visé (facultatif)</Label><SearchableSelect id="call-project" options={projects} value={targetProjectId} onChange={setTargetProjectId} emptyOption="— à préciser —" searchFrom={1} className="w-full" data-testid="call-project" /></div>
+            <div className="grid gap-1"><Label htmlFor="call-amount">Montant indicatif en texte (facultatif)</Label><Input id="call-amount" value={amountHint} onChange={(e) => setAmountHint(e.target.value)} placeholder="jusqu'à 30 000 €, 50 % des dépenses…" /></div>
             <div className="grid gap-1"><Label htmlFor="call-link">Lien vers l&apos;appel (facultatif)</Label><Input id="call-link" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" /></div>
           </div>
-          <DialogFooter><Button type="submit" disabled={pending || !label.trim() || !funderId} data-testid="call-submit">Repérer</Button></DialogFooter>
+          <DialogFooter><Button type="submit" disabled={pending || !label.trim() || (!funderId && !funderName.trim())} data-testid="call-submit">Repérer</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -80,7 +92,7 @@ export function CallStatusSelect({ id, value, readOnly }: { id: string; value: s
   );
 }
 
-// Actions par ligne : Étudier (→ convention), Reconduire (annuel, clôturé), Retirer / Remettre.
+// Actions par ligne : Ouvrir un dossier (→ dossier de financement à étudier), Reconduire (annuel, clôturé), Retirer / Remettre.
 export function CallRowActions({ id, label, canPromote, canSpot, promoted, recurringClosed, active }: { id: string; label: string; canPromote: boolean; canSpot: boolean; promoted: boolean; recurringClosed: boolean; active: boolean }) {
   const { pending, run } = useRun();
   const router = useRouter();
@@ -88,9 +100,9 @@ export function CallRowActions({ id, label, canPromote, canSpot, promoted, recur
   return (
     <div className="flex flex-wrap items-center justify-end gap-1">
       {canPromote && !promoted && active && (
-        <Button size="xs" variant="outline" disabled={pendingP} data-testid={`call-promote-${id}`} title="Créer la convention « à déposer » pré-remplie depuis cet appel"
-          onClick={() => startP(async () => { const r = await promoteCall(id); if (!r.ok) { toast.error(r.error); return; } toast.success(r.data?.existed ? "Cette convention existe déjà" : "Convention créée, à déposer"); router.push(`/conventions/${r.data!.conventionId}`); })}>
-          <FilePlus2 />Étudier
+        <Button size="xs" variant="outline" disabled={pendingP} data-testid={`call-promote-${id}`} title="Ouvrir le dossier de financement (à étudier), prérempli depuis cet appel"
+          onClick={() => startP(async () => { const r = await promoteCall(id); if (!r.ok) { toast.error(r.error); return; } toast.success(r.data?.existed ? "Ce dossier existe déjà" : "Dossier ouvert, à étudier"); router.push(`/conventions/${r.data!.conventionId}`); })}>
+          <FilePlus2 />Ouvrir un dossier
         </Button>
       )}
       {canSpot && recurringClosed && <Button size="xs" variant="ghost" disabled={pending} data-testid={`call-renew-${id}`} title="Créer l'appel de l'année suivante" onClick={() => run(() => renewCall(id), () => toast.success("Appel de l'année suivante créé"))}><RotateCw />Reconduire</Button>}

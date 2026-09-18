@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileSignature } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";

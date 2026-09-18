@@ -32,14 +32,15 @@ test("la RAF repère, le CODIR statue, « Étudier » crée la convention une se
   await expect(page.getByText("Statut posé : À étudier")).toBeVisible();
   await expect(page.getByTestId("calls-table").locator(FDVA)).toHaveAttribute("data-status", "study");
 
-  // Promotion de l'AMI Région : la convention « à déposer » s'ouvre, pré-remplie ; l'appel garde le lien et perd le bouton.
+  // « Ouvrir un dossier » sur l'AMI Région : le dossier « à étudier » s'ouvre, prérempli ; l'appel garde le lien et perd le bouton.
   const amiId = (await page.getByTestId("calls-table").locator(AMI).getAttribute("data-testid"))!.replace("call-", "");
   await page.getByTestId(`call-promote-${amiId}`).click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Région · REGION-2026");
-  await expect(page.getByTestId("convention-REGION-2026")).toContainText("À déposer");
+  await expect(page.getByTestId("convention-REGION-2026")).toContainText("À étudier");
+  await expect(page.getByTestId("dossier-funder")).toContainText("Région");
+  await expect(page.getByTestId("dossier-stepper")).toHaveAttribute("data-status", "study");
   await page.goto("/appels");
   const ami = page.getByTestId("calls-table").locator(AMI);
-  await expect(ami).toContainText("Convention créée");
+  await expect(ami).toContainText("À étudier");
   await expect(ami.getByTestId(`call-convention-${amiId}`)).toHaveText("REGION-2026");
   await expect(page.getByTestId(`call-promote-${amiId}`)).toHaveCount(0);
   // Le radar ne montre plus l'AMI : c'est la convention qui vit désormais.
@@ -81,7 +82,7 @@ test("un contributeur lit la veille sans agir ; la direction éteint le module e
   await page.goto("/admin?section=parametres");
   await page.getByTestId("instance-module-veille").uncheck();
   await expect(page.getByText("Module « Appels à projets (veille) » désactivé — les données restent")).toBeVisible();
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await expect(page.locator("aside").getByRole("link", { name: "Appels à projets" })).toHaveCount(0);
   const res = await page.goto("/appels");
   expect(res?.status()).toBe(404);

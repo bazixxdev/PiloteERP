@@ -66,7 +66,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
             <FunderContacts funderId={f.id} contacts={f.contacts} readOnly={!rw} />
           </Section>
 
-          <Section title="Conventions" description="Une convention existe une fois, même sur plusieurs années.">
+          <Section title="Dossiers et financements" description="Les dossiers en cours et les financements obtenus auprès de ce financeur.">
             {f.conventions.length === 0 ? <p className="text-sm text-muted-foreground">Aucune convention. <Link href="/conventions" className="text-primary hover:underline">Créer une convention</Link>.</p> : (
               <table className="w-full text-sm">
                 <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">Référence</th><th className="py-1.5 pr-2">Période</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Notifié</th><th className="py-1.5 pr-2 text-right">Affecté</th><th className="py-1.5">Contact du dossier</th></tr></thead>
@@ -75,7 +75,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
                     <tr key={c.id} className={cn(!(c.startYear <= year && year <= c.endYear) && "text-muted-foreground")}>
                       <td className="py-2 pr-2"><Link href={`/conventions/${c.id}`} className="font-medium text-primary hover:underline">{c.reference}</Link>{c.scheme && <small className="block text-[10px] text-muted-foreground">{c.scheme}</small>}</td>
                       <td className="py-2 pr-2 whitespace-nowrap tabular">{c.startYear === c.endYear ? c.startYear : `${c.startYear} → ${c.endYear}`}</td>
-                      <td className="py-2 pr-2"><StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} /></td>
+                      <td className="py-2 pr-2"><StatusBadge label={refLabel(refs, "dossier_status", c.status)} color={refColor(refs, "dossier_status", c.status)} /></td>
                       <td className="py-2 pr-2 text-right tabular">{fmtEuro(c.amountNotified)}</td>
                       <td className={cn("py-2 pr-2 text-right tabular", a.over && "font-semibold text-danger")}>{fmtEuro(a.granted)}</td>
                       <td className="py-2 text-xs text-muted-foreground">{c.contact ? [c.contact.firstName, c.contact.lastName].filter(Boolean).join(" ") : main ? `${[main.firstName, main.lastName].filter(Boolean).join(" ")} (principal)` : "—"}</td>

@@ -13,7 +13,9 @@ export type RefFamily =
   | "time_visibility"
   | "attachment_kind"
   | "decision_instance"
-  | "college";
+  | "college"
+  | "dossier_status"
+  | "funding_form";
 
 export type RefDef = { code: string; label: string; color?: string };
 
@@ -85,6 +87,25 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "reseaux", label: "Réseaux et fédérations" },
     { code: "personnes", label: "Personnes physiques" },
   ],
+  dossier_status: [
+    { code: "study", label: "À étudier", color: "info" },
+    { code: "drafting", label: "Réponse en cours", color: "primary" },
+    { code: "submitted", label: "Déposé · en attente", color: "warning" },
+    { code: "notified", label: "Obtenu · notifié", color: "mint" },
+    { code: "contracted", label: "Obtenu · conventionné", color: "mint" },
+    { code: "justified", label: "Obtenu · justifié", color: "muted" },
+    { code: "lost", label: "Refusé", color: "danger" },
+    { code: "dismissed", label: "Écarté", color: "muted" },
+  ],
+  funding_form: [
+    { code: "convention", label: "Convention" },
+    { code: "arrete", label: "Arrêté attributif" },
+    { code: "lettre", label: "Lettre de notification" },
+    { code: "mecenat", label: "Contrat de mécénat" },
+    { code: "commande", label: "Bon de commande (prestation)" },
+    { code: "cotisation", label: "Cotisation / adhésion" },
+    { code: "sans", label: "Sans formalisme" },
+  ],
   time_visibility: [
     { code: "self", label: "La personne seule" },
     { code: "self_pole_lead_raf", label: "La personne, son responsable de pôle, la RAF et la direction" },
@@ -106,6 +127,8 @@ export const REF_FAMILY_LABELS: Record<RefFamily, string> = {
   attachment_kind: "Natures de pièces jointes",
   decision_instance: "Instances de décision",
   college: "Collèges d'adhésion",
+  dossier_status: "Statuts de dossier de financement",
+  funding_form: "Formes de financement obtenu",
 };
 
 export type RefMap = Record<string, Record<string, RefDef>>;

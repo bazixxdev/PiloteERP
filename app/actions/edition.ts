@@ -274,14 +274,15 @@ export async function recordDecision(input: { editionId: string; instance: strin
 }
 
 // Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.
-export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null }): Promise<Result<{ id: string }>> {
+export async function createConvention(input: { funderId: string; reference: string; scheme?: string; startYear: number; endYear: number; amountNotified?: number | null; form?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
-  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) crée une convention." };
+  if (!canEditFunding(me)) return { ok: false, error: "Seule la RAF (ou la direction) enregistre un financement obtenu." };
   const reference = input.reference.trim();
   if (!reference) return { ok: false, error: "Référence obligatoire (ex. FSE-2026-2028)." };
-  if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez la convention existante.` };
+  if (await prisma.convention.findUnique({ where: { reference } })) return { ok: false, error: `La référence « ${reference} » existe déjà : rattachez le financement existant.` };
   if (input.endYear < input.startYear) return { ok: false, error: "La fin précède le début." };
-  const c = await prisma.convention.create({ data: { funderId: input.funderId, reference, scheme: input.scheme?.trim() || null, startYear: input.startYear, endYear: input.endYear, amountNotified: input.amountNotified ?? null, status: input.amountNotified ? "notified" : "to_submit" } });
+  // Enregistré directement comme obtenu (lot 2 du 19/09) : un dossier encore en cours s'ouvre dans « Dossiers de financement ».
+  const c = await prisma.convention.create({ data: { funderId: input.funderId, reference, scheme: input.scheme?.trim() || null, startYear: input.startYear, endYear: input.endYear, amountNotified: input.amountNotified ?? null, status: "notified", form: input.form || "convention", notifiedAt: new Date() } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: c.id } };
 }

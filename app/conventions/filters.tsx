@@ -10,7 +10,7 @@ const Filter = ({ label, children }: { label: string; children: React.ReactNode 
 );
 
 // Filtres de la liste des conventions : financeur, statut, type (annuelle / pluriannuelle ou partagée).
-export function ConventionFilters({ funders, statuses, current }: { funders: Opt[]; statuses: Opt[]; current: { financeur: string; statut: string; type: string } }) {
+export function ConventionFilters({ funders, statuses, current, withType = true }: { funders: Opt[]; statuses: Opt[]; current: { vue: string; financeur: string; statut: string; type: string }; withType?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const set = (key: string, value: string) => {
@@ -33,13 +33,13 @@ export function ConventionFilters({ funders, statuses, current }: { funders: Opt
           {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </Select>
       </Filter>
-      <Filter label="Type">
+      {withType && <Filter label="Type">
         <Select className={sel} value={current.type} onChange={(e) => set("type", e.target.value)} aria-label="Filtrer par type">
-          <option value="">Toutes</option>
-          <option value="pluri">Pluriannuelles ou partagées</option>
-          <option value="annuelle">Annuelles</option>
+          <option value="">Tous</option>
+          <option value="pluri">Pluriannuels ou partagés</option>
+          <option value="annuelle">Annuels</option>
         </Select>
-      </Filter>
+      </Filter>}
     </div>
   );
 }

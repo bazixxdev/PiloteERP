@@ -8,12 +8,12 @@ export type DossiersTab = "projets" | "conventions" | "financeurs" | "organisati
 // le compteur à gauche, l'action principale à droite — collée au tableau.
 const TITLES: Record<DossiersTab, string> = { projets: "Projets", conventions: "Conventions", financeurs: "Financeurs", organisations: "Organisations", contacts: "Contacts", matrice: "Qui finance quoi", appels: "Appels à projets" };
 
-export async function DossiersHeader({ current, summary, tools, actions }: { current: DossiersTab; summary?: ReactNode; tools?: ReactNode; actions?: ReactNode }) {
+export async function DossiersHeader({ current, title, summary, tools, actions }: { current: DossiersTab; title?: string; summary?: ReactNode; tools?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-3">
       <div className="mb-3 flex items-center gap-3">
         <SectionIcon className="grid size-9 shrink-0 place-items-center rounded-md bg-info-soft text-primary print:hidden" />
-        <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px] text-foreground" data-testid={`dossiers-title-${current}`}>{TITLES[current]}</h1>
+        <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px] text-foreground" data-testid={`dossiers-title-${current}`}>{title ?? TITLES[current]}</h1>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2" data-testid="dossiers-toolbar">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">

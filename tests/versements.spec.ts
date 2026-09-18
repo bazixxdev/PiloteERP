@@ -5,9 +5,9 @@ import { iAm, openEditionByName } from "./helpers";
 // « Reçu » est posé par la RAF ou la direction ; le reste à percevoir se calcule ; un versement dépassé alerte la RAF et la direction.
 
 test("la convention FSE porte ses tranches : versé, reste à percevoir, ajout et réception par la RAF", async ({ page }) => {
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await iAm(page, "Nadia Ferrand");
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   // La liste montre le versé et le reste de chaque convention.
   await expect(page.getByTestId("received-FSE-2026-2028")).toContainText(/49.500/);
   await expect(page.getByTestId("received-FSE-2026-2028")).toContainText(/reste 115.500/);
@@ -67,9 +67,9 @@ test("l'édition lit ses versements par ligne ; le seul solde en retard est sign
 });
 
 test("un contributeur lit les versements sans pouvoir les modifier", async ({ page }) => {
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await iAm(page, "Lucas Perrin");
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await page.getByTestId("open-convention-FSE-2026-2028").click();
   const list = page.getByTestId("convention-payments-list");
   await expect(list).toContainText("Acompte 2027");

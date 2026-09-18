@@ -89,6 +89,7 @@ model Person {
   cashRulesCreated   CashRule[]         @relation("CashRuleCreator")
   cashRules          CashRule[]         @relation("CashRulePerson")
   loans              Loan[]             @relation("LoanBorrower")
+  dossiersOwned      Convention[]       @relation("ConventionOwner")
   loansCreated       Loan[]             @relation("LoanCreator")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
@@ -328,6 +329,10 @@ model EditionPartner {
 
 // Convention : objet unique par financeur et dispositif, pouvant couvrir plusieurs années et plusieurs projets (EF-C3).
 // Les lignes de financement des éditions sont ses affectations ; leur somme ne doit pas dépasser le montant notifié.
+// Dossier de financement (lot 2 du 19/09, retour de Gaël) : la même table porte le dossier depuis « à étudier » jusqu'au
+// financement obtenu — on ne crée pas une convention qu'on n'a pas encore gagnée. Cycle (référentiel dossier_status) :
+// study → drafting → submitted → notified / contracted / justified (obtenu) ; lost, dismissed (avec le pourquoi). Obtenu, le
+// financement a une forme (référentiel funding_form) : convention, arrêté, lettre, mécénat, commande… pas toujours une convention.
 model Convention {
   id              String        @id @default(cuid())
   funderId        String
@@ -335,11 +340,23 @@ model Convention {
   reference       String // référence interne unique, ex. FSE-2026-2028
   scheme          String?
   label           String?
+  description     String? // de quoi il s'agit, ce qu'on demande
   startYear       Int
   endYear         Int
-  status          String        @default("to_submit") // to_submit | submitted | notified | contracted | justified
+  status          String        @default("study") // study | drafting | submitted | notified | contracted | justified | lost | dismissed
+  form            String? // forme du financement obtenu (funding_form) : convention | arrete | lettre | mecenat | commande | cotisation | sans
   amountRequested Float?
+  amountKind      String        @default("total") // total (sur toute la durée) | annual (par an)
   amountNotified  Float?
+  targetProjectId String? // projet visé par le dossier (les éditions se rattachent une fois obtenu)
+  targetProject   Project?      @relation("ConventionTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
+  deadline        DateTime? // échéance de dépôt
+  ownerId         String? // qui rédige la réponse
+  owner           Person?       @relation("ConventionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  helpers         String? // qui aide (texte libre)
+  sources         String? // documents sources, cahier des charges, liens (texte, une ligne par élément)
+  decisionNote    String? // pourquoi écarté ou refusé
+  decidedAt       DateTime?
   submittedAt     DateTime?
   notifiedAt      DateTime?
   signedAt        DateTime?
@@ -349,6 +366,9 @@ model Convention {
   lines           FundingLine[]
   payments        Payment[]
   call            Call?
+  attachments     Attachment[]
+  tasks           Task[]
+  notesLinked     Note[]
   createdAt       DateTime      @default(now())
 
   @@unique([reference])
@@ -384,7 +404,9 @@ model Project {
   createdAt     DateTime  @default(now())
   editions      Edition[]
   timeEntries   TimeEntry[]
-  secondaryPoles ProjectPole[] // pôles associés (projets communs) ; le pôle principal est celui du pilote
+  secondaryPoles ProjectPole[]
+  targetedBy    Convention[] @relation("ConventionTarget")
+  callsTargeted Call[]       @relation("CallTarget") // pôles associés (projets communs) ; le pôle principal est celui du pilote
 }
 
 // Pôle secondaire d'un projet commun : ses membres le voient dans leur périmètre, son responsable y a ses droits de garant.
@@ -843,6 +865,11 @@ model Call {
   rolling      Boolean     @default(false) // au fil de l'eau
   recurring    Boolean     @default(false) // revient chaque année : « reconduire » crée l'appel de l'année suivante
   amountHint   String? // montant indicatif, en texte (« jusqu'à 30 k€ », « 50 % des dépenses »)
+  amountValue  Float? // montant visé, en chiffres (lot 2)
+  amountKind   String      @default("total") // total | annual
+  durationYears Int? // durée du financement (1, 2, 3 ans) : un montant global se lit par an
+  targetProjectId String? // projet ou édition visés par une réponse
+  targetProject   Project? @relation("CallTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
   link         String?
   note         String?
   teamStatus   String? // study | apply | dismissed ; null = pas encore regardé
@@ -960,6 +987,8 @@ model Attachment {
   equipment     Equipment?         @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   loanId        String? // fiche de prêt signée, état des lieux
   loan          Loan?              @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  conventionId  String? // pièces d'un dossier de financement : cahier des charges, réponse déposée, notification
+  convention    Convention?        @relation(fields: [conventionId], references: [id], onDelete: Cascade)
   fundingLineId String?
   fundingLine   FundingLine?       @relation(fields: [fundingLineId], references: [id])
   deliverableId String?
@@ -1088,6 +1117,8 @@ model Task {
   listId    String?
   list      TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
   requestId String? // tâche née d'une demande prise (« Je m'en occupe ») : cocher la tâche fait la demande, et inversement
+  conventionId String? // tâche d'un dossier de financement (réponse à préparer)
+  convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
   request   Request?   @relation(fields: [requestId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
   slots     WorkSlot[]
@@ -1124,6 +1155,8 @@ model Note {
   context    String   @default("project") // project | team | pole | cafe | other
   editionId  String?
   edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  conventionId String? // note d'un dossier de financement
+  convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
   visibility String   @default("private") // private | pole | all
   color      String?  // repère visuel choisi par l'auteur : bleu | vert | ocre | corail | violet | gris (lib/notes.ts NOTE_COLORS)
   archivedAt DateTime? // archivée par son auteur : sort des listes, reste lisible dans « Archivées »

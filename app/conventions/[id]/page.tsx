@@ -16,20 +16,31 @@ import { AttachEditionForm, DetachButton } from "./allocations";
 import { ContactLine } from "@/components/funders/contacts";
 import { PaymentsList } from "@/components/funding/payments-list";
 import { paymentSummary } from "@/lib/payments";
+import { AMOUNT_KINDS, amounts, durationOf, isWon } from "@/lib/dossiers";
+import { attachmentInclude } from "@/lib/attachments";
+import { DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [me, refs, c] = await Promise.all([
     getCurrentPerson(), getRefs(),
-    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
+    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, owner: { select: { id: true, name: true } }, targetProject: { select: { id: true, name: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } }, tasks: { include: { person: { select: { name: true } } }, orderBy: [{ done: "asc" }, { createdAt: "asc" }] }, notesLinked: { include: { author: { select: { name: true } } }, orderBy: { date: "desc" } }, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
   const rw = canEditFunding(me);
   // Éditions couvertes par la période et pas encore rattachées : proposées au rattachement depuis la convention.
   const attachable = rw ? (await prisma.edition.findMany({ where: { year: { gte: c.startYear, lte: c.endYear }, status: { not: "closed" }, id: { notIn: c.lines.map((l) => l.editionId) } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] })).map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` })) : [];
   const a = allocationOf(c);
-  const statusOpts = REF_DEFAULTS.funding_status.map((s) => ({ value: s.code, label: refLabel(refs, "funding_status", s.code) }));
+  const statusOpts = REF_DEFAULTS.dossier_status.map((s) => ({ value: s.code, label: refLabel(refs, "dossier_status", s.code) }));
+  const formOpts = REF_DEFAULTS.funding_form.map((s) => ({ value: s.code, label: refLabel(refs, "funding_form", s.code) }));
+  const won = isWon(c.status);
+  const asked = amounts(c.amountRequested, c.amountKind, durationOf(c));
+  const [projects, people] = await Promise.all([
+    prisma.project.findMany({ where: { archived: false }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.person.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
+  const funderContact = c.contact ?? c.funder.contacts.find((x) => x.primary) ?? c.funder.contacts[0] ?? null;
   const pct = a.ceiling ? Math.round((a.granted / a.ceiling) * 100) : null;
   // Versements : les tranches de la convention, plus ceux posés directement sur une ligne rattachée (propres à une édition).
   const linePayments = c.lines.flatMap((l) => l.payments.map((p) => ({ ...p, source: { label: `${l.edition.project.name} · ${l.edition.year}`, href: `/edition/${l.editionId}?onglet=budget#recettes` } })));
@@ -53,31 +64,66 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="p-4 md:p-6" data-testid={`convention-${c.reference}`}>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/conventions" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Toutes les conventions</Link>
+          <Link href={won ? "/conventions?vue=obtenus" : "/conventions"} className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />{won ? "Financements obtenus" : "Dossiers de financement"}</Link>
           <div className="flex flex-wrap items-center gap-2">
             <SectionIcon />
-            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{c.funder.name} · {c.reference}</h1>
-            <StatusBadge label={refLabel(refs, "funding_status", c.status)} color={refColor(refs, "funding_status", c.status)} />
+            <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{c.label ?? c.reference}</h1>
+            <StatusBadge label={refLabel(refs, "dossier_status", c.status)} color={refColor(refs, "dossier_status", c.status)} />
             {a.over && <StatusBadge label={`Affectations au-delà du notifié · ${fmtEuro(-a.remaining!)}`} color="danger" dot={false} />}
           </div>
-          <p className="mt-1.5 text-xs" data-testid="convention-contact"><ContactLine c={c.contact ?? c.funder.contacts.find((x) => x.primary) ?? null} label={c.contact ? "Contact du dossier" : "Contact"} /> · <Link href={`/financeurs/${c.funderId}`} className="text-primary hover:underline">fiche {c.funder.name}</Link></p>
-          <p className="mt-1.5 text-xs text-muted-foreground">{c.scheme ? `${c.scheme} · ` : ""}{c.startYear === c.endYear ? `Année ${c.startYear}` : `${c.startYear} → ${c.endYear}`} · {c.lines.length} édition{c.lines.length > 1 ? "s" : ""} rattachée{c.lines.length > 1 ? "s" : ""}{rw ? "" : " · lecture seule : tenue par la RAF"}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground"><span className="font-mono">{c.reference}</span>{c.scheme ? ` · ${c.scheme}` : ""} · {c.startYear === c.endYear ? `année ${c.startYear}` : `${c.startYear} → ${c.endYear} (${durationOf(c)} ans)`}{c.targetProject && <> · pour <Link href={`/projets/${c.targetProject.id}`} className="text-primary hover:underline">{c.targetProject.name}</Link></>}{won && c.form ? ` · ${refLabel(refs, "funding_form", c.form)}` : ""}{rw ? "" : " · lecture seule : tenu par la RAF"}</p>
+          <div className="mt-2"><Stepper status={c.status} /></div>
+        </div>
+        {rw && <LifecycleButtons id={c.id} status={c.status} forms={formOpts} />}
+      </div>
+
+      {/* Le financeur et son contact, en avant (retour de Gaël : on ne les voyait pas). */}
+      <div className="mb-4 rounded-md border bg-card px-4 py-3" data-testid="dossier-funder">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Financeur</span><div className="text-[15px] font-bold"><Link href={`/financeurs/${c.funderId}`} className="text-primary hover:underline">{c.funder.name}</Link></div></div>
+          <div className="text-xs" data-testid="convention-contact"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{c.contact ? "Contact du dossier" : "Contact"}</span><div><ContactLine c={funderContact} /></div></div>
+          {(c.decisionNote || c.decidedAt) && <div className="text-xs"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{c.status === "lost" ? "Refusé" : c.status === "dismissed" ? "Écarté" : "Décision"}{c.decidedAt ? ` le ${fmtDate(c.decidedAt)}` : ""}</span><div data-testid="dossier-decision">{c.decisionNote ?? "—"}</div></div>}
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-5">
+      {won && <div className="mb-4 grid gap-3 sm:grid-cols-5">
         {card("Demandé", c.amountRequested === null ? "—" : fmtEuro(c.amountRequested), "au dépôt du dossier")}
         {card("Notifié", c.amountNotified === null ? "—" : fmtEuro(c.amountNotified), "plafond des affectations", undefined, `notified-value-${c.reference}`)}
         {card("Affecté aux éditions", fmtEuro(a.granted), pct !== null ? `${pct} % du notifié · montants obtenus des lignes` : "somme des montants obtenus", a.over ? "border-danger bg-danger-soft/50" : undefined, `allocated-${c.reference}`)}
         {card("Reste à affecter", a.remaining === null ? "—" : fmtEuro(a.remaining), a.remaining === null ? "renseignez le notifié" : a.remaining < 0 ? "dépassement : réduisez une affectation ou corrigez le notifié" : "disponible pour une édition à venir", a.remaining !== null && a.remaining < 0 ? "border-danger bg-danger-soft/50" : undefined)}
         {card("Versé", fmtEuro(pay.received), pay.remaining === null ? "renseignez le notifié" : pay.late.length > 0 ? `${pay.late.length} versement${pay.late.length > 1 ? "s" : ""} en retard` : pay.remaining > 0 ? `reste à percevoir ${fmtEuro(pay.remaining)}` : "tout est perçu", pay.late.length > 0 ? "border-danger bg-danger-soft/50" : undefined, `received-${c.reference}`)}
       </div>
+}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className={cn("grid gap-4", won ? "lg:grid-cols-[1fr_360px]" : "lg:grid-cols-[1fr_1fr]")}>
         <div className="grid content-start gap-4">
-          <Section title="Affectations aux éditions" description="Une ligne de financement par édition rattachée ; le montant obtenu se saisit sur l'édition (onglet Financements). Le rattachement se fait ici ou depuis l'édition." testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
+          <Section title={won ? "La demande, pour mémoire" : "La demande"} description="Ce qu'on vise : de quoi il s'agit, combien, sur combien de temps, pour quel projet, avant quand." testId="dossier-request">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="sm:col-span-3"><Field label="De quoi il s'agit" field="description" type="textarea" placeholder="Ce qui est financé, les conditions, ce qu'on demande…" /></div>
+              <Field label="Montant demandé" field="amountRequested" type="number" suffix="€" refresh />
+              <Field label="Ce montant est" field="amountKind" type="select" options={AMOUNT_KINDS} refresh />
+              <div className="grid gap-1"><span className="text-[10px] text-muted-foreground">Par an · global</span><div className="text-sm tabular" data-testid="dossier-per-year">{asked.total == null ? "—" : `${fmtEuro(asked.perYear!)} par an · ${fmtEuro(asked.total)} sur ${durationOf(c)} an${durationOf(c) > 1 ? "s" : ""}`}</div></div>
+              <Field label="Première année" field="startYear" type="number" refresh />
+              <Field label="Dernière année" field="endYear" type="number" refresh />
+              <Field label="Échéance de dépôt" field="deadline" type="date" />
+              <Field label="Pour quel projet" field="targetProjectId" type="select" options={projects.map((p) => ({ value: p.id, label: p.name }))} placeholder="— à préciser —" refresh />
+              <Field label="Dispositif" field="scheme" type="text" placeholder="axe, programme…" />
+              <Field label="Référence" field="reference" type="text" refresh />
+            </div>
+          </Section>
+          {!won && (
+            <Section title="La réponse" description="Qui rédige, qui aide, où sont les sources ; les tâches et notes pour s'organiser ; les pièces (cahier des charges, réponse déposée)." testId="dossier-response">
+              <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Qui répond" field="ownerId" type="select" options={people.map((p) => ({ value: p.id, label: p.name }))} placeholder="— à désigner —" refresh />
+                <Field label="Qui aide" field="helpers" type="text" placeholder="noms, rôles" />
+                <div className="sm:col-span-2"><Field label="Documents sources, cahier des charges, liens" field="sources" type="textarea" placeholder="un élément par ligne : lien de l'appel, dossier sur le serveur, contact technique…" /></div>
+              </div>
+              <DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} />
+            </Section>
+          )}
+          {won && <Section title="Affectations aux éditions" description="Une ligne de financement par édition rattachée ; le montant obtenu se saisit sur l'édition (onglet Financements). Le rattachement se fait ici ou depuis l'édition." testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
             {c.lines.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune édition rattachée{rw ? " — choisissez-en une ci-dessus, ou depuis l'onglet Financements d'une édition couverte par la période." : "."}</p>
             ) : (
@@ -108,31 +154,29 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                 </table>
               </div>
             )}
-          </Section>
+          </Section>}
 
-          <Section title="Versements" description="Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par la RAF ou la direction. Un versement propre à une édition se saisit sur sa ligne et apparaît ici avec son projet." testId="convention-payments">
+          {won && <Section title="Versements" description="Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par la RAF ou la direction. Un versement propre à une édition se saisit sur sa ligne et apparaît ici avec son projet." testId="convention-payments">
             <PaymentsList payments={allPayments} reference={c.amountNotified} rw={rw} target={{ conventionId: c.id }} showSource testId="convention-payments-list" />
-          </Section>
+          </Section>}
 
-          <Section title="Informations" description={rw ? "Sauvegarde automatique à chaque champ." : "Renseignées par la RAF."}>
+          <Section title={won ? "Le financement obtenu" : "Suivi"} description={rw ? "Sauvegarde automatique à chaque champ." : "Renseigné par la RAF."} testId="dossier-info">
             <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Référence" field="reference" type="text" refresh />
-              <Field label="Dispositif" field="scheme" type="text" placeholder="Convention, appel à projets…" />
               <Field label="Statut" field="status" type="select" options={statusOpts} />
-              <Field label="Début (année)" field="startYear" type="number" refresh />
-              <Field label="Fin (année)" field="endYear" type="number" refresh />
-              <Field label="Montant demandé" field="amountRequested" type="number" suffix="€" />
-              <Field label="Montant notifié" field="amountNotified" type="number" suffix="€" refresh testId={`notified-${c.reference}`} />
+              {won && <Field label="Forme" field="form" type="select" options={formOpts} placeholder="— à préciser —" testId={`form-${c.reference}`} />}
+              {won && <Field label="Montant notifié" field="amountNotified" type="number" suffix="€" refresh testId={`notified-${c.reference}`} />}
               <Field label="Date de dépôt" field="submittedAt" type="date" />
               <Field label="Date de notification" field="notifiedAt" type="date" />
               <Field label="Date de signature" field="signedAt" type="date" />
               <Field label="Contact du dossier" field="contactId" type="select" options={c.funder.contacts.map((x) => ({ value: x.id, label: `${[x.firstName, x.lastName].filter(Boolean).join(" ")}${x.role ? ` · ${x.role}` : ""}` }))} placeholder="— contact principal —" refresh />
+              {(c.status === "lost" || c.status === "dismissed") && <div className="sm:col-span-2"><Field label="Pourquoi" field="decisionNote" type="textarea" /></div>}
             </div>
             <div className="mt-3"><Field label="Notes" field="notes" type="textarea" placeholder="Conditions, avenants, clés de répartition (référence à l'Excel RAF)…" /></div>
+            {won && <div className="mt-3 border-t pt-3"><DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} /></div>}
           </Section>
         </div>
 
-        <Section title="Obligations à venir" description="Livrables non remis des éditions rattachées, les plus proches d'abord." testId="convention-obligations">
+        {won && <Section title="Obligations à venir" description="Livrables non remis des éditions rattachées, les plus proches d'abord." testId="convention-obligations">
           {obligations.length === 0 ? <p className="text-sm text-muted-foreground">Aucun livrable en attente.</p> : (
             <ul className="divide-y text-sm">
               {obligations.map(({ d, l }) => {
@@ -146,7 +190,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               })}
             </ul>
           )}
-        </Section>
+        </Section>}
       </div>
     </div>
   );

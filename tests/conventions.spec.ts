@@ -3,9 +3,9 @@ import { iAm, openEditionByName, pick } from "./helpers";
 
 // Convention partagée : une FSE 2026-2028 existe une fois, les éditions y sont affectées, la somme ne dépasse pas le notifié, la reconduction la conserve.
 test("la convention FSE est unique, ses affectations sont plafonnées, la reconduction la rattache", async ({ page }) => {
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await iAm(page, "Nadia Ferrand");
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   const fse = page.getByTestId("convention-FSE-2026-2028");
   await expect(fse).toBeVisible();
   await expect(fse).toContainText("Dispositif local d'accompagnement (DLA) · 2026");
@@ -28,7 +28,7 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await page.keyboard.press("Escape");
 
   // Création d'une convention et rattachement d'une édition.
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await page.getByTestId("cc-open").click();
   await pick(page, "cc-funder", "ADEME");
   await page.getByTestId("cc-reference").fill("ADEME-TEST-2026-2027");
@@ -45,7 +45,7 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await page.getByTestId("convention-lines").getByRole("button", { name: "Détacher" }).click();
   await expect(page.getByText(/Ligne vide supprimée|Édition détachée/)).toBeVisible();
   await expect(page.getByTestId("convention-lines-table")).toHaveCount(0);
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");
   await openEditionByName(page, "Chroniquer la TESS");
   await page.getByRole("tab", { name: "Budget" }).click();
@@ -61,6 +61,6 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await expect(page.getByTestId("edition-years").locator('[aria-current="page"]')).toContainText("2027", { timeout: 15_000 });
   await page.getByRole("tab", { name: "Budget" }).click();
   await expect(page.locator("[data-testid^=funding-line-]", { hasText: "ADEME-TEST-2026-2027" })).toHaveCount(1);
-  await page.goto("/conventions");
+  await page.goto("/conventions?vue=obtenus");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("Chroniquer la TESS · 2027");
 });

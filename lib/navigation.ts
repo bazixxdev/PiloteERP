@@ -65,7 +65,8 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       id: "financements",
       label: "Financements",
       items: [
-        { label: "Conventions", href: "/conventions", path: "/conventions" },
+        { label: "Dossiers de financement", href: "/conventions", path: "/conventions", absent: ["vue"] },
+        { label: "Financements obtenus", href: "/conventions?vue=obtenus", path: "/conventions", present: ["vue"] },
         { label: "Qui finance quoi", href: "/matrice", path: "/matrice" },
         ...(ctx.veille ? [{ label: "Appels à projets", href: "/appels", path: "/appels" }] : []),
       ],
