@@ -25,6 +25,6 @@ reçoit `NEXT_PUBLIC_CLIENT` et `PORT` de l'instance ; le build embarque donc l'
 
 ## Passage de `cress-pilote` à `pilote@cress` (fait par `deploy.sh cress`)
 Au premier déploiement sous le nouveau nom, l'ancienne unité est arrêtée puis désactivée quand la nouvelle répond ; en cas
-d'échec, le script revient sur l'ancienne. Ensuite `rm /etc/systemd/system/cress-pilote.service && systemctl daemon-reload` à la main.
+d'échec, le script revient sur l'ancienne. **Fait le 18/09** : `pilote@cress` en service, `cress-pilote.service` retiré du serveur.
 
 Base : PostgreSQL local (`DBNAME` de l'instance, une par client) ; pièces jointes : `MEDIAS` de l'instance.
