@@ -13,6 +13,7 @@ import { addMonths, buildPlan, HR_CATEGORY, isMonth, loadActuals, loadCashRules,
 import { cn } from "@/lib/utils";
 import { BalanceChart } from "./chart";
 import { FlowsTable, NewRuleDialog, OpeningDialog, RuleRowActions, type FlowRow } from "./controls";
+import { V, le, de, pl } from "@/lib/vocab";
 
 // Trésorerie (module « tresorerie », 18/09 ; sous-onglets et réel : retour de Gaël le soir même). Douze mois de plan depuis le
 // solde de départ, précédés des trois derniers mois **réels** (grand livre) ; le mois en cours en évidence. Onglets : le plan,
@@ -24,7 +25,7 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
   const sp = await searchParams;
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!instanceHas(settings, "tresorerie")) notFound();
-  if (!canViewTreasury(me)) return <div className="p-6 text-sm text-muted-foreground" data-testid="treasury-denied">La trésorerie se consulte par la direction, la RAF et les responsables de pôle.</div>;
+  if (!canViewTreasury(me)) return <div className="p-6 text-sm text-muted-foreground" data-testid="treasury-denied">{`La trésorerie se consulte par ${le(V.direction)}, ${le(V.raf)} et les responsables ${de(V.pole)}.`}</div>;
   const rw = canManageTreasury(me);
   const vue = TABS.some((t) => t.key === sp.vue) ? sp.vue! : "plan";
   const current = thisMonth();
@@ -123,7 +124,7 @@ export default async function TresoreriePage({ searchParams }: { searchParams: P
 
       {vue === "charges" && (
         <section className="rounded-md border bg-card" data-testid="treasury-out">
-          <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Charges</h2><p className="text-[11px] text-muted-foreground">Ce qu&apos;on va décaisser : les charges saisies (loyer, leasing, fonctionnement, prêt, assurances… avec un premier mois et un dernier si ça s&apos;arrête) et, calculés depuis les éditions, les factures reçues non payées et les devis approuvés à facturer (sur le premier mois, par prudence). Les salaires sont dans l&apos;onglet Ressources humaines.</p></div>
+          <div className="px-4 pb-2 pt-3"><h2 className="text-[15px] font-bold">Charges</h2><p className="text-[11px] text-muted-foreground">{`Ce qu'on va décaisser : les charges saisies (loyer, leasing, fonctionnement, prêt, assurances… avec un premier mois et un dernier si ça s'arrête) et, calculés depuis les ${pl(V.edition)}, les factures reçues non payées et les devis approuvés à facturer (sur le premier mois, par prudence). Les salaires sont dans l'onglet Ressources humaines.`}</p></div>
           <FlowsTable rows={flowRows("out")} rw={rw} usual={usual} people={people} categories={categories} monthLabels={monthLabels} testId="flows-out" />
         </section>
       )}

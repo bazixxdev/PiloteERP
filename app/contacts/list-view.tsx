@@ -21,6 +21,7 @@ import { withBase } from "@/lib/base-path";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
 import { ContactForm } from "./controls";
+import { V, cap } from "@/lib/vocab";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (r: { data?: unknown }) => void) => void;
 function useRun(): [boolean, Run] {
@@ -144,7 +145,7 @@ function ListSettings({ list, editions, pending, run }: { list: ContactListFull;
         <div className="grid gap-3 text-xs">
           <label className="grid gap-1"><span className="font-semibold">Nom</span><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name !== list.name) run(() => updateContactList(list.id, { name })); }} className="h-8" disabled={pending} data-testid={`contact-list-name-${list.id}`} /></label>
           <label className="grid gap-1"><span className="font-semibold">À quoi elle sert</span><Input value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { if (description !== (list.description ?? "")) run(() => updateContactList(list.id, { description })); }} className="h-8" disabled={pending} /></label>
-          <div className="grid gap-1"><span className="font-semibold">Projet</span><SearchableSelect aria-label="Édition rattachée" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateContactList(list.id, { editionId: v || null }))} emptyOption="Sans projet" className="w-full text-xs" /></div>
+          <div className="grid gap-1"><span className="font-semibold">Projet</span><SearchableSelect aria-label={`${cap(V.edition)} rattachée`} options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateContactList(list.id, { editionId: v || null }))} emptyOption="Sans projet" className="w-full text-xs" /></div>
           <div className="grid gap-1"><span className="font-semibold">Couleur</span><div className="flex items-center gap-1.5">{NOTE_COLORS.map((k) => <button key={k.value} type="button" title={k.label} aria-label={k.label} aria-pressed={list.color === k.value} disabled={pending} onClick={() => run(() => updateContactList(list.id, { color: list.color === k.value ? null : k.value }))} className={cn("size-6 rounded-full border-2", list.color === k.value ? "border-foreground" : "border-transparent hover:border-border")} style={{ background: k.hex }} />)}</div></div>
           <fieldset className="grid gap-1"><legend className="mb-1 font-semibold">Qui la lit</legend>
             {VISIBILITIES.map((v) => <label key={v.value} className="flex items-start gap-2"><input type="radio" name={`clvis-${list.id}`} value={v.value} checked={list.visibility === v.value} disabled={pending} onChange={() => run(() => updateContactList(list.id, { visibility: v.value }), () => toast.success(v.value === "private" ? "Liste privée" : "Liste partagée"))} className="mt-0.5 accent-primary" data-testid={`contact-list-vis-${list.id}-${v.value}`} /><span><b className="font-medium">{v.label}</b> <span className="text-muted-foreground">· {v.hint}</span></span></label>)}
@@ -263,7 +264,7 @@ function PushDialog({ list }: { list: ContactListFull }) {
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{list.brevoListId ? "Mettre à jour dans Brevo" : "Envoyer vers Brevo"}</DialogTitle></DialogHeader>
         <div className="grid gap-2 text-xs" data-testid="push-summary">
-          <p>{list.brevoListId ? <>La liste Brevo liée est mise à jour avec le contenu de « {list.name} ».</> : <>Une liste « {list.name} » est créée dans Brevo (dossier « Pilote »).</>}</p>
+          <p>{list.brevoListId ? <>La liste Brevo liée est mise à jour avec le contenu de « {list.name} ».</> : <>Une liste « {list.name}{` » est créée dans Brevo (dossier « ${cap(V.pilote)} »).`}</>}</p>
           <ul className="grid gap-1 text-muted-foreground">
             <li>· <b className="text-foreground">{sendable}</b> contact{sendable > 1 ? "s" : ""} avec e-mail : créé{sendable > 1 ? "s" : ""} ou complété{sendable > 1 ? "s" : ""} dans Brevo (nom, prénom, téléphone, structure…), puis inscrit{sendable > 1 ? "s" : ""} à la liste.</li>
             {noEmail > 0 && <li>· {noEmail} sans e-mail : ignoré{noEmail > 1 ? "s" : ""}.</li>}

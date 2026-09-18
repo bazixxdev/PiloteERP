@@ -17,6 +17,7 @@ import { helloAssoConfig } from "@/lib/helloasso";
 import { isCurrent, loadMemberships, MEMBERSHIP_METHODS, MEMBERSHIP_STATUS, memberName, membershipYears, statusOf, summarize } from "@/lib/members";
 import { cn } from "@/lib/utils";
 import { DeleteMembershipButton, HelloAssoSyncButton, MembersToolbar, NewMembershipDialog, PayButton, RenewButton } from "./controls";
+import { V, le } from "@/lib/vocab";
 
 // Adhérents (module « adherents », 18/09) : les adhésions d'une année — structures ou personnes de l'annuaire, collège,
 // cotisation, règlement —, la reconduction N → N+1, l'export, le connecteur HelloAsso. La vue « Cotisations » regarde la
@@ -93,7 +94,7 @@ export default async function AdherentsPage({ searchParams }: { searchParams: Pr
       ) : (
         <div className="rounded-md border bg-card">
           <MembersToolbar q={sp.q ?? ""} statut={sp.statut ?? ""} college={sp.college ?? ""} colleges={colleges} year={year} />
-          {rows.length === 0 ? <div className="p-4"><EmptyState title={all.length === 0 ? `Aucune adhésion en ${year}` : "Rien ne correspond"} hint={all.length === 0 ? (rw ? `Enregistrez une adhésion, reconduisez celles de ${year - 1}, ou synchronisez HelloAsso.` : "Les adhésions se tiennent par la RAF ou la direction.") : "Changez le filtre."} icon={<Users className="size-5" />} /></div> : (
+          {rows.length === 0 ? <div className="p-4"><EmptyState title={all.length === 0 ? `Aucune adhésion en ${year}` : "Rien ne correspond"} hint={all.length === 0 ? (rw ? `Enregistrez une adhésion, reconduisez celles de ${year - 1}, ou synchronisez HelloAsso.` : `Les adhésions se tiennent par ${le(V.raf)} ou ${le(V.direction)}.`) : "Changez le filtre."} icon={<Users className="size-5" />} /></div> : (
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]" data-testid="members-table">
                 <thead className="text-left text-[10px] font-semibold text-muted-foreground">

@@ -12,6 +12,7 @@ import { addCall, promoteCall, renewCall, setCallActive, setCallStatus } from "@
 import { CALL_STATUSES } from "@/lib/calls";
 import { AMOUNT_KINDS } from "@/lib/dossiers";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { V, cap, le } from "@/lib/vocab";
 
 type Opt = { value: string; label: string };
 type R = { ok: true } | { ok: false; error: string };
@@ -50,7 +51,7 @@ export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { fun
           if (!r.ok) { toast.error(r.error); return; }
           toast.success("Appel à projets repéré"); setOpen(false); setLabel(""); setScheme(""); setDeadline(""); setAmountHint(""); setLink(""); setFunderName(""); setAmountValue(""); setTargetProjectId(""); router.refresh();
         }); }}>
-          <DialogHeader><DialogTitle>Nouvel appel à projets</DialogTitle><DialogDescription>Une opportunité repérée, avant toute décision. Le CODIR dira ensuite « à étudier », « on dépose » ou « écarté ».</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Nouvel appel à projets</DialogTitle><DialogDescription>{`Une opportunité repérée, avant toute décision. ${cap(le(V.codir))} dira ensuite « à étudier », « on dépose » ou « écarté ».`}</DialogDescription></DialogHeader>
           <div className="grid gap-3 py-3">
             <div className="grid gap-1"><Label htmlFor="call-funder">Financeur</Label><SearchableSelect id="call-funder" options={funders} value={funderId} onChange={setFunderId} emptyOption="— nouveau financeur, ci-dessous —" data-testid="call-funder" className="w-full" />{!funderId && <Input value={funderName} onChange={(e) => setFunderName(e.target.value)} placeholder="Nom du nouveau financeur (créé dans l'annuaire)" className="h-8 text-xs" data-testid="call-funder-name" />}</div>
             <div className="grid gap-1"><Label htmlFor="call-label">Intitulé</Label><Input id="call-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="AAP Transition écologique 2027" required data-testid="call-label" /></div>

@@ -13,6 +13,7 @@ import { EQUIPMENT_STATES } from "@/lib/equipment";
 import { withBase } from "@/lib/base-path";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
+import { V, cap } from "@/lib/vocab";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (r: { data?: unknown }) => void) => void;
 function useRun(): [boolean, Run] {
@@ -49,7 +50,7 @@ export function NewEquipmentDialog({ categories }: { categories: string[] }) {
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Nouveau matériel</DialogTitle></DialogHeader>
         <form className="grid gap-3 text-xs" onSubmit={(e) => { e.preventDefault(); run(() => createEquipment(f), (r) => { setOpen(false); toast.success("Matériel ajouté"); router.push(`/materiel?materiel=${(r.data as { id: string }).id}`); }); }}>
-          <label className="grid gap-1"><span className="font-semibold">Nom</span><Input autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Vidéoprojecteur Epson, Kakemono CRESS…" className="h-8" data-testid="equipment-name" /></label>
+          <label className="grid gap-1"><span className="font-semibold">Nom</span><Input autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={`Vidéoprojecteur Epson, Kakemono ${V.org.one}…`} className="h-8" data-testid="equipment-name" /></label>
           <div className="grid grid-cols-[1fr_5rem] gap-1.5">
             <label className="grid gap-1"><span className="font-semibold">Catégorie</span><Input list="eq-cats" value={f.category ?? ""} onChange={(e) => setF({ ...f, category: e.target.value })} placeholder="Audiovisuel, Signalétique…" className="h-8" data-testid="equipment-category" /><datalist id="eq-cats">{categories.map((c) => <option key={c} value={c} />)}</datalist></label>
             <label className="grid gap-1"><span className="font-semibold">Quantité</span><Input type="number" min={1} value={String(f.quantity ?? 1)} onChange={(e) => setF({ ...f, quantity: e.target.value })} className="h-8" data-testid="equipment-quantity" /></label>
@@ -114,7 +115,7 @@ export function LoanDialog({ equipment: fixed, equipments, people, organisations
           )}
           <div className="grid grid-cols-[5rem_1fr] gap-1.5">
             <label className="grid gap-1"><span className="font-semibold">Quantité</span><Input type="number" min={1} max={equipment.available} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} className="h-8" data-testid="loan-quantity" /></label>
-            <div className="grid gap-1"><span className="font-semibold">Pour quel projet <span className="font-normal text-muted-foreground">(facultatif)</span></span><SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={f.editionId} onChange={(v) => setF({ ...f, editionId: v })} emptyOption="—" aria-label="Édition" className="h-8 w-full text-xs" data-testid="loan-edition" /></div>
+            <div className="grid gap-1"><span className="font-semibold">Pour quel projet <span className="font-normal text-muted-foreground">(facultatif)</span></span><SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={f.editionId} onChange={(v) => setF({ ...f, editionId: v })} emptyOption="—" aria-label={cap(V.edition)} className="h-8 w-full text-xs" data-testid="loan-edition" /></div>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <label className="grid gap-1"><span className="font-semibold">Sorti le</span><Input type="date" value={f.outAt} onChange={(e) => setF({ ...f, outAt: e.target.value })} className="h-8" data-testid="loan-out" /></label>

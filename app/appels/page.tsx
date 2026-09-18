@@ -15,6 +15,7 @@ import { deadlineState, isNewCall, sortCalls } from "@/lib/calls";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AddCallDialog, CallFilters, CallRowActions, CallStatusSelect } from "./controls";
+import { V, cap, le, de, au } from "@/lib/vocab";
 
 type Search = { financeur?: string; statut?: string; vue?: string };
 
@@ -46,13 +47,13 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
     <div className="p-4 md:p-6">
       <DossiersHeader
         current="appels"
-        summary={<>{active.length} appel{active.length > 1 ? "s" : ""} en veille · {toStudy} à regarder ou à étudier · {applying} sans dossier ouvert{soon > 0 && <span className="text-warning-foreground"> · {soon} à échéance dans les {settings.deliverableAlertDays} j</span>}. Le CODIR pose le statut ; « Étudier » crée la convention à déposer, pré-remplie, une seule fois.</>}
+        summary={<>{active.length} appel{active.length > 1 ? "s" : ""} en veille · {toStudy} à regarder ou à étudier · {applying} sans dossier ouvert{soon > 0 && <span className="text-warning-foreground"> · {soon} à échéance dans les {settings.deliverableAlertDays} j</span>}{`. ${cap(le(V.codir))} pose le statut ; « Étudier » crée la convention à déposer, pré-remplie, une seule fois.`}</>}
         actions={rw ? <AddCallDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} defaultFunderId={sp.financeur} projects={projects.map((p) => ({ value: p.id, label: p.name }))} /> : undefined}
       />
       <CallFilters funders={funders.map((f) => ({ value: f.id, label: f.name }))} current={{ financeur: sp.financeur ?? "", statut: sp.statut ?? "", vue: sp.vue ?? "" }} />
 
       {rows.length === 0 ? (
-        <EmptyState title={all.length === 0 ? "Aucun appel repéré" : "Aucun appel pour ces filtres"} hint={all.length === 0 ? "La RAF, la direction ou un responsable de pôle repère un appel ; le CODIR décide ensuite." : "Changez le filtre ou la vue pour retrouver les appels écartés et retirés."} />
+        <EmptyState title={all.length === 0 ? "Aucun appel repéré" : "Aucun appel pour ces filtres"} hint={all.length === 0 ? `${cap(le(V.raf))}, ${le(V.direction)} ou un responsable ${de(V.pole)} repère un appel ; ${le(V.codir)} décide ensuite.` : "Changez le filtre ou la vue pour retrouver les appels écartés et retirés."} />
       ) : (
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${rows.length} appels à projets`}>
           <table className="w-full text-[13px]" style={{ minWidth: 1040 }} data-testid="calls-table">
@@ -110,7 +111,7 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
           </table>
         </div>
       )}
-      <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} appel{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""} sur {all.length} · un appel écarté ou retiré reste en base (vue « Tous ») · le statut d&apos;équipe appartient à la CRESS : un flux importé ne le toucherait jamais.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} appel{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""} sur {all.length}{` · un appel écarté ou retiré reste en base (vue « Tous ») · le statut d'équipe appartient ${au(V.org)} : un flux importé ne le toucherait jamais.`}</p>
     </div>
   );
 }

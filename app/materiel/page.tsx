@@ -16,6 +16,7 @@ import { borrowerName, equipmentCategories, EQUIPMENT_STATES, isLate, loadEquipm
 import { cn } from "@/lib/utils";
 import { DeleteLoanButton, EquipmentToolbar, FilesBlock, LoanDialog, NewEquipmentDialog, RetireButton, ReturnButton } from "./controls";
 import { attachmentInclude } from "@/lib/attachments";
+import { V, le } from "@/lib/vocab";
 
 // Matériel et prêts (module « materiel », 18/09) : l'inventaire (disponible = quantité − sorti), le registre des prêts en
 // cours avec les retours en retard, la fiche d'un matériel en panneau (?materiel=) avec son historique.
@@ -46,7 +47,7 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
       {(
         <div className="rounded-md border bg-card">
           <EquipmentToolbar q={sp.q ?? ""} category={sp.categorie ?? ""} categories={categories} available={sp.dispo === "1"} />
-          {items.length === 0 ? <div className="p-4"><EmptyState title="Aucun matériel" hint={sp.q || sp.categorie || sp.dispo ? "Rien ne correspond." : rw ? "Ajoutez le matériel prêtable : vidéoprojecteur, kakemonos, enceinte…" : "L'inventaire se tient par la direction, la RAF ou l'assistant·e."} icon={<Package className="size-5" />} /></div> : (
+          {items.length === 0 ? <div className="p-4"><EmptyState title="Aucun matériel" hint={sp.q || sp.categorie || sp.dispo ? "Rien ne correspond." : rw ? "Ajoutez le matériel prêtable : vidéoprojecteur, kakemonos, enceinte…" : `L'inventaire se tient par ${le(V.direction)}, ${le(V.raf)} ou l'assistant·e.`} icon={<Package className="size-5" />} /></div> : (
             <table className="w-full text-[13px]" data-testid="equipment-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="px-4 py-1.5">Matériel</th><th className="px-2 py-1.5">Catégorie</th><th className="px-2 py-1.5">Rangement</th><th className="px-2 py-1.5">État</th><th className="px-2 py-1.5 text-right">Disponible</th><th className="px-2 py-1.5">Sorti chez</th><th className="px-2 py-1.5"></th></tr></thead>
               <tbody className="divide-y">

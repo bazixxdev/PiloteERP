@@ -15,6 +15,7 @@ import { borrowerName, isLate } from "@/lib/equipment";
 import { attachmentInclude } from "@/lib/attachments";
 import { cn } from "@/lib/utils";
 import { DeleteLoanButton, FilesBlock, PrintButton, ReturnButton, SendLoanButton } from "../../controls";
+import { V, le } from "@/lib/vocab";
 
 // Fiche de prêt (retour de Gaël, 18/09) : l'entité prêt en tant que telle — quoi, à qui, pour quoi, quand sorti, quand
 // attendu, rendu avec commentaire, chèque de caution, pièces (fiche signée). Elle s'imprime (PDF) et s'envoie par mail
@@ -41,7 +42,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const org = l.organisation?.name ?? l.contact?.organisation?.name ?? l.contact?.organisationName ?? null;
   const number = `P-${String(l.number).padStart(4, "0")}`;
   const status = l.returnedAt ? { label: `Rendu le ${fmtDate(l.returnedAt)}`, color: "mint" } : late ? { label: "En retard", color: "danger" } : { label: "En cours", color: "primary" };
-  const subject = `Fiche de prêt ${number} — ${l.equipment.name} — CRESS`;
+  const subject = `Fiche de prêt ${number} — ${l.equipment.name} — ${V.org.one}`;
   const body = [
     `Bonjour${l.contact ? ` ${contactName(l.contact)}` : l.person ? ` ${l.person.name}` : ""},`, "",
     `Voici la fiche du prêt de matériel ${number}.`, "",
@@ -52,7 +53,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
     `Retour attendu le : ${l.dueAt ? fmtDate(l.dueAt) : "à convenir"}`,
     l.depositAmount ? `Chèque de caution : ${fmtEuro(l.depositAmount)}${l.depositRef ? ` (${l.depositRef})` : ""}, rendu au retour du matériel en bon état` : null,
     l.notes ? `Note : ${l.notes}` : null, "",
-    "Merci de rendre le matériel à la date convenue, dans l'état où il a été remis.", "", "Cordialement,", me.name, "CRESS",
+    "Merci de rendre le matériel à la date convenue, dans l'état où il a été remis.", "", "Cordialement,", me.name, V.org.one,
   ].filter((x) => x !== null).join("\n");
   // Chaque champ modifiable a son double en texte pour l'impression (pas de champs de saisie sur la fiche papier).
   const asText = (type: string, value: unknown) => value == null || value === "" ? "—" : type === "date" ? fmtDate(value as Date) : type === "number" ? fmtEuro(Number(value)) : String(value);
@@ -116,8 +117,8 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
           <FilesBlock files={l.attachments} target={{ loanId: l.id }} canEdit={rw} />
         </section>
         <div className="mt-6 hidden text-xs text-muted-foreground print:block">
-          <p>Fiche de prêt {number} · CRESS · {fmtDate(new Date())}. Le matériel est remis en bon état et doit être rendu à la date convenue, dans l&apos;état où il a été remis.{l.depositAmount ? " Le chèque de caution est restitué au retour du matériel en bon état." : ""}</p>
-          <div className="mt-8 grid grid-cols-2 gap-8"><div>Pour la CRESS — nom, date, signature :<div className="mt-10 border-b" /></div><div>L&apos;emprunteur — nom, date, signature :<div className="mt-10 border-b" /></div></div>
+          <p>Fiche de prêt {number}{` · ${V.org.one} · `}{fmtDate(new Date())}. Le matériel est remis en bon état et doit être rendu à la date convenue, dans l&apos;état où il a été remis.{l.depositAmount ? " Le chèque de caution est restitué au retour du matériel en bon état." : ""}</p>
+          <div className="mt-8 grid grid-cols-2 gap-8"><div>{`Pour ${le(V.org)} — nom, date, signature :`}<div className="mt-10 border-b" /></div><div>L&apos;emprunteur — nom, date, signature :<div className="mt-10 border-b" /></div></div>
         </div>
         {rw && <div className="no-print mt-3 flex justify-end"><DeleteLoanButton loanId={l.id} /></div>}
       </div>
