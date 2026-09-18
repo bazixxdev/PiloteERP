@@ -23,6 +23,7 @@ export function hasModule(p: { modules: string }, key: ModuleKey): boolean {
 export const INSTANCE_MODULES = [
   { key: "veille", label: "Appels à projets (veille)", hint: "Les appels à projets repérés par financeur, le statut d'équipe (à étudier, on dépose, écarté) et la promotion en convention. Onglet dans Projets et financements." },
   { key: "adherents", label: "Adhérents", hint: "Les adhésions par année (structures ou personnes de l'annuaire, collège, cotisation, règlement), la reconduction, le connecteur HelloAsso. Rubrique « Adhérents » dans le menu." },
+  { key: "tresorerie", label: "Trésorerie", hint: "Plan de trésorerie mensuel sur douze mois : versements attendus des financeurs, factures et engagements, cotisations, règles de flux (salaires, loyer…), solde et point bas. Rubrique « Trésorerie » (direction, RAF, responsables de pôle)." },
 ] as const;
 
 export type InstanceModuleKey = (typeof INSTANCE_MODULES)[number]["key"];

@@ -86,6 +86,7 @@ model Person {
   contactsCreated    Contact[]          @relation("ContactCreator")
   contactLists       ContactList[]      @relation("ContactListOwner")
   membershipsCreated Membership[]       @relation("MembershipCreator")
+  cashRulesCreated   CashRule[]         @relation("CashRuleCreator")
   decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
@@ -708,7 +709,7 @@ model Settings {
   billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
-  modules                   String  @default("veille,adherents")
+  modules                   String  @default("veille,adherents,tresorerie")
   // Réalisé comptable (lot D) : quelle source alimente le « réalisé » des alertes d'enveloppe et du portefeuille —
   // raf = saisi par la RAF sur les dépenses (Expense.spent) ; ledger = le grand livre analytique importé. L'autre s'affiche en regard.
   realizedSource            String  @default("raf")
@@ -720,6 +721,32 @@ model Settings {
   // Connecteur HelloAsso (identifiants dans l'environnement) : dernière synchronisation et son compte rendu.
   helloAssoSyncedAt         DateTime?
   helloAssoSyncReport       String?
+  // Trésorerie (module « tresorerie », 18/09) : solde de départ à un mois donné (relevé bancaire), seuil d'alerte.
+  cashOpeningBalance        Float   @default(0)
+  cashOpeningMonth          String? // AAAA-MM ; vide = mois courant
+  cashAlertThreshold        Float   @default(20000)
+}
+
+// Trésorerie : les flux qui ne se déduisent pas des dossiers — salaires et charges, loyer, subvention de fonctionnement,
+// prestations… — saisis comme des règles (récurrentes) ou des flux ponctuels. Le reste (versements attendus des financeurs,
+// factures et engagements, cotisations à régler) est dérivé des données existantes, jamais ressaisi.
+model CashRule {
+  id          String   @id @default(cuid())
+  label       String
+  direction   String // in (encaissement) | out (décaissement)
+  category    String // libellé libre, regroupe les lignes du plan (Salaires et charges, Loyer, Fonctionnement…)
+  amount      Float
+  period      String   @default("monthly") // monthly | quarterly | semiannual | annual | once
+  startMonth  String // AAAA-MM (premier mois, ou le mois d'un flux ponctuel)
+  endMonth    String? // AAAA-MM inclus ; vide = sans fin
+  active      Boolean  @default(true)
+  notes       String?
+  createdById String?
+  createdBy   Person?  @relation("CashRuleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([direction])
 }
 
 // Adhésions (module « adherents », 18/09) : une adhésion = une organisation (ou une personne de l'annuaire) × une année,

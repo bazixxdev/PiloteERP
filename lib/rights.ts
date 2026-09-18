@@ -93,6 +93,14 @@ export function canManageMembers(me: Actor): boolean {
   return has(me, "members.manage");
 }
 
+// Trésorerie (module tresorerie) : consulter (direction, RAF, responsables de pôle), tenir (direction, RAF).
+export function canViewTreasury(me: Actor): boolean {
+  return has(me, "treasury.view") || has(me, "treasury.manage");
+}
+export function canManageTreasury(me: Actor): boolean {
+  return has(me, "treasury.manage");
+}
+
 export function canAdmin(me: Actor): boolean {
   return has(me, "admin.manage");
 }

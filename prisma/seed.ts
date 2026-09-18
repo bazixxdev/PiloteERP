@@ -75,6 +75,7 @@ async function reset() {
   await prisma.request.deleteMany();
   await prisma.achievement.deleteMany();
   await prisma.loadFreeze.deleteMany();
+  await prisma.cashRule.deleteMany();
   await prisma.membership.deleteMany();
   await prisma.contactListItem.deleteMany();
   await prisma.contactList.deleteMany();
@@ -1029,7 +1030,7 @@ async function main() {
     { personId: director.id, senderId: leadB.id, kind: "info", title: "Pour information · Devis intervenant conférence 2 approuvé (600 €)", body: `Par ${leadB.name}, niveau 2.`, link: `/edition/${ed("TES-02").id}?onglet=budget`, createdAt: d(-97), readAt: d(-96) },
   ] });
 
-  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents" } });
+  await prisma.settings.update({ where: { id: 1 }, data: { operatingDaysPerMonth: 1.5, billingEmail: "factures@cress-cvl.example", modules: "veille,adherents,tresorerie" } });
 
   const org = (name: string) => [...funders, ...partnerOrgs].find((o) => o.name === name)!.id;
   // Contacts et listes (18/09) : quelques personnes extérieures fictives, une liste « Réseau développeurs ESS » à Thomas
@@ -1072,6 +1073,22 @@ async function main() {
   // Deux personnes physiques : Léna (à jour), Olivier (à régler).
   await prisma.membership.create({ data: { contactId: extContacts[5].id, year, college: "Personnes physiques", amount: 30, status: "paid", paidAt: new Date(`${year}-02-03`), method: "helloasso", createdById: byName("Nadia Ferrand").id } });
   await prisma.membership.create({ data: { contactId: extContacts[4].id, year, college: "Personnes physiques", amount: 30, status: "due", createdById: byName("Nadia Ferrand").id } });
+
+  // Trésorerie (module « tresorerie », 18/09) : solde de départ du mois courant, seuil, et les règles d'un budget associatif.
+  const ym = `${year}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  await prisma.settings.update({ where: { id: 1 }, data: { cashOpeningBalance: 148500, cashOpeningMonth: ym, cashAlertThreshold: 30000 } });
+  const rafId = byName("Nadia Ferrand").id;
+  for (const r of [
+    { label: "Salaires et charges sociales", direction: "out", category: "Salaires et charges", amount: 33500, period: "monthly", notes: "charges comprises, hors postes financés sur conventions (paie du 28)" },
+    { label: "Loyer des locaux", direction: "out", category: "Loyer et charges locatives", amount: 2400, period: "monthly" },
+    { label: "Fonctionnement courant", direction: "out", category: "Fonctionnement", amount: 3200, period: "monthly", notes: "fournitures, télécoms, déplacements, frais bancaires" },
+    { label: "Remboursement du prêt (Banque des Territoires)", direction: "out", category: "Remboursement d'emprunt", amount: 1250, period: "monthly", endMonth: `${year + 1}-06` },
+    { label: "Assurances", direction: "out", category: "Impôts et taxes", amount: 3100, period: "annual", startMonth: `${year + 1}-01` },
+    { label: "Prestations et formations facturées", direction: "in", category: "Prestations et ventes", amount: 3500, period: "monthly" },
+    { label: "Subvention de fonctionnement Région (acompte 2027)", direction: "in", category: "Subvention de fonctionnement", amount: 45000, period: "once", startMonth: `${year + 1}-02` },
+    { label: "Subvention de fonctionnement Région (solde 2026)", direction: "in", category: "Subvention de fonctionnement", amount: 38000, period: "once", startMonth: `${year}-${String(new Date().getMonth() + 2 > 12 ? 12 : new Date().getMonth() + 2).padStart(2, "0")}` },
+    { label: "FDVA fonctionnement (État)", direction: "in", category: "Subvention de fonctionnement", amount: 12000, period: "quarterly", notes: "quatre versements dans l'année" },
+  ]) await prisma.cashRule.create({ data: { startMonth: ym, ...r, createdById: rafId } });
 
   // Partenaires liés aux éditions (lot E2), en plus du texte libre de la fiche.
   for (const [code, name, role] of [["TES-02", "Université de Tours", "Co-organise le cycle, accueille deux conférences"], ["TES-05", "France Active Centre-Val de Loire", "Intervient sur le financement des coopérations"], ["SEN-03", "Tours Métropole Val de Loire", "Accueille le forum"], ["OBS-01", "Mouvement associatif Centre-Val de Loire", "Partage ses données associatives"], ["SEN-03", "ESS France", "Relaie le forum au niveau national"]] as const) {

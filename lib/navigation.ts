@@ -1,7 +1,7 @@
 // Arbre de navigation à deux niveaux (proto validé le 17/09) : une section = une icône et des feuilles ; la section
 // active se déplie d'après l'adresse, une seule à la fois. Tout est calculé ici, côté serveur, à partir des droits et des
 // modules ; la barre latérale ne fait qu'afficher et reconnaître l'entrée active. Module pur : pas de base, pas de React.
-import { canAdmin, canLockMonths, isCodir, type Actor } from "./rights";
+import { canAdmin, canLockMonths, canViewTreasury, isCodir, type Actor } from "./rights";
 
 export type NavLeaf = {
   label: string;
@@ -15,7 +15,7 @@ export type NavLeaf = {
 };
 
 export type NavSection = {
-  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "echeances" | "direction" | "admin";
+  id: "travail" | "temps" | "portefeuille" | "demandes" | "projets" | "adherents" | "tresorerie" | "echeances" | "direction" | "admin";
   label: string;
   badge?: number;
   items: NavLeaf[];
@@ -27,6 +27,7 @@ export type NavContext = Actor & {
   modules: string[]; // modules de la personne (Mon compte)
   veille: boolean; // module d'instance « appels à projets »
   adherents: boolean; // module d'instance « adhérents »
+  tresorerie: boolean; // module d'instance « trésorerie »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
@@ -75,6 +76,11 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         { label: "Adhérents", href: "/adherents", path: "/adherents", absent: ["vue"] },
         { label: "Cotisations", href: "/adherents?vue=cotisations", path: "/adherents", present: ["vue"] },
       ],
+    }] : []),
+    ...(ctx.tresorerie && canViewTreasury(ctx) ? [{
+      id: "tresorerie" as const,
+      label: "Trésorerie",
+      items: [{ label: "Plan de trésorerie", href: "/tresorerie", path: "/tresorerie" }],
     }] : []),
     {
       id: "demandes",

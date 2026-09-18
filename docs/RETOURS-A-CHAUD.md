@@ -383,6 +383,15 @@ Gaël : « ok go adhérents + helloasso ». Cadre validé le matin : la donnée 
 - **HelloAsso** (`lib/helloasso.ts` OAuth client_credentials, jeton en mémoire ; `lib/helloasso-sync.ts`) : Admin › Import / export › HelloAsso, ou « Synchroniser HelloAsso » sur la page. Commandes → items « Membership » → adhésions : structure = `payer.company` ou champ personnalisé (structure / raison sociale…), organisation trouvée ou créée (genre member), référent = payeur (contact trouvé par e-mail ou nom, créé au besoin, rattaché) ; sans structure = personne physique ; année lue dans le titre du formulaire ou le tarif, sinon la date ; réglée si `Processed`, annulée si `Canceled/Refunded`, sinon à régler ; **une adhésion préparée à la main pour le même membre et la même année est complétée (réglée, identifiant posé) au lieu d'être doublée**. Formulaires d'événement « suivis » → liste miroir `source = helloasso` (inscrits, tarif en rôle, champs personnalisés en colonnes synchronisées, annulés exclus). Colonnes synchronisées : le drapeau `fields[].brevo` devient **`synced`** (Brevo et HelloAsso).
 - Pas fait : HelloAsso → outil seulement (pas d'écriture) ; pas de dons ni boutique ; pas de relance par mail (le champ notes trace la relance).
 
+### AH. Trésorerie (18/09) — fait
+
+Gaël : « ok go trésorerie ».
+- **Principe** : un plan calculé sur douze mois glissants depuis un solde de départ (relevé bancaire à un mois donné, paramètres). Lignes **dérivées** des dossiers (jamais ressaisies) : versements attendus des financeurs (`Payment` sans `receivedAt`, au mois attendu ; attendus avant la fenêtre = « en retard », placés sur le premier mois), factures reçues non payées et engagements à facturer (`Expense` ouvertes, premier mois par prudence), cotisations à régler (Adhérents, premier mois). Lignes **saisies** : `CashRule` (sens, catégorie libre avec suggestions, montant, périodicité mois / trimestre / semestre / année / une fois, premier mois, dernier mois facultatif, actif, note).
+- **Page `/tresorerie`** (rubrique « Trésorerie ») : tuiles (solde de départ, point bas et son mois, encaissements et décaissements sur 12 mois), courbe du solde avec le seuil et le zéro, tableau lignes × mois (encaissements, décaissements, totaux, solde fin de mois coloré sous le seuil / négatif), règles (créer, modifier, décocher = hors plan, supprimer), détail des versements attendus / factures et engagements / cotisations avec liens vers la convention, l'édition, les adhérents ; export CSV.
+- **Droits** : `treasury.view` (direction, RAF, responsables de pôle — migration sur les rôles), `treasury.manage` (direction, RAF). Un pilote n'a ni la rubrique ni la page.
+- **Seed** : solde 148 500 € au mois courant, seuil 30 000 €, neuf règles (salaires, loyer, fonctionnement, prêt, assurances, prestations, subventions de fonctionnement).
+- Pas fait (consigné) : scénarios, rapprochement bancaire (Pennylane), relevés importés, échéancier des dépenses par date de paiement prévue (les engagements tombent sur le premier mois).
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_
