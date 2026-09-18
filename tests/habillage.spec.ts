@@ -14,7 +14,7 @@ test("titre, logo, favicon, thème, police", async ({ page }) => {
   const icon = await page.request.get("/icon", { maxRedirects: 0 });
   expect(icon.status()).toBe(200);
   expect(icon.headers()["content-type"]).toContain("image/png");
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--primary").trim())).toBe("#3f6b4a");
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--primary").trim())).toBe("#1f5a2d");
   expect(await page.evaluate(() => getComputedStyle(document.querySelector("h1")!).fontFamily)).toMatch(/Nunito/);
 });
 

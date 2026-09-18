@@ -48,11 +48,34 @@ def main() -> None:
 
     tlst = ROOT / "tlst"
     tlst.mkdir(parents=True, exist_ok=True)
-    green = (63, 107, 74, 255)  # primary TLST (config/clients/tlst.ts)
-    wordmark("TLST", green, (465, 187), tlst / "logo.png", 120)
-    wordmark("TLST", (255, 255, 255, 255), (465, 187), tlst / "logo-white.png", 120)
-    wordmark("T", green, (190, 177), tlst / "mark.png", 150)
-    favicon(tlst / "mark.png", tlst / "favicon.png")
+    green = (0, 66, 20, 255)   # vert du logo (#004214), primaire TLST
+    source = tlst / "logo-white.png"  # le vrai logo (export du site tierslieusudtouraine.fr, 2024) : blanc + jaune, pour fond sombre
+    if source.exists() and Image.open(source).width > 500:
+        im = Image.open(source).convert("RGBA")
+        im = im.crop(im.getbbox())
+        # Version pour fond clair : le blanc devient le vert du logo, le jaune reste.
+        color = im.copy(); px = color.load()
+        for y in range(color.height):
+            for x in range(color.width):
+                r, g, b, a = px[x, y]
+                if a and r > 235 and g > 235 and b > 235:
+                    px[x, y] = (green[0], green[1], green[2], a)
+        w = 465; h = round(im.height * w / im.width)
+        color.resize((w, h), Image.LANCZOS).save(tlst / "logo.png")
+        white = im.resize((w, h), Image.LANCZOS)
+        white.save(tlst / "logo-white.png")
+        # La marque seule = le pictogramme (les deux personnages et la pousse), en haut du logo.
+        picto = im.crop((0, 0, im.width, int(im.height * 0.22)))
+        picto = picto.crop(picto.getbbox())
+        mw = 190; mh = round(picto.height * mw / picto.width)
+        picto.resize((mw, mh), Image.LANCZOS).save(tlst / "mark.png")
+        favicon(tlst / "mark.png", tlst / "favicon.png")
+        print(f"TLST : logo {w}×{h}, marque {mw}×{mh}")
+    else:
+        wordmark("TLST", green, (465, 187), tlst / "logo.png", 120)
+        wordmark("TLST", (255, 255, 255, 255), (465, 187), tlst / "logo-white.png", 120)
+        wordmark("T", green, (190, 177), tlst / "mark.png", 150)
+        favicon(tlst / "mark.png", tlst / "favicon.png")
     print("ok :", *sorted(p.relative_to(ROOT.parent) for p in ROOT.rglob("*.png")), sep="\n  ")
 
 
