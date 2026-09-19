@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { dayjs } from "../lib/format";
 import { iAm, openEditionByName, pick } from "./helpers";
 
 // To-do personnelle : une tâche privée, son échéance (pour quand) et ses créneaux (quand je m'y mets), visibles dans Ma semaine et dans l'agenda.
@@ -125,7 +126,11 @@ test("la fiche d'une tâche porte une description ; le kanban range par liste ; 
   await expect(page.getByTestId("tasks-main")).toHaveAttribute("data-name", "Vie statutaire");
   await page.getByTestId("tasks-display-kanban").click();
   await expect(page.getByTestId("tasks-kanban")).toHaveAttribute("data-mode", "due");
-  await expect(page.getByTestId("kanban-col-week")).toContainText("Envoyer la convocation");
+  // La convocation est due dans deux jours (seed) : « Cette semaine » si ça tombe avant la fin de la semaine ISO, « Plus tard » sinon
+  // (un samedi ou un dimanche, J+2 est déjà la semaine suivante).
+  const dueIn2 = dayjs().add(2, "day");
+  const col = dueIn2.isAfter(dayjs().endOf("isoWeek"), "day") ? "kanban-col-later" : "kanban-col-week";
+  await expect(page.getByTestId(col)).toContainText("Envoyer la convocation");
   await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-add-]").click();
   await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-input-]").fill("Appeler la préfecture");
   await page.getByTestId("kanban-col-today").locator("[data-testid^=kanban-input-]").press("Enter");
