@@ -24,7 +24,8 @@ function useRun() {
   return { pending, run };
 }
 
-// Nouvel appel repéré : financeur, intitulé, échéance (ou fil de l'eau), montant indicatif, lien. Le reste se complète en place.
+// Nouvel appel repéré : financeur, intitulé, programme, échéance (ou fil de l'eau), montant visé, projet, lien, description. Le reste
+// se complète en place, dans le panneau de l'appel (19/09).
 export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { funders: Opt[]; defaultFunderId?: string; projects?: Opt[] }) {
   const [open, setOpen] = useState(false);
   const [funderId, setFunderId] = useState(defaultFunderId ?? funders[0]?.value ?? "");
@@ -38,7 +39,7 @@ export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { fun
   const [deadline, setDeadline] = useState("");
   const [rolling, setRolling] = useState(false);
   const [recurring, setRecurring] = useState(false);
-  const [amountHint, setAmountHint] = useState("");
+  const [description, setDescription] = useState("");
   const [link, setLink] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -47,15 +48,15 @@ export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { fun
       <DialogTrigger asChild><Button data-testid="call-add-open"><Plus />Nouvel appel</Button></DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={(e) => { e.preventDefault(); start(async () => {
-          const r = await addCall({ funderId, funderName, label, scheme, deadline: deadline || null, rolling, recurring, amountHint, amountValue: amountValue || null, amountKind, durationYears: years || null, targetProjectId: targetProjectId || null, link });
+          const r = await addCall({ funderId, funderName, label, scheme, deadline: deadline || null, rolling, recurring, description, amountValue: amountValue || null, amountKind, durationYears: years || null, targetProjectId: targetProjectId || null, link });
           if (!r.ok) { toast.error(r.error); return; }
-          toast.success("Appel à projets repéré"); setOpen(false); setLabel(""); setScheme(""); setDeadline(""); setAmountHint(""); setLink(""); setFunderName(""); setAmountValue(""); setTargetProjectId(""); router.refresh();
+          toast.success("Appel à projets repéré"); setOpen(false); setLabel(""); setScheme(""); setDeadline(""); setDescription(""); setLink(""); setFunderName(""); setAmountValue(""); setTargetProjectId(""); router.refresh();
         }); }}>
           <DialogHeader><DialogTitle>Nouvel appel à projets</DialogTitle><DialogDescription>{`Une opportunité repérée, avant toute décision. ${cap(le(V.codir))} dira ensuite « à étudier », « on dépose » ou « écarté ».`}</DialogDescription></DialogHeader>
           <div className="grid gap-3 py-3">
             <div className="grid gap-1"><Label htmlFor="call-funder">Financeur</Label><SearchableSelect id="call-funder" options={funders} value={funderId} onChange={setFunderId} emptyOption="— nouveau financeur, ci-dessous —" data-testid="call-funder" className="w-full" />{!funderId && <Input value={funderName} onChange={(e) => setFunderName(e.target.value)} placeholder="Nom du nouveau financeur (créé dans l'annuaire)" className="h-8 text-xs" data-testid="call-funder-name" />}</div>
             <div className="grid gap-1"><Label htmlFor="call-label">Intitulé</Label><Input id="call-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="AAP Transition écologique 2027" required data-testid="call-label" /></div>
-            <div className="grid gap-1"><Label htmlFor="call-scheme">Dispositif, axe (facultatif)</Label><Input id="call-scheme" value={scheme} onChange={(e) => setScheme(e.target.value)} placeholder="Axe 2 · économie circulaire" /></div>
+            <div className="grid gap-1"><Label htmlFor="call-scheme">Programme du financeur (dispositif, axe) — facultatif</Label><Input id="call-scheme" value={scheme} onChange={(e) => setScheme(e.target.value)} placeholder="FSE+ axe inclusion, Axe 2 · économie circulaire…" data-testid="call-scheme" /><p className="text-[11px] text-muted-foreground">Le cadre dans lequel l&apos;appel s&apos;inscrit chez le financeur : sert à retrouver les appels d&apos;un même programme d&apos;une année sur l&apos;autre, et pré-remplit le dossier.</p></div>
             <div className="grid grid-cols-[1fr_auto] items-end gap-2">
               <div className="grid gap-1"><Label htmlFor="call-deadline">Date limite de dépôt</Label><Input id="call-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={rolling} data-testid="call-deadline" /></div>
               <label className="flex h-8 items-center gap-1.5 text-xs"><input type="checkbox" checked={rolling} onChange={(e) => setRolling(e.target.checked)} className="accent-primary" data-testid="call-rolling" /> au fil de l&apos;eau</label>
@@ -67,8 +68,8 @@ export function AddCallDialog({ funders, defaultFunderId, projects = [] }: { fun
               <div className="grid gap-1"><Label htmlFor="call-years">Durée (ans)</Label><Input id="call-years" type="number" min={1} max={10} value={years} onChange={(e) => setYears(e.target.value)} data-testid="call-years" /></div>
             </div>
             <div className="grid gap-1"><Label htmlFor="call-project">Projet visé (facultatif)</Label><SearchableSelect id="call-project" options={projects} value={targetProjectId} onChange={setTargetProjectId} emptyOption="— à préciser —" searchFrom={1} className="w-full" data-testid="call-project" /></div>
-            <div className="grid gap-1"><Label htmlFor="call-amount">Montant indicatif en texte (facultatif)</Label><Input id="call-amount" value={amountHint} onChange={(e) => setAmountHint(e.target.value)} placeholder="jusqu'à 30 000 €, 50 % des dépenses…" /></div>
             <div className="grid gap-1"><Label htmlFor="call-link">Lien vers l&apos;appel (facultatif)</Label><Input id="call-link" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" /></div>
+            <div className="grid gap-1"><Label htmlFor="call-description">Description (facultatif)</Label><textarea id="call-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Ce qui est financé, les conditions, ce qu'on en pense… (repris dans le dossier à l'ouverture)" className="rounded-md border bg-card px-2.5 py-1.5 text-sm" data-testid="call-description" /></div>
           </div>
           <DialogFooter><Button type="submit" disabled={pending || !label.trim() || (!funderId && !funderName.trim())} data-testid="call-submit">Repérer</Button></DialogFooter>
         </form>

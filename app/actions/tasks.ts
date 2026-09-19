@@ -20,7 +20,7 @@ async function mine(taskId: string) {
 
 const day = (d: string | null | undefined) => (d ? dayjs(d, "YYYY-MM-DD").startOf("day").toDate() : null);
 
-export async function addTask(input: { label: string; dueDate?: string | null; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result<{ id: string }>> {
+export async function addTask(input: { label: string; dueDate?: string | null; editionId?: string | null; actionId?: string | null; listId?: string | null; conventionId?: string | null }): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Écrivez la tâche." };
@@ -31,7 +31,8 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
     // Une liste rattachée à une édition rattache ses tâches, sauf rattachement explicite.
     if (!editionId && l.editionId) editionId = l.editionId;
   }
-  const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId, actionId: input.actionId || null, listId: input.listId || null } });
+  if (input.conventionId && !(await prisma.convention.findUnique({ where: { id: input.conventionId } }))) return { ok: false, error: "Dossier introuvable." };
+  const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId, actionId: input.actionId || null, listId: input.listId || null, conventionId: input.conventionId || null } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: t.id } };
 }

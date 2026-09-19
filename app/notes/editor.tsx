@@ -83,7 +83,7 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
           <span className="inline-flex flex-wrap items-center gap-x-2 text-muted-foreground" data-testid="note-meta">
             <span className="font-medium text-foreground">{dayjs(date).format("D MMMM YYYY")}</span>
             <span>· {NOTE_CONTEXTS.find((c) => c.value === context)?.label ?? context}</span>
-            <span>· {note?.edition ? <Link href={`/edition/${note.edition.id}`} className="text-primary hover:underline">{note.edition.name} · {note.edition.year}</Link> : "transverse"}</span>
+            <span>· {note?.edition ? <Link href={`/edition/${note.edition.id}`} className="text-primary hover:underline">{note.edition.name} · {note.edition.year}</Link> : note?.convention ? <Link href={`/conventions/${note.convention.id}`} className="text-primary hover:underline" data-testid="note-dossier">Dossier · {note.convention.label}</Link> : "transverse"}</span>
             <span>·</span>
           </span>
         ) : (<>
@@ -92,6 +92,7 @@ export function NoteEditor({ note, editions, people, defaultEditionId, focus }: 
           {NOTE_CONTEXTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </Select>
         <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={editionId} disabled={pending} onChange={(v) => { setEditionId(v); save({ editionId: v || null }); }} emptyOption="Transverse — sans projet" aria-label="Projet rattaché" className="h-7 max-w-[220px] rounded-md px-1.5 text-[11px]" data-testid="note-edition" />
+        {note?.convention && <Link href={`/conventions/${note.convention.id}`} className="inline-flex items-center rounded-full bg-sand px-2 py-0.5 text-[10px] text-warning-foreground hover:underline" data-testid="note-dossier">Dossier · {note.convention.label}</Link>}
         </>)}
         {readOnly ? (
           <span className="inline-flex items-center gap-1 text-muted-foreground">{(() => { const V = VIS.find((v) => v.value === visibility) ?? VIS[0]; return note!.sharedWithMe ? <><UserPlus className="size-3" />Partagée avec vous · note de {note!.author.name}</> : <><V.icon className="size-3" />{V.label} · note de {note!.author.name}</>; })()}</span>

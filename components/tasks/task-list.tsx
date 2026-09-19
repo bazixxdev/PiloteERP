@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AtSign, CalendarClock, CalendarDays, Plus, Trash2, X, GripVertical, ChevronDown, Inbox, Pencil } from "lucide-react";
+import { FileSignature } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { postponeLate } from "@/app/actions/tasks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -27,6 +28,7 @@ const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 export type TaskView = {
   id: string; label: string; description?: string | null; dueDate: string | null; done: boolean; listId?: string | null; requestId?: string | null; list?: { id: string; name: string; color: string | null } | null;
   edition: { id: string; name: string; year: number } | null; action: { id: string; name: string } | null;
+  convention?: { id: string; label: string; reference: string } | null; // tâche d'un dossier de financement (19/09)
   slots: { id: string; startAt: string; endAt: string; allDay: boolean }[];
 };
 
@@ -50,7 +52,7 @@ export function parseBang(word: string): string | null {
   return null;
 }
 
-export function TaskList({ tasks, editions = [], editionId, actionId, compact, listId, lists = [], readOnly, emptyText, autoFocus, grouped, showList, hideAdd }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; compact?: boolean; listId?: string | null; lists?: ListOpt[]; readOnly?: boolean; emptyText?: string; autoFocus?: boolean; grouped?: boolean; showList?: boolean; hideAdd?: boolean }) {
+export function TaskList({ tasks, editions = [], editionId, actionId, conventionId, compact, listId, lists = [], readOnly, emptyText, autoFocus, grouped, showList, hideAdd }: { tasks: TaskView[]; editions?: EditionOpt[]; editionId?: string; actionId?: string; conventionId?: string | null; compact?: boolean; listId?: string | null; lists?: ListOpt[]; readOnly?: boolean; emptyText?: string; autoFocus?: boolean; grouped?: boolean; showList?: boolean; hideAdd?: boolean }) {
   const [label, setLabel] = useState("");
   const [linked, setLinked] = useState<string | null>(editionId ?? null);
   const [cursor, setCursor] = useState(0);
@@ -74,7 +76,7 @@ export function TaskList({ tasks, editions = [], editionId, actionId, compact, l
   const submit = () => {
     const clean = (bangDue ? label.replace(/(?:^|\s)!\S+\s*$/, "") : label).trim();
     if (!clean) return;
-    run(() => addTask({ label: clean, dueDate: bangDue, editionId: linked, actionId: linked === editionId ? actionId : null, listId: listId ?? null }), () => { setLabel(""); setLinked(editionId ?? null); });
+    run(() => addTask({ label: clean, dueDate: bangDue, editionId: linked, actionId: linked === editionId ? actionId : null, listId: listId ?? null, conventionId: conventionId ?? null }), () => { setLabel(""); setLinked(editionId ?? null); });
   };
 
   const rowProps = { pending, run, compact, editions, lists, showList };
@@ -158,6 +160,7 @@ function ReadRow({ t }: { t: TaskView }) {
       <span className={cn("min-w-0 flex-1 text-xs font-medium", t.done && "line-through")}>{t.label}</span>
       <span className="flex shrink-0 flex-wrap items-center justify-end gap-1 text-[10px] text-muted-foreground">
         {t.edition && <Link href={`/edition/${t.edition.id}`} className="max-w-[180px] truncate rounded-full bg-secondary px-1.5 py-px text-primary hover:underline">{t.edition.name}{t.action ? ` · ${t.action.name}` : ""}</Link>}
+        {t.convention && <DossierChip c={t.convention} />}
         {t.slots.map((s) => <span key={s.id} className="inline-flex items-center gap-1 rounded-sm bg-muted px-1.5 py-px"><CalendarClock className="size-3" aria-hidden />{slotLabel(s)}</span>)}
         {due && !t.done && <span className={cn("rounded-sm px-1.5 py-px", n !== null && n < 0 ? "bg-danger-soft font-semibold text-danger" : "bg-warning-soft text-warning-foreground")}>Pour {n === 0 ? "aujourd'hui" : n === 1 ? "demain" : due.format("ddd D MMM")}</span>}
       </span>
@@ -168,6 +171,11 @@ function ReadRow({ t }: { t: TaskView }) {
 // Ma ligne (redesign du 18/09, inspiration Todoist) : un rond à cocher, le libellé, une ligne de description, puis les repères
 // (échéance en rouge si en retard, créneaux, demande) ; à droite « Liste / Édition ». Le libellé ouvre la fiche de la tâche.
 type Run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => void;
+
+// Le dossier de financement d'une tâche (19/09, retour de Gaël : « on perd la trace de quoi est l'objet de la tâche »).
+export function DossierChip({ c }: { c: { id: string; label: string; reference: string } }) {
+  return <Link href={`/conventions/${c.id}`} className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-sand px-1.5 py-px text-[10px] text-warning-foreground hover:underline" title={`Dossier ${c.reference}`} data-testid={`task-dossier-${c.id}`}><FileSignature className="size-3 shrink-0" aria-hidden />Dossier · {c.label}</Link>;
+}
 
 export function dueMeta(t: TaskView) {
   const due = t.dueDate ? dayjs(t.dueDate) : null;
@@ -224,6 +232,7 @@ function TaskRow({ t, pending, run, compact, editions, lists = [], showList }: {
       <div className="flex max-w-[42%] shrink-0 flex-col items-end gap-1 text-[11px] text-muted-foreground">
         <span className="flex max-w-full flex-col items-end gap-0.5">
           {!t.done && editions.length > 0 ? <span className={cn(!t.edition && hover)}><TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /></span> : t.edition && <Link href={`/edition/${t.edition.id}${t.action ? "?onglet=actions" : ""}`} className="max-w-[180px] truncate hover:underline">{t.edition.name}{t.action ? ` · ${t.action.name}` : ""}</Link>}
+          {t.convention && <DossierChip c={t.convention} />}
           {!t.done && lists.length > 0 ? <span className={cn(!showList && !t.list && hover)}><ListChip t={t} pending={pending} run={run} lists={lists} /></span> : t.list && <span className="inline-flex max-w-[140px] items-center gap-1"><span className="truncate">{t.list.name}</span><span className="font-bold" style={{ color: listColor ?? "var(--border)" }} aria-hidden>#</span></span>}
         </span>
         <span className={cn("flex items-center gap-0.5", hover)}>
@@ -272,6 +281,7 @@ export function TaskDetail({ t, open, onOpenChange, pending, run, editions, list
           <aside className="min-w-0 border-t bg-muted/30 px-4 py-2 md:border-l md:border-t-0">
             <Field label="Liste">{lists.length > 0 ? <ListChip t={t} pending={pending} run={run} lists={lists} /> : t.list?.name ?? "À trier"}</Field>
             <Field label={cap(V.edition)}>{editions.length > 0 ? <TaskEditionPicker t={t} pending={pending} run={run} editions={editions} /> : t.edition ? `${t.edition.name} · ${t.edition.year}` : "—"}</Field>
+            {t.convention && <Field label="Dossier de financement"><DossierChip c={t.convention} /></Field>}
             <Field label="Échéance"><DuePicker t={t} pending={pending} run={run} label={dueText} late={late} today={today} /></Field>
             {t.requestId && <Field label="Demande d'origine"><Link href="/demandes" className="text-primary hover:underline">Ouvrir la demande</Link> · la cocher fait la demande</Field>}
             <Field label={cap(pl(V.action))}><button type="button" disabled={pending} onClick={() => run(() => deleteTask(t.id), () => onOpenChange(false))} className="inline-flex items-center gap-1 text-danger hover:underline"><Trash2 className="size-3" />Supprimer la tâche</button></Field>

@@ -49,3 +49,11 @@ export function suggestedReference(funderName: string, year: number): string {
   const base = funderName.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 12);
   return `${base || "AAP"}-${year}`;
 }
+
+// « 42 000 € / an · 2 ans », « 30 000 € global », ou null si rien n'est visé.
+export function fmtCallAmount(c: { amountValue: number | null; amountKind: string; durationYears: number | null }): string | null {
+  if (c.amountValue == null) return null;
+  const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c.amountValue);
+  const years = c.durationYears && c.durationYears > 1 ? ` · ${c.durationYears} ans` : "";
+  return `${euro} ${c.amountKind === "annual" ? "/ an" : "global"}${years}`;
+}

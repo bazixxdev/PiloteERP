@@ -489,6 +489,15 @@ Gaël (retour vocal du 18/09) : un seul bouton « Nouvelle demande », la valida
 - Corrigé au passage : les filtres d'un tableau ne suivent plus d'une liste à l'autre (`key={list.id}`) ; une cellule modifiée en groupe se remet à la valeur du serveur.
 - Tests : `tests/contacts-tableau.spec.ts` (3 tests). Deux tests préexistants dépendaient du jour (`taches` « Cette semaine », `tresorerie` « en retard ») et échouaient un samedi — **corrigés le 19/09** (branche `tests/independants-du-jour`) : le versement en retard de la démo tombe au plus tard le dernier jour du mois précédent (en retard au jour *et* au mois), et le test du kanban applique la règle de la semaine ISO. `projets.spec` (archivage) est parfois capricieux dans la suite complète (1 échec sur 3 passes) — à surveiller.
 
+### AT. Appels à projets en panneau, une seule description ; dossier : qui aide, tâches et notes tracées (19/09) — fait, branche `feat/appels-dossiers`
+
+- **Appels à projets** : clic sur l'intitulé → panneau latéral `?appel=` avec tous les champs modifiables en place (financeur, intitulé, programme, échéance / au fil de l'eau / chaque année, montant visé + annuel/global + durée, projet visé, lien, description, statut d'équipe, suite). Le tableau gagne « Montant visé » en chiffres (« 42 000 € / an · 2 ans ») et perd la colonne texte.
+- **Une seule « Description »** (Gaël : pas de note à côté) : `Call.note` renommé `description` par migration, l'ancien « montant indicatif en texte » y est replié (`Montant indicatif : …`) ; la colonne `amountHint` reste en base, inutilisée (à supprimer un jour, sur go). « Étudier » / « Ouvrir un dossier » copie programme, montant visé et description dans le dossier.
+- **« Dispositif, axe » → « Programme du financeur (dispositif, axe) »** avec une aide, sur l'appel et sur le dossier : c'est le cadre du financeur (FSE+ axe inclusion, CPO, Axe 2 · économie circulaire), pas l'appel lui-même.
+- **Dossier** : « De quoi il s'agit » → « Description ». **« Qui aide »** = des personnes de l'équipe choisies (chips, table `ConventionHelper`), plus « Aide extérieure, précisions » en texte libre (l'ancien champ `helpers`). Seed : Thomas et Élise aident sur l'AAP ADEME.
+- **Tâches et notes d'un dossier** : la saisie de tâche du dossier accepte `!lundi`, `!12/10` comme dans Tâches ; dans Tâches (liste, kanban, fiche) la tâche porte « Dossier · <intitulé> » avec le lien ; dans Notes, la note porte son dossier (liste, en-tête) et le sélecteur « projet ou dossier » filtre dessus (`?dossier=`). Depuis le dossier, liens vers Tâches et Notes.
+- Tests : `tests/appels-dossiers.spec.ts` (2 tests). Branche à fusionner avec `tests/independants-du-jour` et `fix/infobulle-rail` quand l'audit aura fini de lire `main`.
+
 ## À chaud (notes brutes, non traitées)
 
 _(vide)_

@@ -11,13 +11,16 @@ import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { refColor, refLabel } from "@/lib/refs";
 import { canEditCalls, canEditFunding, isCodir } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
-import { deadlineState, isNewCall, sortCalls } from "@/lib/calls";
+import { deadlineState, fmtCallAmount, isNewCall, sortCalls } from "@/lib/calls";
+import { UrlPanel } from "@/components/common/url-panel";
+import { AMOUNT_KINDS } from "@/lib/dossiers";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AddCallDialog, CallFilters, CallRowActions, CallStatusSelect } from "./controls";
+import { CallPanel } from "./call-panel";
 import { V, cap, le, de, au } from "@/lib/vocab";
 
-type Search = { financeur?: string; statut?: string; vue?: string };
+type Search = { financeur?: string; statut?: string; vue?: string; appel?: string };
 
 // Appels à projets (lot B, module « veille ») : ce que la CRESS a repéré chez ses financeurs, l'échéance calculée, le statut
 // d'équipe posé en CODIR, et « Étudier » qui ouvre une convention à déposer. Saisie manuelle ; un flux importé viendra plus tard
@@ -27,12 +30,15 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
   if (!instanceHas(settings, "veille")) notFound();
   const [funders, all, projects, people] = await Promise.all([
     listFunders(),
-    prisma.call.findMany({ include: { funder: true, convention: { select: { id: true, reference: true, status: true } } } }),
+    prisma.call.findMany({ include: { funder: true, targetProject: { select: { id: true, name: true } }, convention: { select: { id: true, reference: true, status: true } } } }),
     prisma.project.findMany({ where: { archived: false }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.person.findMany({ select: { id: true, name: true } }),
   ]);
   const rw = canEditCalls(me);
   const codir = isCodir(me);
+  // Panneau latéral (19/09) : ?appel=<id> ouvre la fiche complète de l'appel, les filtres restent dans l'adresse.
+  const qs = (extra: Record<string, string | undefined>) => { const u = new URLSearchParams(); for (const [k, v] of Object.entries({ financeur: sp.financeur, statut: sp.statut, vue: sp.vue, ...extra })) if (v) u.set(k, v); const q = u.toString(); return `/appels${q ? `?${q}` : ""}`; };
+  const openCall = sp.appel ? all.find((c) => c.id === sp.appel) ?? null : null;
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   let rows = sortCalls(all, settings.deliverableAlertDays);
   if (!sp.vue) rows = rows.filter((c) => c.active && c.teamStatus !== "dismissed");
@@ -61,7 +67,7 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
               <tr>
                 <th className="px-3 py-2.5">Financeur · appel</th>
                 <th className="px-3 py-2.5">Échéance</th>
-                <th className="px-3 py-2.5">Montant indicatif</th>
+                <th className="px-3 py-2.5">Montant visé</th>
                 <th className="px-3 py-2.5">Statut d&apos;équipe</th>
                 <th className="px-3 py-2.5">Suite</th>
                 <th className="px-3 py-2.5" />
@@ -79,9 +85,9 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
                         {fresh && <StatusBadge label="Nouveau" color="coral" dot={false} />}
                         {!c.active && <StatusBadge label="Retiré" color="muted" dot={false} />}
                       </div>
-                      <div className="mt-0.5 min-w-0">{rw ? <AutoField model="call" id={c.id} field="label" type="text" value={c.label} inputClassName="font-semibold" label={`Intitulé de l'appel ${c.label}`} /> : <span className="block font-semibold">{c.label}</span>}</div>
+                      <div className="mt-0.5 min-w-0"><Link href={qs({ appel: c.id })} scroll={false} className="block font-semibold text-primary underline-offset-2 hover:underline" data-testid={`call-open-${c.id}`}>{c.label}</Link></div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-                        {rw ? <span className="min-w-[160px] flex-1"><AutoField model="call" id={c.id} field="scheme" type="text" value={c.scheme} placeholder="dispositif, axe…" label={`Dispositif de l'appel ${c.label}`} /></span> : c.scheme && <span>{c.scheme}</span>}
+                        {c.scheme && <span title="Programme du financeur">{c.scheme}</span>}
                         {c.link && <a href={c.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline"><ExternalLink className="size-3" />l&apos;appel</a>}
                         {c.recurring && <span title="Revient chaque année">↻ annuel</span>}
                       </div>
@@ -91,7 +97,7 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
                       {rw && !c.rolling && <div className="mt-1 w-36"><AutoField model="call" id={c.id} field="deadline" type="date" value={c.deadline} label={`Date limite de l'appel ${c.label}`} /></div>}
                       {!rw && c.deadline && <div className="mt-1 text-[11px] text-muted-foreground">{fmtDate(c.deadline)}</div>}
                     </td>
-                    <td className="min-w-[190px] px-3 py-3 text-xs">{rw ? <AutoField model="call" id={c.id} field="amountHint" type="text" value={c.amountHint} placeholder="—" label={`Montant indicatif de l'appel ${c.label}`} /> : c.amountHint ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="min-w-[150px] px-3 py-3 text-xs" data-testid={`call-amount-${c.id}`}>{fmtCallAmount(c) ?? <span className="text-muted-foreground">—</span>}{c.targetProject && <div className="mt-0.5 text-[10px] text-muted-foreground">pour {c.targetProject.name}</div>}</td>
                     <td className="min-w-[170px] px-3 py-3">
                       <CallStatusSelect id={c.id} value={c.teamStatus} readOnly={!codir} />
                       {c.statusAt && <div className="mt-1 text-[10px] text-muted-foreground">{nameOf.get(c.statusById ?? "") ?? "—"} · {fmtDate(c.statusAt)}</div>}
@@ -110,6 +116,11 @@ export default async function AppelsPage({ searchParams }: { searchParams: Promi
             </tbody>
           </table>
         </div>
+      )}
+      {openCall && (
+        <UrlPanel title={openCall.label} description={<>{openCall.funder.name}{openCall.scheme ? ` · ${openCall.scheme}` : ""}</>} closeHref={qs({})} testId="call-panel" wide>
+          <CallPanel call={openCall} rw={rw} codir={codir} canPromote={canEditFunding(me)} funders={funders.map((f) => ({ value: f.id, label: f.name }))} projects={projects.map((p) => ({ value: p.id, label: p.name }))} amountKinds={AMOUNT_KINDS} statusBy={openCall.statusById ? nameOf.get(openCall.statusById) ?? null : null} dossierStatus={openCall.convention ? refLabel(refs, "dossier_status", openCall.convention.status) : null} deadline={deadlineState(openCall, settings.deliverableAlertDays)} />
+        </UrlPanel>
       )}
       <p className="mt-2.5 text-[10px] text-muted-foreground">{rows.length} appel{rows.length > 1 ? "s" : ""} affiché{rows.length > 1 ? "s" : ""} sur {all.length}{` · un appel écarté ou retiré reste en base (vue « Tous ») · le statut d'équipe appartient ${au(V.org)} : un flux importé ne le toucherait jamais.`}</p>
     </div>
