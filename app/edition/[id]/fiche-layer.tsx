@@ -115,7 +115,8 @@ export function FicheLayer(p: Props) {
           {readRows(p.fields).filter((r) => !(p.locked && r.empty && !p.remarks.some((k) => k.field === r.key))).map((r) => (
             <div key={r.key} className={cn("min-w-0", r.wide && "sm:col-span-2")}>
               <dt className="text-[10px] text-muted-foreground">{r.label}</dt>
-              <dd data-testid={`field-${r.key}`} data-readonly="true" className={cn("mt-0.5 whitespace-pre-line text-sm leading-relaxed", r.empty ? "italic text-muted-foreground" : "text-foreground")}>{r.text}</dd>
+              {/* Un clic sur le texte passe la couche en modification (19/09, retour de Gaël : une couche remplie « avait l'air en lecture seule »). */}
+              <dd data-testid={`field-${r.key}`} data-readonly="true" onClick={p.writable && !p.locked ? () => setEditing(true) : undefined} title={p.writable && !p.locked ? "Cliquer pour modifier" : undefined} className={cn("mt-0.5 whitespace-pre-line text-sm leading-relaxed", r.empty ? "italic text-muted-foreground" : "text-foreground", p.writable && !p.locked && "cursor-text rounded-sm hover:bg-muted/60")}>{r.text}</dd>
               {remarksOf(r.key, r.label)}
             </div>
           ))}
