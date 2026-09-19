@@ -549,8 +549,12 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
           } else if (y.year === 2026 && status === "contracted") {
             const acompte = Math.round(granted * 0.5);
             await prisma.payment.create({ data: { fundingLineId: line.id, label: "Acompte 50 %", amount: acompte, expectedAt: dayjs(`2026-04-${10 + fi}`).toDate(), receivedAt: dayjs(`2026-04-${20 + fi}`).toDate(), reference: `VIR-${pd.code}-${f.name.slice(0, 3).toUpperCase()}-1` } });
+            // Le versement en retard de la démo : en retard au jour (alertes, radar) et au mois (plan de trésorerie, qui compte par mois) —
+            // au plus tard le dernier jour du mois précédent, à J-18 sinon (19/09 : J-18 tombait dans le mois courant, plus « en retard » en trésorerie).
             const lateOne = pd.code === "TES-02" && fi === 0;
-            await prisma.payment.create({ data: { fundingLineId: line.id, label: lateOne ? "Solde après justificatifs" : "Solde", amount: granted - acompte, expectedAt: lateOne ? today.subtract(18, "day").toDate() : dayjs("2026-12-15").toDate(), receivedAt: null, note: lateOne ? "Justificatifs envoyés le 12/08 ; relance faite par téléphone." : null } });
+            const j18 = today.subtract(18, "day"), prevMonthEnd = today.subtract(1, "month").endOf("month");
+            const lateExpectedAt = j18.isBefore(prevMonthEnd) ? j18 : prevMonthEnd;
+            await prisma.payment.create({ data: { fundingLineId: line.id, label: lateOne ? "Solde après justificatifs" : "Solde", amount: granted - acompte, expectedAt: lateOne ? lateExpectedAt.toDate() : dayjs("2026-12-15").toDate(), receivedAt: null, note: lateOne ? "Justificatifs envoyés le 12/08 ; relance faite par téléphone." : null } });
           } else if (y.year === 2026 && status === "notified") {
             // Notifié mais pas encore signé : une avance attendue à la signature.
             await prisma.payment.create({ data: { fundingLineId: line.id, label: "Avance à la signature", amount: Math.round(granted * 0.3), expectedAt: dayjs("2026-10-30").toDate(), receivedAt: null } });
