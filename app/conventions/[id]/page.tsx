@@ -18,7 +18,7 @@ import { PaymentsList } from "@/components/funding/payments-list";
 import { paymentSummary } from "@/lib/payments";
 import { AMOUNT_KINDS, amounts, durationOf, isWon } from "@/lib/dossiers";
 import { attachmentInclude } from "@/lib/attachments";
-import { DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
+import { HelpersPicker, DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
 import { V, cap, le, un, aucun, pl } from "@/lib/vocab";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
@@ -26,7 +26,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const [me, refs, c] = await Promise.all([
     getCurrentPerson(), getRefs(),
-    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, owner: { select: { id: true, name: true } }, targetProject: { select: { id: true, name: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } }, tasks: { include: { person: { select: { name: true } } }, orderBy: [{ done: "asc" }, { createdAt: "asc" }] }, notesLinked: { include: { author: { select: { name: true } } }, orderBy: { date: "desc" } }, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
+    prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, owner: { select: { id: true, name: true } }, helperPeople: { include: { person: { select: { id: true, name: true } } } }, targetProject: { select: { id: true, name: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } }, tasks: { include: { person: { select: { name: true } } }, orderBy: [{ done: "asc" }, { createdAt: "asc" }] }, notesLinked: { include: { author: { select: { name: true } } }, orderBy: { date: "desc" } }, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
   const rw = canEditFunding(me);
@@ -102,7 +102,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
         <div className="grid content-start gap-4">
           <Section title={won ? "La demande, pour mémoire" : "La demande"} description="Ce qu'on vise : de quoi il s'agit, combien, sur combien de temps, pour quel projet, avant quand." testId="dossier-request">
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="sm:col-span-3"><Field label="De quoi il s'agit" field="description" type="textarea" placeholder="Ce qui est financé, les conditions, ce qu'on demande…" /></div>
+              <div className="sm:col-span-3"><Field label="Description" field="description" type="textarea" placeholder="Ce qui est financé, les conditions, ce qu'on demande…" /></div>
               <Field label="Montant demandé" field="amountRequested" type="number" suffix="€" refresh />
               <Field label="Ce montant est" field="amountKind" type="select" options={AMOUNT_KINDS} refresh />
               <div className="grid gap-1"><span className="text-[10px] text-muted-foreground">Par an · global</span><div className="text-sm tabular" data-testid="dossier-per-year">{asked.total == null ? "—" : `${fmtEuro(asked.perYear!)} par an · ${fmtEuro(asked.total)} sur ${durationOf(c)} an${durationOf(c) > 1 ? "s" : ""}`}</div></div>
@@ -110,7 +110,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               <Field label="Dernière année" field="endYear" type="number" refresh />
               <Field label="Échéance de dépôt" field="deadline" type="date" />
               <Field label="Pour quel projet" field="targetProjectId" type="select" options={projects.map((p) => ({ value: p.id, label: p.name }))} placeholder="— à préciser —" refresh />
-              <Field label="Dispositif" field="scheme" type="text" placeholder="axe, programme…" />
+              <Field label="Programme du financeur (dispositif, axe)" field="scheme" type="text" placeholder="axe, programme…" />
               <Field label="Référence" field="reference" type="text" refresh />
             </div>
           </Section>
@@ -118,7 +118,10 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
             <Section title="La réponse" description="Qui rédige, qui aide, où sont les sources ; les tâches et notes pour s'organiser ; les pièces (cahier des charges, réponse déposée)." testId="dossier-response">
               <div className="mb-3 grid gap-3 sm:grid-cols-2">
                 <Field label="Qui répond" field="ownerId" type="select" options={people.map((p) => ({ value: p.id, label: p.name }))} placeholder="— à désigner —" refresh />
-                <Field label="Qui aide" field="helpers" type="text" placeholder="noms, rôles" />
+                <div className="grid gap-2">
+                  <HelpersPicker id={c.id} people={people.map((p) => ({ id: p.id, name: p.name }))} selected={c.helperPeople.map((h) => h.person)} rw={rw} />
+                  <Field label="Aide extérieure, précisions" field="helpers" type="text" placeholder="un prestataire, un partenaire, qui fait quoi…" />
+                </div>
                 <div className="sm:col-span-2"><Field label="Documents sources, cahier des charges, liens" field="sources" type="textarea" placeholder="un élément par ligne : lien de l'appel, dossier sur le serveur, contact technique…" /></div>
               </div>
               <DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} />

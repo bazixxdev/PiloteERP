@@ -22,7 +22,7 @@ export function bodyToHtml(body: string): string {
 }
 export const htmlToText = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
 
-export type NoteFilter = { q?: string; editionId?: string; context?: string; author?: string; color?: string; archived?: boolean };
+export type NoteFilter = { q?: string; editionId?: string; conventionId?: string; context?: string; author?: string; color?: string; archived?: boolean };
 
 // Recherche plein texte simple (titre + corps sans balises) et filtres par projet, contexte, auteur. Assez pour des centaines de notes par an.
 export function filterNotes(notes: NoteView[], f: NoteFilter): NoteView[] {
@@ -31,6 +31,7 @@ export function filterNotes(notes: NoteView[], f: NoteFilter): NoteView[] {
     n.archived === Boolean(f.archived) &&
     (!q || `${n.title} ${htmlToText(n.body)}`.toLowerCase().includes(q)) &&
     (!f.editionId || n.edition?.id === f.editionId) &&
+    (!f.conventionId || n.convention?.id === f.conventionId) &&
     (!f.context || n.context === f.context) &&
     (!f.author || n.author.id === f.author) &&
     (!f.color || n.color === f.color),
@@ -60,17 +61,18 @@ export const NOTE_COLORS = [
 ] as const;
 export const noteColor = (v: string | null | undefined) => NOTE_COLORS.find((c) => c.value === v) ?? null;
 
-export type NoteView = { id: string; title: string; body: string; date: string; context: string; visibility: string; color: string | null; archived: boolean; edition: { id: string; name: string; year: number } | null; author: { id: string; name: string }; mine: boolean; sharedWith: { id: string; name: string }[]; sharedWithMe: boolean; updatedAt: string };
+export type NoteView = { id: string; title: string; body: string; date: string; context: string; visibility: string; color: string | null; archived: boolean; edition: { id: string; name: string; year: number } | null; convention: { id: string; label: string; reference: string } | null; author: { id: string; name: string }; mine: boolean; sharedWith: { id: string; name: string }[]; sharedWithMe: boolean; updatedAt: string };
 
-type Row = { id: string; title: string; body: string; date: Date; context: string; visibility: string; color: string | null; archivedAt: Date | null; updatedAt: Date; authorId: string; author: { id: string; name: string; poleId: string | null }; edition: { id: string; year: number; project: { name: string } } | null; shares: { person: { id: string; name: string } }[] };
+type Row = { id: string; title: string; body: string; date: Date; context: string; visibility: string; color: string | null; archivedAt: Date | null; updatedAt: Date; authorId: string; author: { id: string; name: string; poleId: string | null }; edition: { id: string; year: number; project: { name: string } } | null; convention: { id: string; label: string | null; reference: string } | null; shares: { person: { id: string; name: string } }[] };
 
 const toView = (me: string, n: Row): NoteView => ({
   id: n.id, title: n.title, body: bodyToHtml(n.body), date: dayjs(n.date).format("YYYY-MM-DD"), context: n.context, visibility: n.visibility, color: n.color, archived: Boolean(n.archivedAt), updatedAt: n.updatedAt.toISOString(),
-  edition: n.edition ? { id: n.edition.id, name: n.edition.project.name, year: n.edition.year } : null, author: { id: n.author.id, name: n.author.name }, mine: n.author.id === me,
+  edition: n.edition ? { id: n.edition.id, name: n.edition.project.name, year: n.edition.year } : null,
+  convention: n.convention ? { id: n.convention.id, label: n.convention.label ?? n.convention.reference, reference: n.convention.reference } : null, author: { id: n.author.id, name: n.author.name }, mine: n.author.id === me,
   sharedWith: n.shares.map((s) => s.person), sharedWithMe: n.shares.some((s) => s.person.id === me),
 });
 
-const include = { author: true, edition: { include: { project: true } }, shares: { include: { person: { select: { id: true, name: true } } }, orderBy: { createdAt: "asc" as const } } };
+const include = { author: true, edition: { include: { project: true } }, convention: { select: { id: true, label: true, reference: true } }, shares: { include: { person: { select: { id: true, name: true } } }, orderBy: { createdAt: "asc" as const } } };
 
 // Qui lit une note : son auteur, les personnes nommées, puis selon la visibilité (pôle, toute la CRESS).
 export const canReadNote = (me: Viewer, n: Row) => n.authorId === me.id || n.shares.some((s) => s.person.id === me.id) || canReadShared(me, n.author, n.visibility);

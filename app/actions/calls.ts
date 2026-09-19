@@ -21,7 +21,7 @@ function canSpot(me: Actor): boolean {
   return canEditCalls(me);
 }
 
-export async function addCall(input: { funderId: string; funderName?: string | null; label: string; scheme?: string | null; deadline?: string | null; rolling?: boolean; recurring?: boolean; amountHint?: string | null; amountValue?: number | string | null; amountKind?: string; durationYears?: number | string | null; targetProjectId?: string | null; link?: string | null; note?: string | null }): Promise<Result<{ id: string }>> {
+export async function addCall(input: { funderId: string; funderName?: string | null; label: string; scheme?: string | null; deadline?: string | null; rolling?: boolean; recurring?: boolean; description?: string | null; amountValue?: number | string | null; amountKind?: string; durationYears?: number | string | null; targetProjectId?: string | null; link?: string | null; note?: string | null }): Promise<Result<{ id: string }>> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
   if (!canSpot(me)) return { ok: false, error: `Un appel à projets se repère par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.` };
@@ -35,9 +35,9 @@ export async function addCall(input: { funderId: string; funderName?: string | n
   const c = await prisma.call.create({ data: {
     funderId, label, scheme: input.scheme?.trim() || null,
     deadline: input.rolling ? null : input.deadline ? new Date(input.deadline) : null, rolling: !!input.rolling, recurring: !!input.recurring,
-    amountHint: input.amountHint?.trim() || null, amountValue: amountValue != null && Number.isFinite(amountValue) ? amountValue : null, amountKind: input.amountKind === "annual" ? "annual" : "total",
+    amountValue: amountValue != null && Number.isFinite(amountValue) ? amountValue : null, amountKind: input.amountKind === "annual" ? "annual" : "total",
     durationYears: input.durationYears ? Math.max(1, Math.round(Number(input.durationYears))) : null, targetProjectId: input.targetProjectId || null,
-    link: input.link?.trim() || null, note: input.note?.trim() || null,
+    link: input.link?.trim() || null, description: input.description?.trim() || null,
   } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: c.id } };
@@ -72,7 +72,7 @@ export async function promoteCall(id: string): Promise<Result<{ conventionId: st
   const years = Math.max(1, c.durationYears ?? 1);
   const sources = c.link ? `Appel : ${c.link}` : null;
   const conv = await prisma.convention.create({ data: {
-    funderId: c.funderId, reference, scheme: c.scheme, label: c.label, description: c.note ?? (c.amountHint ? `Montant indicatif : ${c.amountHint}.` : null),
+    funderId: c.funderId, reference, scheme: c.scheme, label: c.label, description: c.description,
     startYear: year, endYear: year + years - 1, status: "study", amountRequested: c.amountValue ?? null, amountKind: c.amountKind, deadline: c.deadline, targetProjectId: c.targetProjectId, sources,
   } });
   await prisma.call.update({ where: { id }, data: { conventionId: conv.id, teamStatus: "study", statusById: me.id, statusAt: new Date() } });
@@ -91,7 +91,7 @@ export async function renewCall(id: string): Promise<Result<{ id: string }>> {
   const next = dayjs(c.deadline).add(1, "year");
   const dup = await prisma.call.findFirst({ where: { funderId: c.funderId, label: c.label, deadline: next.toDate() } });
   if (dup) return { ok: true, data: { id: dup.id } };
-  const n = await prisma.call.create({ data: { funderId: c.funderId, label: c.label, scheme: c.scheme, deadline: next.toDate(), rolling: false, recurring: true, amountHint: c.amountHint, link: c.link, note: c.note } });
+  const n = await prisma.call.create({ data: { funderId: c.funderId, label: c.label, scheme: c.scheme, deadline: next.toDate(), rolling: false, recurring: true, amountValue: c.amountValue, amountKind: c.amountKind, durationYears: c.durationYears, targetProjectId: c.targetProjectId, link: c.link, description: c.description } });
   if (c.active) await prisma.call.update({ where: { id }, data: { active: false } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: n.id } };

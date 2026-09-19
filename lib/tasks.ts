@@ -5,14 +5,15 @@ import { dayjs } from "./format";
 import { canReadShared } from "./modules";
 import type { EditionOpt, TaskView } from "@/components/tasks/task-list";
 
-const toView = (t: { id: string; label: string; description: string | null; dueDate: Date | null; done: boolean; listId: string | null; requestId: string | null; list: { id: string; name: string; color: string | null } | null; edition: { id: string; year: number; project: { name: string } } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
+const toView = (t: { id: string; label: string; description: string | null; dueDate: Date | null; done: boolean; listId: string | null; requestId: string | null; list: { id: string; name: string; color: string | null } | null; edition: { id: string; year: number; project: { name: string } } | null; convention: { id: string; label: string | null; reference: string } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
   id: t.id, label: t.label, description: t.description, dueDate: t.dueDate ? dayjs(t.dueDate).format("YYYY-MM-DD") : null, done: t.done, listId: t.listId, requestId: t.requestId, list: t.list ? { id: t.list.id, name: t.list.name, color: t.list.color } : null,
   edition: t.edition ? { id: t.edition.id, name: t.edition.project.name, year: t.edition.year } : null,
   action: t.action ? { id: t.action.id, name: t.action.name } : null,
+  convention: t.convention ? { id: t.convention.id, label: t.convention.label ?? t.convention.reference, reference: t.convention.reference } : null,
   slots: t.slots.map((s) => ({ id: s.id, startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString(), allDay: s.allDay })),
 });
 
-const include = { edition: { include: { project: true } }, action: true, list: { select: { id: true, name: true, color: true } }, slots: { orderBy: { startAt: "asc" as const } } };
+const include = { edition: { include: { project: true } }, action: true, convention: { select: { id: true, label: true, reference: true } }, list: { select: { id: true, name: true, color: true } }, slots: { orderBy: { startAt: "asc" as const } } };
 
 // Tâches de la personne connectée, prêtes pour le client (dates en chaînes). Les terminées de plus de 14 jours disparaissent.
 export async function loadMyTasks(personId: string, opts?: { editionId?: string }): Promise<TaskView[]> {

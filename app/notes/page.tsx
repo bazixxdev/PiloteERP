@@ -15,8 +15,12 @@ import { Select } from "@/components/common/searchable-select";
 import { V, tout } from "@/lib/vocab";
 
 // Notes (retour du 14/09) : prise de notes propre, rattachée à un projet ou transverse, privée ou partagée. Remplace le OneNote « défouloir ».
-export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; contexte?: string; auteur?: string; couleur?: string; vue?: string }> }) {
-  const { note: noteId, edition, focus, q, projet, contexte, auteur, couleur, vue } = await searchParams;
+export default async function NotesPage({ searchParams }: { searchParams: Promise<{ note?: string; edition?: string; focus?: string; q?: string; projet?: string; dossier?: string; contexte?: string; auteur?: string; couleur?: string; vue?: string }> }) {
+  const sp = await searchParams;
+  const { note: noteId, edition, focus, q, contexte, auteur, couleur, vue } = sp;
+  // Le sélecteur « projet ou dossier » du formulaire GET envoie `projet=dossier:<id>` pour un dossier (19/09).
+  const projet = sp.projet?.startsWith("dossier:") ? undefined : sp.projet;
+  const dossier = sp.dossier ?? (sp.projet?.startsWith("dossier:") ? sp.projet.slice(8) : undefined);
   const [me, settings] = await Promise.all([getCurrentPerson(), getSettings()]);
   if (!hasModule(me, "notes")) {
     return (
@@ -35,8 +39,8 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   // Recherche et filtres (retour du 14/09 : « après 12 mois de notes on va galérer à s'y retrouver »).
   // Archivées : une vue à part (retour du 15/09), jamais mélangées aux notes vivantes.
   const archivedView = vue === "archivees" || Boolean(current?.archived);
-  const filter = { q, editionId: projet, context: contexte, author: auteur, color: couleur, archived: archivedView };
-  const filtering = Boolean(q || projet || contexte || auteur || couleur);
+  const filter = { q, editionId: projet, conventionId: dossier, context: contexte, author: auteur, color: couleur, archived: archivedView };
+  const filtering = Boolean(q || projet || dossier || contexte || auteur || couleur);
   const archivedCount = allNotes.filter((n) => n.archived).length;
   const notes = filterNotes(allNotes, filter);
   const mine = notes.filter((n) => n.mine);
@@ -44,13 +48,15 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const ctxLabel = (c: string) => NOTE_CONTEXTS.find((x) => x.value === c)?.label ?? c;
   // Les projets et auteurs proposés dans les filtres : seulement ceux qui ont des notes visibles.
   const projectOpts = Array.from(new Map(allNotes.filter((n) => n.edition).map((n) => [n.edition!.id, n.edition!])).values()).sort((a, b) => b.year - a.year || a.name.localeCompare(b.name));
+  // Les dossiers de financement qui ont des notes (19/09) : le projet ou le dossier, dans le même sélecteur.
+  const dossierOpts = Array.from(new Map(allNotes.filter((n) => n.convention).map((n) => [n.convention!.id, n.convention!])).values()).sort((a, b) => a.label.localeCompare(b.label));
   const authorOpts = Array.from(new Map(allNotes.filter((n) => !n.mine).map((n) => [n.author.id, n.author])).values()).sort((a, b) => a.name.localeCompare(b.name));
-  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, contexte, auteur, couleur, vue: archivedView ? "archivees" : undefined, ...over })) if (v) p.set(k, v); return p.toString(); };
+  const keep = (over: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ q, projet, dossier, contexte, auteur, couleur, vue: archivedView ? "archivees" : undefined, ...over })) if (v) p.set(k, v); return p.toString(); };
 
   const NoteLink = ({ n }: { n: (typeof notes)[number] }) => (
     <Link href={`/notes?${keep({ note: n.id })}`} className={cn("block min-w-0 rounded-md px-3 py-2 hover:bg-muted", current?.id === n.id && "bg-info-soft")} style={noteColor(n.color) ? { boxShadow: `inset 3px 0 0 ${noteColor(n.color)!.hex}` } : undefined} data-testid={`note-link-${n.id}`} data-color={n.color ?? undefined}>
       <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">{noteColor(n.color) && <span className="size-2 shrink-0 rounded-full" style={{ background: noteColor(n.color)!.hex }} aria-hidden />}<span className="truncate">{n.title || "Sans titre"}</span></div>
-      <div className="truncate text-[10px] text-muted-foreground">{dayjs(n.date).format("D MMM")} · {n.edition ? `${n.edition.name} · ${n.edition.year}` : ctxLabel(n.context)}{!n.mine ? ` · ${n.author.name}` : ""}{n.sharedWithMe ? " · pour vous" : ""}</div>
+      <div className="truncate text-[10px] text-muted-foreground">{dayjs(n.date).format("D MMM")} · {n.edition ? `${n.edition.name} · ${n.edition.year}` : n.convention ? `Dossier · ${n.convention.label}` : ctxLabel(n.context)}{!n.mine ? ` · ${n.author.name}` : ""}{n.sharedWithMe ? " · pour vous" : ""}</div>
       {q && <div className="truncate text-[10px] text-muted-foreground/80">{snippet(htmlToText(n.body), q)}</div>}
     </Link>
   );
@@ -81,9 +87,10 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                 <input type="search" name="q" defaultValue={q ?? ""} placeholder="Rechercher dans mes notes…" aria-label="Rechercher" className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" data-testid="notes-search" />
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                <Select name="projet" defaultValue={projet ?? ""} aria-label="Projet" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-project">
+                <Select name="projet" defaultValue={dossier ? `dossier:${dossier}` : projet ?? ""} aria-label="Projet ou dossier" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-project">
                   <option value="">Tous les projets</option>
                   {projectOpts.map((e) => <option key={e.id} value={e.id}>{e.name} · {e.year}</option>)}
+                  {dossierOpts.map((d) => <option key={d.id} value={`dossier:${d.id}`}>Dossier · {d.label}</option>)}
                 </Select>
                 <Select name="contexte" defaultValue={contexte ?? ""} aria-label="Type de note" className="h-7 min-w-0 rounded-md border bg-background px-1 text-[11px]" data-testid="notes-filter-context">
                   <option value="">Tous les types</option>

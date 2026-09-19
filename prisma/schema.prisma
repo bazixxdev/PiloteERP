@@ -11,14 +11,14 @@ datasource db {
 }
 
 model Pole {
-  id       String    @id @default(cuid())
-  name     String
-  leadId   String?
-  lead     Person?   @relation("PoleLead", fields: [leadId], references: [id])
-  members  Person[]  @relation("PoleMembers")
-  projects Project[]
+  id          String        @id @default(cuid())
+  name        String
+  leadId      String?
+  lead        Person?       @relation("PoleLead", fields: [leadId], references: [id])
+  members     Person[]      @relation("PoleMembers")
+  projects    Project[]
   secondaryOf ProjectPole[]
-  requests Request[]
+  requests    Request[]
 }
 
 // Rôles et droits (lot F2) : un rôle porte un sous-ensemble du catalogue lib/permissions.ts (clés séparées par des virgules)
@@ -35,36 +35,36 @@ model Role {
 }
 
 model Person {
-  id            String   @id @default(cuid())
-  name          String // « Prénom Nom », affiché partout ; tenu en cohérence avec firstName / lastName (lot E1)
+  id               String               @id @default(cuid())
+  name             String // « Prénom Nom », affiché partout ; tenu en cohérence avec firstName / lastName (lot E1)
   // Fiche (lot E1) : identité, poste, dates de présence. `leftAt` est posé par « Préparer un départ » ; rien n'est effacé.
-  firstName     String   @default("")
-  lastName      String   @default("")
-  jobTitle      String? // fonction affichée : « chargée de mission ESS et emploi »
-  phone         String?
-  arrivedAt     DateTime?
-  leftAt        DateTime?
-  note          String?
-  poleId        String?
-  pole          Pole?    @relation("PoleMembers", fields: [poleId], references: [id])
-  role          String // code d'un Role (pilot | contributor | pole_lead | director | raf | assistant | rôles créés dans l'admin)
-  roleRef       Role     @relation(fields: [role], references: [code])
-  workRhythm    String // option_a | option_b | part_time | apprentice
-  availableDays Int      @default(200)
-  active        Boolean  @default(true)
-  order         Int      @default(0)
-  icsToken      String?  @unique // jeton du flux agenda personnel (.ics)
+  firstName        String               @default("")
+  lastName         String               @default("")
+  jobTitle         String? // fonction affichée : « chargée de mission ESS et emploi »
+  phone            String?
+  arrivedAt        DateTime?
+  leftAt           DateTime?
+  note             String?
+  poleId           String?
+  pole             Pole?                @relation("PoleMembers", fields: [poleId], references: [id])
+  role             String // code d'un Role (pilot | contributor | pole_lead | director | raf | assistant | rôles créés dans l'admin)
+  roleRef          Role                 @relation(fields: [role], references: [code])
+  workRhythm       String // option_a | option_b | part_time | apprentice
+  availableDays    Int                  @default(200)
+  active           Boolean              @default(true)
+  order            Int                  @default(0)
+  icsToken         String?              @unique // jeton du flux agenda personnel (.ics)
   // Compte de connexion (lot F) : l'identité d'accès est le User (better-auth), l'identité métier reste la Person.
   // Une Person sans compte existe (contact, personne partie) ; un User sans Person ne peut rien faire.
-  email         String?  @unique
-  userId        String?  @unique
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email            String?              @unique
+  userId           String?              @unique
+  user             User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   // Modules activés par la personne (Mon compte) : tasks | notes | split. Un module coupé disparaît de la navigation.
-  modules       String   @default("tasks,notes,split")
+  modules          String               @default("tasks,notes,split")
   // Part fixe (lettre de mission FSE, art. 55 §5 du règlement 2021/1060) : aucune répartition hebdomadaire attendue.
-  fixedShare     Boolean @default(false)
-  fixedShareNote String?
-  rhythmPeriods PersonRhythmPeriod[]
+  fixedShare       Boolean              @default(false)
+  fixedShareNote   String?
+  rhythmPeriods    PersonRhythmPeriod[]
   weekDeclarations WeekDeclaration[]
 
   ledPoles           Pole[]              @relation("PoleLead")
@@ -82,33 +82,34 @@ model Person {
   comments           Comment[]
   changes            ChangeLog[]
   uploads            Attachment[]
-  decisionsTaken     Decision[]         @relation("DecisionAuthor")
-  contactsCreated    Contact[]          @relation("ContactCreator")
-  contactLists       ContactList[]      @relation("ContactListOwner")
-  membershipsCreated Membership[]       @relation("MembershipCreator")
-  cashRulesCreated   CashRule[]         @relation("CashRuleCreator")
-  cashRules          CashRule[]         @relation("CashRulePerson")
-  loans              Loan[]             @relation("LoanBorrower")
-  dossiersOwned      Convention[]       @relation("ConventionOwner")
-  loansCreated       Loan[]             @relation("LoanCreator")
-  decisionsFollowed  Decision[]         @relation("DecisionFollowUp")
+  decisionsTaken     Decision[]          @relation("DecisionAuthor")
+  contactsCreated    Contact[]           @relation("ContactCreator")
+  contactLists       ContactList[]       @relation("ContactListOwner")
+  membershipsCreated Membership[]        @relation("MembershipCreator")
+  cashRulesCreated   CashRule[]          @relation("CashRuleCreator")
+  cashRules          CashRule[]          @relation("CashRulePerson")
+  loans              Loan[]              @relation("LoanBorrower")
+  dossiersOwned      Convention[]        @relation("ConventionOwner")
+  loansCreated       Loan[]              @relation("LoanCreator")
+  decisionsFollowed  Decision[]          @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
   notes              Note[]
   noteShares         NoteShare[]
   loadFreezes        LoadFreeze[]
-  proposalsWritten   ChangeProposal[]   @relation("ProposalAuthor")
-  proposalsDecided   ChangeProposal[]   @relation("ProposalDecider")
+  proposalsWritten   ChangeProposal[]    @relation("ProposalAuthor")
+  proposalsDecided   ChangeProposal[]    @relation("ProposalDecider")
   achievements       Achievement[]
-  requestsMade       Request[]          @relation("RequestRequester")
-  requestsAssigned   Request[]          @relation("RequestAssignee")
-  servicesDone       Expense[]          @relation("ServiceDoneBy")
+  requestsMade       Request[]           @relation("RequestRequester")
+  requestsAssigned   Request[]           @relation("RequestAssignee")
+  servicesDone       Expense[]           @relation("ServiceDoneBy")
   plannedLoads       PlannedLoad[]
-  sponsoredEditions  Edition[]          @relation("EditionSponsor")
-  remarksWritten     FieldRemark[]      @relation("RemarkAuthor")
-  remarksResolved    FieldRemark[]      @relation("RemarkResolver")
-  notifications      Notification[]     @relation("NotificationRecipient")
-  notificationsSent  Notification[]     @relation("NotificationSender")
+  sponsoredEditions  Edition[]           @relation("EditionSponsor")
+  remarksWritten     FieldRemark[]       @relation("RemarkAuthor")
+  remarksResolved    FieldRemark[]       @relation("RemarkResolver")
+  notifications      Notification[]      @relation("NotificationRecipient")
+  notificationsSent  Notification[]      @relation("NotificationSender")
+  helpsConventions   ConventionHelper[]  @relation("ConventionHelperPerson")
 }
 
 // ---- Comptes et sessions (lot F) : tables attendues par better-auth (adaptateur Prisma). Ne pas renommer les champs. ----
@@ -216,17 +217,17 @@ model Mission {
 // funder | supplier | partner | network | authority). Les relations gardent leur nom de rôle — le `funder` d'une ligne, d'une
 // convention ou d'un appel est l'organisation qui finance ; le `supplierRef` d'une validation est celle qui fournit.
 model Organisation {
-  id          String          @id @default(cuid())
-  name        String          @unique
-  kinds       String          @default("partner")
+  id          String              @id @default(cuid())
+  name        String              @unique
+  kinds       String              @default("partner")
   siret       String?
   website     String?
   address     String?
   email       String? // adresse générique (fournisseur : où envoyer le bon pour accord)
   phone       String?
   notes       String? // périmètre, habitudes, calendrier d'appels à projets…
-  active      Boolean         @default(true)
-  createdAt   DateTime        @default(now())
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
   lines       FundingLine[]
   conventions Convention[]
   contacts    Contact[]
@@ -242,9 +243,9 @@ model Organisation {
 // données personnelles de tiers : le minimum utile. Un contact parti se détache (`leftAt`), il ne s'efface pas tant qu'un
 // dossier le cite. Prêt pour Brevo (identifiant, statut RGPD) sans que rien ne soit branché.
 model Contact {
-  id               String        @id @default(cuid())
+  id               String            @id @default(cuid())
   organisationId   String?
-  organisation     Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  organisation     Organisation?     @relation(fields: [organisationId], references: [id], onDelete: SetNull)
   organisationName String? // structure en texte quand elle n'est pas dans l'annuaire
   firstName        String?
   lastName         String
@@ -254,18 +255,18 @@ model Contact {
   address          String?
   postcode         String?
   city             String?
-  tags             String        @default("") // mots-clés, séparés par des virgules
+  tags             String            @default("") // mots-clés, séparés par des virgules
   notes            String?
-  primary          Boolean       @default(false) // contact principal de son organisation
+  primary          Boolean           @default(false) // contact principal de son organisation
   leftAt           DateTime?
-  brevoContactId   String?       @unique
+  brevoContactId   String?           @unique
   brevoStatus      String? // null = hors Brevo ; active | unsubscribed (désinscrit·e, RGPD) | deleted (disparu·e de Brevo)
-  brevoAttributes  String        @default("{}") // attributs Brevo non repris dans les colonnes communes (JSON, nom → valeur)
+  brevoAttributes  String            @default("{}") // attributs Brevo non repris dans les colonnes communes (JSON, nom → valeur)
   brevoSyncedAt    DateTime?
   createdById      String?
-  createdBy        Person?       @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @default(now()) @updatedAt
+  createdBy        Person?           @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
   lines            FundingLine[]
   conventions      Convention[]
   listItems        ContactListItem[]
@@ -289,25 +290,25 @@ model BrevoIgnored {
 }
 
 model ContactList {
-  id          String   @id @default(cuid())
-  ownerId     String
-  owner       Person   @relation("ContactListOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  visibility  String   @default("private") // private | pole_lead | pole | all
-  color       String?
-  editionId   String?
-  edition     Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
-  fields      String   @default("[]")
+  id            String            @id @default(cuid())
+  ownerId       String
+  owner         Person            @relation("ContactListOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  visibility    String            @default("private") // private | pole_lead | pole | all
+  color         String?
+  editionId     String?
+  edition       Edition?          @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  fields        String            @default("[]")
   // Connecteur Brevo : une liste `source = brevo` est le miroir d'une liste Brevo (membres tenus par la synchronisation, colonnes
   // = attributs Brevo, en lecture) ; une liste `manual` envoyée vers Brevo garde l'identifiant de la liste créée là-bas.
-  source        String    @default("manual") // manual | brevo | helloasso
-  brevoListId   Int?      @unique
+  source        String            @default("manual") // manual | brevo | helloasso
+  brevoListId   Int?              @unique
   brevoSyncedAt DateTime? // dernière synchronisation (source brevo) ou dernier envoi (source manual)
-  helloAssoForm String?   @unique // source helloasso : slug du formulaire (événement) dont les inscrits sont tenus en miroir
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
-  items       ContactListItem[]
+  helloAssoForm String?           @unique // source helloasso : slug du formulaire (événement) dont les inscrits sont tenus en miroir
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
+  items         ContactListItem[]
 
   @@index([ownerId])
 }
@@ -342,27 +343,38 @@ model EditionPartner {
 // financement obtenu — on ne crée pas une convention qu'on n'a pas encore gagnée. Cycle (référentiel dossier_status) :
 // study → drafting → submitted → notified / contracted / justified (obtenu) ; lost, dismissed (avec le pourquoi). Obtenu, le
 // financement a une forme (référentiel funding_form) : convention, arrêté, lettre, mécénat, commande… pas toujours une convention.
+// Qui aide sur un dossier de financement (19/09) : des personnes de l'équipe, choisies dans une liste, pas tapées.
+model ConventionHelper {
+  conventionId String
+  convention   Convention @relation(fields: [conventionId], references: [id], onDelete: Cascade)
+  personId     String
+  person       Person     @relation("ConventionHelperPerson", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([conventionId, personId])
+}
+
 model Convention {
-  id              String        @id @default(cuid())
+  id              String             @id @default(cuid())
   funderId        String
-  funder          Organisation        @relation(fields: [funderId], references: [id])
+  funder          Organisation       @relation(fields: [funderId], references: [id])
   reference       String // référence interne unique, ex. FSE-2026-2028
   scheme          String?
   label           String?
   description     String? // de quoi il s'agit, ce qu'on demande
   startYear       Int
   endYear         Int
-  status          String        @default("study") // study | drafting | submitted | notified | contracted | justified | lost | dismissed
+  status          String             @default("study") // study | drafting | submitted | notified | contracted | justified | lost | dismissed
   form            String? // forme du financement obtenu (funding_form) : convention | arrete | lettre | mecenat | commande | cotisation | sans
   amountRequested Float?
-  amountKind      String        @default("total") // total (sur toute la durée) | annual (par an)
+  amountKind      String             @default("total") // total (sur toute la durée) | annual (par an)
   amountNotified  Float?
   targetProjectId String? // projet visé par le dossier (les éditions se rattachent une fois obtenu)
-  targetProject   Project?      @relation("ConventionTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
+  targetProject   Project?           @relation("ConventionTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
   deadline        DateTime? // échéance de dépôt
   ownerId         String? // qui rédige la réponse
-  owner           Person?       @relation("ConventionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  helpers         String? // qui aide (texte libre)
+  owner           Person?            @relation("ConventionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  helpers         String? // qui aide, en texte libre (personnes extérieures, précisions) — les personnes de l'équipe sont dans helperPeople (19/09)
+  helperPeople    ConventionHelper[]
   sources         String? // documents sources, cahier des charges, liens (texte, une ligne par élément)
   decisionNote    String? // pourquoi écarté ou refusé
   decidedAt       DateTime?
@@ -371,14 +383,14 @@ model Convention {
   signedAt        DateTime?
   notes           String?
   contactId       String? // contact du dossier ; sinon le contact principal du financeur
-  contact         Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact         Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lines           FundingLine[]
   payments        Payment[]
   call            Call?
   attachments     Attachment[]
   tasks           Task[]
   notesLinked     Note[]
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime           @default(now())
 
   @@unique([reference])
 }
@@ -396,26 +408,26 @@ model RefValue {
 }
 
 model Project {
-  id            String    @id @default(cuid())
-  name          String
-  analyticCode  String
-  poleId        String
-  pole          Pole      @relation(fields: [poleId], references: [id])
-  pilotId       String
-  pilot         Person    @relation("ProjectPilot", fields: [pilotId], references: [id])
-  guarantorId   String?
-  guarantor     Person?   @relation("ProjectGuarantor", fields: [guarantorId], references: [id])
-  missionId     String
-  mission       Mission   @relation(fields: [missionId], references: [id])
-  strategicAxis String?
-  recurring     Boolean   @default(true)
-  archived      Boolean   @default(false) // projet rangé : plus dans la liste courante, ses éditions restent lisibles
-  createdAt     DateTime  @default(now())
-  editions      Edition[]
-  timeEntries   TimeEntry[]
+  id             String        @id @default(cuid())
+  name           String
+  analyticCode   String
+  poleId         String
+  pole           Pole          @relation(fields: [poleId], references: [id])
+  pilotId        String
+  pilot          Person        @relation("ProjectPilot", fields: [pilotId], references: [id])
+  guarantorId    String?
+  guarantor      Person?       @relation("ProjectGuarantor", fields: [guarantorId], references: [id])
+  missionId      String
+  mission        Mission       @relation(fields: [missionId], references: [id])
+  strategicAxis  String?
+  recurring      Boolean       @default(true)
+  archived       Boolean       @default(false) // projet rangé : plus dans la liste courante, ses éditions restent lisibles
+  createdAt      DateTime      @default(now())
+  editions       Edition[]
+  timeEntries    TimeEntry[]
   secondaryPoles ProjectPole[]
-  targetedBy    Convention[] @relation("ConventionTarget")
-  callsTargeted Call[]       @relation("CallTarget") // pôles associés (projets communs) ; le pôle principal est celui du pilote
+  targetedBy     Convention[]  @relation("ConventionTarget")
+  callsTargeted  Call[]        @relation("CallTarget") // pôles associés (projets communs) ; le pôle principal est celui du pilote
 }
 
 // Pôle secondaire d'un projet commun : ses membres le voient dans leur périmètre, son responsable y a ses droits de garant.
@@ -452,24 +464,24 @@ model Edition {
   fte                   Float?
   imposedIndicators     String?
   sponsorId             String? // sponsor de la fiche projet (membre du CODIR)
-  sponsor               Person?   @relation("EditionSponsor", fields: [sponsorId], references: [id])
+  sponsor               Person? @relation("EditionSponsor", fields: [sponsorId], references: [id])
 
   // Couche 3 — proposition opérationnelle (pilote)
-  operationalObjectives String? // objectifs qualitatifs (quelle problématique)
+  operationalObjectives  String? // objectifs qualitatifs (quelle problématique)
   quantitativeObjectives String? // objectifs quantitatifs
-  content               String? // contenu développé, valeur ajoutée
-  audience              String? // public, bénéficiaires
-  calendar              String?
-  deliveryDate          DateTime? // date de rendu
-  partners              String?
-  partnerLinks          EditionPartner[]
-  contactLists          ContactList[]
-  loans                 Loan[]
-  method                String?
-  governance            String?
-  ownIndicators         String?
-  timeNeed              String?
-  budgetNeed            String?
+  content                String? // contenu développé, valeur ajoutée
+  audience               String? // public, bénéficiaires
+  calendar               String?
+  deliveryDate           DateTime? // date de rendu
+  partners               String?
+  partnerLinks           EditionPartner[]
+  contactLists           ContactList[]
+  loans                  Loan[]
+  method                 String?
+  governance             String?
+  ownIndicators          String?
+  timeNeed               String?
+  budgetNeed             String?
 
   // Couche 4 — validation
   codirDecision  String? // renew | adjust | stop
@@ -486,8 +498,8 @@ model Edition {
 
   // Budget (écrit par la RAF)
   budgetEnvelope Float?
-  committed      Float @default(0)
-  spent          Float @default(0)
+  committed      Float  @default(0)
+  spent          Float  @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -554,19 +566,19 @@ model EditionPersonDays {
 }
 
 model Action {
-  id            String       @id @default(cuid())
+  id            String              @id @default(cuid())
   editionId     String
-  edition       Edition      @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  edition       Edition             @relation(fields: [editionId], references: [id], onDelete: Cascade)
   name          String
   ownerId       String?
-  owner         Person?      @relation(fields: [ownerId], references: [id])
+  owner         Person?             @relation(fields: [ownerId], references: [id])
   milestoneDate DateTime?
   timeTarget    Float? // heures
-  state         String       @default("todo") // todo | doing | done | late
+  state         String              @default("todo") // todo | doing | done | late
   fundingLineId String?
-  fundingLine   FundingLine? @relation(fields: [fundingLineId], references: [id])
-  order         Int          @default(0)
-  isPublic      Boolean      @default(false) // événement public : flux agenda du site
+  fundingLine   FundingLine?        @relation(fields: [fundingLineId], references: [id])
+  order         Int                 @default(0)
+  isPublic      Boolean             @default(false) // événement public : flux agenda du site
   // Occurrence (petit-déjeuner, forum SPRO…) : contenu, lieu, participants — une action peut porter sa petite fiche et se dupliquer.
   description   String?
   venue         String?
@@ -582,7 +594,7 @@ model FundingLine {
   editionId        String
   edition          Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
   funderId         String
-  funder           Organisation        @relation(fields: [funderId], references: [id])
+  funder           Organisation  @relation(fields: [funderId], references: [id])
   conventionId     String? // affectation d'une convention partagée ; sinon financement annuel propre à l'édition
   convention       Convention?   @relation(fields: [conventionId], references: [id])
   scheme           String?
@@ -597,7 +609,7 @@ model FundingLine {
   multiYear        Boolean       @default(false)
   notes            String?
   contactId        String? // contact du dossier ; sinon le contact principal du financeur
-  contact          Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact          Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deliverables     Deliverable[]
   actions          Action[]
   attachments      Attachment[]
@@ -605,12 +617,12 @@ model FundingLine {
 }
 
 model Deliverable {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   fundingLineId String
-  fundingLine   FundingLine @relation(fields: [fundingLineId], references: [id], onDelete: Cascade)
+  fundingLine   FundingLine  @relation(fields: [fundingLineId], references: [id], onDelete: Cascade)
   label         String
   dueDate       DateTime
-  done          Boolean     @default(false)
+  done          Boolean      @default(false)
   doneAt        DateTime?
   attachments   Attachment[]
 }
@@ -668,30 +680,30 @@ model MonthLock {
 }
 
 model ValidationRequest {
-  id              String    @id @default(cuid())
+  id              String        @id @default(cuid())
   editionId       String
-  edition         Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  edition         Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
   actionId        String?
-  action          Action?   @relation(fields: [actionId], references: [id])
+  action          Action?       @relation(fields: [actionId], references: [id])
   kind            String // quote | expense | sending | scope_change | funder_milestone
   label           String
   requesterId     String
-  requester       Person    @relation("Requester", fields: [requesterId], references: [id])
+  requester       Person        @relation("Requester", fields: [requesterId], references: [id])
   amount          Float?
   attachmentUrl   String?
-  requiredLevel   Int       @default(1)
-  status          String    @default("pending") // pending | approved | refused
+  requiredLevel   Int           @default(1)
+  status          String        @default("pending") // pending | approved | refused
   deciderId       String?
-  decider         Person?   @relation("Decider", fields: [deciderId], references: [id])
+  decider         Person?       @relation("Decider", fields: [deciderId], references: [id])
   decidedAt       DateTime?
   decisionComment String?
-  targetDelayDays Int       @default(5)
+  targetDelayDays Int           @default(5)
   // Devis : fournisseur et adresse pour le « bon pour accord » envoyé à la validation (lot 3, plus d'impression ni de tampon).
   supplier        String?
   supplierEmail   String?
   supplierId      String?
   supplierRef     Organisation? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime      @default(now())
   attachments     Attachment[]
   expense         Expense?
 }
@@ -699,60 +711,60 @@ model ValidationRequest {
 // Demande interne (retour du 14/09) : retour sur le site, besoin de chiffres, travail à faire, demande à l'assistante…
 // Un seul canal, un état suivi ; une tâche peut en naître. L'achat / devis passe par la validation (même tableau).
 model Request {
-  id           String    @id @default(cuid())
-  kind         String    @default("other") // site | data | work | assistant | com | other
-  title        String
-  body         String?
-  requesterId  String
-  requester    Person    @relation("RequestRequester", fields: [requesterId], references: [id])
-  assigneeId   String?
-  assignee     Person?   @relation("RequestAssignee", fields: [assigneeId], references: [id])
-  poleId       String?
-  pole         Pole?     @relation(fields: [poleId], references: [id])
-  editionId    String?
-  edition      Edition?  @relation(fields: [editionId], references: [id], onDelete: SetNull)
-  dueDate      DateTime?
-  status       String    @default("open") // open | doing | done | declined
-  answer       String?
-  doneAt       DateTime?
-  createdAt    DateTime  @default(now())
-  tasks        Task[]
+  id          String    @id @default(cuid())
+  kind        String    @default("other") // site | data | work | assistant | com | other
+  title       String
+  body        String?
+  requesterId String
+  requester   Person    @relation("RequestRequester", fields: [requesterId], references: [id])
+  assigneeId  String?
+  assignee    Person?   @relation("RequestAssignee", fields: [assigneeId], references: [id])
+  poleId      String?
+  pole        Pole?     @relation(fields: [poleId], references: [id])
+  editionId   String?
+  edition     Edition?  @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  dueDate     DateTime?
+  status      String    @default("open") // open | doing | done | declined
+  answer      String?
+  doneAt      DateTime?
+  createdAt   DateTime  @default(now())
+  tasks       Task[]
 
   @@index([assigneeId, status])
   @@index([poleId, status])
 }
 
 model Settings {
-  id                        Int    @id @default(1)
-  validationThresholdLevel1 Float  @default(500)
-  validationThresholdLevel2 Float  @default(3000)
-  reminderDaysBefore        String @default("30,7")
-  envelopeAlertPercent      Int    @default(80)
-  deliverableAlertDays      Int    @default(30)
-  timeVisibility            String @default("self_pole_lead_raf") // self | self_pole_lead_raf | codir | all
-  horizonDays               Int    @default(90)
+  id                        Int       @id @default(1)
+  validationThresholdLevel1 Float     @default(500)
+  validationThresholdLevel2 Float     @default(3000)
+  reminderDaysBefore        String    @default("30,7")
+  envelopeAlertPercent      Int       @default(80)
+  deliverableAlertDays      Int       @default(30)
+  timeVisibility            String    @default("self_pole_lead_raf") // self | self_pole_lead_raf | codir | all
+  horizonDays               Int       @default(90)
   // Dernier passage de la passerelle échéances → notifications (lib/deadline-notifications.ts) : une échéance découverte
   // après ce passage est notifiée à ce moment-là, pas à la date théorique du palier.
   deadlineSyncAt            DateTime?
-  timeRules                 String @default("")
+  timeRules                 String    @default("")
   // Gabarit du chemin du dossier de référence sur le serveur ({code}, {annee}) — posé par le seed du client (lot I).
-  serverPathTemplate        String @default("")
+  serverPathTemplate        String    @default("")
   teamIcsToken              String? // jeton du flux agenda équipe (.ics)
   apiToken                  String? // jeton des exports pour Excel / outils externes
-  hoursPerDay               Float   @default(7) // coefficient heures → jours, avec son origine dans la notice
+  hoursPerDay               Float     @default(7) // coefficient heures → jours, avec son origine dans la notice
   // Jours de fonctionnement par mois (réunions transverses, café, entretiens…) déduits de la capacité du plan de charge (S14 : 9 j / 86).
-  operatingDaysPerMonth     Float   @default(0)
+  operatingDaysPerMonth     Float     @default(0)
   // Adresse de facturation écrite sur le bon pour accord (lot 3) : les factures y arrivent, pas chez le pilote.
-  billingEmail              String  @default("") // posée par le seed du client (lot I)
-  billingNote               String  @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
+  billingEmail              String    @default("") // posée par le seed du client (lot I)
+  billingNote               String    @default("Merci d'adresser la facture à cette adresse, en rappelant la référence du devis et le nom du projet.")
   // Modules activés pour cette installation (lot 0, docs/produit.md) : un module éteint disparaît de la navigation et de ses
   // adresses, ses données restent. Distinct de Person.modules (choix de chacun). Aujourd'hui : veille.
-  modules                   String  @default("veille,adherents,tresorerie,materiel")
+  modules                   String    @default("veille,adherents,tresorerie,materiel")
   // Réalisé comptable (lot D) : quelle source alimente le « réalisé » des alertes d'enveloppe et du portefeuille —
   // raf = saisi par la RAF sur les dépenses (Expense.spent) ; ledger = le grand livre analytique importé. L'autre s'affiche en regard.
-  realizedSource            String  @default("raf")
+  realizedSource            String    @default("raf")
   // Axes analytiques Pennylane retenus (libellés, séparés par des virgules) ; vide = toutes les lignes.
-  pennylaneAxes             String  @default("")
+  pennylaneAxes             String    @default("")
   // Connecteur Brevo (clé dans l'environnement, BREVO_API_KEY) : dernière synchronisation et son compte rendu.
   brevoSyncedAt             DateTime?
   brevoSyncReport           String?
@@ -760,9 +772,9 @@ model Settings {
   helloAssoSyncedAt         DateTime?
   helloAssoSyncReport       String?
   // Trésorerie (module « tresorerie », 18/09) : solde de départ à un mois donné (relevé bancaire), seuil d'alerte.
-  cashOpeningBalance        Float   @default(0)
+  cashOpeningBalance        Float     @default(0)
   cashOpeningMonth          String? // AAAA-MM ; vide = mois courant
-  cashAlertThreshold        Float   @default(20000)
+  cashAlertThreshold        Float     @default(20000)
 }
 
 // Trésorerie : les flux qui ne se déduisent pas des dossiers — salaires et charges, loyer, subvention de fonctionnement,
@@ -865,29 +877,29 @@ model LedgerImport {
 // CRESS et ne serait jamais touché par un flux importé. Un appel promu garde le lien vers sa convention ; un appel passé ou
 // retiré reste en base (actif = false), il n'est pas supprimé.
 model Call {
-  id           String      @id @default(cuid())
-  funderId     String
-  funder       Organisation      @relation(fields: [funderId], references: [id], onDelete: Cascade)
-  label        String
-  scheme       String? // dispositif, axe
-  deadline     DateTime? // date limite de dépôt ; null si au fil de l'eau
-  rolling      Boolean     @default(false) // au fil de l'eau
-  recurring    Boolean     @default(false) // revient chaque année : « reconduire » crée l'appel de l'année suivante
-  amountHint   String? // montant indicatif, en texte (« jusqu'à 30 k€ », « 50 % des dépenses »)
-  amountValue  Float? // montant visé, en chiffres (lot 2)
-  amountKind   String      @default("total") // total | annual
-  durationYears Int? // durée du financement (1, 2, 3 ans) : un montant global se lit par an
+  id              String       @id @default(cuid())
+  funderId        String
+  funder          Organisation @relation(fields: [funderId], references: [id], onDelete: Cascade)
+  label           String
+  scheme          String? // dispositif, axe
+  deadline        DateTime? // date limite de dépôt ; null si au fil de l'eau
+  rolling         Boolean      @default(false) // au fil de l'eau
+  recurring       Boolean      @default(false) // revient chaque année : « reconduire » crée l'appel de l'année suivante
+  amountHint      String? // ancien « montant indicatif en texte » (19/09 : replié dans description, colonne gardée sans usage)
+  amountValue     Float? // montant visé, en chiffres (lot 2)
+  amountKind      String       @default("total") // total | annual
+  durationYears   Int? // durée du financement (1, 2, 3 ans) : un montant global se lit par an
   targetProjectId String? // projet ou édition visés par une réponse
-  targetProject   Project? @relation("CallTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
-  link         String?
-  note         String?
-  teamStatus   String? // study | apply | dismissed ; null = pas encore regardé
-  statusById   String?
-  statusAt     DateTime?
-  conventionId String?     @unique // convention créée depuis cet appel (« Étudier »)
-  convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
+  targetProject   Project?     @relation("CallTarget", fields: [targetProjectId], references: [id], onDelete: SetNull)
+  link            String?
+  description     String? // texte libre sur plusieurs lignes (ex-« note » + ex-montant indicatif, 19/09) ; hérité par le dossier ouvert
+  teamStatus      String? // study | apply | dismissed ; null = pas encore regardé
+  statusById      String?
+  statusAt        DateTime?
+  conventionId    String?      @unique // convention créée depuis cet appel (« Étudier »)
+  convention      Convention?  @relation(fields: [conventionId], references: [id], onDelete: SetNull)
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
 
   @@index([funderId])
   @@index([deadline])
@@ -1050,42 +1062,42 @@ model WeekDeclaration {
 
 // Dépense directe : un devis approuvé crée l'engagement une seule fois ; le réalisé rattaché ne compte pas deux fois.
 model Expense {
-  id           String             @id @default(cuid())
-  editionId    String
-  edition      Edition            @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  label        String
-  supplier     String?
-  committed    Float              @default(0) // montant engagé (devis approuvé)
-  spent        Float              @default(0) // réalisé rattaché (factures), saisi par la RAF
-  status       String             @default("open") // open | closed (reliquat soldé ou annulé)
-  reference    String?
-  validationId String?            @unique
-  validation   ValidationRequest? @relation(fields: [validationId], references: [id])
+  id                String             @id @default(cuid())
+  editionId         String
+  edition           Edition            @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  label             String
+  supplier          String?
+  committed         Float              @default(0) // montant engagé (devis approuvé)
+  spent             Float              @default(0) // réalisé rattaché (factures), saisi par la RAF
+  status            String             @default("open") // open | closed (reliquat soldé ou annulé)
+  reference         String?
+  validationId      String?            @unique
+  validation        ValidationRequest? @relation(fields: [validationId], references: [id])
   // Circuit facture (lot 3) : nature analytique, facture reçue, service fait par le pilote (non bloquant), payée.
-  nature          String?   // purchase | investment | service
+  nature            String? // purchase | investment | service
   invoiceReceivedAt DateTime?
-  serviceDoneAt   DateTime?
-  serviceDoneById String?
-  serviceDoneBy   Person?   @relation("ServiceDoneBy", fields: [serviceDoneById], references: [id])
-  paidAt          DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  serviceDoneAt     DateTime?
+  serviceDoneById   String?
+  serviceDoneBy     Person?            @relation("ServiceDoneBy", fields: [serviceDoneById], references: [id])
+  paidAt            DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 // Décision d'instance (CODIR, réunion de pôle, revue trimestrielle, CA) consignée sur l'édition, datée (EF-F4, EF-H2, EF-H3).
 model Decision {
-  id            String    @id @default(cuid())
-  editionId     String
-  edition       Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  instance      String // codir | pole | quarterly | board
-  body          String
-  authorId      String
-  author        Person    @relation("DecisionAuthor", fields: [authorId], references: [id])
-  followUpId    String?
-  followUp      Person?   @relation("DecisionFollowUp", fields: [followUpId], references: [id])
-  dueDate       DateTime?
-  decidedAt     DateTime  @default(now())
-  alertKind     String? // alerte de l'édition que cette décision règle (envelope, time_over…) : elle s'éteint dans la bande d'état
+  id         String    @id @default(cuid())
+  editionId  String
+  edition    Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  instance   String // codir | pole | quarterly | board
+  body       String
+  authorId   String
+  author     Person    @relation("DecisionAuthor", fields: [authorId], references: [id])
+  followUpId String?
+  followUp   Person?   @relation("DecisionFollowUp", fields: [followUpId], references: [id])
+  dueDate    DateTime?
+  decidedAt  DateTime  @default(now())
+  alertKind  String? // alerte de l'édition que cette décision règle (envelope, time_over…) : elle s'éteint dans la bande d'état
 }
 
 // Notification dans l'outil (cloche) : relance de temps, information. Dans le prototype, pas de mail : tout passe par ici.
@@ -1111,26 +1123,26 @@ model Notification {
 // Tâche personnelle (to-do privée) : libellé, échéance facultative, rattachement facultatif à une édition ou une action.
 // La personne est portée en base pour cloisonner ; à l'écran, c'est toujours la personne connectée, jamais un choix.
 model Task {
-  id        String     @id @default(cuid())
-  personId  String
-  person    Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
-  label     String
-  description String? // quelques lignes sous le libellé (redesign du 18/09, inspiration Todoist)
-  dueDate   DateTime?
-  done      Boolean    @default(false)
-  doneAt    DateTime?
-  editionId String?
-  edition   Edition?   @relation(fields: [editionId], references: [id], onDelete: SetNull)
-  actionId  String?
-  action    Action?    @relation(fields: [actionId], references: [id], onDelete: SetNull)
-  listId    String?
-  list      TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
-  requestId String? // tâche née d'une demande prise (« Je m'en occupe ») : cocher la tâche fait la demande, et inversement
+  id           String      @id @default(cuid())
+  personId     String
+  person       Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label        String
+  description  String? // quelques lignes sous le libellé (redesign du 18/09, inspiration Todoist)
+  dueDate      DateTime?
+  done         Boolean     @default(false)
+  doneAt       DateTime?
+  editionId    String?
+  edition      Edition?    @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  actionId     String?
+  action       Action?     @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  listId       String?
+  list         TaskList?   @relation(fields: [listId], references: [id], onDelete: SetNull)
+  requestId    String? // tâche née d'une demande prise (« Je m'en occupe ») : cocher la tâche fait la demande, et inversement
   conventionId String? // tâche d'un dossier de financement (réponse à préparer)
   convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
-  request   Request?   @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  createdAt DateTime   @default(now())
-  slots     WorkSlot[]
+  request      Request?    @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  slots        WorkSlot[]
 
   @@index([personId, done])
 }
@@ -1143,7 +1155,7 @@ model TaskList {
   person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   name       String
   visibility String   @default("private")
-  color      String?  // repère visuel, même palette que les notes (lib/notes.ts NOTE_COLORS)
+  color      String? // repère visuel, même palette que les notes (lib/notes.ts NOTE_COLORS)
   editionId  String?
   edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
   order      Int      @default(0)
@@ -1155,23 +1167,23 @@ model TaskList {
 
 // Note de réunion ou note libre : rattachée à une édition ou transverse (réunion d'équipe, café du lundi) ; privée ou partagée.
 model Note {
-  id         String   @id @default(cuid())
-  authorId   String
-  author     Person   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title      String
-  body       String   @default("")
-  date       DateTime @default(now())
-  context    String   @default("project") // project | team | pole | cafe | other
-  editionId  String?
-  edition    Edition? @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  id           String      @id @default(cuid())
+  authorId     String
+  author       Person      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title        String
+  body         String      @default("")
+  date         DateTime    @default(now())
+  context      String      @default("project") // project | team | pole | cafe | other
+  editionId    String?
+  edition      Edition?    @relation(fields: [editionId], references: [id], onDelete: SetNull)
   conventionId String? // note d'un dossier de financement
   convention   Convention? @relation(fields: [conventionId], references: [id], onDelete: SetNull)
-  visibility String   @default("private") // private | pole | all
-  color      String?  // repère visuel choisi par l'auteur : bleu | vert | ocre | corail | violet | gris (lib/notes.ts NOTE_COLORS)
-  archivedAt DateTime? // archivée par son auteur : sort des listes, reste lisible dans « Archivées »
-  shares     NoteShare[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  visibility   String      @default("private") // private | pole | all
+  color        String? // repère visuel choisi par l'auteur : bleu | vert | ocre | corail | violet | gris (lib/notes.ts NOTE_COLORS)
+  archivedAt   DateTime? // archivée par son auteur : sort des listes, reste lisible dans « Archivées »
+  shares       NoteShare[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([authorId])
   @@index([editionId])
@@ -1225,19 +1237,19 @@ model FieldRemark {
 // Matériel et prêts (module « materiel », 18/09) : l'inventaire du matériel prêtable (vidéoprojecteur, kakemonos, enceinte…)
 // et le registre des prêts — à une personne de l'équipe, à un contact ou une organisation de l'annuaire, pour une édition.
 model Equipment {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   category    String? // libellé libre avec suggestions (Audiovisuel, Signalétique, Mobilier, Informatique…)
   reference   String? // numéro d'inventaire
   location    String? // où il est rangé
-  quantity    Int      @default(1)
-  state       String   @default("ok") // ok | worn (fatigué) | broken (en panne) | retired (sorti de l'inventaire)
+  quantity    Int          @default(1)
+  state       String       @default("ok") // ok | worn (fatigué) | broken (en panne) | retired (sorti de l'inventaire)
   purchasedAt DateTime?
   value       Float? // valeur d'achat, indicative
   notes       String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
   loans       Loan[]
   attachments Attachment[]
 
@@ -1245,33 +1257,33 @@ model Equipment {
 }
 
 model Loan {
-  id             String        @id @default(cuid())
-  number         Int           @unique @default(autoincrement()) // numéro de la fiche de prêt
-  equipmentId    String
-  equipment      Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  quantity       Int           @default(1)
-  personId       String? // emprunteur de l'équipe
-  person         Person?       @relation("LoanBorrower", fields: [personId], references: [id], onDelete: SetNull)
-  contactId      String? // emprunteur extérieur (annuaire des contacts)
-  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  organisationId String?
-  organisation   Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
-  editionId      String? // pour quel projet / événement
-  edition        Edition?      @relation(fields: [editionId], references: [id], onDelete: SetNull)
-  outAt          DateTime      @default(now())
-  dueAt          DateTime? // retour attendu (demandé à la saisie)
-  returnedAt     DateTime?
-  returnNote     String? // commentaire de retour : état, incident, ce qui manque
-  notes          String?
+  id                String        @id @default(cuid())
+  number            Int           @unique @default(autoincrement()) // numéro de la fiche de prêt
+  equipmentId       String
+  equipment         Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  quantity          Int           @default(1)
+  personId          String? // emprunteur de l'équipe
+  person            Person?       @relation("LoanBorrower", fields: [personId], references: [id], onDelete: SetNull)
+  contactId         String? // emprunteur extérieur (annuaire des contacts)
+  contact           Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  organisationId    String?
+  organisation      Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  editionId         String? // pour quel projet / événement
+  edition           Edition?      @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  outAt             DateTime      @default(now())
+  dueAt             DateTime? // retour attendu (demandé à la saisie)
+  returnedAt        DateTime?
+  returnNote        String? // commentaire de retour : état, incident, ce qui manque
+  notes             String?
   // Chèque de caution (facultatif) : montant, référence (banque, numéro), rendu le.
-  depositAmount  Float?
-  depositRef     String?
+  depositAmount     Float?
+  depositRef        String?
   depositReturnedAt DateTime?
-  sentAt         DateTime? // fiche de prêt envoyée à l'emprunteur (mail)
-  createdById    String?
-  createdBy      Person?       @relation("LoanCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt      DateTime      @default(now())
-  attachments    Attachment[]
+  sentAt            DateTime? // fiche de prêt envoyée à l'emprunteur (mail)
+  createdById       String?
+  createdBy         Person?       @relation("LoanCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt         DateTime      @default(now())
+  attachments       Attachment[]
 
   @@index([equipmentId])
   @@index([returnedAt])

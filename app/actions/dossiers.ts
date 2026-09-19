@@ -47,6 +47,21 @@ export async function createDossier(input: DossierInput): Promise<Result<{ id: s
   return { ok: true, data: { id: c.id } };
 }
 
+// Qui aide (19/09) : des personnes de l'équipe, choisies — plus un texte libre pour l'extérieur. Réservé à qui tient les financements.
+export async function setDossierHelpers(id: string, personIds: string[]): Promise<Result> {
+  const me = await getCurrentPerson();
+  if (!canEditFunding(me)) return { ok: false, error: DENIED };
+  if (!(await prisma.convention.findUnique({ where: { id } }))) return { ok: false, error: "Dossier introuvable." };
+  const ids = Array.from(new Set(personIds.filter(Boolean)));
+  const known = (await prisma.person.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((p) => p.id);
+  await prisma.$transaction([
+    prisma.conventionHelper.deleteMany({ where: { conventionId: id } }),
+    ...(known.length ? [prisma.conventionHelper.createMany({ data: known.map((personId) => ({ conventionId: id, personId })) })] : []),
+  ]);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // Changer d'étape : seulement les passages prévus ; écarté / refusé demandent le pourquoi ; obtenu demande la forme et le montant.
 export async function setDossierStatus(id: string, to: string, extra: { reason?: string | null; form?: string | null; amountNotified?: number | string | null } = {}): Promise<Result> {
   const me = await getCurrentPerson();

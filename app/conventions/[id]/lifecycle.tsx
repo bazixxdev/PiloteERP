@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select } from "@/components/common/searchable-select";
-import { addDossierNote, addDossierTask, setDossierStatus, toggleDossierTask, uploadDossierFile } from "@/app/actions/dossiers";
+import { addDossierNote, addDossierTask, setDossierHelpers, setDossierStatus, toggleDossierTask, uploadDossierFile } from "@/app/actions/dossiers";
+import { parseBang } from "@/components/tasks/task-list";
+import { SearchableSelect } from "@/components/common/searchable-select";
+import { X } from "lucide-react";
 import { TRANSITIONS } from "@/lib/dossiers";
 import { withBase } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
@@ -77,16 +81,21 @@ export function DossierWorkspace({ id, tasks, notes, files, rw }: { id: string; 
   return (
     <div className="grid gap-4 text-xs">
       <div data-testid="dossier-tasks">
-        <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Tâches <span className="font-normal">· pour s&apos;organiser, chacun coche les siennes</span></div>
+        <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Tâches <span className="font-normal">· pour s&apos;organiser, chacun coche les siennes · elles apparaissent aussi dans <Link href="/taches" className="text-primary hover:underline">Tâches</Link>, marquées de ce dossier</span></div>
         <ul className="grid gap-1">{tasks.map((t) => <li key={t.id} className={cn("flex items-center gap-2", t.done && "text-muted-foreground line-through")}><input type="checkbox" checked={t.done} disabled={pending} onChange={(e) => run(() => toggleDossierTask(t.id, e.target.checked))} className="size-3.5 accent-primary" aria-label={t.label} data-testid={`dossier-task-${t.id}`} /><span>{t.label}</span><span className="text-[10px] text-muted-foreground">{t.person.name}{t.dueDate ? ` · ${fmt(t.dueDate)}` : ""}</span></li>)}</ul>
-        <form className="mt-1.5 flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addDossierTask(id, label, due || null), () => { setLabel(""); setDue(""); }); }}>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Relire le cahier des charges, demander le budget ${au(V.pilote)}…`} className="h-7 w-72 text-[11px]" aria-label="Nouvelle tâche" data-testid="dossier-task-label" />
+        <form className="mt-1.5 flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault();
+          // Même syntaxe que dans Tâches (19/09) : « !lundi », « !12/10 » posent l'échéance ; la tâche garde le dossier et se retrouve dans Tâches.
+          let text = label, bang: string | null = null;
+          text = text.replace(/(^|\s)!(\S+)/g, (m, sp, w) => { const d = parseBang(w); if (d) { bang = d; return sp; } return m; }).trim();
+          run(() => addDossierTask(id, text, bang ?? due ?? null), () => { setLabel(""); setDue(""); });
+        }}>
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Relire le cahier des charges !lundi, demander le budget ${au(V.pilote)}…`} title="« !lundi », « !demain », « !12/10 » : l'échéance, comme dans Tâches" className="h-7 w-72 text-[11px]" aria-label="Nouvelle tâche" data-testid="dossier-task-label" />
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-7 w-36 text-[11px]" aria-label="Échéance" />
           <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim()} data-testid="dossier-task-submit">Ajouter</Button>
         </form>
       </div>
       <div data-testid="dossier-notes">
-        <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Notes</div>
+        <div className="mb-1 text-[11px] font-semibold text-muted-foreground">Notes <span className="font-normal">· aussi dans <Link href={`/notes?dossier=${id}`} className="text-primary hover:underline">Notes</Link>, marquées de ce dossier</span></div>
         {notes.length === 0 && <p className="text-muted-foreground">Aucune note.</p>}
         <ul className="grid gap-1.5">{notes.map((n) => <li key={n.id} className="rounded-md border bg-card px-2 py-1.5"><b className="font-medium">{n.title}</b> <span className="text-[10px] text-muted-foreground">· {n.author.name} · {fmt(n.date)}</span><p className="mt-0.5 whitespace-pre-line">{n.body}</p></li>)}</ul>
         <form className="mt-1.5 grid gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addDossierNote(id, noteTitle, noteBody), () => { setNoteTitle(""); setNoteBody(""); }); }}>
@@ -106,6 +115,24 @@ export function DossierWorkspace({ id, tasks, notes, files, rw }: { id: string; 
             <Button type="submit" size="xs" variant="outline" disabled={pending} data-testid="dossier-file-submit">Déposer</Button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Qui aide sur le dossier (19/09) : des personnes de l'équipe, en chips, plus un texte libre à côté pour l'extérieur.
+export function HelpersPicker({ id, people, selected, rw }: { id: string; people: { id: string; name: string }[]; selected: { id: string; name: string }[]; rw: boolean }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const ids = selected.map((p) => p.id);
+  const save = (next: string[]) => start(async () => { const r = await setDossierHelpers(id, next); if (!r.ok) { toast.error(r.error); return; } router.refresh(); });
+  return (
+    <div className="grid gap-1">
+      <span className="text-[10px] text-muted-foreground">Qui aide (équipe)</span>
+      <div className="flex flex-wrap items-center gap-1" data-testid="dossier-helpers">
+        {selected.map((p) => <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs" data-testid={`dossier-helper-${p.id}`}>{p.name}{rw && <button type="button" aria-label={`Retirer ${p.name}`} disabled={pending} onClick={() => save(ids.filter((x) => x !== p.id))} className="rounded p-0.5 hover:bg-muted"><X className="size-3" /></button>}</span>)}
+        {selected.length === 0 && !rw && <span className="text-xs text-muted-foreground">—</span>}
+        {rw && <SearchableSelect options={people.filter((p) => !ids.includes(p.id)).map((p) => ({ value: p.id, label: p.name }))} value="" onChange={(v) => v && save([...ids, v])} placeholder="+ ajouter quelqu'un" searchFrom={1} disabled={pending} aria-label="Ajouter une personne qui aide" className="h-7 w-48 text-xs" data-testid="dossier-helpers-add" />}
       </div>
     </div>
   );
