@@ -279,6 +279,15 @@ model Contact {
 // Liste de contacts : invités d'un événement, réseau sur une thématique, annuaire d'un projet… À son auteur, avec une
 // visibilité (privée, mon responsable, mon pôle, toute la CRESS), une édition facultative, et ses propres colonnes
 // (`fields`, JSON : [{ key, label, type: bool | text | date | select, options? }]) dont les valeurs vivent sur chaque ligne.
+// Contacts supprimés définitivement dans l'outil alors qu'ils venaient de Brevo (19/09) : on garde leur identifiant Brevo pour
+// que la synchronisation Brevo → outil ne les recrée pas. Si Brevo les a aussi supprimés, la ligne ne sert plus à rien.
+model BrevoIgnored {
+  brevoContactId String   @id
+  email          String?
+  deletedAt      DateTime @default(now())
+  byId           String?
+}
+
 model ContactList {
   id          String   @id @default(cuid())
   ownerId     String

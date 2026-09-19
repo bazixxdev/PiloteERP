@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { BookUser, Building2, Send, Ticket, Users } from "lucide-react";
+import { BookUser, Building2, Send, Ticket } from "lucide-react";
 import { DossiersHeader } from "@/components/common/dossiers-nav";
-import { EmptyState } from "@/components/common/empty-state";
 import { UrlPanel } from "@/components/common/url-panel";
 import { visibilityIcon } from "@/components/common/visibility-icon";
 import { prisma } from "@/lib/db";
@@ -14,7 +13,8 @@ import { cn } from "@/lib/utils";
 import { brevoConfig } from "@/lib/brevo";
 import { canAdmin, canManageMembers } from "@/lib/rights";
 import { instanceHas } from "@/lib/modules";
-import { ContactsToolbar, NewContactListDialog, NewContactDialog } from "./controls";
+import { NewContactListDialog, NewContactDialog } from "./controls";
+import { DirectoryTable } from "./directory-table";
 import { ContactPanelBody } from "./contact-panel";
 import { ContactListView } from "./list-view";
 
@@ -26,8 +26,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const [{ mine, shared, brevo, helloasso, base }, editions, organisations] = await Promise.all([loadContactLists(me), loadEditionOpts(me, settings), prisma.organisation.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
   const list = sp.liste ? await loadContactList(sp.liste) : null;
   if (sp.liste && (!list || !canReadList(me, list))) return <div className="p-6 text-sm text-muted-foreground">Liste introuvable, ou non partagée avec vous.</div>;
-  const contacts = list ? [] : await loadContacts({ q: sp.q, tag: sp.tag });
-  const allTags = list ? [] : Array.from(new Set((await loadContacts()).flatMap(tagsOf))).sort((a, b) => a.localeCompare(b, "fr"));
+  const contacts = list ? [] : await loadContacts();
   const openContact = sp.contact ? await prisma.contact.findUnique({ where: { id: sp.contact }, include: { organisation: { select: { id: true, name: true, kinds: true } }, memberships: { where: { organisationId: null }, orderBy: { year: "desc" } }, listItems: { include: { list: { select: { id: true, name: true, ownerId: true, visibility: true, owner: { select: { id: true, poleId: true } } } } } }, lines: { select: { id: true, edition: { select: { id: true, year: true, project: { select: { name: true } } } } } }, conventions: { select: { id: true, reference: true } } } }) : null;
   const navClass = (active: boolean) => cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-xs hover:bg-muted", active && "bg-info-soft font-semibold text-primary");
   const Count = ({ n }: { n: number }) => n > 0 ? <span className="ml-auto rounded-sm bg-muted px-1.5 text-[10px] text-muted-foreground">{n}</span> : null;
@@ -87,28 +86,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
         <div className="min-w-0" data-testid="contacts-main" data-view={list ? "liste" : "annuaire"} data-name={list?.name}>
           {list ? (
-            <ContactListView list={list} meId={me.id} canEdit={list.source !== "base" && (list.ownerId === me.id || ((list.source === "brevo" || list.source === "helloasso") && canAdmin(me)))} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())} editions={editions} organisations={organisations} />
+            <ContactListView key={list.id} list={list} meId={me.id} canEdit={list.source !== "base" && (list.ownerId === me.id || ((list.source === "brevo" || list.source === "helloasso") && canAdmin(me)))} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())} editions={editions} organisations={organisations} myLists={mine.map((l) => ({ id: l.id, name: l.name }))} />
           ) : (
-            <div className="rounded-md border bg-card">
-              <div className="px-4 pb-2 pt-3"><h2 className="text-[19px] font-bold">Tous les contacts</h2><p className="text-[11px] text-muted-foreground">{contacts.length} contact{contacts.length > 1 ? "s" : ""}{sp.q || sp.tag ? " pour cette recherche" : ""} · interlocuteurs des financeurs et fournisseurs, invités, membres des réseaux.</p></div>
-              <ContactsToolbar q={sp.q ?? ""} tag={sp.tag ?? ""} tags={allTags} />
-              {contacts.length === 0 ? <div className="p-4"><EmptyState title="Aucun contact" hint={sp.q || sp.tag ? "Rien ne correspond." : "Ajoutez-en un, ou importez un fichier dans une liste."} icon={<Users className="size-5" />} /></div> : (
-                <table className="w-full text-[13px]" data-testid="contacts-table">
-                  <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th><th className="px-2 py-1.5">Mots-clés</th><th className="px-2 py-1.5 text-right">Listes</th></tr></thead>
-                  <tbody className="divide-y">
-                    {contacts.map((c) => (
-                      <tr key={c.id} className={cn(c.leftAt && "opacity-60")} data-testid={`contact-row-${c.id}`}>
-                        <td className="px-4 py-2"><Link href={`/contacts?${new URLSearchParams({ ...(sp.q ? { q: sp.q } : {}), ...(sp.tag ? { tag: sp.tag } : {}), contact: c.id }).toString()}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline" data-testid={`contact-open-${c.id}`}>{contactName(c)}</Link>{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}</td>
-                        <td className="px-2 py-2 text-xs">{c.organisation ? <Link href={`/organisations?organisation=${c.organisation.id}`} className="hover:underline">{c.organisation.name}</Link> : c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
-                        <td className="px-2 py-2 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && " · "}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
-                        <td className="px-2 py-2"><div className="flex flex-wrap gap-1">{tagsOf(c).map((t) => <Link key={t} href={`/contacts?tag=${encodeURIComponent(t)}`} className="rounded-sm bg-muted px-1.5 text-[10px] text-muted-foreground hover:bg-info-soft hover:text-primary">{t}</Link>)}</div></td>
-                        <td className="px-2 py-2 text-right text-xs text-muted-foreground">{c._count.listItems || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <DirectoryTable
+              rows={contacts.map((c) => ({ id: c.id, name: contactName(c), firstName: c.firstName, lastName: c.lastName, email: c.email, phone: c.phone, role: c.role, organisationId: c.organisation?.id ?? null, organisation: c.organisation?.name ?? c.organisationName ?? null, city: c.city, postcode: c.postcode, tags: tagsOf(c), brevoStatus: c.brevoStatus, leftAt: Boolean(c.leftAt), lists: c._count.listItems }))}
+              myLists={mine.map((l) => ({ id: l.id, name: l.name }))} organisations={organisations} isAdmin={canAdmin(me)} brevoConfigured={Boolean(brevoConfig())}
+              initialQ={sp.q} initialTag={sp.tag}
+            />
           )}
         </div>
       </div>

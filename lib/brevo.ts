@@ -105,6 +105,11 @@ export async function getContact(cfg: BrevoConfig, identifier: string, f: Fetche
   try { const { data } = await brevoCall<BrevoContact>(cfg, `/contacts/${encodeURIComponent(identifier)}`, {}, f); return data; } catch (e) { if (e instanceof BrevoError && /HTTP 404/.test(e.message)) return null; throw e; }
 }
 
+// Supprime un contact chez Brevo (irréversible : disparaît des listes et des campagnes). 404 = déjà absent, on ne s'en formalise pas.
+export async function deleteContact(cfg: BrevoConfig, identifier: string, f: Fetcher = fetch): Promise<boolean> {
+  try { await brevoCall(cfg, `/contacts/${encodeURIComponent(identifier)}`, { method: "DELETE" }, f); return true; } catch (e) { if (e instanceof BrevoError && /HTTP 404/.test(e.message)) return false; throw e; }
+}
+
 export async function removeFromList(cfg: BrevoConfig, listId: number, emails: string[], f: Fetcher = fetch): Promise<void> {
   for (let i = 0; i < emails.length; i += 150) await brevoCall(cfg, `/contacts/lists/${listId}/contacts/remove`, { method: "POST", body: { emails: emails.slice(i, i + 150) } }, f);
 }

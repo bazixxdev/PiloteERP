@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Download, Plus, RefreshCw, Send, Settings2, Trash2, Upload, UserPlus, X } from "lucide-react";
@@ -21,6 +21,7 @@ import { withBase } from "@/lib/base-path";
 import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
 import { ContactForm } from "./controls";
+import { BulkBar, FilterCell, SortTh, useContactsTable, type BulkContext, type Column } from "./table-tools";
 import { V, cap } from "@/lib/vocab";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (r: { data?: unknown }) => void) => void;
@@ -33,15 +34,28 @@ function useRun(): [boolean, Run] {
 
 // Une liste de contacts : en-tête (nom, visibilité, projet, réglages), ligne compacte (compteur, ajouter, importer, exporter),
 // puis le tableau — colonnes communes, rôle dans la liste, colonnes propres modifiables en place.
-export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editions, organisations }: { list: ContactListFull; meId: string; canEdit: boolean; isAdmin: boolean; brevoConfigured: boolean; editions: EditionOpt[]; organisations: { id: string; name: string }[] }) {
+export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editions, organisations, myLists }: { list: ContactListFull; meId: string; canEdit: boolean; isAdmin: boolean; brevoConfigured: boolean; editions: EditionOpt[]; myLists: { id: string; name: string }[]; organisations: { id: string; name: string }[] }) {
   const [pending, run] = useRun();
   const router = useRouter();
   const mirror = list.source === "brevo" || list.source === "helloasso"; // miroir : membres et colonnes tenus par la synchronisation
   const sourceLabel = list.source === "helloasso" ? "HelloAsso" : "Brevo";
   const base = list.source === "base"; // liste de base : calculée (interlocuteurs d'un genre d'organisation), sans auteur ni réglages
-  const [q, setQ] = useState("");
-  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  const rows = useMemo(() => { const n = norm(q.trim()); return n ? list.items.filter((i) => norm(`${contactName(i.contact)} ${i.contact.email ?? ""} ${i.contact.organisation?.name ?? i.contact.organisationName ?? ""} ${i.contact.city ?? ""} ${i.role ?? ""}`).includes(n)) : list.items; }, [q, list.items]);
+  type Item = ContactListFull["items"][number];
+  // Colonnes du tableau (19/09) : communes, rôle, colonnes propres — pour le tri et les filtres ; l'édition en place reste dans ValueCell.
+  const columns = useMemo<Column<Item>[]>(() => [
+    { key: "name", label: "Contact", get: (i) => `${i.contact.lastName} ${i.contact.firstName ?? ""}`.trim(), className: "px-4" },
+    { key: "organisation", label: "Structure", get: (i) => i.contact.organisation?.name ?? i.contact.organisationName ?? null },
+    { key: "email", label: "Coordonnées", get: (i) => [i.contact.email, i.contact.phone, i.contact.city].filter(Boolean).join(" ") || null },
+    ...(base ? [] : [{ key: "role", label: "Rôle dans la liste", get: (i: Item) => i.role } as Column<Item>]),
+    ...list.fields.map((f): Column<Item> => ({ key: `f:${f.key}`, label: f.label, get: (i) => { const v = i.values[f.key]; return f.type === "bool" ? Boolean(v) : v == null ? null : String(v); }, filter: f.type === "bool" ? "bool" : f.type === "select" ? { options: f.options ?? [] } : "text" })),
+  ], [list.fields, base]);
+  const idOf = useCallback((i: Item) => i.contact.id, []);
+  const quick = useCallback((i: Item) => `${contactName(i.contact)} ${i.contact.email ?? ""} ${i.contact.organisation?.name ?? i.contact.organisationName ?? ""} ${i.contact.city ?? ""} ${i.role ?? ""}`, []);
+  const t = useContactsTable(list.items, columns, idOf, quick);
+  const rows = t.view;
+  const byId = useMemo(() => new Map(list.items.map((i) => [i.contact.id, i])), [list.items]);
+  const selectedIds = [...t.selected].filter((id) => byId.has(id));
+  const bulk: BulkContext = { listId: base ? null : list.id, listCanEdit: canEdit && !mirror && !base, fields: list.fields, myLists, organisations, isAdmin, brevoConfigured, hasBrevo: (ids) => ids.filter((id) => byId.get(id)?.contact.brevoStatus).length, run, pending };
   const Icon = visibilityIcon(list.visibility);
   const vis = VISIBILITIES.find((v) => v.value === list.visibility);
   const color = noteColor(list.color);
@@ -68,8 +82,9 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 border-y px-4 py-2">
-        <span className="text-sm text-muted-foreground" data-testid="contact-list-count">{list.items.length} contact{list.items.length > 1 ? "s" : ""}</span>
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer…" className="h-8 w-44 text-xs" aria-label="Filtrer la liste" data-testid="contact-list-filter" />
+        <span className="text-sm text-muted-foreground" data-testid="contact-list-count">{t.hasFilters ? `${rows.length} sur ${list.items.length}` : `${list.items.length} contact${list.items.length > 1 ? "s" : ""}`}</span>
+        <Input value={t.q} onChange={(e) => t.setQ(e.target.value)} placeholder="Filtrer…" className="h-8 w-44 text-xs" aria-label="Filtrer la liste" data-testid="contact-list-filter" />
+        {t.hasFilters && <Button variant="ghost" size="xs" onClick={t.resetFilters}>Effacer les filtres</Button>}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" size="sm"><a href={withBase(`/contacts/export?liste=${list.id}`)} title="Exporter la liste en CSV (colonnes communes et propres)" data-testid="contact-list-export"><Download />Exporter</a></Button>
           {canEdit && !mirror && brevoConfigured && <PushDialog list={list} />}
@@ -77,28 +92,43 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
           {canEdit && !mirror && <AddToListDialog list={list} organisations={organisations} pending={pending} run={run} />}
         </div>
       </div>
+      <BulkBar ids={selectedIds} total={rows.length} allSelected={t.allInViewSelected} onSelectAll={t.toggleAll} onClear={t.clear} ctx={bulk} />
       {/* Le tableau reste, même vide : on voit ses colonnes (et celles qu'on vient d'ajouter). */}
       {(
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]" data-testid="contact-list-table">
             <thead className="text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
-                <th className="px-4 py-1.5">Contact</th><th className="px-2 py-1.5">Structure</th><th className="px-2 py-1.5">Coordonnées</th>{!base && <th className="px-2 py-1.5">Rôle dans la liste</th>}
-                {list.fields.map((f) => <th key={f.key} className="px-2 py-1.5 whitespace-nowrap" data-testid={`col-${f.key}`} title={f.synced ? "Colonne synchronisée, en lecture" : undefined}>{f.label}{canEdit && !f.synced && <button type="button" title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} disabled={pending} onClick={() => { if (confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></button>}</th>)}
-                {canEdit && !mirror && <th className="px-2 py-1.5"></th>}
+                <th className="w-8 px-3 py-1.5"><input type="checkbox" checked={t.allInViewSelected} onChange={t.toggleAll} aria-label="Sélectionner toutes les lignes affichées" className="size-4 rounded border-border accent-primary" data-testid="select-all" /></th>
+                {columns.map((c) => {
+                  const f = c.key.startsWith("f:") ? list.fields.find((x) => `f:${x.key}` === c.key) : null;
+                  return (
+                    <SortTh key={c.key} col={c} sort={t.sort} setSort={t.setSort} className={cn(c.className, f && "whitespace-nowrap")}>
+                      {f ? <span data-testid={`col-${f.key}`} title={f.synced ? "Colonne synchronisée, en lecture" : undefined}>{f.label}</span> : c.label}
+                      {f && canEdit && !f.synced && <span role="button" tabIndex={0} title="Retirer la colonne" aria-label={`Retirer la colonne ${f.label}`} onClick={(e) => { e.stopPropagation(); if (!pending && confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); }} onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (!pending && confirm(`Retirer la colonne « ${f.label} » ?`)) run(() => removeListField(list.id, f.key)); } }} className="ml-1 rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-danger"><X className="size-3" /></span>}
+                    </SortTh>
+                  );
+                })}
+                {canEdit && !mirror && <th className="px-2 py-1.5" />}
+              </tr>
+              <tr className="border-t bg-muted/30">
+                <th />
+                {columns.map((c) => <FilterCell key={c.key} col={c} value={t.filters[c.key] ?? ""} onChange={(v) => t.setFilter(c.key, v)} rows={list.items} />)}
+                {canEdit && !mirror && <th />}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={5 + list.fields.length} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? `Aucun contact dans cette liste ${sourceLabel} pour l'instant.` : base ? "Aucun contact rattaché à une organisation de ce genre pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={columns.length + 2} className="px-4 py-6 text-sm text-muted-foreground">{list.items.length === 0 ? (mirror ? `Aucun contact dans cette liste ${sourceLabel} pour l'instant.` : base ? "Aucun contact rattaché à une organisation de ce genre pour l'instant." : "Aucun contact dans cette liste : ajoutez-en, ou importez votre fichier.") : "Rien ne correspond au filtre."}</td></tr>}
               {rows.map((i) => {
                 const c = i.contact;
                 return (
-                  <tr key={c.id} data-testid={`contact-item-${c.id}`}>
+                  <tr key={c.id} data-testid={`contact-item-${c.id}`} className={cn(t.selected.has(c.id) && "bg-info-soft/60")} aria-selected={t.selected.has(c.id) || undefined}>
+                    <td className="px-3 py-1.5"><input type="checkbox" checked={t.selected.has(c.id)} onChange={() => t.toggle(c.id)} aria-label={`Sélectionner ${contactName(c)}`} className="size-4 rounded border-border accent-primary" data-testid={`select-${c.id}`} /></td>
                     <td className="px-4 py-1.5"><Link href={`/contacts?liste=${list.id}&contact=${c.id}`} scroll={false} className="font-medium text-primary underline-offset-2 hover:underline">{contactName(c)}</Link>{c.brevoStatus && c.brevoStatus !== "active" && <span className="ml-1.5 inline-block whitespace-nowrap rounded-sm bg-warning-soft px-1 text-[10px] text-warning" title={BREVO_STATUS[c.brevoStatus]?.hint} data-testid={`brevo-status-${c.id}`}>{BREVO_STATUS[c.brevoStatus]?.label}</span>}{c.role && <div className="text-[11px] text-muted-foreground">{c.role}</div>}{tagsOf(c).length > 0 && <div className="mt-0.5 flex flex-wrap gap-1">{tagsOf(c).map((t) => <span key={t} className="rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t}</span>)}</div>}</td>
                     <td className="px-2 py-1.5 text-xs">{c.organisation ? <Link href={`/organisations?organisation=${c.organisation.id}`} className="hover:underline">{c.organisation.name}</Link> : c.organisationName ?? <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-2 py-1.5 text-xs text-muted-foreground">{c.email && <a href={`mailto:${c.email}`} className="text-primary hover:underline">{c.email}</a>}{c.email && c.phone && <br />}{c.phone}{c.city && <div>{[c.postcode, c.city].filter(Boolean).join(" ")}</div>}</td>
-                    {!base && <td className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>}
-                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.synced} pending={pending} run={run} /></td>)}
+                    {!base && <td className="px-2 py-1.5"><ValueCell key={`role:${i.role ?? ""}`} listId={list.id} contactId={c.id} field={{ key: "role", label: "Rôle", type: "text" }} value={i.role} canEdit={canEdit} pending={pending} run={run} /></td>}
+                    {list.fields.map((f) => <td key={f.key} className="px-2 py-1.5"><ValueCell key={`${f.key}:${String(i.values[f.key] ?? "")}`} listId={list.id} contactId={c.id} field={f} value={i.values[f.key] ?? null} canEdit={canEdit && !f.synced} pending={pending} run={run} /></td>)}
                     {canEdit && !mirror && <td className="px-2 py-1.5 text-right"><button type="button" aria-label={`Retirer ${contactName(c)} de la liste`} disabled={pending} onClick={() => run(() => removeFromList(list.id, c.id))} className="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-danger" data-testid={`contact-item-remove-${c.id}`}><X className="size-3.5" /></button></td>}
                   </tr>
                 );
@@ -111,7 +141,8 @@ export function ContactListView({ list, canEdit, isAdmin, brevoConfigured, editi
   );
 }
 
-// Une cellule de colonne propre (ou le rôle) : case, texte, date ou liste, enregistrée en quittant la cellule.
+// Une cellule de colonne propre (ou le rôle) : case, texte, date ou liste, enregistrée en quittant la cellule. Sa `key` porte la
+// valeur : une modification groupée (19/09) la remonte à la valeur du serveur.
 function ValueCell({ listId, contactId, field, value, canEdit, pending, run }: { listId: string; contactId: string; field: ListField; value: string | boolean | null; canEdit: boolean; pending: boolean; run: Run }) {
   const [v, setV] = useState<string>(typeof value === "string" ? value : "");
   const [checked, setChecked] = useState(Boolean(value)); // coche immédiate, confirmée par le rafraîchissement

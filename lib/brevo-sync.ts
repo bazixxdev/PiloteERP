@@ -20,8 +20,11 @@ export async function syncBrevo(cfg: BrevoConfig, byId: string, f: typeof fetch 
   const byEmail = new Map(local.filter((c) => c.email).map((c) => [c.email!.toLowerCase(), c]));
   const idOf = new Map<number, string>(); // id Brevo → id contact
   const seen = new Set<string>();
+  // Supprimés définitivement dans l'outil (BrevoIgnored) : ni recréés ni comptés.
+  const ignored = new Set((await prisma.brevoIgnored.findMany({ select: { brevoContactId: true } })).map((x) => x.brevoContactId));
   for (const rc of remote) {
     const bid = String(rc.id);
+    if (ignored.has(bid)) continue;
     seen.add(bid);
     const email = rc.email?.trim().toLowerCase() || null;
     const status = rc.emailBlacklisted ? "unsubscribed" : "active";

@@ -256,3 +256,136 @@ export async function canISeeList(id: string): Promise<boolean> {
   const l = await prisma.contactList.findUnique({ where: { id }, include: { owner: { select: { id: true, poleId: true } } } });
   return Boolean(l && canReadList(me, l));
 }
+
+// ——— Actions groupées (19/09) : sur une sélection de contacts, dans l'annuaire ou dans une liste ———
+// Les listes se modifient par leur auteur (ou l'admin) ; les contacts eux-mêmes (modifier, supprimer) par l'administration.
+
+const MAX_BULK = 2000;
+const ids = (contactIds: string[]) => Array.from(new Set(contactIds.filter((x) => typeof x === "string" && x))).slice(0, MAX_BULK);
+
+// Ajouter à une liste ; `fromListId` = déplacer (retirer de la liste d'origine, si elle est à moi).
+export async function bulkAddToList(listId: string, contactIds: string[], fromListId?: string | null): Promise<Result<{ added: number; skipped: number; removed: number }>> {
+  const { list, error } = await myList(listId); if (!list) return { ok: false, error: error! };
+  if (list.source === "brevo" || list.source === "helloasso") return { ok: false, error: "Une liste miroir est tenue par la synchronisation : ajoutez les contacts dans Brevo ou HelloAsso." };
+  const wanted = ids(contactIds);
+  if (!wanted.length) return { ok: false, error: "Aucun contact sélectionné." };
+  const existing = new Set((await prisma.contactListItem.findMany({ where: { listId, contactId: { in: wanted } }, select: { contactId: true } })).map((x) => x.contactId));
+  const known = new Set((await prisma.contact.findMany({ where: { id: { in: wanted } }, select: { id: true } })).map((x) => x.id));
+  const toAdd = wanted.filter((id) => known.has(id) && !existing.has(id));
+  if (toAdd.length) await prisma.contactListItem.createMany({ data: toAdd.map((contactId) => ({ listId, contactId, values: "{}" })) });
+  let removed = 0;
+  if (fromListId && fromListId !== listId) {
+    const from = await myList(fromListId);
+    if (!from.list) return { ok: false, error: from.error! };
+    if (from.list.source === "brevo" || from.list.source === "helloasso") return { ok: false, error: "On ne retire pas d'une liste miroir : elle est tenue par la synchronisation." };
+    removed = (await prisma.contactListItem.deleteMany({ where: { listId: fromListId, contactId: { in: wanted } } })).count;
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, data: { added: toAdd.length, skipped: wanted.length - toAdd.length, removed } };
+}
+
+export async function bulkRemoveFromList(listId: string, contactIds: string[]): Promise<Result<{ removed: number }>> {
+  const { list, error } = await myList(listId); if (!list) return { ok: false, error: error! };
+  if (list.source === "brevo" || list.source === "helloasso") return { ok: false, error: "Une liste miroir est tenue par la synchronisation : retirez les contacts dans Brevo ou HelloAsso." };
+  const removed = (await prisma.contactListItem.deleteMany({ where: { listId, contactId: { in: ids(contactIds) } } })).count;
+  revalidatePath("/", "layout");
+  return { ok: true, data: { removed } };
+}
+
+// Une même valeur pour tous : un champ commun du contact (structure, fonction, ville, mots-clés à ajouter ou retirer, « parti·e »)
+// ou, dans une liste, le rôle ou une colonne propre.
+export type BulkPatch =
+  | { kind: "contact"; field: "role" | "city" | "postcode" | "address" | "organisationName"; value: string | null }
+  | { kind: "contact"; field: "organisationId"; value: string | null }
+  | { kind: "contact"; field: "leftAt"; value: boolean }
+  | { kind: "tags"; mode: "add" | "remove"; value: string }
+  | { kind: "item"; listId: string; key: string; value: string | boolean | null };
+
+export async function bulkUpdateContacts(contactIds: string[], patch: BulkPatch): Promise<Result<{ updated: number }>> {
+  const me = await getCurrentPerson();
+  const wanted = ids(contactIds);
+  if (!wanted.length) return { ok: false, error: "Aucun contact sélectionné." };
+  if (patch.kind === "item") {
+    const { list, error } = await myList(patch.listId); if (!list) return { ok: false, error: error! };
+    const field = parseFields(list.fields).find((f) => f.key === patch.key);
+    if (patch.key !== "role" && !field) return { ok: false, error: "Colonne inconnue." };
+    if (field?.synced) return { ok: false, error: "Colonne synchronisée, en lecture." };
+    const items = await prisma.contactListItem.findMany({ where: { listId: patch.listId, contactId: { in: wanted } } });
+    for (const item of items) {
+      if (patch.key === "role") { await prisma.contactListItem.update({ where: { listId_contactId: { listId: patch.listId, contactId: item.contactId } }, data: { role: clean(patch.value) } }); continue; }
+      const values = parseValues(item.values);
+      let v: string | boolean | null = patch.value;
+      if (field!.type === "bool") v = Boolean(patch.value);
+      else if (field!.type === "select") { const s = clean(patch.value); if (s && !field!.options?.includes(s)) return { ok: false, error: "Valeur hors liste." }; v = s; }
+      else v = clean(patch.value);
+      values[patch.key] = v;
+      await prisma.contactListItem.update({ where: { listId_contactId: { listId: patch.listId, contactId: item.contactId } }, data: { values: JSON.stringify(values) } });
+    }
+    revalidatePath("/", "layout");
+    return { ok: true, data: { updated: items.length } };
+  }
+  if (!canAdmin(me)) return { ok: false, error: "Modifier plusieurs contacts d'un coup est réservé à l'administration." };
+  let updated = 0;
+  if (patch.kind === "tags") {
+    const tag = clean(patch.value); if (!tag) return { ok: false, error: "Indiquez un mot-clé." };
+    const rows = await prisma.contact.findMany({ where: { id: { in: wanted } }, select: { id: true, tags: true } });
+    for (const c of rows) {
+      const tags = c.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const next = patch.mode === "add" ? [...tags, tag] : tags.filter((t) => t.toLowerCase() !== tag.toLowerCase());
+      const s = serializeTags(next);
+      if (s !== c.tags) { await prisma.contact.update({ where: { id: c.id }, data: { tags: s } }); updated++; }
+    }
+  } else if (patch.field === "leftAt") {
+    updated = (await prisma.contact.updateMany({ where: { id: { in: wanted } }, data: { leftAt: patch.value ? new Date() : null } })).count;
+  } else if (patch.field === "organisationId") {
+    if (patch.value && !(await prisma.organisation.findUnique({ where: { id: patch.value } }))) return { ok: false, error: "Organisation introuvable." };
+    updated = (await prisma.contact.updateMany({ where: { id: { in: wanted } }, data: { organisationId: patch.value, ...(patch.value ? { organisationName: null } : {}) } })).count;
+  } else {
+    updated = (await prisma.contact.updateMany({ where: { id: { in: wanted } }, data: { [patch.field]: clean(patch.value) } })).count;
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, data: { updated } };
+}
+
+// Suppression définitive : hors de l'annuaire et de toutes les listes. Refusée pour un contact cité par un financement ou une
+// adhésion (on le marque « parti·e » à la place). Venu de Brevo : son identifiant est gardé (BrevoIgnored) pour que la synchro ne le
+// recrée pas ; « aussi dans Brevo » le supprime chez eux (irréversible), au choix de la personne, jamais par défaut.
+export async function bulkDeleteContacts(contactIds: string[], alsoBrevo: boolean): Promise<Result<{ deleted: number; kept: number; brevoDeleted: number }>> {
+  const me = await getCurrentPerson();
+  if (!canAdmin(me)) return { ok: false, error: "Supprimer définitivement des contacts est réservé à l'administration." };
+  const wanted = ids(contactIds);
+  if (!wanted.length) return { ok: false, error: "Aucun contact sélectionné." };
+  const rows = await prisma.contact.findMany({ where: { id: { in: wanted } }, select: { id: true, email: true, brevoContactId: true, _count: { select: { lines: true, conventions: true, memberships: true } } } });
+  const deletable = rows.filter((c) => !c._count.lines && !c._count.conventions && !c._count.memberships);
+  let brevoDeleted = 0;
+  if (alsoBrevo) {
+    const { brevoConfig, deleteContact: deleteInBrevo } = await import("@/lib/brevo");
+    const cfg = brevoConfig();
+    if (!cfg) return { ok: false, error: "Brevo n'est pas configuré sur cette installation." };
+    for (const c of deletable) if (c.brevoContactId) { if (await deleteInBrevo(cfg, c.brevoContactId)) brevoDeleted++; }
+  }
+  const fromBrevo = deletable.filter((c) => c.brevoContactId);
+  if (fromBrevo.length) await prisma.brevoIgnored.createMany({ data: fromBrevo.map((c) => ({ brevoContactId: c.brevoContactId!, email: c.email, byId: me.id })), skipDuplicates: true });
+  const deleted = (await prisma.contact.deleteMany({ where: { id: { in: deletable.map((c) => c.id) } } })).count;
+  revalidatePath("/", "layout");
+  return { ok: true, data: { deleted, kept: rows.length - deletable.length, brevoDeleted } };
+}
+
+// Export CSV d'une sélection (mêmes colonnes que l'export de liste ; sans les colonnes propres hors d'une liste).
+export async function exportContactsCsv(contactIds: string[], listId?: string | null): Promise<Result<{ csv: string; name: string }>> {
+  const me = await getCurrentPerson();
+  const wanted = ids(contactIds);
+  if (!wanted.length) return { ok: false, error: "Aucun contact sélectionné." };
+  const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const list = listId ? await prisma.contactList.findUnique({ where: { id: listId }, include: { owner: { select: { id: true, poleId: true } } } }) : null;
+  if (listId && (!list || !canReadList(me, list))) return { ok: false, error: "Liste introuvable." };
+  const fields = list ? parseFields(list.fields) : [];
+  const items = list ? new Map((await prisma.contactListItem.findMany({ where: { listId: list.id, contactId: { in: wanted } } })).map((i) => [i.contactId, { role: i.role, values: parseValues(i.values) }])) : new Map<string, { role: string | null; values: Record<string, string | boolean | null> }>();
+  const contacts = await prisma.contact.findMany({ where: { id: { in: wanted } }, include: { organisation: { select: { name: true } } }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }] });
+  const head = ["Nom", "Prénom", "E-mail", "Téléphone", "Fonction", "Structure", "Adresse", "Code postal", "Ville", "Mots-clés", ...(list ? ["Rôle dans la liste", ...fields.map((f) => f.label)] : [])];
+  const lines = contacts.map((c) => {
+    const it = items.get(c.id);
+    return [c.lastName, c.firstName, c.email, c.phone, c.role, c.organisation?.name ?? c.organisationName, c.address, c.postcode, c.city, c.tags, ...(list ? [it?.role ?? "", ...fields.map((f) => { const v = it?.values[f.key]; return v === true ? "oui" : v === false || v == null ? "" : String(v); })] : [])].map(esc).join(";");
+  });
+  return { ok: true, data: { csv: "﻿" + [head.map(esc).join(";"), ...lines].join("\n"), name: `${list ? list.name : "contacts"}-selection.csv` } };
+}
