@@ -45,6 +45,9 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
   const pathname = usePathname();
   useEffect(() => { setTip(false); }, [pathname]);
   const within = s.items.some((l) => l.href === activeHref);
+  // L'infobulle ne s'ouvre qu'au survol : Radix l'ouvrait aussi au focus, et le panneau d'une rubrique rend le focus à l'icône en se
+  // fermant — l'infobulle restait affichée après chaque navigation (retour de Gaël, 19/09). preventDefault() coupe l'ouverture au focus.
+  const noTipOnFocus = (e: React.FocusEvent) => e.preventDefault();
   const iconClass = cn(
     "relative grid h-10 w-11 place-items-center rounded-md text-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20",
     within && !isOpen && "bg-primary text-primary-foreground hover:bg-primary",
@@ -56,7 +59,7 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
     return (
       <Tooltip open={tip} onOpenChange={setTip}>
         <TooltipTrigger asChild>
-          <Link href={s.items[0]?.href ?? "/portefeuille"} aria-label={s.label} aria-current={within ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => setTip(false)}><Icon className="size-5" />{dot}</Link>
+          <Link href={s.items[0]?.href ?? "/portefeuille"} aria-label={s.label} aria-current={within ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => setTip(false)} onFocus={noTipOnFocus}><Icon className="size-5" />{dot}</Link>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
       </Tooltip>
@@ -68,7 +71,7 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
         <TooltipTrigger asChild>
           <PopoverAnchor asChild>
             {/* Ouverture pilotée à la main : un second clic sur l'icône ferme (le déclencheur Radix, pris entre le clic « dehors » et le sien, rouvrait). */}
-            <button type="button" aria-label={s.label} aria-haspopup="menu" aria-expanded={isOpen} aria-current={within && !isOpen ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onClick={() => { setTip(false); onOpenChange(!isOpen); }}><Icon className="size-5" />{dot}</button>
+            <button type="button" aria-label={s.label} aria-haspopup="menu" aria-expanded={isOpen} aria-current={within && !isOpen ? "page" : undefined} className={iconClass} data-testid={`rail-${s.id}`} onFocus={noTipOnFocus} onClick={() => { setTip(false); onOpenChange(!isOpen); }}><Icon className="size-5" />{dot}</button>
           </PopoverAnchor>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={6}>{s.label}</TooltipContent>
