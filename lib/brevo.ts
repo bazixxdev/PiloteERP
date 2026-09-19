@@ -61,8 +61,10 @@ export async function listFolders(cfg: BrevoConfig, f: Fetcher = fetch): Promise
 // Toutes les listes, avec le nom de leur dossier.
 export async function listLists(cfg: BrevoConfig, f: Fetcher = fetch): Promise<BrevoList[]> {
   const folders = new Map((await listFolders(cfg, f)).map((x) => [x.id, x.name]));
-  const lists = await paged<Omit<BrevoList, "folderName">>(cfg, "/contacts/lists", "lists", 50, f);
-  return lists.map((l) => ({ ...l, folderId: l.folderId ?? null, folderName: l.folderId != null ? folders.get(l.folderId) ?? null : null, totalSubscribers: l.totalSubscribers ?? 0 }));
+  // Brevo renvoie le nombre d'abonnés dans `uniqueSubscribers` ; `totalSubscribers` vaut 0 sur les comptes récents (constaté le
+  // 19/09 sur le compte TLST : 975 contacts, « 0 abonné » partout). On lit l'un puis l'autre.
+  const lists = await paged<Omit<BrevoList, "folderName"> & { uniqueSubscribers?: number }>(cfg, "/contacts/lists", "lists", 50, f);
+  return lists.map((l) => ({ id: l.id, name: l.name, folderId: l.folderId ?? null, folderName: l.folderId != null ? folders.get(l.folderId) ?? null : null, totalSubscribers: l.uniqueSubscribers || l.totalSubscribers || 0 }));
 }
 
 // Tous les contacts du compte (50 par page, la limite de Brevo sur cette adresse), avec leurs listes et attributs.
