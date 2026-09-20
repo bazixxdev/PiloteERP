@@ -200,6 +200,25 @@ Exécutée sans modification du code applicatif :
 
 La baseline est donc partiellement verte : la suite security doit être rejouée avec une base de sécurité dédiée, sans utiliser une base de production.
 
+## Baseline de clôture intermédiaire
+
+Date d’exécution : 2026-09-20  
+Commit testé : `cd23e43` (`security: audit remediation and production hardening`), avec les modifications locales de réconciliation `deploy.sh`/tests présentes dans l’arbre de travail au moment de l’exécution.
+
+| Contrôle | Résultat |
+|---|---|
+| `npm ci` | PASS |
+| `npx prisma generate` | PASS — Prisma Client 6.19.3 |
+| Tests unitaires | PASS — 39/39 |
+| `npm run test:security` | FAIL avant exécution — `SECURITY_DATABASE_URL` absente ; les trois variables dédiées étaient absentes de la session |
+| Tests historiques ciblés | 39/39 PASS via le ciblage disponible ; aucun fichier distinct nommé historical/legacy/regression trouvé |
+| Lint | PASS |
+| TypeScript | PASS |
+| Build production | PASS |
+| `npm audit` | 5 avis : 2 modérés, 3 élevés ; correction automatique non exécutée |
+
+La baseline de clôture intermédiaire est **FAIL** uniquement parce que la suite security production-like n’a pas pu démarrer sans son environnement PostgreSQL dédié. Aucun test n’a utilisé une base de production.
+
 ## N. Documents de référence
 
 - Audit : [`docs/audit/01-securite.md`](../audit/01-securite.md) à [`07-backlog-consolide.md`](../audit/07-backlog-consolide.md).

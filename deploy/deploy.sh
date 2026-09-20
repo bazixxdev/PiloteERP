@@ -73,6 +73,27 @@ fi
 # Comptes et sessions (lot F) : secret de signature généré une fois, adresse publique de l'API d'auth, mode démo.
 grep -q '^BETTER_AUTH_SECRET=' "$DIR/.env" || echo "BETTER_AUTH_SECRET=\"$(openssl rand -hex 32)\"" >> "$DIR/.env"
 grep -q '^BETTER_AUTH_URL=' "$DIR/.env" || echo "BETTER_AUTH_URL=\"$PUBLIC_URL/api/auth\"" >> "$DIR/.env"
+# Toute instance déployée est une instance de production : conserver les
+# garde-fous explicites même lors d'une première mise en ligne.
+if grep -q '^NODE_ENV=' "$DIR/.env" && ! grep -q '^NODE_ENV=production$' "$DIR/.env"; then
+  echo "✖ NODE_ENV doit être production ($INSTANCE)" >&2
+  exit 1
+fi
+grep -q '^NODE_ENV=' "$DIR/.env" || echo 'NODE_ENV=production' >> "$DIR/.env"
+if ! grep -Eq '^BETTER_AUTH_URL=\"https://' "$DIR/.env"; then
+  echo "✖ BETTER_AUTH_URL doit être HTTPS ($INSTANCE)" >&2
+  exit 1
+fi
+if grep -q '^AUTH_RATE_LIMIT=' "$DIR/.env"; then
+  RATE_LIMIT=$(sed -n 's/^AUTH_RATE_LIMIT=//p' "$DIR/.env" | head -1)
+  [ "$RATE_LIMIT" != "0" ] || { echo "✖ AUTH_RATE_LIMIT=0 est interdit en production ($INSTANCE)" >&2; exit 1; }
+else
+  echo 'AUTH_RATE_LIMIT=10' >> "$DIR/.env"
+fi
+if grep -Eq '^PILOTE_ENV_PROFILE=(local|test|security-test)$|^PILOTE_ENV=(local|test|security-test)$|^PILOTE_PROFILE=(local|test|security-test)$' "$DIR/.env"; then
+  echo "✖ profil local/test interdit en production ($INSTANCE)" >&2
+  exit 1
+fi
 # Lot I : le client et le port de l'instance dans le .env (le build embarque l'habillage ; l'unité systemd lit PORT).
 grep -q '^NEXT_PUBLIC_CLIENT=' "$DIR/.env" || echo "NEXT_PUBLIC_CLIENT=\"$CLIENT\"" >> "$DIR/.env"
 grep -q '^PORT=' "$DIR/.env" || echo "PORT=$PORT" >> "$DIR/.env"
@@ -115,17 +136,31 @@ if ! systemctl cat "$SERVICE" >/dev/null 2>&1; then
   cp "$NEW/deploy/systemd/pilote@.service" /etc/systemd/system/pilote@.service
   systemctl daemon-reload
 fi
+UNIT=/etc/systemd/system/pilote@.service
+grep -q '^User=pilote-%i$' "$UNIT" || { echo "✖ unité systemd non isolée : User attendu" >&2; exit 1; }
+grep -q '^Group=pilote-%i$' "$UNIT" || { echo "✖ unité systemd non isolée : Group attendu" >&2; exit 1; }
+grep -q '^NoNewPrivileges=true$' "$UNIT" || { echo "✖ unité systemd sans NoNewPrivileges" >&2; exit 1; }
+grep -q '^PrivateTmp=true$' "$UNIT" || { echo "✖ unité systemd sans PrivateTmp" >&2; exit 1; }
+grep -q '^ProtectSystem=strict$' "$UNIT" || { echo "✖ unité systemd sans ProtectSystem=strict" >&2; exit 1; }
+grep -q '^ProtectHome=true$' "$UNIT" || { echo "✖ unité systemd sans ProtectHome" >&2; exit 1; }
+grep -q '^UMask=0077$' "$UNIT" || { echo "✖ unité systemd sans UMask=0077" >&2; exit 1; }
+grep -q '^ReadWritePaths=/var/www/%i-pilote-data /var/www/%i-pilote-medias$' "$UNIT" || { echo "✖ chemins d'écriture systemd inattendus" >&2; exit 1; }
 systemctl is-enabled "$SERVICE" >/dev/null 2>&1 || systemctl enable "$SERVICE" >/dev/null 2>&1 || true # au boot, chaque instance
 # Bascule : maintenance, arrêt, échange des dossiers, démarrage.
 touch "$MAINTENANCE_FLAG"
 [ "$LEGACY_SERVICE" != "none" ] && systemctl stop "$LEGACY_SERVICE" 2>/dev/null || true
 systemctl stop "$SERVICE" 2>/dev/null || true
-rm -rf "$OLD"; [ -d "$DIR" ] && mv "$DIR" "$OLD"; mv "$NEW" "$DIR"
-chown -R "$RUNTIME_USER:$RUNTIME_USER" "$DIR" "$DATA" "$MEDIAS"
-find "$DIR" -type d -exec chmod 755 {} +
-find "$DIR" -type f -exec chmod 644 {} +
+if [ -d "$OLD" ]; then mv "$OLD" "$OLD.$STAMP.previous"; fi
+[ -d "$DIR" ] && mv "$DIR" "$OLD"
+mv "$NEW" "$DIR"
+chown -R root:root "$DIR"
+find "$DIR" -type d -exec chmod u+rwx,go+rx,go-w {} +
+find "$DIR" -type f -exec chmod go-w {} +
+chown "$RUNTIME_USER:$RUNTIME_USER" "$DIR/.env"
 chmod 600 "$DIR/.env"
-chmod 750 "$DATA" "$MEDIAS"
+chown -R "$RUNTIME_USER:$RUNTIME_USER" "$DATA" "$MEDIAS"
+find "$DATA" "$MEDIAS" -type d -exec chmod 750 {} +
+find "$DATA" "$MEDIAS" -type f -exec chmod 640 {} +
 systemctl start "$SERVICE"
 for i in $(seq 1 30); do
   if curl -fsS -o /dev/null "$HEALTH"; then
