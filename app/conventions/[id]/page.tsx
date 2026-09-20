@@ -20,6 +20,7 @@ import { AMOUNT_KINDS, amounts, durationOf, isWon } from "@/lib/dossiers";
 import { attachmentInclude } from "@/lib/attachments";
 import { DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
 import { V, cap, le, un, aucun, pl } from "@/lib/vocab";
+import { loadNotes } from "@/lib/notes";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
     prisma.convention.findUnique({ where: { id }, include: { funder: { include: { contacts: true } }, contact: true, owner: { select: { id: true, name: true } }, targetProject: { select: { id: true, name: true } }, attachments: { include: attachmentInclude, orderBy: { createdAt: "desc" } }, tasks: { include: { person: { select: { name: true } } }, orderBy: [{ done: "asc" }, { createdAt: "asc" }] }, notesLinked: { include: { author: { select: { name: true } } }, orderBy: { date: "desc" } }, payments: { orderBy: { expectedAt: "asc" } }, lines: { include: { edition: { include: { project: { include: { pilot: true } } } }, deliverables: { orderBy: { dueDate: "asc" } }, payments: true }, orderBy: { edition: { year: "asc" } } } } }),
   ]);
   if (!c) notFound();
+  const notesLinked = await loadNotes(me, { conventionId: id });
   const rw = canEditFunding(me);
   // Éditions couvertes par la période et pas encore rattachées : proposées au rattachement depuis la convention.
   const attachable = rw ? (await prisma.edition.findMany({ where: { year: { gte: c.startYear, lte: c.endYear }, status: { not: "closed" }, id: { notIn: c.lines.map((l) => l.editionId) } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] })).map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` })) : [];
@@ -121,7 +123,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                 <Field label="Qui aide" field="helpers" type="text" placeholder="noms, rôles" />
                 <div className="sm:col-span-2"><Field label="Documents sources, cahier des charges, liens" field="sources" type="textarea" placeholder="un élément par ligne : lien de l'appel, dossier sur le serveur, contact technique…" /></div>
               </div>
-              <DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} />
+              <DossierWorkspace id={c.id} tasks={c.tasks} notes={notesLinked} files={c.attachments} rw={rw} />
             </Section>
           )}
           {won && <Section title={`Affectations aux ${pl(V.edition)}`} description={`Une ligne de financement par ${V.edition.one} rattachée ; le montant obtenu se saisit sur ${le(V.edition)} (onglet Financements). Le rattachement se fait ici ou depuis ${le(V.edition)}.`} testId="convention-lines" actions={rw ? <AttachEditionForm conventionId={c.id} editions={attachable} /> : undefined}>
@@ -173,7 +175,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               {(c.status === "lost" || c.status === "dismissed") && <div className="sm:col-span-2"><Field label="Pourquoi" field="decisionNote" type="textarea" /></div>}
             </div>
             <div className="mt-3"><Field label="Notes" field="notes" type="textarea" placeholder={`Conditions, avenants, clés de répartition (référence à l'Excel ${V.raf.one})…`} /></div>
-            {won && <div className="mt-3 border-t pt-3"><DossierWorkspace id={c.id} tasks={c.tasks} notes={c.notesLinked} files={c.attachments} rw={rw} /></div>}
+            {won && <div className="mt-3 border-t pt-3"><DossierWorkspace id={c.id} tasks={c.tasks} notes={notesLinked} files={c.attachments} rw={rw} /></div>}
           </Section>
         </div>
 

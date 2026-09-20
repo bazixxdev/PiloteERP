@@ -6,6 +6,7 @@ import { getCurrentPerson } from "@/lib/session";
 import { NOTE_COLORS } from "@/lib/notes";
 import { dayjs } from "@/lib/format";
 import { V, cap, au, ce } from "@/lib/vocab";
+import { canTreatRequest } from "@/lib/requests";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -38,6 +39,7 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
 export async function updateTask(id: string, patch: { label?: string; description?: string | null; dueDate?: string | null; done?: boolean; editionId?: string | null; actionId?: string | null; listId?: string | null }): Promise<Result> {
   const t = await mine(id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
+  const me = await getCurrentPerson();
   if (patch.listId) {
     const l = await prisma.taskList.findUnique({ where: { id: patch.listId } });
     if (!l || l.personId !== t.personId) return { ok: false, error: "Liste introuvable." };
@@ -54,6 +56,7 @@ export async function updateTask(id: string, patch: { label?: string; descriptio
   // Tâche née d'une demande : la cocher fait la demande (le demandeur est prévenu), la décocher la rouvre.
   if (patch.done !== undefined && t.requestId) {
     const r = await prisma.request.findUnique({ where: { id: t.requestId }, include: { requester: true } });
+    if (r && !canTreatRequest(me, r)) return { ok: false, error: "Cette demande a été réattribuée : vous ne pouvez plus la modifier via cette tâche." };
     if (r && (patch.done ? r.status !== "done" : r.status === "done")) {
       await prisma.request.update({ where: { id: r.id }, data: { status: patch.done ? "done" : "doing", doneAt: patch.done ? new Date() : null } });
       if (patch.done && r.requesterId !== t.personId) await prisma.notification.create({ data: { personId: r.requesterId, senderId: t.personId, kind: "info", title: `Demande faite : ${r.title}`, link: "/demandes" } });

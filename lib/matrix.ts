@@ -122,5 +122,6 @@ export function matrixToCsv(m: Matrix): string {
     fmt(r.granted), fmt(r.requested), r.coverage === null ? "" : `${Math.round(r.coverage * 100)} %`,
   ]);
   const foot = ["", "Total", "", String(m.year), fmt(m.totals.envelope), ...m.columns.map((c) => fmt(c.granted)), fmt(m.totals.granted), fmt(m.totals.requested), ""];
-  return [head, ...lines, foot].map((r) => r.map((v) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(";")).join("\n");
+  return [head, ...lines, foot].map(csvRow).join("\n");
 }
+import { csvRow } from "./csv";

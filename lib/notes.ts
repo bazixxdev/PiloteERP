@@ -76,9 +76,9 @@ const include = { author: true, edition: { include: { project: true } }, shares:
 export const canReadNote = (me: Viewer, n: Row) => n.authorId === me.id || n.shares.some((s) => s.person.id === me.id) || canReadShared(me, n.author, n.visibility);
 
 // Mes notes, puis celles que d'autres partagent avec moi ; par date décroissante.
-export async function loadNotes(me: Viewer, opts?: { editionId?: string }): Promise<NoteView[]> {
+export async function loadNotes(me: Viewer, opts?: { editionId?: string; conventionId?: string }): Promise<NoteView[]> {
   const rows = await prisma.note.findMany({
-    where: { ...(opts?.editionId ? { editionId: opts.editionId } : {}), OR: [{ authorId: me.id }, { visibility: { not: "private" } }, { shares: { some: { personId: me.id } } }] },
+    where: { ...(opts?.editionId ? { editionId: opts.editionId } : {}), ...(opts?.conventionId ? { conventionId: opts.conventionId } : {}), OR: [{ authorId: me.id }, { visibility: { not: "private" } }, { shares: { some: { personId: me.id } } }] },
     include, orderBy: [{ date: "desc" }, { updatedAt: "desc" }],
   });
   return rows.filter((n) => canReadNote(me, n)).map((n) => toView(me.id, n));

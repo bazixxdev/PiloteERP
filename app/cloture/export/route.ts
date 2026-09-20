@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { exportAllowed } from "@/lib/export-auth";
+import { permissionExportAllowed } from "@/lib/export-auth";
+import { csvRow } from "@/lib/csv";
 import { dayjs } from "@/lib/format";
 
 // Export mensuel des temps, agrégé par projet ou par personne (EF-D5), vers l'Excel de la RAF.
 export async function GET(req: Request) {
-  if (!(await exportAllowed(req))) return new NextResponse("Jeton d'API requis", { status: 401 });
+  if (!(await permissionExportAllowed(req, "time.lock"))) return new NextResponse("Export non autorisé", { status: 403 });
   const url = new URL(req.url);
   const month = url.searchParams.get("mois") ?? dayjs().format("YYYY-MM");
   const par = url.searchParams.get("par") === "personne" ? "personne" : "projet";
@@ -22,6 +23,6 @@ export async function GET(req: Request) {
     agg.set(key, { ...row, c: par === "projet" ? row.c : row.c || code });
   }
   const headers = par === "projet" ? ["projet", "action", "personne", "heures", "jours"] : ["personne", "projet", "action", "heures", "jours"];
-  const lines = [headers.join(";"), ...[...agg.values()].sort((x, y) => x.a.localeCompare(y.a) || x.b.localeCompare(y.b)).map((r) => [r.a, r.b, r.c, r.hours.toFixed(2).replace(".", ","), (r.hours / 7).toFixed(2).replace(".", ",")].join(";"))];
+  const lines = [csvRow(headers), ...[...agg.values()].sort((x, y) => x.a.localeCompare(y.a) || x.b.localeCompare(y.b)).map((r) => csvRow([r.a, r.b, r.c, r.hours.toFixed(2).replace(".", ","), (r.hours / 7).toFixed(2).replace(".", ",")]))];
   return new NextResponse("﻿" + lines.join("\n"), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="temps-${month}-par-${par}.csv"` } });
 }

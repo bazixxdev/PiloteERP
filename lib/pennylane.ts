@@ -1,5 +1,5 @@
-import * as XLSX from "xlsx";
 import { rowsToEntries, type RawEntry } from "./ledger";
+import { readSpreadsheet } from "./spreadsheet";
 
 // Connecteur Pennylane (lot D), repris du client d'erp-tlst : l'API v2 produit un export du grand livre analytique (xlsx) pour
 // une période ; on le lit comme un fichier. Lecteur injectable pour les tests ; sans jeton, l'outil tourne sans (mode dégradé).
@@ -42,10 +42,8 @@ export async function fetchAnalyticalLedger(year: number, cfg: PennylaneConfig, 
 }
 
 // Lecture d'un classeur (Pennylane ou fichier déposé) : première feuille, première ligne = en-têtes.
-export function entriesFromWorkbook(buf: Uint8Array): RawEntry[] {
-  const wb = XLSX.read(buf, { type: "array", cellDates: false });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: "" });
+export async function entriesFromWorkbook(buf: Uint8Array): Promise<RawEntry[]> {
+  const rows = await readSpreadsheet(buf, "export.xlsx");
   const r = rowsToEntries(rows);
   if (r.missing.length) throw new PennylaneError(`Colonnes introuvables : ${r.missing.join(", ")}`);
   return r.entries;

@@ -9,8 +9,9 @@ import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
 import { isLocked } from "@/lib/lock";
 import { V, cap, le, de, ce, seul } from "@/lib/vocab";
+import { reportInternalError } from "@/lib/errors";
 
-export type SaveResult = { ok: true } | { ok: false; error: string };
+export type SaveResult = { ok: true } | { ok: false; code?: string; error: string };
 
 async function editionContext(editionId: string, personId: string) {
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
@@ -157,6 +158,6 @@ export async function saveField(model: Model, id: string, field: string, raw: un
     revalidatePath(revalidate ?? "/", revalidate ? undefined : "layout");
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Erreur inconnue" };
+    return { ok: false, ...reportInternalError("saveField", e) };
   }
 }

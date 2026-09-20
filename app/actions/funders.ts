@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canEditFunding } from "@/lib/rights";
 import { V, cap, le, seul } from "@/lib/vocab";
+import { contactDeletionError } from "./contacts";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -47,6 +48,9 @@ export async function deleteFunderContact(id: string): Promise<Result> {
   if (denied) return { ok: false, error: denied };
   const c = await prisma.contact.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Contact introuvable." };
+  const me = await getCurrentPerson();
+  const deletionDenied = await contactDeletionError(id, me as typeof me & { id: string });
+  if (deletionDenied) return { ok: false, error: deletionDenied };
   await prisma.contact.delete({ where: { id } });
   // Un seul contact principal : s'il disparaît, le premier restant prend le relais.
   if (c.primary) {

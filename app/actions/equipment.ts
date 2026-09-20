@@ -86,7 +86,7 @@ export async function uploadEquipmentFile(form: FormData): Promise<Result> {
   const loanId = String(form.get("loanId") ?? "") || null;
   if (!equipmentId && !loanId) return { ok: false, error: "Rattachement manquant." };
   if (equipmentId && !canManageEquipment(me)) return { ok: false, error: DENIED };
-  if (loanId) { const l = await prisma.loan.findUnique({ where: { id: loanId } }); if (!l) return { ok: false, error: "Prêt introuvable." }; if (l.createdById !== me.id && l.personId !== me.id && !canManageEquipment(me)) return { ok: false, error: "Ce prêt a été enregistré par quelqu'un d'autre." }; }
+  if (loanId) { const l = await prisma.loan.findUnique({ where: { id: loanId } }); if (!l) return { ok: false, error: "Prêt introuvable." }; if (equipmentId && l.equipmentId !== equipmentId) return { ok: false, error: "Le prêt ne correspond pas à ce matériel." }; if (l.createdById !== me.id && l.personId !== me.id && !canManageEquipment(me)) return { ok: false, error: "Ce prêt a été enregistré par quelqu'un d'autre." }; }
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Aucun fichier." };
   if (file.size > MAX_ATTACHMENT_BYTES) return { ok: false, error: "Pièce trop lourde (5 Mo au plus)." };

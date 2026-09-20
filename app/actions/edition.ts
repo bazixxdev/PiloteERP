@@ -87,13 +87,14 @@ export async function setTeam(editionId: string, personIds: string[]): Promise<R
   return { ok: true };
 }
 
-// Demande de validation (EF-F1). Le niveau requis est calculé puis modifiable à la main (EF-F2).
+// Demande de validation (EF-F1). Le niveau requis est une décision serveur : le client
+// peut afficher une suggestion, mais ne peut pas diminuer le circuit calculé.
 export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number; supplier?: string | null; supplierEmail?: string | null; supplierId?: string | null; saveSupplier?: boolean }): Promise<Result<{ id: string; requiredLevel: number }>> {
   const c = await ctx(input.editionId);
   const settings = await getSettings();
   const remaining = budgetOf(c.e).available;
   const computed = requiredLevelFor(input.amount, settings, remaining);
-  const level = input.requiredLevel ?? computed;
+  const level = computed;
   // Base fournisseurs (15/09) : fournisseur choisi dans la base, ou nouveau nom ajouté si demandé ; le nom et l'adresse restent copiés sur la demande.
   let supplierId = input.supplierId || null;
   const supplierName = input.supplier?.trim() || null;
@@ -124,8 +125,20 @@ export async function computeRequiredLevel(editionId: string, amount: number | n
   return (await explainRequiredLevel(editionId, amount)).level;
 }
 
+async function assertEditionReadable(editionId: string) {
+  const me = await getCurrentPerson();
+  const edition = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
+  if (!edition) throw new Error(`${cap(V.edition)} introuvable`);
+  const isPilot = edition.project.pilotId === me.id;
+  const isTeam = edition.team.some((member) => member.personId === me.id);
+  const samePole = inMyPole(me, edition.project);
+  if (!isPilot && !isTeam && !samePole && !isCodir(me)) throw new Error("Accès refusé.");
+  return edition.id;
+}
+
 // Niveau requis et sa raison, en clair, pour que le demandeur sache à qui part sa demande et pourquoi.
 export async function explainRequiredLevel(editionId: string, amount: number | null): Promise<{ level: number; reason: string }> {
+  await assertEditionReadable(editionId);
   const settings = await getSettings();
   const raw = await prisma.edition.findUnique({ where: { id: editionId }, include: { expenses: true } });
   const e = raw ? (await attachLedgerSpent([raw], settings))[0] : null;
@@ -148,6 +161,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   const v = await prisma.validationRequest.findUnique({ where: { id }, include: { edition: { include: { project: { include: { secondaryPoles: true } } } } } });
   if (!v) return { ok: false, error: "Demande introuvable" };
   if (v.status !== "pending") return { ok: false, error: "Cette demande est déjà traitée." };
+  if (!Number.isInteger(v.requiredLevel) || v.requiredLevel < 1 || v.requiredLevel > 3) return { ok: false, error: "Niveau de validation invalide." };
   if (!canDecideValidation(me, v)) return { ok: false, error: `Cette demande requiert le niveau ${v.requiredLevel} sur ce projet : vous ne pouvez pas la décider.` };
   // Une seule décision, même en cas de double clic : la mise à jour ne passe que si la demande est encore en attente.
   const changed = await prisma.validationRequest.updateMany({ where: { id, status: "pending" }, data: { status: decision, deciderId: me.id, decidedAt: new Date(), decisionComment: comment.trim() || null } });
@@ -293,9 +307,11 @@ export async function createConvention(input: { funderId: string; reference: str
 export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
   const me = await getCurrentPerson();
   if (!canEditFunding(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) modifie les affectations.` };
-  const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true } });
+  const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true, payments: true } });
   if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
-  const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0;
+  // Un paiement est un usage métier, même attendu : ne jamais supprimer la
+  // ligne parente et laisser la FK Cascade effacer son historique financier.
+  const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0 && line.payments.length === 0;
   if (empty) await prisma.fundingLine.delete({ where: { id: lineId } });
   else await prisma.fundingLine.update({ where: { id: lineId }, data: { conventionId: null } });
   revalidatePath("/", "layout");

@@ -130,6 +130,7 @@ export function canDecideValidation(
   me: Actor & { id: string; poleId: string | null },
   v: { requiredLevel: number; requesterId: string; edition: { project: { pilotId: string; poleId: string; secondaryPoles?: { poleId: string }[] } } },
 ): boolean {
+  if (!Number.isInteger(v.requiredLevel) || v.requiredLevel < 1 || v.requiredLevel > 3) return false;
   if (v.requesterId === me.id) return false;
   const level = validationLevelOf(me);
   if (level < v.requiredLevel) return false;

@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
@@ -10,8 +10,10 @@ import { canEditFunding, canWriteLayer } from "@/lib/rights";
 import { ALLOWED_MIME, MAX_ATTACHMENT_BYTES, UPLOAD_DIR } from "@/lib/attachments";
 import { inMyPole } from "@/lib/scope";
 import { V, cap, ce } from "@/lib/vocab";
+import { attachmentParentsAreConsistent } from "@/lib/attachment-coherence";
+import { reportInternalError } from "@/lib/errors";
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = { ok: true } | { ok: false; code?: string; error: string };
 
 // Dépôt d'une pièce jointe (formulaire multipart). Rattachement : édition + ligne / livrable / validation selon le contexte.
 export async function uploadAttachment(form: FormData): Promise<Result> {
@@ -30,6 +32,25 @@ export async function uploadAttachment(form: FormData): Promise<Result> {
     const isTeam = e.team.some((t) => t.personId === me.id);
     const validationId = String(form.get("validationId") ?? "") || null;
     const requester = validationId ? await prisma.validationRequest.findUnique({ where: { id: validationId } }) : null;
+    const validationEditionId = requester?.editionId ?? null;
+    if (validationId && (!requester || !attachmentParentsAreConsistent({ editionId, validationEditionId }))) return { ok: false, error: "La validation ne correspond pas à cette édition." };
+    const fundingLineId = String(form.get("fundingLineId") ?? "") || null;
+    if (fundingLineId) {
+      const line = await prisma.fundingLine.findUnique({ where: { id: fundingLineId } });
+      if (!line || !attachmentParentsAreConsistent({ editionId, fundingLineEditionId: line.editionId })) return { ok: false, error: "La ligne de financement ne correspond pas à cette édition." };
+    }
+    const deliverableId = String(form.get("deliverableId") ?? "") || null;
+    if (deliverableId) {
+      const deliverable = await prisma.deliverable.findUnique({ where: { id: deliverableId }, include: { fundingLine: true } });
+      if (!deliverable || !attachmentParentsAreConsistent({ editionId, deliverableEditionId: deliverable.fundingLine.editionId })) return { ok: false, error: "Le livrable ne correspond pas à cette édition." };
+    }
+    const conventionId = String(form.get("conventionId") ?? "") || null;
+    if (conventionId) {
+      const convention = await prisma.convention.findUnique({ where: { id: conventionId } });
+      if (!convention) return { ok: false, error: "La convention est introuvable." };
+      const linked = await prisma.fundingLine.findFirst({ where: { editionId, conventionId } });
+      if (!attachmentParentsAreConsistent({ editionId, conventionLinked: Boolean(linked) })) return { ok: false, error: "La convention ne correspond pas à cette édition." };
+    }
     const allowed = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project)) || canEditFunding(me) || requester?.requesterId === me.id;
     if (!allowed) return { ok: false, error: `Vous ne pouvez pas déposer de pièce sur ${ce(V.edition)}.` };
 
@@ -37,25 +58,30 @@ export async function uploadAttachment(form: FormData): Promise<Result> {
     const storedName = `${randomBytes(12).toString("hex")}${ext}`;
     await mkdir(UPLOAD_DIR, { recursive: true });
     await writeFile(path.join(UPLOAD_DIR, storedName), Buffer.from(await file.arrayBuffer()));
-
-    await prisma.attachment.create({
-      data: {
-        editionId,
-        fundingLineId: String(form.get("fundingLineId") ?? "") || null,
-        deliverableId: String(form.get("deliverableId") ?? "") || null,
-        validationId,
-        kind: String(form.get("kind") ?? "other"),
-        label: String(form.get("label") ?? "").trim() || file.name,
-        fileName: file.name,
-        storedName,
-        mimeType: mime,
-        size: file.size,
-        uploadedById: me.id,
-      },
-    });
+    try {
+      await prisma.attachment.create({
+        data: {
+          editionId,
+          fundingLineId,
+          deliverableId,
+          validationId,
+          conventionId,
+          kind: String(form.get("kind") ?? "other"),
+          label: String(form.get("label") ?? "").trim() || file.name,
+          fileName: file.name,
+          storedName,
+          mimeType: mime,
+          size: file.size,
+          uploadedById: me.id,
+        },
+      });
+    } catch (error) {
+      await unlink(path.join(UPLOAD_DIR, storedName)).catch(() => undefined);
+      throw error;
+    }
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+    return { ok: false, ...reportInternalError("uploadAttachment", err) };
   }
 }

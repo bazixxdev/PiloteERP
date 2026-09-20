@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { exportAllowed } from "@/lib/export-auth";
+import { permissionExportAllowed } from "@/lib/export-auth";
 import { budgetOf } from "@/lib/budget";
+import { csvRow } from "@/lib/csv";
 
 // Export CSV par table, ou JSON complet (ENF-5).
 function csv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return "";
   const headers = Object.keys(rows[0]);
-  const esc = (v: unknown) => { const s = v instanceof Date ? v.toISOString() : v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  return [headers.join(";"), ...rows.map((r) => headers.map((h) => esc(r[h])).join(";"))].join("\n");
+  return [csvRow(headers), ...rows.map((r) => csvRow(headers.map((h) => r[h])))].join("\n");
 }
 
 export async function GET(req: Request) {
-  if (!(await exportAllowed(req))) return new NextResponse("Jeton d'API requis", { status: 401 });
+  if (!(await permissionExportAllowed(req, "admin.manage"))) return new NextResponse("Export non autorisé", { status: 403 });
   const url = new URL(req.url);
   const table = url.searchParams.get("table") ?? "tout";
   const format = url.searchParams.get("format") ?? "csv";

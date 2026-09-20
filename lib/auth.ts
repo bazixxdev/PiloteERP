@@ -13,10 +13,28 @@ import { BASE_PATH } from "./base-path";
 // PILOTE_DEMO=1 (mode démo : « Changer d'utilisateur » reste disponible aux personnes connectées), AUTH_RATE_LIMIT=0 (tests).
 
 const isProd = process.env.NODE_ENV === "production";
-// Un serveur de production servi en http://localhost : ce sont les recettes (next build + next start), pas le déploiement.
-const localHttp = (process.env.BETTER_AUTH_URL ?? "").startsWith("http://");
-// `next build` charge les modules sans servir personne : un secret de circonstance suffit, le vrai est exigé au démarrage.
 const building = process.env.NEXT_PHASE === "phase-production-build";
+const environmentProfile = process.env.PILOTE_ENV_PROFILE ?? "";
+// Le mode démonstration est réservé au développement et aux profils de recette.
+// Une production explicitement configurée en mode démo doit refuser de démarrer.
+if (isProd && !building && process.env.PILOTE_DEMO === "1") throw new Error("PILOTE_DEMO=1 est interdit en production.");
+const configuredAuthUrl = process.env.BETTER_AUTH_URL ?? `http://localhost:${process.env.PORT ?? 3001}${BASE_PATH}/api/auth`;
+let authUrl: URL;
+try {
+  authUrl = new URL(configuredAuthUrl);
+} catch {
+  throw new Error("BETTER_AUTH_URL doit être une URL absolue valide.");
+}
+const isExplicitLocalProfile = ["local", "test", "security-test"].includes(environmentProfile);
+const isLoopbackHost = authUrl.hostname === "localhost" || authUrl.hostname === "127.0.0.1" || authUrl.hostname === "[::1]";
+const localHttp = isExplicitLocalProfile && isLoopbackHost && authUrl.protocol === "http:";
+if (isProd && !building && !isExplicitLocalProfile && authUrl.protocol !== "https:") {
+  throw new Error("BETTER_AUTH_URL doit utiliser HTTPS en production.");
+}
+if (isProd && !building && !isExplicitLocalProfile && process.env.AUTH_RATE_LIMIT === "0") {
+  throw new Error("AUTH_RATE_LIMIT=0 est interdit en production.");
+}
+// `next build` charge les modules sans servir personne : un secret de circonstance suffit, le vrai est exigé au démarrage.
 const secret = process.env.BETTER_AUTH_SECRET ?? (isProd && !building ? undefined : "pilote-dev-secret-ne-pas-utiliser-en-production");
 if (!secret) throw new Error("BETTER_AUTH_SECRET manquant : générez-le (openssl rand -hex 32) dans le .env du serveur.");
 
@@ -26,7 +44,7 @@ export const SESSION_DAYS = 7;
 export const auth = betterAuth({
   appName: "Pilote",
   secret,
-  baseURL: process.env.BETTER_AUTH_URL ?? `http://localhost:${process.env.PORT ?? 3001}${BASE_PATH}/api/auth`,
+  baseURL: configuredAuthUrl,
   basePath: `${BASE_PATH}/api/auth`,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
@@ -41,6 +59,8 @@ export const auth = betterAuth({
         link: url,
       } });
     },
+    // Un reset réussi invalide immédiatement toutes les sessions émises avant le changement.
+    revokeSessionsOnPasswordReset: true,
     resetPasswordTokenExpiresIn: 60 * 60,
   },
 

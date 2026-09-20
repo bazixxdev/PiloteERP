@@ -6,9 +6,11 @@ import { getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
 import { ficheParagraphs, loadFiche } from "@/lib/fiche-docx";
 import { V, cap, pl } from "@/lib/vocab";
+import { sessionExportAllowed } from "@/lib/export-auth";
 
 // Export du bilan (EF-I3) : .md ou .docx basique.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await sessionExportAllowed(req))) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
   const { id } = await params;
   const format = new URL(req.url).searchParams.get("format") ?? "md";
   const e = await prisma.edition.findUnique({ where: { id }, include: { project: { include: { pilot: true, pole: true, guarantor: true } }, sponsor: true, team: { include: { person: true } }, indicators: { orderBy: { order: "asc" } }, fundingLines: { include: { funder: true, convention: true } }, actions: { orderBy: { order: "asc" } }, remarks: { where: { resolvedAt: null }, include: { author: true } }, achievements: { orderBy: { date: "asc" }, include: { action: true } } } });

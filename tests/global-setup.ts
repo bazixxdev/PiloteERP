@@ -10,6 +10,9 @@ export default async function globalSetup(config: FullConfig) {
   mkdirSync("uploads-test", { recursive: true });
   mkdirSync("tests/.auth", { recursive: true });
   const env = { ...process.env, UPLOAD_DIR: "./uploads-test" };
+  // Le setup doit être autonome, y compris lorsque BASE_URL pointe vers un
+  // serveur déjà démarré qui n'a pas exécuté les migrations de cette base.
+  execSync("npx prisma migrate reset --force --skip-seed", { stdio: "inherit", env });
   execSync("npx prisma db seed", { stdio: "inherit", env });
 
   const baseURL = config.projects[0].use.baseURL ?? "http://localhost:3100";
@@ -18,7 +21,7 @@ export default async function globalSetup(config: FullConfig) {
   // Instance TLST (lot I) : sa base, son seed, sa session (la coordinatrice du seed TLST).
   if (config.projects.some((p) => p.name === "tlst")) {
     mkdirSync("uploads-test-tlst", { recursive: true });
-    execSync("npx prisma migrate deploy && npx prisma db seed", { stdio: "inherit", env: { ...env, DATABASE_URL: TLST_DATABASE_URL, NEXT_PUBLIC_CLIENT: "tlst", UPLOAD_DIR: "./uploads-test-tlst" } });
+    execSync("npx prisma migrate reset --force --skip-seed && npx prisma db seed", { stdio: "inherit", env: { ...env, DATABASE_URL: TLST_DATABASE_URL, NEXT_PUBLIC_CLIENT: "tlst", UPLOAD_DIR: "./uploads-test-tlst" } });
     await signIn(`http://localhost:${TLST_PORT}`, "anne.lefort@exemple.fr", "tests/.auth/state-tlst.json");
   }
 }

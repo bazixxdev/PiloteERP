@@ -6,15 +6,22 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
+import Link from "@tiptap/extension-link";
 import { Bold, Italic, Heading2, List, ListOrdered, ListChecks, Quote, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Éditeur riche (retour de Gaël, 14/09 : « tu peux pas proposer du wysiwyg ? »). Tiptap : titres, gras, italique,
 // listes, cases à cocher pour les « à faire », citation. Le contenu est du HTML, enregistré en quittant l'éditeur.
 export function RichEditor({ value, onChange, onBlur, readOnly, placeholder, className, testId }: { value: string; onChange?: (html: string) => void; onBlur?: (html: string) => void; readOnly?: boolean; placeholder?: string; className?: string; testId?: string }) {
+  const safeValue = value.replace(/<a\b([^>]*?)>/gi, (_match, attrs: string) => {
+    const href = attrs.match(/href\s*=\s*["']([^"']*)["']/i)?.[1] ?? "";
+    if (!/^(https?:|mailto:)/i.test(href)) return `<a${attrs}>`;
+    const withoutRel = attrs.replace(/\srel\s*=\s*["'][^"']*["']/gi, "").replace(/\starget\s*=\s*["'][^"']*["']/gi, "");
+    return `<a${withoutRel} target="_blank" rel="noopener noreferrer">`;
+  });
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: true, autolink: true } }), TaskList, TaskItem.configure({ nested: true }), Placeholder.configure({ placeholder: placeholder ?? "" })],
-    content: value,
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), Link.configure({ openOnClick: true, autolink: true, HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } }), TaskList, TaskItem.configure({ nested: true }), Placeholder.configure({ placeholder: placeholder ?? "" })],
+    content: safeValue,
     editable: !readOnly,
     immediatelyRender: false,
     editorProps: { attributes: { class: "prose-note min-h-[420px] px-5 pb-5 text-sm leading-relaxed outline-none", ...(testId ? { "data-testid": testId } : {}), "aria-label": "Contenu de la note" } },
@@ -25,8 +32,8 @@ export function RichEditor({ value, onChange, onBlur, readOnly, placeholder, cla
   // Contenu changé de l'extérieur (autre note affichée) : on remplace, sans toucher à ce que l'utilisateur est en train de taper.
   useEffect(() => {
     if (!editor || editor.isFocused) return;
-    if (value !== editor.getHTML()) editor.commands.setContent(value, { emitUpdate: false });
-  }, [editor, value]);
+    if (safeValue !== editor.getHTML()) editor.commands.setContent(safeValue, { emitUpdate: false });
+  }, [editor, safeValue]);
 
   return (
     <div className={cn("flex flex-1 flex-col", className)}>

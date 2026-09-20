@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import * as XLSX from "xlsx";
+import { readSpreadsheet } from "@/lib/spreadsheet";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
-import { canAdmin } from "@/lib/rights";
+import { canAdmin, type Actor } from "@/lib/rights";
 import { VISIBILITIES } from "@/lib/modules";
 import { NOTE_COLORS } from "@/lib/notes";
 import { CONTACT_COLUMNS, canReadList, fieldKey, parseFields, parseValues, serializeFields, serializeTags, type ListField, type ListFieldType } from "@/lib/contacts";
@@ -41,13 +41,22 @@ export async function setContactOrganisation(id: string, organisationId: string 
   return { ok: true };
 }
 
-// Supprimer un contact : seulement s'il n'est cité par aucun dossier (ligne, convention) ; les listes le lâchent.
+// Politique centrale : les références métier protègent l'historique, et un contact
+// importé/historique sans créateur n'est jamais supprimable par défaut.
+export async function contactDeletionError(id: string, me: Actor & { id: string }): Promise<string | null> {
+  const c = await prisma.contact.findUnique({ where: { id }, include: { _count: { select: { lines: true, conventions: true, memberships: true, loans: true } } } });
+  if (!c) return "Contact introuvable.";
+  if (c._count.lines || c._count.conventions || c._count.memberships || c._count.loans) return "Ce contact est cité par des données métier : détachez-le ou archivez-le plutôt que de le supprimer.";
+  if (!c.createdById && !canAdmin(me)) return "Ce contact historique ne peut être supprimé que par l'administration.";
+  if (c.createdById && c.createdById !== me.id && !canAdmin(me)) return "Ce contact a été créé par quelqu'un d'autre : l'administration peut le supprimer.";
+  return null;
+}
+
+// Supprimer un contact : seulement s'il n'est cité par aucune donnée métier.
 export async function deleteContact(id: string): Promise<Result> {
   const me = await getCurrentPerson();
-  const c = await prisma.contact.findUnique({ where: { id }, include: { _count: { select: { lines: true, conventions: true } } } });
-  if (!c) return { ok: false, error: "Contact introuvable." };
-  if (c._count.lines || c._count.conventions) return { ok: false, error: "Ce contact est cité par des financements : détachez-le (« parti·e ») plutôt que de le supprimer." };
-  if (c.createdById && c.createdById !== me.id && !canAdmin(me)) return { ok: false, error: "Ce contact a été créé par quelqu'un d'autre : l'administration peut le supprimer." };
+  const denied = await contactDeletionError(id, me as Actor & { id: string });
+  if (denied) return { ok: false, error: denied };
   await prisma.contact.delete({ where: { id } });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -160,13 +169,6 @@ export async function setItemValue(id: string, contactId: string, key: string, v
 export type ImportPreview = { headers: string[]; rows: string[][]; total: number; guesses: Record<string, string> };
 export type ImportMapping = Record<string, string>; // en-tête → clé de colonne commune, « field:<key> » (colonne propre), « role », ou « » (ignorer)
 
-function readSheet(buf: ArrayBuffer): string[][] {
-  const wb = XLSX.read(buf, { type: "array", raw: false });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", blankrows: false }) as unknown[][];
-  return rows.map((r) => r.map((v) => (v == null ? "" : String(v).trim())));
-}
-
 // L'en-tête est la première ligne qui contient au moins deux cellules connues (nom, mail…) : les titres et logos au-dessus sont sautés.
 function findHeader(rows: string[][]): number {
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
@@ -193,7 +195,7 @@ export async function previewImport(form: FormData): Promise<Result<ImportPrevie
   const { list, error } = await myList(listId); if (!list) return { ok: false, error: error! };
   const file = form.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Choisissez un fichier .csv ou .xlsx." };
-  const rows = readSheet(await file.arrayBuffer());
+  const rows = await readSpreadsheet(await file.arrayBuffer(), file.name);
   if (rows.length < 2) return { ok: false, error: "Le fichier est vide." };
   const h = findHeader(rows);
   const headers = rows[h].map((x, i) => x || `Colonne ${i + 1}`);
@@ -210,7 +212,7 @@ export async function runImport(form: FormData, mapping: ImportMapping): Promise
   const { me, list, error } = await myList(listId); if (!list) return { ok: false, error: error! };
   const file = form.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Fichier manquant." };
-  const rows = readSheet(await file.arrayBuffer());
+  const rows = await readSpreadsheet(await file.arrayBuffer(), file.name);
   const h = findHeader(rows);
   const headers = rows[h].map((x, i) => x || `Colonne ${i + 1}`);
   const fields = parseFields(list.fields);
@@ -355,8 +357,8 @@ export async function bulkDeleteContacts(contactIds: string[], alsoBrevo: boolea
   if (!canAdmin(me)) return { ok: false, error: "Supprimer définitivement des contacts est réservé à l'administration." };
   const wanted = ids(contactIds);
   if (!wanted.length) return { ok: false, error: "Aucun contact sélectionné." };
-  const rows = await prisma.contact.findMany({ where: { id: { in: wanted } }, select: { id: true, email: true, brevoContactId: true, _count: { select: { lines: true, conventions: true, memberships: true } } } });
-  const deletable = rows.filter((c) => !c._count.lines && !c._count.conventions && !c._count.memberships);
+  const rows = await prisma.contact.findMany({ where: { id: { in: wanted } }, select: { id: true, email: true, brevoContactId: true, _count: { select: { lines: true, conventions: true, memberships: true, loans: true } } } });
+  const deletable = rows.filter((c) => !c._count.lines && !c._count.conventions && !c._count.memberships && !c._count.loans);
   let brevoDeleted = 0;
   if (alsoBrevo) {
     const { brevoConfig, deleteContact: deleteInBrevo } = await import("@/lib/brevo");

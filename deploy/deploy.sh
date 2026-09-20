@@ -25,6 +25,7 @@ if [ -z "$INSTANCE" ] || [ ! -f "$HERE/instances/$INSTANCE.env" ]; then
 fi
 # shellcheck disable=SC1090
 source "$HERE/instances/$INSTANCE.env"
+RUNTIME_USER="pilote-$INSTANCE"
 SEED="${2:-none}" # « none » plutôt que vide : ssh perd un argument vide
 HEALTH="http://127.0.0.1:$PORT$BASE_PATH/connexion" # page publique (le reste renvoie à la connexion, lot F)
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -39,10 +40,11 @@ rsync -az --delete \
   "$LOCAL/" "$HOST:$DIR.next/"
 
 # 2. Côté serveur : build dans la nouvelle copie, puis bascule.
-ssh "$HOST" bash -s -- "$DIR" "$DATA" "$MEDIAS" "$HEALTH" "$STAMP" "$SEED" "$DBNAME" "$DBUSER" "$CLIENT" "$BASE_PATH" "$PUBLIC_URL" "$SERVICE" "$MAINTENANCE_FLAG" "$BACKUP_DIR" "$PORT" "${LEGACY_SERVICE:-none}" <<'REMOTE'
+ssh "$HOST" bash -s -- "$DIR" "$DATA" "$MEDIAS" "$HEALTH" "$STAMP" "$SEED" "$DBNAME" "$DBUSER" "$CLIENT" "$BASE_PATH" "$PUBLIC_URL" "$SERVICE" "$MAINTENANCE_FLAG" "$BACKUP_DIR" "$PORT" "${LEGACY_SERVICE:-none}" "$RUNTIME_USER" <<'REMOTE'
 set -euo pipefail
 DIR="$1"; DATA="$2"; MEDIAS="$3"; HEALTH="$4"; STAMP="$5"; SEED="$6"; DBNAME="$7"; DBUSER="$8"
-CLIENT="$9"; BASE_PATH="${10}"; PUBLIC_URL="${11}"; SERVICE="${12}"; MAINTENANCE_FLAG="${13}"; BACKUP_DIR="${14}"; PORT="${15}"; LEGACY_SERVICE="${16}"
+CLIENT="$9"; BASE_PATH="${10}"; PUBLIC_URL="${11}"; SERVICE="${12}"; MAINTENANCE_FLAG="${13}"; BACKUP_DIR="${14}"; PORT="${15}"; LEGACY_SERVICE="${16}"; RUNTIME_USER="${17}"
+id "$RUNTIME_USER" >/dev/null 2>&1 || { echo "✖ utilisateur système absent : $RUNTIME_USER (création préalable requise)" >&2; exit 1; }
 NEW="$DIR.next"; OLD="$DIR.prev"
 mkdir -p "$DATA" "$MEDIAS" "$BACKUP_DIR" /var/www/maintenance
 # Rôle et base Postgres : créés une fois (mot de passe généré, gardé dans le .env). Idempotent.
@@ -74,18 +76,40 @@ grep -q '^BETTER_AUTH_URL=' "$DIR/.env" || echo "BETTER_AUTH_URL=\"$PUBLIC_URL/a
 # Lot I : le client et le port de l'instance dans le .env (le build embarque l'habillage ; l'unité systemd lit PORT).
 grep -q '^NEXT_PUBLIC_CLIENT=' "$DIR/.env" || echo "NEXT_PUBLIC_CLIENT=\"$CLIENT\"" >> "$DIR/.env"
 grep -q '^PORT=' "$DIR/.env" || echo "PORT=$PORT" >> "$DIR/.env"
-grep -q '^PILOTE_DEMO=' "$DIR/.env" || echo 'PILOTE_DEMO=1' >> "$DIR/.env"
+# Une instance déployée est toujours production : le mode démonstration doit
+# être explicitement refusé, jamais activé par défaut.
+if grep -q '^PILOTE_DEMO=1' "$DIR/.env"; then
+  echo "✖ PILOTE_DEMO=1 est interdit pour une instance de production ($INSTANCE)" >&2
+  exit 1
+fi
+grep -q '^PILOTE_DEMO=' "$DIR/.env" || echo 'PILOTE_DEMO=0' >> "$DIR/.env"
 cp "$DIR/.env" "$NEW/.env"
 cd "$NEW"
 echo "→ dépendances"; npm ci --no-audit --no-fund >/dev/null
-echo "→ sauvegarde de la base"; su postgres -c "pg_dump -Fc $DBNAME" > "$BACKUP_DIR/$DBNAME-$STAMP.dump" 2>/dev/null || true
+echo "→ build"; npm run build >/dev/null
+echo "→ sauvegarde de la base";
+DUMP="$BACKUP_DIR/$DBNAME-$STAMP.dump"
+TMP_DUMP="$DUMP.tmp"
+rm -f "$TMP_DUMP"
+su postgres -c "pg_dump -Fc $DBNAME" > "$TMP_DUMP"
+[ -s "$TMP_DUMP" ] || { echo "✖ sauvegarde PostgreSQL absente ou vide" >&2; exit 1; }
+su postgres -c "pg_restore --list '$TMP_DUMP'" >/dev/null
+chmod 600 "$TMP_DUMP"
+mv "$TMP_DUMP" "$DUMP"
+MEDIA_BACKUP="$BACKUP_DIR/$INSTANCE-medias-$STAMP.tar.gz"
+tar -czf "$MEDIA_BACKUP" -C "$(dirname "$MEDIAS")" "$(basename "$MEDIAS")"
+[ -s "$MEDIA_BACKUP" ] || { echo "✖ sauvegarde médias absente ou vide" >&2; exit 1; }
+chmod 600 "$MEDIA_BACKUP"
 echo "→ migrations"; npx prisma migrate deploy
 # Base vide (première mise en ligne) ou --seed : données de démo AVANT le démarrage, sinon l'app répond 500.
 PERSONNES=$(su postgres -c "psql -Atc 'select count(*) from \"Person\"' $DBNAME" 2>/dev/null || echo 0)
 if [ "$SEED" = "--seed" ] || [ "$PERSONNES" = "0" ]; then
+  if [ "$PERSONNES" = "0" ] && [ "$SEED" != "--seed" ]; then
+    echo "✖ base vide : un seed explicite (--seed) est requis ; aucun seed de démonstration implicite en production" >&2
+    exit 1
+  fi
   echo "→ seed"; rm -f "$MEDIAS"/*.pdf; env UPLOAD_DIR="$MEDIAS" npx prisma db seed >/dev/null
 fi
-echo "→ build"; npm run build >/dev/null
 # Unité systemd paramétrée (lot I) : installée depuis le dépôt si elle manque ; l'ancienne unité de l'instance est arrêtée.
 if ! systemctl cat "$SERVICE" >/dev/null 2>&1; then
   cp "$NEW/deploy/systemd/pilote@.service" /etc/systemd/system/pilote@.service
@@ -97,7 +121,11 @@ touch "$MAINTENANCE_FLAG"
 [ "$LEGACY_SERVICE" != "none" ] && systemctl stop "$LEGACY_SERVICE" 2>/dev/null || true
 systemctl stop "$SERVICE" 2>/dev/null || true
 rm -rf "$OLD"; [ -d "$DIR" ] && mv "$DIR" "$OLD"; mv "$NEW" "$DIR"
-chown -R www-data:www-data "$DIR" "$DATA" "$MEDIAS"
+chown -R "$RUNTIME_USER:$RUNTIME_USER" "$DIR" "$DATA" "$MEDIAS"
+find "$DIR" -type d -exec chmod 755 {} +
+find "$DIR" -type f -exec chmod 644 {} +
+chmod 600 "$DIR/.env"
+chmod 750 "$DATA" "$MEDIAS"
 systemctl start "$SERVICE"
 for i in $(seq 1 30); do
   if curl -fsS -o /dev/null "$HEALTH"; then

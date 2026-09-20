@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "pilote.session_token",
+      "value": "Ng0c2Qy1peHlPqYcltUkyDiyTNc1GOJW.JW5zOobxa6dq889DxJgXSstEe4nh%2FoM4uA3TDsj6Ldo%3D",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

@@ -6,9 +6,16 @@ import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce } from "@/lib/fields";
 import { canActAsPilot, has, isCodir } from "@/lib/rights";
 import { V, cap, le, du, ce } from "@/lib/vocab";
+import { canAcceptProposedField } from "@/lib/proposal-permissions";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
+/**
+ * A proposal must not bypass the field permission of the mutation it represents.
+ * This targeted guard currently covers the financial layer; the other proposal
+ * layers retain their existing pilot/director workflow pending the broader
+ * proposal policy review (BLK-14).
+ */
 // Proposer une modification d'une fiche verrouillée : qui, quoi, pourquoi. Le pilote, le garant et la direction sont prévenus.
 export async function proposeChange(editionId: string, field: string, proposed: string, reason: string): Promise<Result<{ id: string }>> {
   const me = await getCurrentPerson();
@@ -41,7 +48,14 @@ export async function decideChange(id: string, decision: "accepted" | "refused",
   if (!canDecide) return { ok: false, error: `${cap(le(V.pilote))} ${du(V.edition)} ou ${le(V.direction)} décide d'une proposition.` };
   if (p.authorId === me.id && !has(me, "edition.edit_all")) return { ok: false, error: `On n'accepte pas sa propre proposition : ${le(V.pilote)} ou ${le(V.direction)} tranche.` };
   const def = FIELDS.edition[p.field];
-  await prisma.$transaction(async (tx) => {
+  if (!def) return { ok: false, error: "Cette rubrique n'est plus disponible." };
+  if (decision === "accepted" && !canAcceptProposedField(me, p.field)) {
+    return { ok: false, error: "Vous n'avez pas le droit de modifier cette rubrique financière." };
+  }
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.changeProposal.updateMany({ where: { id, status: "pending" }, data: { status: decision, decidedById: me.id, decidedAt: new Date(), comment: comment.trim() || null } });
+      if (claimed.count !== 1) throw new Error("PROPOSAL_ALREADY_DECIDED");
     if (decision === "accepted") {
       const before = await tx.edition.findUnique({ where: { id: p.editionId } });
       const prev = before ? (before as Record<string, unknown>)[p.field] : null;
@@ -49,8 +63,11 @@ export async function decideChange(id: string, decision: "accepted" | "refused",
       await tx.edition.update({ where: { id: p.editionId }, data: { [p.field]: value } });
       await tx.changeLog.create({ data: { editionId: p.editionId, field: p.field, before: prev == null ? null : String(prev instanceof Date ? prev.toISOString() : prev).slice(0, 500), after: `${value == null ? "" : String(value instanceof Date ? value.toISOString() : value)}`.slice(0, 500), authorId: me.id } });
     }
-    await tx.changeProposal.update({ where: { id }, data: { status: decision, decidedById: me.id, decidedAt: new Date(), comment: comment.trim() || null } });
-  });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "PROPOSAL_ALREADY_DECIDED") return { ok: false, error: "Cette proposition a déjà été décidée." };
+    throw error;
+  }
   if (p.authorId !== me.id) {
     await prisma.notification.create({ data: { personId: p.authorId, senderId: me.id, kind: "info", title: `Proposition ${decision === "accepted" ? "acceptée" : "refusée"} · ${p.edition.project.name} · ${p.edition.year}`, body: `${def?.label ?? p.field}${comment.trim() ? ` — ${comment.trim().slice(0, 120)}` : ""}`, link: `/edition/${p.editionId}?onglet=fiche` } });
   }

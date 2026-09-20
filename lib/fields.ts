@@ -76,7 +76,10 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   refValue: { label: { type: "text" }, color: { type: "select" } },
   funder: { name: { type: "text" }, notes: { type: "textarea" } }, // alias historique d'organisation (écran Financeurs)
   organisation: { name: { type: "text" }, notes: { type: "textarea" }, siret: { type: "text" }, website: { type: "text" }, address: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, active: { type: "bool" } },
-  equipment: { name: { type: "text" }, category: { type: "text" }, reference: { type: "text" }, location: { type: "text" }, quantity: { type: "number" }, state: { type: "select" }, purchasedAt: { type: "date" }, value: { type: "number" }, notes: { type: "textarea" } },
+  // `state` est une transition métier : elle passe par retireEquipment, qui
+  // vérifie notamment l'absence de prêt actif. Elle ne doit pas être éditable
+  // via la voie générique saveField.
+  equipment: { name: { type: "text" }, category: { type: "text" }, reference: { type: "text" }, location: { type: "text" }, quantity: { type: "number" }, purchasedAt: { type: "date" }, value: { type: "number" }, notes: { type: "textarea" } },
   loan: { dueAt: { type: "date" }, notes: { type: "textarea" }, returnNote: { type: "textarea" }, depositAmount: { type: "number" }, depositRef: { type: "text" }, depositReturnedAt: { type: "date" } },
   membership: { college: { type: "text" }, amount: { type: "number" }, status: { type: "select" }, paidAt: { type: "date" }, method: { type: "select" }, notes: { type: "textarea" } },
   contact: { firstName: { type: "text" }, lastName: { type: "text" }, role: { type: "text" }, email: { type: "text" }, phone: { type: "text" }, notes: { type: "textarea" }, organisationName: { type: "text" }, address: { type: "text" }, postcode: { type: "text" }, city: { type: "text" }, tags: { type: "text" } },

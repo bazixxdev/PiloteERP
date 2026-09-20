@@ -34,7 +34,7 @@ export async function importLedgerFile(form: FormData): Promise<Result<{ lines: 
   let entries: RawEntry[]; let skipped = 0;
   try {
     if (/\.(xlsx|xls)$/i.test(file.name)) {
-      entries = entriesFromWorkbook(new Uint8Array(await file.arrayBuffer()));
+      entries = await entriesFromWorkbook(new Uint8Array(await file.arrayBuffer()));
     } else {
       const text = await file.text();
       const sep = text.split("\n")[0]?.includes(";") ? ";" : ",";

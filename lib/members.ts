@@ -58,9 +58,9 @@ export function summarize(rows: { status: string; amount: number }[]) {
 }
 
 // Export CSV (point-virgule, BOM) d'une année.
+import { csvRow } from "./csv";
 export function membershipsToCsv(rows: MembershipRow[]): string {
-  const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const head = ["Adhérent", "Type", "Année", "Collège", "Cotisation", "Statut", "Réglée le", "Moyen", "Référent", "E-mail", "Téléphone", "Ville", "Notes"];
-  const lines = rows.map((m) => [memberName(m), m.organisation ? "Structure" : "Personne", m.year, m.college, m.amount.toFixed(2).replace(".", ","), statusOf(m.status).label, m.paidAt ? m.paidAt.toLocaleDateString("fr-FR") : "", methodLabel(m.method), m.organisation && m.contact ? contactName(m.contact) : "", m.contact?.email, m.contact?.phone, m.organisation?.address, m.notes].map(esc).join(";"));
-  return "﻿" + [head.map(esc).join(";"), ...lines].join("\n");
+  const lines = rows.map((m) => csvRow([memberName(m), m.organisation ? "Structure" : "Personne", m.year, m.college, m.amount.toFixed(2).replace(".", ","), statusOf(m.status).label, m.paidAt ? m.paidAt.toLocaleDateString("fr-FR") : "", methodLabel(m.method), m.organisation && m.contact ? contactName(m.contact) : "", m.contact?.email, m.contact?.phone, m.organisation?.address, m.notes]));
+  return "﻿" + [csvRow(head), ...lines].join("\n");
 }

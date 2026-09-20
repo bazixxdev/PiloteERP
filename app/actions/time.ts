@@ -51,20 +51,25 @@ export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copi
   const me = await getCurrentPerson();
   const start = dayjs(weekStart).startOf("isoWeek");
   const prev = start.subtract(1, "week");
-  const month = monthKey(start.toDate());
-  const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId: me.id, month } } });
-  if (locked) return { ok: false, error: "Ce mois est verrouillé." };
+  // Une semaine peut toucher deux mois : chaque date candidate doit être
+  // contrôlée avant la moindre écriture (le lundi ne suffit pas).
+  const targetDates = Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
+  const months = [...new Set(targetDates.map((d) => monthKey(d.toDate())))];
+  const locks = await prisma.monthLock.findMany({ where: { personId: me.id, month: { in: months } }, select: { month: true } });
+  if (locks.length) return { ok: false, error: "Un mois de cette semaine est verrouillé." };
   const prevEntries = await prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: prev.toDate(), lt: start.toDate() } } });
   const current = await prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: start.toDate(), lt: start.add(1, "week").toDate() } } });
-  let copied = 0;
-  for (const p of prevEntries) {
+  const creates = prevEntries.flatMap((p) => {
     const date = dayjs(p.date).add(1, "week");
-    if (date.isAfter(dayjs(), "day")) continue;
+    if (date.isAfter(dayjs(), "day")) return [];
     const dup = current.find((c) => dayjs(c.date).isSame(date, "day") && c.projectId === p.projectId && c.actionId === p.actionId && c.timeCodeId === p.timeCodeId);
-    if (dup) continue;
-    await prisma.timeEntry.create({ data: { personId: me.id, date: date.toDate(), projectId: p.projectId, actionId: p.actionId, timeCodeId: p.timeCodeId, hours: p.hours } });
-    copied++;
-  }
+    return dup ? [] : [{ personId: me.id, date: date.toDate(), projectId: p.projectId, actionId: p.actionId, timeCodeId: p.timeCodeId, hours: p.hours }];
+  });
+  await prisma.$transaction(async (tx) => {
+    for (const data of creates) await tx.timeEntry.create({ data });
+    if (creates.length) await tx.weekDeclaration.deleteMany({ where: { personId: me.id, week: weekKey(start) } });
+  });
+  const copied = creates.length;
   revalidatePath("/temps");
   return { ok: true, data: { copied } };
 }

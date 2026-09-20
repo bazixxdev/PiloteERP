@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { csvRow } from "./csv";
 
 // Trésorerie (module « tresorerie », 18/09). Un plan mensuel sur douze mois glissants, calculé : ce que les dossiers savent
 // déjà (versements attendus des financeurs, factures reçues et engagements des éditions, cotisations à régler) plus les
@@ -128,14 +129,13 @@ export async function loadCashRules() {
 
 // Export CSV du plan (point-virgule, BOM).
 export function planToCsv(plan: Plan): string {
-  const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const num = (n: number) => n.toFixed(2).replace(".", ",");
-  const lines = [["Ligne", "Sens", ...plan.months.map((m) => monthLabel(m)), "Total"].map(esc).join(";")];
-  lines.push(["Solde de départ", "", num(plan.opening), ...plan.months.slice(1).map(() => ""), ""].join(";"));
-  for (const r of plan.rows) lines.push([r.category, r.direction === "in" ? "Encaissement" : "Décaissement", ...r.cells.map(num), num(r.total)].map(esc).join(";"));
-  lines.push(["Total encaissements", "", ...plan.inTotals.map(num), num(plan.totalIn)].join(";"));
-  lines.push(["Total décaissements", "", ...plan.outTotals.map(num), num(plan.totalOut)].join(";"));
-  lines.push(["Solde fin de mois", "", ...plan.balances.map(num), ""].join(";"));
+  const lines = [csvRow(["Ligne", "Sens", ...plan.months.map((m) => monthLabel(m)), "Total"])]
+  lines.push(csvRow(["Solde de départ", "", num(plan.opening), ...plan.months.slice(1).map(() => ""), ""]));
+  for (const r of plan.rows) lines.push(csvRow([r.category, r.direction === "in" ? "Encaissement" : "Décaissement", ...r.cells.map(num), num(r.total)]));
+  lines.push(csvRow(["Total encaissements", "", ...plan.inTotals.map(num), num(plan.totalIn)]));
+  lines.push(csvRow(["Total décaissements", "", ...plan.outTotals.map(num), num(plan.totalOut)]));
+  lines.push(csvRow(["Solde fin de mois", "", ...plan.balances.map(num), ""]));
   return "﻿" + lines.join("\n");
 }
 

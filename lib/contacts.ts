@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { canReadShared } from "./modules";
 import type { Viewer } from "./scope";
 import { kindFilter, ORGANISATION_KINDS, type OrganisationKind } from "./organisations";
+import { csvRow } from "./csv";
 
 // Contacts et listes (18/09). Un contact = une personne extérieure ; une liste = une sélection de contacts à son auteur,
 // avec ses propres colonnes. Les colonnes propres sont bornées à quatre types : ce qui couvre les Excel de l'équipe
@@ -140,11 +141,10 @@ export type ContactListFull = NonNullable<Awaited<ReturnType<typeof loadContactL
 
 // Export CSV (point-virgule, UTF-8 avec BOM : Excel l'ouvre tel quel) : colonnes communes puis colonnes propres.
 export function listToCsv(list: ContactListFull): string {
-  const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const head = ["Nom", "Prénom", "E-mail", "Téléphone", "Fonction", "Structure", "Adresse", "Code postal", "Ville", "Mots-clés", "Rôle dans la liste", ...list.fields.map((f) => f.label)];
   const rows = list.items.map((i) => {
     const c = i.contact;
-    return [c.lastName, c.firstName, c.email, c.phone, c.role, c.organisation?.name ?? c.organisationName, c.address, c.postcode, c.city, c.tags, i.role, ...list.fields.map((f) => { const v = i.values[f.key]; return f.type === "bool" ? (v ? "oui" : "") : v ?? ""; })].map(esc).join(";");
+    return csvRow([c.lastName, c.firstName, c.email, c.phone, c.role, c.organisation?.name ?? c.organisationName, c.address, c.postcode, c.city, c.tags, i.role, ...list.fields.map((f) => { const v = i.values[f.key]; return f.type === "bool" ? (v ? "oui" : "") : v ?? ""; })]);
   });
-  return "﻿" + [head.map(esc).join(";"), ...rows].join("\n");
+  return "﻿" + [csvRow(head), ...rows].join("\n");
 }

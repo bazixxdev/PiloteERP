@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { findOrCreateOrganisation } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
@@ -25,6 +26,16 @@ export async function setInstanceModule(key: string, on: boolean): Promise<Resul
   await prisma.settings.update({ where: { id: 1 }, data: { modules: [...set].join(",") } });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// Rotation explicite du jeton des exports externes. L'ancien est remplacé dans une
+// seule mise à jour ; le secret n'est renvoyé qu'à l'administrateur qui l'a demandé.
+export async function rotateApiToken(): Promise<Result<{ token: string }>> {
+  const d = await guard(); if (d) return { ok: false, error: d };
+  const token = randomBytes(32).toString("base64url");
+  await prisma.settings.update({ where: { id: 1 }, data: { apiToken: token } });
+  revalidatePath("/admin");
+  return { ok: true, data: { token } };
 }
 
 export async function createPerson(name: string): Promise<Result> {

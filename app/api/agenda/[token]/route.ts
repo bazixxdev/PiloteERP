@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   else if (settings?.teamIcsToken && token === settings.teamIcsToken) feed = await teamEvents(base);
   else {
     const p = await prisma.person.findUnique({ where: { icsToken: token } });
-    if (p) feed = await personEvents(p.id, base);
+    if (p?.active) feed = await personEvents(p.id, base);
   }
   if (!feed) return new NextResponse("Flux introuvable", { status: 404 });
   return new NextResponse(buildIcs(feed.name, feed.events), {

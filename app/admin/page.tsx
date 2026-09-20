@@ -24,6 +24,7 @@ import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
 import { brevoConfig } from "@/lib/brevo";
 import { BrevoPanel } from "./brevo-forms";
+import { ApiTokenPanel } from "./api-token-panel";
 import { helloAssoConfig } from "@/lib/helloasso";
 import { HelloAssoPanel } from "./helloasso-forms";
 import { SOURCE_LABEL } from "@/lib/ledger";
@@ -67,7 +68,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const accounts = current === "comptes" ? await (async () => {
     const [persons, outbox] = await Promise.all([
       prisma.person.findMany({ include: { pole: true, user: { include: { _count: { select: { sessions: true } } } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
-      prisma.mailOutbox.findMany({ where: { handedAt: null }, orderBy: { createdAt: "desc" } }),
+      rw ? prisma.mailOutbox.findMany({ where: { handedAt: null }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
     ]);
     return { persons, outbox };
   })() : null;
@@ -279,18 +280,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </table>
             </div>
           </Section>
-          <Section title="Boîte d'envoi" description="Courriers que l'outil aurait envoyés : liens d'accès et de nouveau mot de passe, valables une heure. Copiez le lien, remettez-le à la personne, marquez « remis ». En V1, un envoi de mail vide cette boîte tout seul." testId="outbox">
+          {rw && <Section title="Boîte d'envoi" description="Courriers que l'outil aurait envoyés : liens d'accès et de nouveau mot de passe, valables une heure. Copiez le lien, remettez-le à la personne, marquez « remis ». En V1, un envoi de mail vide cette boîte tout seul." testId="outbox">
             {accounts.outbox.length === 0 ? <p className="text-sm text-muted-foreground">Rien à remettre.</p> : (
               <ul className="divide-y text-sm" data-testid="outbox-list">
                 {accounts.outbox.map((m) => (
                   <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2" data-testid={`mail-${m.id}`} data-kind={m.kind}>
                     <div className="min-w-0"><div className="font-medium">{m.subject} <span className="font-normal text-muted-foreground">→ {m.to}</span></div><div className="text-[11px] text-muted-foreground">{fmtDate(m.createdAt, "D MMM YYYY à HH:mm")} · {m.kind === "invitation" ? "lien d'accès" : "nouveau mot de passe"}{m.link && <> · <a href={m.link} className="break-all font-mono text-[10px] text-primary hover:underline" data-testid={`mail-link-${m.id}`}>{m.link.length > 90 ? `${m.link.slice(0, 90)}…` : m.link}</a></>}</div></div>
-                    {rw && <OutboxRow id={m.id} link={m.link} />}
+                    <OutboxRow id={m.id} link={m.link} />
                   </li>
                 ))}
               </ul>
             )}
-          </Section>
+          </Section>}
         </div>
       )}
 
@@ -336,17 +337,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Export" description="Réversibilité : toutes les données, à tout moment (ENF-5).">
             <div className="flex flex-wrap gap-2">
               {["personnes", "projets", "editions", "actions", "financements", "livrables", "temps", "depenses", "validations"].map((t) => (
-                <Button key={t} asChild size="sm" variant="outline"><a href={withBase(`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />{t}.csv</a></Button>
+                rw ? <Button key={t} asChild size="sm" variant="outline"><a href={withBase(`/admin/export?table=${t}${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />{t}.csv</a></Button> : null
               ))}
-              <Button asChild size="sm"><a href={withBase(`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />Tout (JSON)</a></Button>
+              {rw && <Button asChild size="sm"><a href={withBase(`/admin/export?table=tout&format=json${settings.apiToken ? `&jeton=${settings.apiToken}` : ""}`)}><Download />Tout (JSON)</a></Button>}
             </div>
           </Section>
           <Section title="Connexions externes" description="Jeton d'API : il protège les exports ouverts depuis Excel ou un autre outil (dans l'outil, aucun jeton n'est nécessaire).">
             <div className="mb-4 grid items-center gap-2 sm:grid-cols-[1fr_320px]">
               <span className="text-sm">Jeton d'API</span>
-              <AutoField model="settings" id="1" field="apiToken" type="text" value={settings.apiToken} readOnly={!rw} inputClassName="font-mono text-xs" refreshOnSave testId="setting-api-token" />
+              <ApiTokenPanel token={rw ? settings.apiToken : null} canManage={rw} />
             </div>
-            <ApiCard apiToken={settings.apiToken} />
+            {rw && <ApiCard apiToken={settings.apiToken} />}
           </Section>
           {current === "donnees" && (
             <Section title="Brevo" description="Le connecteur lit tous les contacts du compte Brevo et leurs attributs dans l'annuaire (Projets et financements › Contacts), et tient en miroir les listes Brevo suivies. Sens Brevo → outil ; l'inverse se fait liste par liste (« Envoyer vers Brevo »). Désinscrits et supprimés sont marqués, jamais effacés.">

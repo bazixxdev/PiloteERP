@@ -5,11 +5,13 @@ import { getRefs } from "@/lib/session";
 import { ficheInclude, ficheParagraphs } from "@/lib/fiche-docx";
 import { fmtDate } from "@/lib/format";
 import { V } from "@/lib/vocab";
+import { sessionExportAllowed } from "@/lib/export-auth";
 
 // Plan opérationnel assemblé (retour du 14/09, S15) : toutes les fiches d'une année en un seul Word, par pôle puis mission,
 // à la place des 2-3 heures de copier-coller de l'assistante. Une fiche par page, un sommaire en tête. Comme l'export d'une fiche :
 // ouvert depuis l'outil, sans jeton (le jeton d'API reste exigé sur les exports de données pour Excel).
 export async function GET(req: Request) {
+  if (!(await sessionExportAllowed(req))) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
   const url = new URL(req.url);
   const year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
   const poleId = url.searchParams.get("pole") || null;

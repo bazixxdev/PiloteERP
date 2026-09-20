@@ -6,16 +6,23 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=pilote-%i
+Group=pilote-%i
 WorkingDirectory=/var/www/%i-pilote
 EnvironmentFile=/var/www/%i-pilote/.env
 Environment=NODE_ENV=production
 Environment=HOME=/var/www/%i-pilote-data
 Environment=HOSTNAME=127.0.0.1
+# Le proxy public est Nginx ; Next ne doit jamais écouter sur une interface publique.
 ExecStart=/usr/bin/npm run start
 Restart=always
 RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/%i-pilote-data /var/www/%i-pilote-medias
+UMask=0077
 # Pas de journal verbeux : les accès sont dans nginx.
 StandardOutput=append:/var/log/%i-pilote.log
 StandardError=append:/var/log/%i-pilote.log
