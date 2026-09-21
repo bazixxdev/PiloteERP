@@ -217,7 +217,25 @@ Commit testé : `cd23e43` (`security: audit remediation and production hardening
 | Build production | PASS |
 | `npm audit` | 5 avis : 2 modérés, 3 élevés ; correction automatique non exécutée |
 
-La baseline de clôture intermédiaire est **FAIL** uniquement parce que la suite security production-like n’a pas pu démarrer sans son environnement PostgreSQL dédié. Aucun test n’a utilisé une base de production.
+La base PostgreSQL locale `pilote_security_local` a ensuite été recréée avec le rôle `pilote` comme propriétaire, sans privilège superuser ni accès à une base de production. La suite security production-like a alors été rejouée avec succès. Aucun test n’a utilisé une base de production.
+
+Mise à jour de clôture intermédiaire :
+
+| Contrôle | Résultat actuel |
+|---|---|
+| Commit Git testé | `42a226f7cedc7dc8158ad09238b83451c5d05b44` |
+| `npm ci` | PASS |
+| `npx prisma generate` | PASS — Prisma Client 6.19.3 |
+| Tests unitaires | PASS — 39/39 |
+| `npm run test:security` | PASS — 33/33 |
+| Fixtures/global setup security | PASS |
+| Tests historiques ciblés | PASS — 39/39 ; aucun fichier historique distinct trouvé |
+| Lint | PASS |
+| TypeScript | PASS |
+| Build production | PASS |
+| `npm audit` | 5 avis : 2 modérés, 3 élevés ; aucune correction automatique |
+
+La baseline de clôture intermédiaire est désormais **PASS** pour les contrôles exécutés. Les avis `npm audit` restent suivis comme dette de dépendances et ne sont pas masqués.
 
 ## N. Documents de référence
 
