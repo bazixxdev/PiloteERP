@@ -41,3 +41,26 @@ test("le déploiement ne supprime pas brutalement l'ancienne release", () => {
   assert.doesNotMatch(script, /rm -rf/);
   assert.match(script, /\.previous/);
 });
+
+test("le déploiement refuse un working tree dirty et capture le commit construit", () => {
+  assert.match(script, /git -C "\$LOCAL" rev-parse HEAD/);
+  assert.match(script, /git -C "\$LOCAL" status --porcelain/);
+  assert.match(script, /working tree Git dirty/);
+  assert.match(script, /GIT_COMMIT/);
+  assert.match(script, /GIT_SHORT/);
+});
+
+test("la release possède un manifeste non sensible et traçable", () => {
+  assert.match(script, /\.release\.json/);
+  assert.match(script, /"instance"/);
+  assert.match(script, /"commit"/);
+  assert.match(script, /"commit_short"/);
+  assert.match(script, /"deployed_at"/);
+  assert.match(script, /"release"/);
+  assert.match(script, /"previous_release"/);
+  assert.match(script, /date -u/);
+  assert.match(script, /chmod 444 "\$NEW\/\.release\.json"/);
+  assert.match(script, /rollback de/);
+  assert.doesNotMatch(script, /DATABASE_URL.*\.release\.json/);
+  assert.doesNotMatch(script, /BETTER_AUTH_SECRET.*\.release\.json/);
+});

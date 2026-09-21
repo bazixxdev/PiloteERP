@@ -31,7 +31,25 @@ HEALTH="http://127.0.0.1:$PORT$BASE_PATH/connexion" # page publique (le reste re
 STAMP="$(date +%Y%m%d-%H%M%S)"
 LOCAL="$(cd "$HERE/.." && pwd)"
 
-echo "═══ Pilote [$INSTANCE] → $HOST ($STAMP) ═══"
+# Une release de production doit être un état Git reproductible, jamais une
+# combinaison ambiguë d'un commit et de modifications locales.
+GIT_COMMIT="$(git -C "$LOCAL" rev-parse HEAD 2>/dev/null)" || {
+  echo "✖ impossible d'identifier le commit Git source" >&2
+  exit 1
+}
+git -C "$LOCAL" cat-file -e "$GIT_COMMIT^{commit}" || {
+  echo "✖ le commit Git source n'existe pas" >&2
+  exit 1
+}
+if [ -n "$(git -C "$LOCAL" status --porcelain)" ]; then
+  echo "✖ working tree Git dirty : déploiement refusé" >&2
+  exit 1
+fi
+GIT_SHORT="$(git -C "$LOCAL" rev-parse --short=12 HEAD)"
+RELEASE_ID="${STAMP}Z-${GIT_SHORT}-${INSTANCE}"
+GIT_BRANCH="$(git -C "$LOCAL" symbolic-ref --quiet --short HEAD 2>/dev/null || echo detached)"
+
+echo "═══ Pilote [$INSTANCE] → $HOST ($STAMP UTC, $GIT_COMMIT) ═══"
 
 # 1. Copie du code (sans dépendances, caches, base, pièces).
 rsync -az --delete \
@@ -40,10 +58,11 @@ rsync -az --delete \
   "$LOCAL/" "$HOST:$DIR.next/"
 
 # 2. Côté serveur : build dans la nouvelle copie, puis bascule.
-ssh "$HOST" bash -s -- "$DIR" "$DATA" "$MEDIAS" "$HEALTH" "$STAMP" "$SEED" "$DBNAME" "$DBUSER" "$CLIENT" "$BASE_PATH" "$PUBLIC_URL" "$SERVICE" "$MAINTENANCE_FLAG" "$BACKUP_DIR" "$PORT" "${LEGACY_SERVICE:-none}" "$RUNTIME_USER" <<'REMOTE'
+ssh "$HOST" bash -s -- "$DIR" "$DATA" "$MEDIAS" "$HEALTH" "$STAMP" "$SEED" "$DBNAME" "$DBUSER" "$CLIENT" "$BASE_PATH" "$PUBLIC_URL" "$SERVICE" "$MAINTENANCE_FLAG" "$BACKUP_DIR" "$PORT" "${LEGACY_SERVICE:-none}" "$RUNTIME_USER" "$GIT_COMMIT" "$GIT_SHORT" "$RELEASE_ID" "$GIT_BRANCH" "$INSTANCE" <<'REMOTE'
 set -euo pipefail
 DIR="$1"; DATA="$2"; MEDIAS="$3"; HEALTH="$4"; STAMP="$5"; SEED="$6"; DBNAME="$7"; DBUSER="$8"
 CLIENT="$9"; BASE_PATH="${10}"; PUBLIC_URL="${11}"; SERVICE="${12}"; MAINTENANCE_FLAG="${13}"; BACKUP_DIR="${14}"; PORT="${15}"; LEGACY_SERVICE="${16}"; RUNTIME_USER="${17}"
+GIT_COMMIT="${18}"; GIT_SHORT="${19}"; RELEASE_ID="${20}"; GIT_BRANCH="${21}"; INSTANCE="${22}"
 id "$RUNTIME_USER" >/dev/null 2>&1 || { echo "✖ utilisateur système absent : $RUNTIME_USER (création préalable requise)" >&2; exit 1; }
 NEW="$DIR.next"; OLD="$DIR.prev"
 mkdir -p "$DATA" "$MEDIAS" "$BACKUP_DIR" /var/www/maintenance
@@ -108,6 +127,23 @@ cp "$DIR/.env" "$NEW/.env"
 cd "$NEW"
 echo "→ dépendances"; npm ci --no-audit --no-fund >/dev/null
 echo "→ build"; npm run build >/dev/null
+PREVIOUS_RELEASE="none"
+if [ -f "$DIR/.release.json" ]; then
+  PREVIOUS_RELEASE="$(sed -n 's/^[[:space:]]*"release":[[:space:]]*"\([^"]*\)".*/\1/p' "$DIR/.release.json" | head -1)"
+  [ -n "$PREVIOUS_RELEASE" ] || PREVIOUS_RELEASE="unknown"
+fi
+cat > "$NEW/.release.json" <<RELEASE
+{
+  "instance": "$INSTANCE",
+  "commit": "$GIT_COMMIT",
+  "commit_short": "$GIT_SHORT",
+  "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "release": "$RELEASE_ID",
+  "previous_release": "$PREVIOUS_RELEASE",
+  "branch": "$GIT_BRANCH"
+}
+RELEASE
+chmod 444 "$NEW/.release.json"
 echo "→ sauvegarde de la base";
 DUMP="$BACKUP_DIR/$DBNAME-$STAMP.dump"
 TMP_DUMP="$DUMP.tmp"
@@ -156,6 +192,7 @@ mv "$NEW" "$DIR"
 chown -R root:root "$DIR"
 find "$DIR" -type d -exec chmod u+rwx,go+rx,go-w {} +
 find "$DIR" -type f -exec chmod go-w {} +
+chmod 444 "$DIR/.release.json"
 chown "$RUNTIME_USER:$RUNTIME_USER" "$DIR/.env"
 chmod 600 "$DIR/.env"
 chown -R "$RUNTIME_USER:$RUNTIME_USER" "$DATA" "$MEDIAS"
@@ -174,6 +211,7 @@ done
 echo "✖ l'application ne répond pas : retour à la version précédente" >&2
 systemctl stop "$SERVICE" || true
 mv "$DIR" "$NEW.failed-$STAMP"; [ -d "$OLD" ] && mv "$OLD" "$DIR"
+echo "↩ rollback de $RELEASE_ID vers $(sed -n 's/^[[:space:]]*"release":[[:space:]]*"\([^"]*\)".*/\1/p' "$DIR/.release.json" | head -1)" >&2
 # Retour : l'ancienne unité si elle existe encore (première migration), sinon la nouvelle sur l'ancien dossier.
 if [ "$LEGACY_SERVICE" != "none" ] && systemctl cat "$LEGACY_SERVICE" >/dev/null 2>&1 && systemctl is-enabled "$LEGACY_SERVICE" >/dev/null 2>&1; then systemctl start "$LEGACY_SERVICE" || true; else systemctl start "$SERVICE" || true; fi
 rm -f "$MAINTENANCE_FLAG"
