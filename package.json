@@ -10,12 +10,14 @@
     "seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "test": "playwright test",
-    "test:security": "playwright test --config=playwright.security.config.ts",
+    "test:security": "SECURITY_DATABASE_URL=\"${SECURITY_DATABASE_URL:-postgresql://pilote:pilote@localhost:5432/pilote_security_local}\" playwright test --config=playwright.security.config.ts",
     "postinstall": "prisma generate",
     "screenshots": "tsx scripts/screenshots.ts",
     "test:unit": "tsx --test tests/unit/*.test.ts",
     "check:vocab": "node scripts/check-vocab.mjs",
-    "seed:tlst": "NEXT_PUBLIC_CLIENT=tlst prisma db seed"
+    "seed:tlst": "NEXT_PUBLIC_CLIENT=tlst prisma db seed",
+    "check": "npm run check:vocab && npm run test:unit && npm run lint && tsc --noEmit",
+    "check:full": "npm run check && npm run build && npm test && npm run test:security"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
