@@ -61,7 +61,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 300_000,
       // Le serveur de production exige un secret d'auth : celui-ci ne sert qu'aux recettes locales.
-      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BETTER_AUTH_SECRET: "secret-de-recette-locale-sans-valeur-0000000000000000", BETTER_AUTH_URL: `http://localhost:${PORT}/api/auth`, BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "cress-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
+      env: { DATABASE_URL: TEST_DATABASE_URL, UPLOAD_DIR: "./uploads-test", PILOTE_DEMO: "1", PILOTE_ENV_PROFILE: "test", AUTH_RATE_LIMIT: "0", BETTER_AUTH_SECRET: "secret-de-recette-locale-sans-valeur-0000000000000000", BETTER_AUTH_URL: `http://localhost:${PORT}/api/auth`, BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "cress-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
     },
     {
       command: process.env.PW_DEV ? `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test-tlst npm run dev -- -p ${TLST_PORT}` : `npx prisma migrate deploy && NEXT_DIST_DIR=.next-test-tlst npx next build && NEXT_DIST_DIR=.next-test-tlst npx next start -p ${TLST_PORT}`,
@@ -69,7 +69,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 300_000,
       // Instance TLST (lot I) : même recette, client tlst.
-      env: { DATABASE_URL: TLST_DATABASE_URL, NEXT_PUBLIC_CLIENT: "tlst", UPLOAD_DIR: "./uploads-test-tlst", PILOTE_DEMO: "1", AUTH_RATE_LIMIT: "0", BETTER_AUTH_SECRET: "secret-de-recette-locale-sans-valeur-0000000000000000", BETTER_AUTH_URL: `http://localhost:${TLST_PORT}/api/auth`, BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "tlst-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
+      env: { DATABASE_URL: TLST_DATABASE_URL, NEXT_PUBLIC_CLIENT: "tlst", UPLOAD_DIR: "./uploads-test-tlst", PILOTE_DEMO: "1", PILOTE_ENV_PROFILE: "test", AUTH_RATE_LIMIT: "0", BETTER_AUTH_SECRET: "secret-de-recette-locale-sans-valeur-0000000000000000", BETTER_AUTH_URL: `http://localhost:${TLST_PORT}/api/auth`, BREVO_API_KEY: "test-key", BREVO_API_BASE: `http://localhost:${BREVO_MOCK_PORT}/v3`, HELLOASSO_CLIENT_ID: "test-id", HELLOASSO_CLIENT_SECRET: "test-secret", HELLOASSO_ORG_SLUG: "tlst-demo", HELLOASSO_API_BASE: `http://localhost:${HELLOASSO_MOCK_PORT}` },
     },
   ],
 });

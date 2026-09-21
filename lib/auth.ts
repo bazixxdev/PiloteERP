@@ -15,9 +15,6 @@ import { BASE_PATH } from "./base-path";
 const isProd = process.env.NODE_ENV === "production";
 const building = process.env.NEXT_PHASE === "phase-production-build";
 const environmentProfile = process.env.PILOTE_ENV_PROFILE ?? "";
-// Le mode démonstration est réservé au développement et aux profils de recette.
-// Une production explicitement configurée en mode démo doit refuser de démarrer.
-if (isProd && !building && process.env.PILOTE_DEMO === "1") throw new Error("PILOTE_DEMO=1 est interdit en production.");
 const configuredAuthUrl = process.env.BETTER_AUTH_URL ?? `http://localhost:${process.env.PORT ?? 3001}${BASE_PATH}/api/auth`;
 let authUrl: URL;
 try {
@@ -28,6 +25,11 @@ try {
 const isExplicitLocalProfile = ["local", "test", "security-test"].includes(environmentProfile);
 const isLoopbackHost = authUrl.hostname === "localhost" || authUrl.hostname === "127.0.0.1" || authUrl.hostname === "[::1]";
 const localHttp = isExplicitLocalProfile && isLoopbackHost && authUrl.protocol === "http:";
+// Le mode démonstration est réservé au développement et aux profils de recette (SEC-20) : en production, il ne passe
+// qu'avec un profil explicite servi en loopback ; une production publique configurée en mode démo refuse de démarrer.
+if (isProd && !building && process.env.PILOTE_DEMO === "1" && !(isExplicitLocalProfile && isLoopbackHost)) {
+  throw new Error("PILOTE_DEMO=1 est interdit en production.");
+}
 if (isProd && !building && !isExplicitLocalProfile && authUrl.protocol !== "https:") {
   throw new Error("BETTER_AUTH_URL doit utiliser HTTPS en production.");
 }
