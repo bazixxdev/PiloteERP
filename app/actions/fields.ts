@@ -7,6 +7,7 @@ import { FIELDS, coerce, type Model } from "@/lib/fields";
 import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageEquipment, canManageMembers, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { allocationCheck } from "@/lib/conventions";
+import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
 import { V, cap, le, de, ce, seul } from "@/lib/vocab";
 import { reportInternalError } from "@/lib/errors";
@@ -146,6 +147,12 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       if (email && target?.userId && (await prisma.user.findFirst({ where: { email, id: { not: target.userId } } }))) return { ok: false, error: "Cette adresse est déjà celle d'un autre compte." };
       await prisma.person.update({ where: { id }, data: { email } });
       if (target?.userId && email) await prisma.user.update({ where: { id: target.userId }, data: { email } });
+    } else if (model === "call") {
+      const call = await prisma.call.findUnique({ where: { id }, select: { conventionId: true } });
+      if (!call) return { ok: false, error: "Appel introuvable." };
+      const bad = callFieldInvariant(field, value, call);
+      if (bad) return { ok: false, error: bad };
+      await prisma.call.update({ where: { id }, data: { [field]: value } });
     } else if (model === "settings") {
       await prisma.settings.update({ where: { id: 1 }, data: { [field]: value } });
     } else {

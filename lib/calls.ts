@@ -57,3 +57,14 @@ export function fmtCallAmount(c: { amountValue: number | null; amountKind: strin
   const years = c.durationYears && c.durationYears > 1 ? ` · ${c.durationYears} ans` : "";
   return `${euro} ${c.amountKind === "annual" ? "/ an" : "global"}${years}`;
 }
+
+// Mêmes invariants qu'à la création (addCall) quand un appel est modifié champ par champ via saveField (SEC-27) :
+// la forme du montant est connue, la durée est un nombre d'années entier ≥ 1, et le financeur ne change plus
+// une fois le dossier ouvert (la convention en a hérité).
+export function callFieldInvariant(field: string, value: unknown, call: { conventionId: string | null }): string | null {
+  if (field === "amountKind" && value !== "annual" && value !== "total") return "La forme du montant est « global » ou « par an ».";
+  if (field === "durationYears" && value != null && (!Number.isInteger(value) || (value as number) < 1)) return "La durée est un nombre d'années entier, au moins 1.";
+  if (field === "amountValue" && value != null && (value as number) < 0) return "Le montant visé ne peut pas être négatif.";
+  if (field === "funderId" && call.conventionId) return "Le dossier est ouvert : son financeur ne change plus depuis l'appel.";
+  return null;
+}
