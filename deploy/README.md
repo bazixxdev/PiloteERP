@@ -9,7 +9,7 @@ dans `deploy/instances/<instance>.env` (aucun secret : ils vivent dans le `.env`
 | `tlst` | https://tlst.bazixx.fr/outilcli/tlst/pilote (rideau `auth_basic`, fiche `CRESS/tlst-acces-demo.txt` hors git) — **en ligne depuis le 18/09** (démo TLST ; DNS, certificat Let's Encrypt, rideau) | `pilote@tlst` | 3003 |
 
 ## À chaque mise à jour (depuis le poste de travail)
-`./deploy/deploy.sh <instance>` — et `./deploy/deploy.sh <instance> --seed` pour remettre la base de démo à zéro.
+`./deploy/deploy.sh <instance>` — et `./deploy/deploy.sh <instance> --seed` pour remettre la base de démo à zéro. Le script commence par `npm run check:full` en local (≈ 10 min : vocab, unitaires, lint, tsc, build, recette, sécurité) et refuse de déployer si une suite est rouge.
 
 Le script copie le code, construit dans un dossier à côté, sauvegarde la base (`pg_dump` dans `BACKUP_DIR`), applique les migrations,
 bascule avec la page de maintenance, vérifie que l'application répond, sinon revient à la version précédente. Le `.env` serveur

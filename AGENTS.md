@@ -12,7 +12,7 @@ Outil de pilotage de projets pour une petite structure associative (CRESS), déc
 
 - `npm run dev -- -p 3001` — serveur de dev (base `pilote_dev`, `.env` local).
 - `npm run check` — vocab + unitaires + lint + tsc (≈ 1 min) : **avant chaque commit**.
-- `npm run check:full` — check + build + recette (`npm test`) + sécurité (`npm run test:security`) : **avant chaque déploiement**.
+- `npm run check:full` — check + build + recette (`npm test`) + sécurité (`npm run test:security`) : lancé automatiquement par `deploy.sh`, qui refuse de déployer s'il est rouge.
 - `npx prisma migrate dev --name x` puis `npx prisma generate` — schéma.
 - `./deploy/deploy.sh cress|tlst` — le seul chemin vers la production.
 

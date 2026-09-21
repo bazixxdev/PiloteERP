@@ -51,6 +51,15 @@ GIT_BRANCH="$(git -C "$LOCAL" symbolic-ref --quiet --short HEAD 2>/dev/null || e
 
 echo "═══ Pilote [$INSTANCE] → $HOST ($STAMP UTC, $GIT_COMMIT) ═══"
 
+# 0. Vérifications complètes en local (vocab, unitaires, lint, tsc, build, recette, sécurité) : rien ne part vers le
+# serveur si une suite est rouge. Pas de variable pour sauter cette étape (.agents/rules/production-deploiement.md).
+echo "→ npm run check:full"
+mkdir -p "$LOCAL/test-results"
+(cd "$LOCAL" && npm run check:full >"$LOCAL/test-results/check-full-$STAMP.log" 2>&1) || {
+  echo "✖ check:full rouge : déploiement refusé (journal : test-results/check-full-$STAMP.log)" >&2
+  exit 1
+}
+
 # 1. Copie du code (sans dépendances, caches, base, pièces).
 rsync -az --delete \
   --exclude node_modules --exclude ".next*" --exclude uploads --exclude "uploads-test" --exclude ".claude/worktrees" \
