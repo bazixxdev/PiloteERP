@@ -33,23 +33,23 @@ export async function uploadAttachment(form: FormData): Promise<Result> {
     const validationId = String(form.get("validationId") ?? "") || null;
     const requester = validationId ? await prisma.validationRequest.findUnique({ where: { id: validationId } }) : null;
     const validationEditionId = requester?.editionId ?? null;
-    if (validationId && (!requester || !attachmentParentsAreConsistent({ editionId, validationEditionId }))) return { ok: false, error: "La validation ne correspond pas à cette édition." };
+    if (validationId && (!requester || !attachmentParentsAreConsistent({ editionId, validationEditionId }))) return { ok: false, error: `La validation ne correspond pas à ${ce(V.edition)}.` };
     const fundingLineId = String(form.get("fundingLineId") ?? "") || null;
     if (fundingLineId) {
       const line = await prisma.fundingLine.findUnique({ where: { id: fundingLineId } });
-      if (!line || !attachmentParentsAreConsistent({ editionId, fundingLineEditionId: line.editionId })) return { ok: false, error: "La ligne de financement ne correspond pas à cette édition." };
+      if (!line || !attachmentParentsAreConsistent({ editionId, fundingLineEditionId: line.editionId })) return { ok: false, error: `La ligne de financement ne correspond pas à ${ce(V.edition)}.` };
     }
     const deliverableId = String(form.get("deliverableId") ?? "") || null;
     if (deliverableId) {
       const deliverable = await prisma.deliverable.findUnique({ where: { id: deliverableId }, include: { fundingLine: true } });
-      if (!deliverable || !attachmentParentsAreConsistent({ editionId, deliverableEditionId: deliverable.fundingLine.editionId })) return { ok: false, error: "Le livrable ne correspond pas à cette édition." };
+      if (!deliverable || !attachmentParentsAreConsistent({ editionId, deliverableEditionId: deliverable.fundingLine.editionId })) return { ok: false, error: `Le livrable ne correspond pas à ${ce(V.edition)}.` };
     }
     const conventionId = String(form.get("conventionId") ?? "") || null;
     if (conventionId) {
       const convention = await prisma.convention.findUnique({ where: { id: conventionId } });
       if (!convention) return { ok: false, error: "La convention est introuvable." };
       const linked = await prisma.fundingLine.findFirst({ where: { editionId, conventionId } });
-      if (!attachmentParentsAreConsistent({ editionId, conventionLinked: Boolean(linked) })) return { ok: false, error: "La convention ne correspond pas à cette édition." };
+      if (!attachmentParentsAreConsistent({ editionId, conventionLinked: Boolean(linked) })) return { ok: false, error: `La convention ne correspond pas à ${ce(V.edition)}.` };
     }
     const allowed = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project)) || canEditFunding(me) || requester?.requesterId === me.id;
     if (!allowed) return { ok: false, error: `Vous ne pouvez pas déposer de pièce sur ${ce(V.edition)}.` };
