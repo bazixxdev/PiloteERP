@@ -19,6 +19,10 @@ export const TLST_DATABASE_URL = process.env.TEST_DATABASE_URL_TLST ?? "postgres
 
 export default defineConfig({
   testDir: "./tests",
+  // Les tests unitaires (tests/unit/*.test.ts, node:test) ne sont pas des recettes Playwright : npm run test:unit.
+  testMatch: /.*\.spec\.ts$/,
+  // La suite production-like tests/security/ a son propre harnais : npm run test:security.
+  testIgnore: /tests\/security\//,
   timeout: 120_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
@@ -35,7 +39,7 @@ export default defineConfig({
     storageState: "tests/.auth/state.json",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /habillage\.spec\.ts/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: [/habillage\.spec\.ts/, /tests\/security\//] },
     { name: "tlst", testMatch: /habillage\.spec\.ts/, use: { ...devices["Desktop Chrome"], baseURL: `http://localhost:${TLST_PORT}`, storageState: "tests/.auth/state-tlst.json" } },
   ],
   // Le serveur démarre avant le globalSetup : on migre la base de test dans la commande, et l'adresse de contrôle ne dépend pas
