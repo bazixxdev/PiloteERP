@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { dayjs } from "../lib/format";
 import { iAm, pick } from "./helpers";
 
 // Lot 1 « Mon travail » (retour du 14/09) : listes de tâches partagées, notes, répartition en parts, modules, part fixe.
@@ -89,10 +90,10 @@ test("la semaine se répartit en parts de mon temps et devient des heures pour l
   await expect(page.getByTestId("split-total")).toContainText("100 %");
   await page.getByTestId("split-save").click();
   await expect(page.getByText("Répartition enregistrée")).toBeVisible();
-  // Retour à la grille : le total attendu du rythme est entièrement réparti.
+  // Retour à la grille : le total attendu du rythme est entièrement réparti (option B : 41,25 h une semaine paire, 33 h une impaire).
   await page.goto("/temps");
   await expect(page.getByTestId("week-status")).toContainText("Semaine entièrement répartie");
-  await expect(page.getByTestId("week-total")).toContainText("41,25 h");
+  await expect(page.getByTestId("week-total")).toContainText(dayjs().isoWeek() % 2 === 0 ? "41,25 h" : "33 h");
 });
 
 test("les modules se coupent par personne ; une part fixe n'a rien à répartir", async ({ page }) => {

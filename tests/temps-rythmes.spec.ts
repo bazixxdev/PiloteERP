@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm } from "./helpers";
+import { dayjs } from "../lib/format";
 
 // Rythmes de travail historisés : option B (vendredi une semaine sur deux), passage à 80 % en cours d'année, déclaration de semaine complète.
 test("les heures attendues suivent le rythme réel de la personne et de la semaine ; la déclaration de complétude remonte à la clôture", async ({ page }) => {
@@ -21,8 +22,9 @@ test("les heures attendues suivent le rythme réel de la personne et de la semai
   await page.goto("/temps?semaine=2026-W33");
   await expect(page.getByTestId("week-total")).toContainText("36,5 h");
 
-  // Déclaration de la semaine 37, puis correction d'une cellule : la déclaration tombe.
-  await page.goto("/temps?semaine=2026-W37");
+  // Déclaration de la semaine dernière (la démo ne la déclare pas pour Thomas), puis correction d'une cellule : la déclaration tombe.
+  const lastWeek = dayjs().subtract(1, "week");
+  await page.goto(`/temps?semaine=${lastWeek.isoWeekYear()}-W${String(lastWeek.isoWeek()).padStart(2, "0")}`);
   await expect(page.getByTestId("declare-week")).toBeVisible();
   await page.getByTestId("declare-week").click();
   await expect(page.getByText("Répartition déclarée complète")).toBeVisible();
