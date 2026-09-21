@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { permissionExportAllowed } from "@/lib/export-auth";
+import { exportDenial } from "@/lib/export-auth";
 import { csvRow } from "@/lib/csv";
 import { dayjs } from "@/lib/format";
 
 // Export mensuel des temps, agrégé par projet ou par personne (EF-D5), vers l'Excel de la RAF.
 export async function GET(req: Request) {
-  if (!(await permissionExportAllowed(req, "time.lock"))) return new NextResponse("Export non autorisé", { status: 403 });
+  const denied = await exportDenial(req, "time.lock");
+  if (denied) return new NextResponse(denied.message, { status: denied.status });
   const url = new URL(req.url);
   const month = url.searchParams.get("mois") ?? dayjs().format("YYYY-MM");
   const par = url.searchParams.get("par") === "personne" ? "personne" : "projet";

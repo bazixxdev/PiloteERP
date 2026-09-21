@@ -23,15 +23,16 @@ export async function sessionExportAllowed(req: Request): Promise<boolean> {
   return person?.active === true;
 }
 
-// Exports globaux : un jeton API valide conserve le parcours externe existant ;
-// une session interne doit aussi porter la permission métier de l'export.
-export async function permissionExportAllowed(req: Request, permission: PermissionKey): Promise<boolean> {
+// Exports globaux : un jeton API valide conserve le parcours externe existant ; un jeton présenté mais faux répond 401,
+// même avec une session ouverte (la crédence présentée est celle qui compte). Une session interne doit aussi porter
+// la permission métier de l'export, sinon 403. Renvoie null quand l'export est autorisé.
+export async function exportDenial(req: Request, permission: PermissionKey): Promise<{ status: 401 | 403; message: string } | null> {
   const jeton = new URL(req.url).searchParams.get("jeton");
-  if (jeton && await exportAllowed(req)) return true;
+  if (jeton) return (await exportAllowed(req)) ? null : { status: 401, message: "Jeton d'API requis" };
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return false;
+  if (!session?.user) return { status: 401, message: "Jeton d'API requis" };
   const person = await prisma.person.findUnique({ where: { userId: session.user.id }, select: { active: true, role: true } });
-  if (!person?.active) return false;
+  if (!person?.active) return { status: 403, message: "Export non autorisé" };
   const role = await prisma.role.findUnique({ where: { code: person.role }, select: { permissions: true } });
-  return parsePermissions(role?.permissions).includes(permission);
+  return parsePermissions(role?.permissions).includes(permission) ? null : { status: 403, message: "Export non autorisé" };
 }

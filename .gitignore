@@ -59,3 +59,11 @@ prisma/prototype.db-journal
 /uploads-test/
 /uploads-test-tlst/
 /tests/.auth/
+
+# artefacts régénérés par la suite sécurité (tests/security/global-setup.ts) : sessions, identifiants de fixtures, pièces déposées
+/uploads-security/
+/uploads-security-harness/
+/tests/.security-auth/
+/tests/.security-*
+/.next-security/
+/.next-restore/

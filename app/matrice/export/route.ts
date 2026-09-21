@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { listFunders } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
-import { permissionExportAllowed } from "@/lib/export-auth";
+import { exportDenial } from "@/lib/export-auth";
 import { buildMatrix, matrixToCsv } from "@/lib/matrix";
 
 // Export CSV de « Qui finance quoi » (lot C) : une ligne par édition, une colonne par financeur ; depuis l'outil ou avec le jeton
 // d'API (Excel « À partir du web »). Toute la CRESS : le périmètre d'un pôle se filtre dans Excel par la colonne « pole ».
 export async function GET(req: Request) {
-  if (!(await permissionExportAllowed(req, "codir.access"))) return new NextResponse("Export non autorisé", { status: 403 });
+  const denied = await exportDenial(req, "codir.access");
+  if (denied) return new NextResponse(denied.message, { status: denied.status });
   const url = new URL(req.url);
   const year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
   const [editions, funders, conventions] = await Promise.all([

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { permissionExportAllowed } from "@/lib/export-auth";
+import { exportDenial } from "@/lib/export-auth";
 import { budgetOf } from "@/lib/budget";
 import { csvRow } from "@/lib/csv";
 
@@ -12,7 +12,8 @@ function csv(rows: Record<string, unknown>[]): string {
 }
 
 export async function GET(req: Request) {
-  if (!(await permissionExportAllowed(req, "admin.manage"))) return new NextResponse("Export non autorisé", { status: 403 });
+  const denied = await exportDenial(req, "admin.manage");
+  if (denied) return new NextResponse(denied.message, { status: denied.status });
   const url = new URL(req.url);
   const table = url.searchParams.get("table") ?? "tout";
   const format = url.searchParams.get("format") ?? "csv";
