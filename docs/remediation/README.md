@@ -60,7 +60,7 @@ Les remédiations documentaires ont été produites dans un arbre de travail qui
 | SEC-23 | Moyen | tokens journalisables | `pilote_safe`, map ICS, logs sans sentinelles | test runtime VPS-04 | CORRIGÉ AVEC DETTE | rotation apiToken/ICS | [23](23-sec-23-tokens-logs.md), [105](105-vps-nginx-tokens.md) |
 | SEC-24 | Moyen | HTTP assimilé au local | profils explicites, HTTPS prod, rate limit | unitaires/build + VPS-01 | VALIDATION VPS EFFECTUÉE | — | [24](24-sec-24-http-local-config.md), [102](102-vps-prod-env.md) |
 | SEC-25 | Moyen | PostgreSQL Compose exposé | non traité dans cette campagne | audit dépôt | REPORTÉ | fermer avant usage réseau | [25](25-sec-25-postgres-compose.md) |
-| SEC-26 | Moyen | backup/rollback insuffisants | dump validé, archive médias, rollback documenté | unitaires script + VPS-01 | CORRIGÉ AVEC DETTE | restauration réelle hors production | [26](26-sec-26-backup-rollback.md), [102](102-vps-prod-env.md) |
+| SEC-26 | Moyen | backup/rollback insuffisants | dump validé, archive médias, rollback documenté | unitaires script + VPS-01 + VPS-05 | CORRIGÉ | restauration sur le VPS lui-même non rejouée | [26](26-sec-26-backup-rollback.md), [102](102-vps-prod-env.md), [111](111-restauration-hors-production.md) |
 | SEC-27 | Moyen | champs génériques contournant invariants | gardes et invariants spécialisés | unitaires/sécurité | CORRIGÉ AVEC DETTE | retrait progressif saveField | [27](27-sec-27-savefield-invariants.md) |
 | SEC-28 | Moyen | paiement supprimé par cascade indirecte | garde applicative de détachement | unitaires/sécurité | CORRIGÉ AVEC DETTE | cascade DB et BLK-03 | [28](28-sec-28-paiement-cascade.md) |
 | SEC-29 | Moyen | décisions concurrentes non sérialisées | claim atomique et garde serveur | unitaires | CORRIGÉ AVEC DETTE | test PostgreSQL concurrent réel | [29](29-sec-29-propositions-concurrence.md) |
@@ -168,14 +168,30 @@ Dette de preuve : intégration SEC-05/06/07, navigateur SEC-14/15, test Server A
 
 Ces dettes ne signifient pas que les scénarios SEC correspondants restent ouverts : elles décrivent les limites de conception, de preuve ou de généralisation explicitement conservées par les rapports.
 
-## K. Actions restantes avant clôture définitive
+## K. Clôture (21/09/2026)
 
-1. Effectuer la rotation réelle de l’apiToken par le mécanisme SEC-03B déployé, vérifier ancien refus/nouveau succès et mettre à jour Excel/Power Query.
-2. Implémenter ou activer un parcours sûr de rotation ICS, régénérer les tokens concernés et mettre à jour les abonnements.
-3. Exécuter VPS-05 : restauration DB et médias hors production, avec preuve de cohérence.
-4. Corriger ultérieurement la compatibilité de `deploy.sh` avec le code root-owned et qualifier son prochain déploiement.
-5. Rejouer la baseline sécurité avec `SECURITY_DATABASE_URL` dédiée et fermer les dettes de tests restantes.
-6. Produire la validation finale de clôture après ces preuves.
+Faits :
+
+- VPS-05 restauration réelle DB + médias hors production : **PASS**, voir [111](111-restauration-hors-production.md) (dump du 21/09 restauré, 63/63 pièces cohérentes, migration suivante rejouée sans perte).
+- Premier déploiement traçable des deux instances : [110](110-first-traceable-deploy.md).
+- Baseline sécurité rejouée sur `pilote_security_local` : 33/33.
+- `deploy.sh` a déployé le 21/09 avec le code `root:root` (la dette « chown -R » de VPS-03 est levée par ce déploiement).
+
+**Actions différées, à faire quand on saura qui consomme ces jetons** (aucun consommateur Excel/Power Query ni abonnement ICS connu à ce jour ; les instances tournent sur des données de démonstration) :
+
+1. Rotation de l’`apiToken` par `rotateApiToken` (SEC-03B) : vérifier ancien refus / nouveau succès, puis mettre à jour les classeurs.
+2. Rotation des jetons ICS personnels (SEC-08 / VPS-04) : régénérer et mettre à jour les abonnements.
+3. SEC-25 (PostgreSQL du `docker-compose.yml` de développement) : à fermer avant tout usage du compose sur un réseau partagé.
+
+### Reprise du développement (21/09)
+
+Trois écarts trouvés en rejouant la suite de recette historique (`npm test`), que la campagne n’avait pas exécutée :
+
+- SEC-20 : la garde refusait `PILOTE_DEMO=1` dès `NODE_ENV=production` sans regarder le profil, ce qui cassait la recette (`next start`). Alignée sur le rapport : démo tolérée seulement avec un profil de recette explicite **et** un hôte loopback ; tests positif et négatif ajoutés.
+- SEC-03A : un jeton d’API présenté mais faux retombait sur la session ouverte ; retour au fail-closed historique (un jeton présenté est la seule crédence évaluée).
+- Playwright ramassait `tests/unit/*.test.ts` : `testMatch` restreint aux `*.spec.ts` ; les artefacts régénérés par la suite sécurité sont sortis de git.
+
+Les quatre branches gelées pendant l’audit (`tests/independants-du-jour`, `fix/infobulle-rail`, `fix/fiche-clic-modifier`, `feat/appels-dossiers`) ont été rebasées sur le socle sécurisé ; `feat/appels-dossiers` a reçu une garde SEC-27 (invariants d’`addCall` appliqués aux champs édités via `saveField`).
 
 ## L. Git et traçabilité
 
@@ -241,4 +257,4 @@ La baseline de clôture intermédiaire est désormais **PASS** pour les contrôl
 
 - Audit : [`docs/audit/01-securite.md`](../audit/01-securite.md) à [`07-backlog-consolide.md`](../audit/07-backlog-consolide.md).
 - Clôture initiale : [`99-audit-cloture.md`](99-audit-cloture.md).
-- Lots VPS : [`100`](100-vps-readonly-audit.md), [`102`](102-vps-prod-env.md), [`103`](103-vps-network.md), [`104`](104-vps-unix-systemd.md), [`105`](105-vps-nginx-tokens.md).
+- Lots VPS : [`100`](100-vps-readonly-audit.md), [`102`](102-vps-prod-env.md), [`103`](103-vps-network.md), [`104`](104-vps-unix-systemd.md), [`105`](105-vps-nginx-tokens.md), [`110`](110-first-traceable-deploy.md), [`111`](111-restauration-hors-production.md).
