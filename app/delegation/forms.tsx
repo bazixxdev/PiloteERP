@@ -31,7 +31,7 @@ export function DelegationTextForm({ id, expectations, limits, controls }: { id:
   const { pending, run } = useRun();
   const dirty = v.expectations !== (expectations ?? "") || v.limits !== (limits ?? "") || v.controls !== (controls ?? "");
   const field = (key: keyof typeof v, label: string, placeholder: string) => (
-    <label className="grid gap-1 text-xs font-medium text-muted-foreground">{label}
+    <label className="grid content-start gap-1 text-xs font-medium text-muted-foreground">{label}
       <Textarea value={v[key]} onChange={(e) => setV({ ...v, [key]: e.target.value })} placeholder={placeholder} rows={3} className="text-sm font-normal text-foreground" data-testid={`delegation-${key}-${id}`} />
     </label>
   );
