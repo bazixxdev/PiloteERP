@@ -25,6 +25,8 @@ export async function reset(prisma: PrismaClient, uploads: string) {
   // Budget prévisionnel (25/09) : ses lignes et saisies manuelles partent avec les éditions ; les catégories restent (migration).
   await prisma.budgetActualOverride.deleteMany();
   await prisma.budgetLine.deleteMany();
+  // Délégations (25/09) : elles tiennent à des personnes (Restrict) ; elles partent avant elles.
+  await prisma.delegation.deleteMany();
   await prisma.mailOutbox.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
