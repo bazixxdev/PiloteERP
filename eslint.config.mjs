@@ -14,10 +14,8 @@ const eslintConfig = [
   {
     ignores: [
       "node_modules/**",
-      ".next/**",
-      ".next-build/**",
-      ".next-test/**",
-      ".next-test-tlst/**",
+      // Tout dossier de build Next (.next, .next-build, .next-test, .next-security, aperçus locaux…) : sortie générée, jamais lintée.
+      ".next*/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

@@ -81,23 +81,23 @@ export function BudgetPlanSection({ e, me, plan }: Pick<TabCtx, "e" | "me"> & { 
                         </ul>
                       )}
                     </td>
-                    <td className="py-2 pr-3 text-right tabular">{fmtEuro(r.planned)}</td>
-                    <td className="py-2 pr-3 text-right tabular" data-testid={`budget-actual-${r.categoryId}`}>
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular">{fmtEuro(r.planned)}</td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular" data-testid={`budget-actual-${r.categoryId}`}>
                       <span className={cn(r.override && "font-semibold")}>{fmtEuro(r.actual)}</span>
                       {r.override && <div className="text-[11px] text-muted-foreground" title={r.override.reason}>calculé : {fmtEuro(r.computed)} · saisi à la main</div>}
                       {canValidate && <div><OverrideForm editionId={e.id} categoryId={r.categoryId} current={r.override} /></div>}
                     </td>
-                    <td className="py-2 pr-3 text-right tabular">{fmtEuro(r.engaged)}</td>
-                    <td className={cn("py-2 pr-3 text-right tabular", r.gap < 0 && "font-semibold text-danger")} data-testid={`budget-gap-${r.categoryId}`}>{fmtEuro(r.gap)}</td>
-                    <td className={cn("py-2 text-right tabular", r.pct !== null && r.pct > 100 && "text-danger")}>{r.pct === null ? "—" : `${r.pct} %`}</td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular">{fmtEuro(r.engaged)}</td>
+                    <td className={cn("whitespace-nowrap py-2 pr-3 text-right tabular", r.gap < 0 && "font-semibold text-danger")} data-testid={`budget-gap-${r.categoryId}`}>{fmtEuro(r.gap)}</td>
+                    <td className={cn("whitespace-nowrap py-2 text-right tabular", r.pct !== null && r.pct > 100 && "text-danger")}>{r.pct === null ? "—" : `${r.pct} %`}</td>
                   </tr>
                 );
               })}
               {unclassified !== 0 && (
                 <tr className="border-b" data-testid="budget-row-unclassified">
                   <td className="py-2 pr-3"><b className="font-semibold text-warning">Non classé</b><p className="text-[11px] text-muted-foreground">Charges dont le compte n'entre dans aucune catégorie : complétez les préfixes dans Admin › Référentiels.</p></td>
-                  <td className="py-2 pr-3 text-right tabular">—</td>
-                  <td className="py-2 pr-3 text-right tabular">{fmtEuro(unclassified)}</td>
+                  <td className="whitespace-nowrap py-2 pr-3 text-right tabular">—</td>
+                  <td className="whitespace-nowrap py-2 pr-3 text-right tabular">{fmtEuro(unclassified)}</td>
                   <td colSpan={3} />
                 </tr>
               )}
@@ -105,10 +105,10 @@ export function BudgetPlanSection({ e, me, plan }: Pick<TabCtx, "e" | "me"> & { 
             <tfoot>
               <tr className="border-t-2 font-semibold">
                 <td className="py-2 pr-3">Total</td>
-                <td className="py-2 pr-3 text-right tabular" data-testid="budget-total-planned">{fmtEuro(totals.planned)}</td>
-                <td className="py-2 pr-3 text-right tabular">{fmtEuro(totals.actual)}</td>
-                <td className="py-2 pr-3 text-right tabular">{fmtEuro(totals.engaged)}</td>
-                <td className={cn("py-2 pr-3 text-right tabular", totals.gap < 0 && "text-danger")}>{fmtEuro(totals.gap)}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right tabular" data-testid="budget-total-planned">{fmtEuro(totals.planned)}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right tabular">{fmtEuro(totals.actual)}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right tabular">{fmtEuro(totals.engaged)}</td>
+                <td className={cn("whitespace-nowrap py-2 pr-3 text-right tabular", totals.gap < 0 && "text-danger")}>{fmtEuro(totals.gap)}</td>
                 <td />
               </tr>
             </tfoot>
