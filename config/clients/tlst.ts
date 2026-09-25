@@ -31,7 +31,7 @@ export const tlst: Client = {
     titles: { google: "Nunito", weights: ["600", "700"], fallback: '"Segoe UI", Arial, sans-serif' },
     sans: { stack: '-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif' },
   },
-  modules: "veille,adherents,tresorerie,materiel",
+  modules: "veille,adherents,tresorerie,materiel,budget",
   settings: {
     serverPathTemplate: "\\\\nas\\Partage\\Actions\\{code}\\{annee}",
     billingEmail: "compta@tlst.example",
