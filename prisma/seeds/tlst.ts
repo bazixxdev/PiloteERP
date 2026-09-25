@@ -55,6 +55,13 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
     await prisma.payment.create({ data: { fundingLineId: line.id, label: "Solde sur bilan", amount: p.envelope * 0.2, expectedAt: dayjs(`${year + 1}-01-31`).toDate() } });
   }
 
+  // Budget prévisionnel (25/09) : un prévu en brouillon sur le premier projet, pour que la section ne soit pas vide en démo.
+  await prisma.budgetLine.createMany({ data: [
+    { editionId: editions[0].id, categoryId: "bcat_personnel", label: "Animation du projet", amount: 12000 },
+    { editionId: editions[0].id, categoryId: "bcat_achats", label: "Matériel et semences", amount: 1500 },
+    { editionId: editions[0].id, categoryId: "bcat_indirects", label: "Frais de structure (15 % du personnel)", amount: 1800 },
+  ] });
+
   await prisma.call.create({ data: { funderId: fondation.id, label: `Appel à projets alimentation durable ${year + 1}`, scheme: "Alimentation et précarité", deadline: d(45), recurring: true, amountHint: "jusqu'à 20 000 €", teamStatus: "study", statusById: coord.id, statusAt: d(-3), link: "https://exemple.org/aap" } });
 
   const structures = ["AMAP du Val", "Coop'Loches", "Recyclerie Sud Touraine", "Épicerie Le Panier", "Ferme des Ormeaux", "Collectif Vélo"];

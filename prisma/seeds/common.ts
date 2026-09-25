@@ -22,6 +22,9 @@ export type Common = {
 export const TIME_RULES = `Chaque salarié·e saisit ses heures chaque semaine, au plus tard le lundi suivant. Les réunions transverses (café du lundi, réunion d'équipe) vont sur « Fonctionnement ». Les congés et absences vont sur « Non travaillé ». ${cap(le(V.raf))} verrouille le mois dans les dix jours qui suivent.`;
 
 export async function reset(prisma: PrismaClient, uploads: string) {
+  // Budget prévisionnel (25/09) : ses lignes et saisies manuelles partent avec les éditions ; les catégories restent (migration).
+  await prisma.budgetActualOverride.deleteMany();
+  await prisma.budgetLine.deleteMany();
   await prisma.mailOutbox.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();

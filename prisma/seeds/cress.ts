@@ -8,6 +8,7 @@ import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Common } from "./common";
+import { client } from "../../config/clients";
 
 
 // Générateur déterministe pour un seed reproductible.
@@ -1124,6 +1125,19 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
   }
   await prisma.ledgerLine.createMany({ data: ledger.map((l) => ({ source: "file", analyticCode: l.analyticCode, accountNumber: l.accountNumber, accountLabel: l.accountLabel, year: l.year, debit: l.debit, credit: l.credit, detail: JSON.stringify(l.detail), importedAt: d(-4) })) });
   await prisma.ledgerImport.create({ data: { source: "file", year: 2026, fileName: "grand-livre-analytique-2026-08.xlsx", lines: ledger.length, rows: ledger.reduce((s, l) => s + l.detail.length, 0), byId: raf.id, importedAt: d(-4) } });
+
+  // Budget prévisionnel (25/09) : l'Observatoire 2026 a un prévu validé par la RAF ; son Personnel se lit dans les heures saisies,
+  // ses prestations et déplacements dans le grand livre. L'enquête terrain est déjà dépassée, pour que l'alerte se voie.
+  const obs = ed("OBS-01");
+  await prisma.budgetLine.createMany({ data: [
+    { editionId: obs.id, categoryId: "bcat_personnel", label: "Chargée de mission et appui du pôle", amount: 22000 },
+    { editionId: obs.id, categoryId: "bcat_prestations", label: "Enquête terrain", amount: 300 },
+    { editionId: obs.id, categoryId: "bcat_deplacements", label: "Entretiens en région", amount: 900 },
+    { editionId: obs.id, categoryId: "bcat_communication", label: "Maquette de la note de conjoncture", amount: 1200 },
+  ] });
+  await prisma.edition.update({ where: { id: obs.id }, data: { budgetPlanStatus: "validated", budgetPlanValidatedAt: d(-40), budgetPlanValidatedById: rafId } });
+  // La démo et la recette CRESS montrent le module ; la configuration par défaut du client, elle, ne change pas (au choix de la CRESS).
+  await prisma.settings.update({ where: { id: 1 }, data: { modules: `${client.modules},budget` } });
 
   // Notifications d'échéance (J-30, J-7, retard) : la passerelle les génère datées du jour où le mail serait parti ;
   // celles de plus de trois jours sont marquées lues, comme des mails déjà ouverts — la cloche ne montre que le frais.

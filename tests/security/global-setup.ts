@@ -44,6 +44,10 @@ export default async function globalSetup(config: FullConfig) {
   writeFileSync(path.join(authDir, "../.security-convention-id"), convention.id);
   writeFileSync(path.join(authDir, "../.security-note-id"), note.id);
   writeFileSync(path.join(authDir, "../.security-note-sentinel"), sentinel);
+  // Budget prévisionnel (25/09) : l'édition dont le détail Personnel (coût par personne) ne doit sortir que pour la trésorerie.
+  const budgetEdition = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "OBS-01" } }, select: { id: true } });
+  if (!budgetEdition) throw new Error("Fixture budget prévisionnel introuvable (OBS-01 2026).");
+  writeFileSync(path.join(authDir, "../.security-budget-edition-id"), budgetEdition.id);
   await prisma.person.update({ where: { email: SECURITY_ACTORS.disabled.email }, data: { active: false } });
   await prisma.$disconnect();
 }
