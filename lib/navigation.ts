@@ -31,6 +31,7 @@ export type NavContext = Actor & {
   adherents: boolean; // module d'instance « adhérents »
   tresorerie: boolean; // module d'instance « trésorerie »
   materiel: boolean; // module d'instance « matériel »
+  delegation?: boolean; // module d'instance « délégations »
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
@@ -47,6 +48,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         { label: "Ma semaine", href: "/ma-semaine", path: "/ma-semaine" },
         ...(ctx.modules.includes("tasks") ? [{ label: "Tâches", href: "/taches", path: "/taches" }] : []),
         ...(ctx.modules.includes("notes") ? [{ label: "Notes", href: "/notes", path: "/notes" }] : []),
+        ...(ctx.delegation ? [{ label: "Ma délégation", href: "/delegation", path: "/delegation" }] : []),
       ],
     },
     // Retour de Gaël (18/09) : « ce qu'on fait » (projets, éditions) d'un côté, « comment c'est payé » de l'autre, et l'annuaire

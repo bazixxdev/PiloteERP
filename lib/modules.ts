@@ -27,6 +27,7 @@ export const INSTANCE_MODULES = [
   { key: "tresorerie", label: "Trésorerie", hint: `Plan de trésorerie mensuel sur douze mois : versements attendus des financeurs, factures et engagements, cotisations, règles de flux (salaires, loyer…), solde et point bas. Rubrique « Trésorerie » (${V.direction.one}, ${V.raf.one}, responsables ${de(V.pole)}).` },
   { key: "materiel", label: "Matériel et prêts", hint: "L'inventaire du matériel prêtable (vidéoprojecteur, kakemonos, enceinte…) et le registre des prêts à l'équipe, aux contacts et aux organisations, avec les retours attendus. Rubrique « Matériel »." },
   { key: "budget", label: "Budget prévisionnel", hint: `Le prévu par catégorie de chaque ${V.edition.one}, comparé au réalisé (temps valorisé, grand livre), avec validation. Section de l'onglet Budget.` },
+  { key: "delegation", label: "Délégations", hint: `Ce que la coordination délègue à une personne sur ses ${V.edition.many} : attendus, limites, contrôles, prise de connaissance, présentation ; la vue reprend ses ${V.action.many}, indicateurs et livrables. Rubrique « Ma délégation ».` },
 ] as const;
 
 export type InstanceModuleKey = (typeof INSTANCE_MODULES)[number]["key"];

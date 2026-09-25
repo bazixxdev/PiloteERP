@@ -5,11 +5,12 @@
 // les installations existantes la reçoivent par l'écran Admin › Rôles et droits (ou au reseed).
 import { V, cap, le, un, du, de, au, son, tout, adj, e, pl } from "@/lib/vocab";
 
-export type PermissionModule = "perimetre" | "editions" | "financements" | "adherents" | "tresorerie" | "materiel" | "temps" | "demandes" | "validations" | "direction" | "admin";
+export type PermissionModule = "perimetre" | "editions" | "delegation" | "financements" | "adherents" | "tresorerie" | "materiel" | "temps" | "demandes" | "validations" | "direction" | "admin";
 
 export const PERMISSION_MODULES: Record<PermissionModule, string> = {
   perimetre: "Périmètre",
   editions: `${cap(pl(V.projet))} et ${pl(V.edition)}`,
+  delegation: "Délégations",
   financements: "Financements",
   adherents: "Adhérents",
   tresorerie: "Trésorerie",
@@ -34,6 +35,8 @@ export const PERMISSIONS = [
   { key: "fiche.budget", module: "editions", label: "Tient le budget", help: `Dépenses réalisées, engagements, couche « renseigné par ${le(V.raf)} ».` },
   { key: "budget.plan", module: "editions", label: "Prépare le budget prévisionnel", help: `Sur ses ${pl(V.edition)} (${le(V.pilote)}, équipe), celles de ${son(V.pole)} pour qui le gère, ou partout avec « ${tout(V.org)} ».` },
   { key: "budget.validate", module: "editions", label: "Valide le budget prévisionnel", help: "Valide le prévu, saisit à la main un réalisé (avec motif), voit le détail du personnel par personne." },
+  { key: "delegation.write", module: "delegation", label: "Rédige les délégations", help: `Écrit les attendus, limites et contrôles d'une personne sur ses ${pl(V.edition)}, sur ${son(V.pole)} ou partout avec « ${tout(V.org)} » ; consigne la présentation.` },
+  { key: "delegation.view_all", module: "delegation", label: "Lit toutes les délégations", help: "Chacun lit toujours les siennes ; ce droit ouvre celles des autres (sans leurs tâches, qui restent personnelles)." },
 
   { key: "funding.edit", module: "financements", label: "Gère les financements", help: "Lignes de financement, conventions, versements, financeurs, livrables financeurs." },
   { key: "calls.edit", module: "financements", label: "Gère les appels à projets", help: "Veille : ajouter, qualifier, transformer en dossier (module Veille)." },
@@ -71,7 +74,7 @@ const ALL_EDITIONS: PermissionKey[] = ["edition.contribute", "edition.edit_all",
 
 export const DEFAULT_ROLES: RoleDef[] = [
   { code: "director", label: cap(V.direction), description: "Voit tout, intervient partout, valide au niveau 3, administre l'outil.", validationLevel: 3,
-    permissions: ["budget.plan", "budget.validate", "scope.all", ...ALL_EDITIONS, "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
+    permissions: ["delegation.write", "delegation.view_all", "budget.plan", "budget.validate", "scope.all", ...ALL_EDITIONS, "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
   { code: "raf", label: cap(V.raf), description: `Financements, budget, clôture des temps, suivi des factures ; siège ${au(V.codir)}, administre l'outil ; informé${e(V.raf)} des validations, pas valideu${V.raf.gender === "f" ? "se" : "r"}.`, validationLevel: 0,
     permissions: ["budget.plan", "budget.validate", "scope.all", "edition.contribute", "edition.status", "fiche.means", "fiche.budget", "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
   { code: "pole_lead", label: `Responsable ${de(V.pole)}`, description: `Agit sur les ${pl(V.edition)} et les demandes de ${son(V.pole)}, valide au niveau 2, siège ${au(V.codir)}.`, validationLevel: 2,

@@ -69,6 +69,7 @@ async function counters() {
       adherents: instanceHas(settings, "adherents"),
       tresorerie: instanceHas(settings, "tresorerie"),
       materiel: instanceHas(settings, "materiel"),
+      delegation: instanceHas(settings, "delegation"),
       showTeam: people.some((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)),
       wide: wideViewLabel(me),
       badges,
