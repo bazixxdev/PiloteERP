@@ -23,11 +23,16 @@ async function ctx(editionId: string) {
 
 const path = (id: string) => `/edition/${id}`;
 
-export async function addAction(editionId: string, name: string): Promise<Result<{ id: string }>> {
+// `opts` (25/09) : un objectif créé depuis la vue Délégation porte son responsable, son échéance, et peut être un point de
+// contrôle. Même garde, même création : pas de second moteur d'actions. Sans `opts`, comportement inchangé.
+export async function addAction(editionId: string, name: string, opts?: { ownerId?: string; milestoneDate?: string; isCheckpoint?: boolean }): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
   if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: `Vous ne pouvez pas ajouter d'${V.action.one} ici.` };
+  if (opts?.ownerId && !(await prisma.person.findFirst({ where: { id: opts.ownerId, active: true }, select: { id: true } }))) return { ok: false, error: "Responsable introuvable." };
+  const milestone = opts?.milestoneDate ? new Date(opts.milestoneDate) : null;
+  if (milestone && Number.isNaN(milestone.getTime())) return { ok: false, error: "Échéance invalide." };
   const count = await prisma.action.count({ where: { editionId } });
-  const a = await prisma.action.create({ data: { editionId, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: c.isPilot ? c.me.id : c.e.project.pilotId, order: count } });
+  const a = await prisma.action.create({ data: { editionId, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), milestoneDate: milestone, isCheckpoint: Boolean(opts?.isCheckpoint), order: count } });
   revalidatePath(path(editionId));
   return { ok: true, data: { id: a.id } };
 }
