@@ -67,49 +67,50 @@ model Person {
   rhythmPeriods    PersonRhythmPeriod[]
   weekDeclarations WeekDeclaration[]
 
-  ledPoles           Pole[]              @relation("PoleLead")
+  ledPoles           Pole[]                 @relation("PoleLead")
   timeCodes          PersonTimeCode[]
-  pilotedProjects    Project[]           @relation("ProjectPilot")
-  guaranteedProjects Project[]           @relation("ProjectGuarantor")
+  pilotedProjects    Project[]              @relation("ProjectPilot")
+  guaranteedProjects Project[]              @relation("ProjectGuarantor")
   teams              EditionTeam[]
   personDays         EditionPersonDays[]
   actions            Action[]
   timeEntries        TimeEntry[]
-  monthLocks         MonthLock[]         @relation("LockOwner")
-  locksDone          MonthLock[]         @relation("LockedBy")
-  requests           ValidationRequest[] @relation("Requester")
-  decisions          ValidationRequest[] @relation("Decider")
+  monthLocks         MonthLock[]            @relation("LockOwner")
+  locksDone          MonthLock[]            @relation("LockedBy")
+  requests           ValidationRequest[]    @relation("Requester")
+  decisions          ValidationRequest[]    @relation("Decider")
   comments           Comment[]
   changes            ChangeLog[]
   uploads            Attachment[]
-  decisionsTaken     Decision[]          @relation("DecisionAuthor")
-  contactsCreated    Contact[]           @relation("ContactCreator")
-  contactLists       ContactList[]       @relation("ContactListOwner")
-  membershipsCreated Membership[]        @relation("MembershipCreator")
-  cashRulesCreated   CashRule[]          @relation("CashRuleCreator")
-  cashRules          CashRule[]          @relation("CashRulePerson")
-  loans              Loan[]              @relation("LoanBorrower")
-  dossiersOwned      Convention[]        @relation("ConventionOwner")
-  loansCreated       Loan[]              @relation("LoanCreator")
-  decisionsFollowed  Decision[]          @relation("DecisionFollowUp")
+  decisionsTaken     Decision[]             @relation("DecisionAuthor")
+  contactsCreated    Contact[]              @relation("ContactCreator")
+  contactLists       ContactList[]          @relation("ContactListOwner")
+  membershipsCreated Membership[]           @relation("MembershipCreator")
+  cashRulesCreated   CashRule[]             @relation("CashRuleCreator")
+  cashRules          CashRule[]             @relation("CashRulePerson")
+  budgetOverrides    BudgetActualOverride[] @relation("BudgetOverrideAuthor")
+  loans              Loan[]                 @relation("LoanBorrower")
+  dossiersOwned      Convention[]           @relation("ConventionOwner")
+  loansCreated       Loan[]                 @relation("LoanCreator")
+  decisionsFollowed  Decision[]             @relation("DecisionFollowUp")
   tasks              Task[]
   taskLists          TaskList[]
   notes              Note[]
   noteShares         NoteShare[]
   loadFreezes        LoadFreeze[]
-  proposalsWritten   ChangeProposal[]    @relation("ProposalAuthor")
-  proposalsDecided   ChangeProposal[]    @relation("ProposalDecider")
+  proposalsWritten   ChangeProposal[]       @relation("ProposalAuthor")
+  proposalsDecided   ChangeProposal[]       @relation("ProposalDecider")
   achievements       Achievement[]
-  requestsMade       Request[]           @relation("RequestRequester")
-  requestsAssigned   Request[]           @relation("RequestAssignee")
-  servicesDone       Expense[]           @relation("ServiceDoneBy")
+  requestsMade       Request[]              @relation("RequestRequester")
+  requestsAssigned   Request[]              @relation("RequestAssignee")
+  servicesDone       Expense[]              @relation("ServiceDoneBy")
   plannedLoads       PlannedLoad[]
-  sponsoredEditions  Edition[]           @relation("EditionSponsor")
-  remarksWritten     FieldRemark[]       @relation("RemarkAuthor")
-  remarksResolved    FieldRemark[]       @relation("RemarkResolver")
-  notifications      Notification[]      @relation("NotificationRecipient")
-  notificationsSent  Notification[]      @relation("NotificationSender")
-  helpsConventions   ConventionHelper[]  @relation("ConventionHelperPerson")
+  sponsoredEditions  Edition[]              @relation("EditionSponsor")
+  remarksWritten     FieldRemark[]          @relation("RemarkAuthor")
+  remarksResolved    FieldRemark[]          @relation("RemarkResolver")
+  notifications      Notification[]         @relation("NotificationRecipient")
+  notificationsSent  Notification[]         @relation("NotificationSender")
+  helpsConventions   ConventionHelper[]     @relation("ConventionHelperPerson")
 }
 
 // ---- Comptes et sessions (lot F) : tables attendues par better-auth (adaptateur Prisma). Ne pas renommer les champs. ----
@@ -497,9 +498,15 @@ model Edition {
   report         String?
 
   // Budget (écrit par la RAF)
-  budgetEnvelope Float?
-  committed      Float  @default(0)
-  spent          Float  @default(0)
+  budgetEnvelope          Float?
+  committed               Float                  @default(0)
+  spent                   Float                  @default(0)
+  // Budget prévisionnel (25/09) : draft | submitted | validated ; changé par commandes dédiées (jamais saveField).
+  budgetPlanStatus        String                 @default("draft")
+  budgetPlanValidatedAt   DateTime?
+  budgetPlanValidatedById String?
+  budgetLines             BudgetLine[]
+  budgetOverrides         BudgetActualOverride[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1080,6 +1087,8 @@ model Expense {
   serviceDoneById   String?
   serviceDoneBy     Person?            @relation("ServiceDoneBy", fields: [serviceDoneById], references: [id])
   paidAt            DateTime?
+  budgetCategoryId  String? // catégorie du budget prévisionnel (facultative) : l'engagement tombe dans sa ligne
+  budgetCategory    BudgetCategory?    @relation(fields: [budgetCategoryId], references: [id], onDelete: SetNull)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
@@ -1287,4 +1296,51 @@ model Loan {
 
   @@index([equipmentId])
   @@index([returnedAt])
+}
+
+// Budget prévisionnel (25/09) : grille commune de l'instance. Une catégorie utilisée se désactive, elle ne se supprime pas.
+model BudgetCategory {
+  id              String                 @id @default(cuid())
+  label           String
+  // Préfixes de comptes du grand livre classés ici, séparés par des virgules (« 64 », « 604,611,622 ») ; le plus long l'emporte.
+  accountPrefixes String                 @default("")
+  source          String                 @default("ledger") // time (Personnel : temps valorisé) | ledger (grand livre) | none (forfait, saisie manuelle)
+  order           Int                    @default(0)
+  active          Boolean                @default(true)
+  lines           BudgetLine[]
+  overrides       BudgetActualOverride[]
+  expenses        Expense[]
+}
+
+// Le prévu d'une édition : plusieurs lignes possibles par catégorie.
+model BudgetLine {
+  id         String         @id @default(cuid())
+  editionId  String
+  edition    Edition        @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  label      String?
+  amount     Float
+  note       String?
+  order      Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([editionId])
+}
+
+// Réalisé saisi à la main : remplace le calcul de la catégorie pour cette édition ; le calcul reste affiché à côté.
+model BudgetActualOverride {
+  id         String         @id @default(cuid())
+  editionId  String
+  edition    Edition        @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  amount     Float
+  reason     String
+  authorId   String
+  author     Person         @relation("BudgetOverrideAuthor", fields: [authorId], references: [id])
+  createdAt  DateTime       @default(now())
+
+  @@unique([editionId, categoryId])
 }
