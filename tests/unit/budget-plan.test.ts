@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { budgetTable, canPlanBudget, canSeePersonnelDetail, canValidateBudget, classifyAccount, ledgerByCategory, monthlyCost, nextStatusAfterEdit, overBudget, personnelActual, type Category } from "../../lib/budget-plan";
+import { budgetTable, canPlanBudget, canSeePersonnelDetail, canValidateBudget, canValidateBudgetOn, classifyAccount, ledgerByCategory, monthlyCost, nextStatusAfterEdit, overBudget, personnelActual, type Category } from "../../lib/budget-plan";
 
 const cat = (id: string, prefixes: string, source: Category["source"] = "ledger", order = 0): Category => ({ id, label: id, accountPrefixes: prefixes, source, order, active: true });
 const CATS = [cat("personnel", "64", "time", 1), cat("prestations", "604,611,622", "ledger", 3), cat("achats", "606", "ledger", 4), cat("autre", "6", "ledger", 9), cat("indirects", "", "none", 2)];
@@ -88,4 +88,12 @@ test("modifier un budget validé le repasse à valider, sauf pour qui valide", (
   assert.equal(nextStatusAfterEdit("validated", { ...me, permissions: ["budget.plan"] }), "submitted");
   assert.equal(nextStatusAfterEdit("validated", { ...me, permissions: ["budget.plan", "budget.validate"] }), "validated");
   assert.equal(nextStatusAfterEdit("draft", { ...me, permissions: ["budget.plan"] }), "draft");
+});
+
+test("valider exige le droit et que l'édition soit dans son périmètre", () => {
+  const me = { id: "me", poleId: "A", role: "raf", validationLevel: 0 };
+  assert.equal(canValidateBudgetOn({ ...me, permissions: ["budget.validate"] }, { poleIds: ["A"] }), true);
+  assert.equal(canValidateBudgetOn({ ...me, permissions: ["budget.validate"] }, { poleIds: ["B"] }), false);
+  assert.equal(canValidateBudgetOn({ ...me, permissions: ["budget.validate", "scope.all"] }, { poleIds: ["B"] }), true);
+  assert.equal(canValidateBudgetOn({ ...me, permissions: ["budget.plan", "scope.all"] }, { poleIds: ["A"] }), false);
 });

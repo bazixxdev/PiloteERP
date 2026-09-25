@@ -91,6 +91,13 @@ export function canPlanBudget(me: Viewer, ed: { pilotId: string; poleIds: string
 
 export const canValidateBudget = (me: Actor) => has(me, "budget.validate");
 
+// Valider (ou saisir un réalisé à la main) sur une édition précise : le droit, et l'édition est dans son périmètre
+// (tout avec scope.all, sinon son pôle). Le droit seul ne suffit pas : autorisation par ressource.
+export function canValidateBudgetOn(me: Viewer, ed: { poleIds: string[] }): boolean {
+  if (!canValidateBudget(me)) return false;
+  return has(me, "scope.all") || (me.poleId !== null && ed.poleIds.includes(me.poleId));
+}
+
 // Le détail Personnel par personne révèle une rémunération : trésorerie ou validation du budget seulement.
 export const canSeePersonnelDetail = (me: Actor) => has(me, "treasury.view") || has(me, "budget.validate");
 
