@@ -19,6 +19,8 @@ import { fmtDate } from "@/lib/format";
 import { ApiCard } from "@/components/common/api-card";
 import { InstanceModulesForm } from "./instance-modules-form";
 import { instanceHas, modulesOf } from "@/lib/modules";
+import { loadCategories } from "@/lib/budget-plan-db";
+import { BudgetCategoriesForm } from "./budget-categories";
 import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
 import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
@@ -53,6 +55,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const rw = canAdmin(me);
   const roles = await getRoles();
   const suppliers = await prisma.organisation.findMany({ where: { active: true, ...kindFilter("supplier") }, include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
+  const budgetCategories = instanceHas(settings, "budget") ? await loadCategories() : null;
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
@@ -208,6 +211,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Raisons d'être (missions du plan opérationnel)" description={`Pourquoi ${le(V.org)} porte un projet : chaque projet s'y rattache.`} actions={rw ? <AddSimpleForm kind="mission" placeholder="Nouvelle raison d'être" compact /> : undefined}>
             <ul className="divide-y text-sm">{missions.map((m) => <li key={m.id}><AutoField model="mission" id={m.id} field="name" type="text" value={m.name} readOnly={!rw} /></li>)}</ul>
           </Section>
+          {budgetCategories && (
+            <Section title="Catégories du budget prévisionnel" className="lg:col-span-3" testId="admin-budget-categories" description="La grille commune des budgets. Préfixes : les comptes du grand livre classés ici (le plus long l'emporte). Source : d'où vient le réalisé. Une catégorie utilisée se désactive, elle ne se supprime pas.">
+              <BudgetCategoriesForm categories={budgetCategories} readOnly={!rw} />
+            </Section>
+          )}
           <Section title="Codes de temps hors projet" actions={rw ? <AddSimpleForm kind="timeCode" placeholder="Nouveau code" compact /> : undefined}>
             <ul className="divide-y text-sm">
               {timeCodes.map((t) => (

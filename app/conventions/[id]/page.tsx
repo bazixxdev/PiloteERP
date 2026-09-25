@@ -6,7 +6,9 @@ import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson, getRefs } from "@/lib/session";
+import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
+import { instanceHas } from "@/lib/modules";
+import { ConventionBudget } from "./budget-block";
 import { canEditFunding } from "@/lib/rights";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { allocationOf } from "@/lib/conventions";
@@ -31,6 +33,7 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
   ]);
   if (!c) notFound();
   const notesLinked = await loadNotes(me, { conventionId: id });
+  const budgetOn = instanceHas(await getSettings(), "budget");
   const rw = canEditFunding(me);
   // Éditions couvertes par la période et pas encore rattachées : proposées au rattachement depuis la convention.
   const attachable = rw ? (await prisma.edition.findMany({ where: { year: { gte: c.startYear, lte: c.endYear }, status: { not: "closed" }, id: { notIn: c.lines.map((l) => l.editionId) } }, include: { project: true }, orderBy: [{ project: { name: "asc" } }, { year: "asc" }] })).map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` })) : [];
@@ -161,6 +164,8 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
               </div>
             )}
           </Section>}
+
+          {won && budgetOn && <ConventionBudget me={me} editions={[...new Map(c.lines.map((l) => [l.edition.id, { id: l.edition.id, year: l.edition.year, projectId: l.edition.projectId }])).values()]} />}
 
           {won && <Section title="Versements" description={`Les tranches de l'accord (avance, acomptes, solde), attendues puis reçues ; « reçu » est posé par ${le(V.raf)} ou ${le(V.direction)}. Un versement propre à ${un(V.edition)} se saisit sur sa ligne et apparaît ici avec son projet.`} testId="convention-payments">
             <PaymentsList payments={allPayments} reference={c.amountNotified} rw={rw} target={{ conventionId: c.id }} showSource testId="convention-payments-list" />

@@ -22,4 +22,6 @@ export type TabCtx = {
   openLine?: string | null;
   // Champ à surligner dans ce panneau (le chiffre d'où l'on a cliqué).
   openField?: string | null;
+  // Catégories actives du budget prévisionnel (module « budget ») ; null si le module est éteint.
+  budgetCategories?: { id: string; label: string }[] | null;
 };

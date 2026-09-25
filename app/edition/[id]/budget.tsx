@@ -9,12 +9,13 @@ import { AddExpenseForm } from "./add-forms";
 import { HelpTip } from "@/components/common/help-tip";
 import { ClickToEdit } from "@/components/inline/click-to-edit";
 import { InvoiceCell } from "./invoice-cell";
+import { ExpenseCategorySelect } from "./budget-plan-forms";
 import { RowPanel } from "@/components/common/row-panel";
 import Link from "next/link";
 import { V, cap, le, du, ce } from "@/lib/vocab";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
-export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
+export function BudgetTab({ e, me, settings, isPilot, isTeam, budgetCategories }: TabCtx) {
   const rw = canWriteLayer(me, "budget", isPilot, isTeam);
   const b = budgetOf(e);
   const lastUpdate = e.expenses.reduce<Date | null>((m, x) => (!m || x.updatedAt > m ? x.updatedAt : m), null);
@@ -106,6 +107,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam }: TabCtx) {
                             <Field label="Engagé">{x.validationId ? <div className="px-2 py-1 tabular">{fmtEuro(x.committed)} <span className="text-xs text-muted-foreground">(devis validé)</span></div> : <AutoField model="expense" id={x.id} field="committed" type="number" value={x.committed} readOnly={!rw} suffix="€" refreshOnSave />}</Field>
                             <Field label="Réalisé (factures)"><AutoField model="expense" id={x.id} field="spent" type="number" value={x.spent} readOnly={!rw} suffix="€" refreshOnSave testId={`expense-spent-${x.id}`} /></Field>
                             <Field label="Nature"><AutoField model="expense" id={x.id} field="nature" type="select" value={x.nature} options={natureOpts} readOnly={!rw} placeholder="—" /></Field>
+                            {budgetCategories && <Field label="Catégorie du budget prévisionnel"><ExpenseCategorySelect expenseId={x.id} value={x.budgetCategoryId} categories={budgetCategories} readOnly={!canTrack} /></Field>}
                             <Field label="État"><AutoField model="expense" id={x.id} field="status" type="select" value={x.status} options={statusOpts} allowEmpty={false} readOnly={!rw} refreshOnSave /></Field>
                             <div className="sm:col-span-2"><Field label="Référence (n° de facture, ligne de l'Excel)"><AutoField model="expense" id={x.id} field="reference" type="text" value={x.reference} readOnly={!rw} placeholder="—" /></Field></div>
                           </div>

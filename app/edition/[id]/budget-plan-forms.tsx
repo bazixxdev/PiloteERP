@@ -6,7 +6,7 @@ import { Check, Pencil, Plus, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addBudgetLine, clearActualOverride, deleteBudgetLine, setActualOverride, submitBudgetPlan, updateBudgetLine, validateBudgetPlan } from "@/app/actions/budget-plan";
+import { addBudgetLine, clearActualOverride, deleteBudgetLine, setActualOverride, setExpenseCategory, submitBudgetPlan, updateBudgetLine, validateBudgetPlan } from "@/app/actions/budget-plan";
 
 type R = { ok: true } | { ok: false; error: string };
 type Opt = { id: string; label: string };
@@ -104,5 +104,17 @@ export function OverrideForm({ editionId, categoryId, current }: { editionId: st
       <Button type="submit" size="xs" variant="outline" disabled={pending || !ok} data-testid={`budget-override-save-${categoryId}`}><Check />Enregistrer</Button>
       <Button type="button" size="icon-xs" variant="ghost" onClick={() => setOpen(false)} aria-label="Annuler"><X /></Button>
     </form>
+  );
+}
+
+// Catégorie du budget prévisionnel d'une dépense : l'engagement restant tombe dans la bonne ligne du tableau.
+export function ExpenseCategorySelect({ expenseId, value, categories, readOnly }: { expenseId: string; value: string | null; categories: Opt[]; readOnly: boolean }) {
+  const { pending, run } = useRun();
+  if (readOnly) return <div className="px-2 py-1">{categories.find((c) => c.id === value)?.label ?? "—"}</div>;
+  return (
+    <select value={value ?? ""} disabled={pending} onChange={(e) => run(() => setExpenseCategory(expenseId, e.target.value || null))} className="h-8 w-full rounded-md border bg-background px-2 text-sm" data-testid={`expense-category-${expenseId}`} aria-label="Catégorie du budget prévisionnel">
+      <option value="">—</option>
+      {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+    </select>
   );
 }

@@ -63,7 +63,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const myTasks = await prisma.task.findMany({ where: { personId: me.id, editionId: e.id, done: false }, select: { id: true, label: true, dueDate: true, action: { select: { name: true } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] });
   const canStatus = canSetEditionStatus(me);
   const nextYearExists = e.project.editions.some((x) => x.year === e.year + 1);
-  const ctx = { e, me, refs, settings, people, funders, organisations, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks, openLine: ligne ?? null, openField: champ ?? null };
+  const ctx = { e, me, refs, settings, people, funders, organisations, conventions, isPilot, isTeam, feedback: relecture === "1", myTasks, openLine: ligne ?? null, openField: champ ?? null, budgetCategories: plan ? plan.categories.filter((c) => c.active).map((c) => ({ id: c.id, label: c.label })) : null };
 
   // Compteurs d'onglet (revue du 15/09) : ce qui reste à faire, pas des totaux ; Documents = fichiers et liens seulement.
   const counts = {
