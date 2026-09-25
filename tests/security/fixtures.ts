@@ -1,7 +1,7 @@
 import { type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 export type SecurityActor = {
-  key: "contributor" | "pilot" | "raf" | "director" | "disabled";
+  key: "contributor" | "pilot" | "raf" | "director" | "disabled" | "resettable";
   name: string;
   email: string;
 };
@@ -14,6 +14,9 @@ export const SECURITY_ACTORS: Record<string, SecurityActor> = {
   raf: { key: "raf", name: "Nadia Ferrand", email: "nadia.ferrand@exemple.fr" },
   director: { key: "director", name: "Claire Vasseur", email: "claire.vasseur@exemple.fr" },
   disabled: { key: "disabled", name: "Manon Girard", email: "manon.girard@exemple.fr" },
+  // Compte réservé à SEC-09 : son mot de passe est réinitialisé et ses sessions révoquées ; aucune autre spec ne s'en sert,
+  // pour que la session partagée des autres acteurs survive quel que soit l'ordre des fichiers.
+  resettable: { key: "resettable", name: "Élise Fontaine", email: "elise.fontaine@exemple.fr" },
 };
 
 export const ANONYMOUS = { key: "anonymous" as const };

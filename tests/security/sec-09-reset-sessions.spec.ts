@@ -10,7 +10,7 @@ test("SEC-09 — un reset invalide les deux sessions antérieures", async ({ bas
   const url = String(baseURL);
   const password = process.env.SECURITY_TEST_PASSWORD ?? "security-test-password-2026";
   const nextPassword = "security-reset-password-2026";
-  const actor = SECURITY_ACTORS.contributor;
+  const actor = SECURITY_ACTORS.resettable;
   const a = await signInActor(url, actor, password);
   const b = await signInActor(url, actor, password);
   const cookie = (state: typeof a) => state.cookies.map((c) => `${c.name}=${c.value}`).join("; ");
