@@ -67,3 +67,6 @@ prisma/prototype.db-journal
 /tests/.security-*
 /.next-security/
 /.next-restore/
+
+# tout dossier de build Next (aperçus locaux compris)
+/.next*/
