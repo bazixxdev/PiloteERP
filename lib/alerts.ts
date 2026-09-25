@@ -1,7 +1,7 @@
 import { daysFromNow, dayjs, fmtEuro } from "./format";
 import { budgetOf, type ExpenseLike } from "./budget";
 
-export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending";
+export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending" | "budget_over";
 
 export type Alert = { kind: AlertKind; level: "warning" | "danger"; label: string; when?: Date };
 

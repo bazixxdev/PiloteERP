@@ -26,6 +26,11 @@ import { FinancementsTab } from "./financements";
 import { TempsTab } from "./temps";
 import { BudgetTab } from "./budget";
 import { LedgerBlock } from "./ledger-block";
+import { BudgetPlanSection } from "./budget-plan";
+import { loadBudgetPlan } from "@/lib/budget-plan-db";
+import { overBudget } from "@/lib/budget-plan";
+import { instanceHas } from "@/lib/modules";
+import { fmtEuro } from "@/lib/format";
 import { DocumentsTab } from "./documents";
 import { prisma } from "@/lib/db";
 import { inMyScope, isTransversal } from "@/lib/scope";
@@ -50,6 +55,9 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   const isPilot = e.project.pilotId === me.id;
   const isTeam = e.team.some((t) => t.personId === me.id);
   const alerts = computeAlerts(e, settings);
+  // Budget prévisionnel (module « budget ») : un dépassement par catégorie d'un budget validé s'ajoute à la bande d'état.
+  const plan = instanceHas(settings, "budget") ? await loadBudgetPlan(e, me) : null;
+  if (plan?.status === "validated") for (const r of overBudget(plan.table.rows)) alerts.push({ kind: "budget_over", level: "danger", label: `${r.label} : réalisé + engagé dépasse le prévu de ${fmtEuro(-r.gap)}` });
   // Alertes réglées par une décision d'instance : elles s'éteignent dans la bande d'état, avec la référence de la décision.
   const acks = e.decisions.filter((d) => d.alertKind).map((d) => ({ kind: d.alertKind as (typeof alerts)[number]["kind"], by: `${refLabel(refs, "decision_instance", d.instance)} ${fmtDate(d.decidedAt)}` }));
   const myTasks = await prisma.task.findMany({ where: { personId: me.id, editionId: e.id, done: false }, select: { id: true, label: true, dueDate: true, action: { select: { name: true } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] });
@@ -136,7 +144,8 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
       {/* Budget = l'argent de l'édition (revue du 15/09) : les dépenses (enveloppe, devis, factures) puis les recettes (financeurs, livrables). */}
       {tab === "budget" && (
         <div className="grid gap-4">
-          <nav className="flex gap-3 text-xs" aria-label="Sections du budget"><a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#realise" className="text-primary hover:underline">Réalisé comptable</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
+          <nav className="flex gap-3 text-xs" aria-label="Sections du budget">{plan && <><a href="#previsionnel" className="text-primary hover:underline">Prévisionnel</a><span className="text-muted-foreground">·</span></>}<a href="#depenses" className="text-primary hover:underline">Dépenses</a><span className="text-muted-foreground">·</span><a href="#realise" className="text-primary hover:underline">Réalisé comptable</a><span className="text-muted-foreground">·</span><a href="#recettes" className="text-primary hover:underline">Recettes et financeurs</a></nav>
+          {plan && <div id="previsionnel" className="scroll-mt-20"><BudgetPlanSection e={e} me={me} plan={plan} /></div>}
           <div id="depenses" className="scroll-mt-20"><BudgetTab {...ctx} /></div>
           <div id="realise" className="scroll-mt-20"><LedgerBlock e={ctx.e} settings={ctx.settings} canAdmin={canAdmin(me)} /></div>
           <div id="recettes" className="scroll-mt-20"><FinancementsTab {...ctx} /></div>

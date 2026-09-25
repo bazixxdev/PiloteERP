@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 // Une seule ligne dès la tablette (critique du 16/09) : les puces se partagent la largeur et se tronquent (le libellé entier est en infobulle
 // et sur l'onglet visé) ; au-delà de `max`, « +N » mène à l'aperçu. Avant, quatre alertes prenaient deux lignes à 1024 px.
 // Sur mobile elles s'empilent en pleine largeur, à hauteur tactile.
-const TAB_OF: Record<Alert["kind"], string> = { milestone_overdue: "actions", time_over: "temps", deliverable_overdue: "budget", deliverable_soon: "budget", payment_late: "budget", envelope: "budget", validation_pending: "apercu" };
+const TAB_OF: Record<Alert["kind"], string> = { milestone_overdue: "actions", time_over: "temps", deliverable_overdue: "budget", deliverable_soon: "budget", payment_late: "budget", envelope: "budget", budget_over: "budget", validation_pending: "apercu" };
 
 export type AlertAck = { kind: Alert["kind"]; by: string };
 
