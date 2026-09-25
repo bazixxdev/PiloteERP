@@ -47,8 +47,10 @@ export async function updateDelegation(id: string, input: { expectations?: strin
     if (!d || !canWriteDelegation(me, projectPoleIds(d.edition.project))) return { ok: false, error: DENIED };
     const next = { expectations: input.expectations === undefined ? d.expectations : clean(input.expectations), limits: input.limits === undefined ? d.limits : clean(input.limits), controls: input.controls === undefined ? d.controls : clean(input.controls) };
     if (next.expectations === d.expectations && next.limits === d.limits && next.controls === d.controls) return { ok: true };
+    // Une délégation encore vide n'a rien à archiver : la première rédaction ne crée pas de version.
+    const hadText = Boolean(d.expectations || d.limits || d.controls);
     await prisma.$transaction([
-      prisma.delegationRevision.create({ data: { delegationId: id, expectations: d.expectations, limits: d.limits, controls: d.controls, authorId: me.id } }),
+      ...(hadText ? [prisma.delegationRevision.create({ data: { delegationId: id, expectations: d.expectations, limits: d.limits, controls: d.controls, authorId: me.id } })] : []),
       prisma.delegation.update({ where: { id }, data: { ...next, acknowledgedAt: null } }),
       ...(d.personId !== me.id ? [prisma.notification.create({ data: { personId: d.personId, senderId: me.id, kind: KIND, title: `Délégation modifiée, à relire : ${d.edition.project.name}`, link: link(d.personId) } })] : []),
     ]);

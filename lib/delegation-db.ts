@@ -1,12 +1,13 @@
 import { prisma } from "./db";
-import { has } from "./rights";
-import { projectPoleIds, type Viewer } from "./scope";
+import { canEditActions, has } from "./rights";
+import { inMyPole, projectPoleIds, type Viewer } from "./scope";
 import { canReadDelegation, canWriteDelegation, dueInPeriod, objectiveInPeriod, periodFor, periodsOf } from "./delegation";
 
 const include = {
   edition: { select: {
     id: true, year: true,
-    project: { select: { name: true, poleId: true, pole: { select: { name: true } }, secondaryPoles: { select: { poleId: true } } } },
+    project: { select: { name: true, pilotId: true, poleId: true, pole: { select: { name: true } }, secondaryPoles: { select: { poleId: true } } } },
+    team: { select: { personId: true } },
     actions: { select: { id: true, name: true, ownerId: true, owner: { select: { name: true } }, milestoneDate: true, state: true, isCheckpoint: true }, orderBy: [{ milestoneDate: "asc" as const }, { order: "asc" as const }] },
     indicators: { select: { id: true, label: true, target: true, actual: true, imposed: true }, orderBy: { order: "asc" as const } },
     fundingLines: { select: { funder: { select: { name: true } }, deliverables: { select: { id: true, label: true, dueDate: true, done: true } } } },
@@ -38,6 +39,7 @@ export async function loadSheet(me: Viewer, personId: string, year: number, peri
     return {
       pole: e.project.pole.name,
       canWrite: canWriteDelegation(me, projectPoleIds(e.project)),
+      canAddObjective: canEditActions(me, e.project.pilotId === me.id, e.team.some((t) => t.personId === me.id), inMyPole(me, e.project)),
       delegation: { id: r.id, expectations: r.expectations, limits: r.limits, controls: r.controls, acknowledgedAt: r.acknowledgedAt, boardPresentedAt: r.boardPresentedAt, revisions: r.revisions },
       edition: { id: e.id, name: e.project.name, year: e.year },
       objectives: e.actions.filter((a) => a.ownerId === personId && !a.isCheckpoint && objectiveInPeriod(a, period)),

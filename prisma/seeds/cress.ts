@@ -1137,7 +1137,19 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
   ] });
   await prisma.edition.update({ where: { id: obs.id }, data: { budgetPlanStatus: "validated", budgetPlanValidatedAt: d(-40), budgetPlanValidatedById: rafId } });
   // La démo et la recette CRESS montrent le module ; la configuration par défaut du client, elle, ne change pas (au choix de la CRESS).
-  await prisma.settings.update({ where: { id: 1 }, data: { modules: `${client.modules},budget` } });
+  await prisma.settings.update({ where: { id: 1 }, data: { modules: `${client.modules},budget,delegation` } });
+
+  // Délégation (25/09) : Thomas Guérin sur deux de ses projets 2026, lue ; un bilan intermédiaire marqué point de contrôle.
+  const claire = byName("Claire Vasseur");
+  const thomasDeleg = byName("Thomas Guérin");
+  for (const [code, expectations, limits, controls] of [
+    ["TES-02", "Six conférences tenues dans l'année, 400 participants cumulés ; un partenaire universitaire engagé pour 2027.", "Délégation totale sur la programmation et les intervenants ; tout engagement de dépense au-delà de 1 000 € passe par une demande de validation.", "Point mensuel avec la direction ; bilan intermédiaire fin juin, bilan final en décembre ; compte rendu au CA en octobre."],
+    ["TES-05", "Trois coopérations lancées entre structures ESS et non-ESS, dont une avec une collectivité.", "Pas d'engagement au nom de la CRESS auprès d'une collectivité sans accord de la direction.", "Revue trimestrielle avec le responsable de pôle."],
+  ] as const) {
+    await prisma.delegation.create({ data: { personId: thomasDeleg.id, editionId: ed(code).id, expectations, limits, controls, acknowledgedAt: d(-30), createdById: claire.id } });
+  }
+  const tes02 = await prisma.action.findFirst({ where: { editionId: ed("TES-02").id }, orderBy: { order: "asc" } });
+  if (tes02) await prisma.action.create({ data: { editionId: ed("TES-02").id, name: "Bilan intermédiaire à la direction", ownerId: thomasDeleg.id, milestoneDate: d(20), isCheckpoint: true, order: 99 } });
 
   // Notifications d'échéance (J-30, J-7, retard) : la passerelle les génère datées du jour où le mail serait parti ;
   // celles de plus de trois jours sont marquées lues, comme des mails déjà ouverts — la cloche ne montre que le frais.

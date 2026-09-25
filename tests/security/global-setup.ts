@@ -48,6 +48,12 @@ export default async function globalSetup(config: FullConfig) {
   const budgetEdition = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "OBS-01" } }, select: { id: true } });
   if (!budgetEdition) throw new Error("Fixture budget prévisionnel introuvable (OBS-01 2026).");
   writeFileSync(path.join(authDir, "../.security-budget-edition-id"), budgetEdition.id);
+  // Délégation (25/09) : la feuille de Thomas Guérin (acteur « pilot ») et une tâche personnelle témoin sur l'un de ses projets.
+  const thomas = await prisma.person.findUnique({ where: { email: SECURITY_ACTORS.pilot.email }, select: { id: true } });
+  const deleg = thomas ? await prisma.delegation.findFirst({ where: { personId: thomas.id }, select: { editionId: true } }) : null;
+  if (!thomas || !deleg) throw new Error("Fixture délégation introuvable.");
+  await prisma.task.create({ data: { personId: thomas.id, editionId: deleg.editionId, label: "SEC31_TASK_SENTINEL_4b1e" } });
+  writeFileSync(path.join(authDir, "../.security-delegation-person-id"), thomas.id);
   await prisma.person.update({ where: { email: SECURITY_ACTORS.disabled.email }, data: { active: false } });
   await prisma.$disconnect();
 }

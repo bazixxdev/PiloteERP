@@ -55,6 +55,10 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
     await prisma.payment.create({ data: { fundingLineId: line.id, label: "Solde sur bilan", amount: p.envelope * 0.2, expectedAt: dayjs(`${year + 1}-01-31`).toDate() } });
   }
 
+  // Délégation (25/09) : périodes du tiers-lieu (janvier-juin, été, septembre-décembre) et une délégation à relire.
+  await prisma.settings.update({ where: { id: 1 }, data: { delegationPeriods: "01-06,07-08,09-12" } });
+  await prisma.delegation.create({ data: { personId: projets[0].pilot.id, editionId: editions[0].id, expectations: "Le jardin ouvert deux après-midi par semaine, un groupe de bénévoles stable.", limits: "Délégation totale avec les limites suivantes : pas de dépense au-delà du budget validé sans le groupe budget et trésorerie.", controls: "Reporter mensuellement l'avancée du projet au CA ; bilan intermédiaire en juin.", createdById: coord.id } });
+
   // Budget prévisionnel (25/09) : un prévu en brouillon sur le premier projet, pour que la section ne soit pas vide en démo.
   await prisma.budgetLine.createMany({ data: [
     { editionId: editions[0].id, categoryId: "bcat_personnel", label: "Animation du projet", amount: 12000 },
