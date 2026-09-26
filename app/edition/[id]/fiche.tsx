@@ -74,7 +74,9 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
     return {
       key: f, label: def.label ?? f, type: def.type, value: row[f] as LayerField["value"],
       suffix: def.type === "number" ? (f === "fte" ? "ETP" : "€") : undefined,
-      options: f === "sponsorId" ? people.filter((p) => p.codir).map((p) => ({ value: p.id, label: p.name })) : undefined,
+      // Sponsor (spec vocabulaire § 1) : choix parmi toutes les personnes actives, pas seulement le CODIR ; getPeople() ne renvoie déjà que les actives.
+      options: f === "sponsorId" ? people.map((p) => ({ value: p.id, label: p.name })) : undefined,
+      help: def.help,
     };
   });
   const proposable: ProposableField[] = LAYERS.slice(0, 3).flatMap((l) => layerFields(l).filter((f) => f.type !== "bool" && f.type !== "select").map((f) => ({ key: f.key, label: f.label, current: readableValue(f), multiline: f.type === "textarea", group: `${l.no} · ${l.title}` })));
@@ -171,7 +173,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
                 {/* Bilan : le dernier chapitre du document de l'édition, rédigé en fin d'année, exporté tel quel. */}
                 <section id="bilan" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="fiche-bilan">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">✎</span><h4 className="text-sm font-bold">{`Bilan ${du(V.edition)}`}</h4><span className="text-[10px] text-muted-foreground">{e.report ? "réutilisé tel quel pour le rapport d'activité et les bilans financeurs" : "à rédiger en fin d'année"}</span></div>
+                    <div className="flex items-center gap-2.5"><span className="grid size-[26px] place-items-center rounded-full border border-[#bfccba] font-serif text-sm text-mint">✎</span><h4 className="text-sm font-bold">{`Bilan ${e.year}`}</h4><span className="text-[10px] text-muted-foreground">{e.report ? "réutilisé tel quel pour le rapport d'activité et les bilans financeurs" : "à rédiger en fin d'année"}</span></div>
                     <Button asChild size="xs" variant="outline"><a href={withBase(`/edition/${e.id}/export?format=docx`)} data-testid="export-docx"><FileDown />Exporter le bilan (Word)</a></Button>
                   </div>
                   <div className="mt-3 grid gap-3 lg:ml-9">
@@ -190,7 +192,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
           </Fragment>);
         })}
 
-        <TeamSection editionId={e.id} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role, codir: p.codir }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me, "proposal", isPilot, isTeam)} />
+        <TeamSection editionId={e.id} year={e.year} people={people.map((p) => ({ id: p.id, name: p.name, role: p.role, codir: p.codir }))} selected={e.team.map((t) => t.personId)} canEdit={canWriteLayer(me, "proposal", isPilot, isTeam)} />
 
         <PartnersSection editionId={e.id} partners={e.partnerLinks.map((p) => ({ organisationId: p.organisationId, name: p.organisation.name, role: p.role, kinds: p.organisation.kinds }))} organisations={organisations} canEdit={canYear} />
 

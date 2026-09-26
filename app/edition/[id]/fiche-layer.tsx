@@ -9,7 +9,7 @@ import type { FieldType } from "@/lib/fields";
 import { cn } from "@/lib/utils";
 import { FieldRemarks, type RemarkView } from "./remarks";
 
-export type LayerField = { key: string; label: string; type: FieldType; value: string | number | boolean | Date | null; options?: Option[]; suffix?: string };
+export type LayerField = { key: string; label: string; type: FieldType; value: string | number | boolean | Date | null; options?: Option[]; suffix?: string; help?: string };
 
 type Props = {
   editionId: string;
@@ -97,7 +97,7 @@ export function FicheLayer(p: Props) {
             const isBool = f.type === "bool";
             return (
               <div key={f.key} className={cn("grid gap-1", wide && "sm:col-span-2")}>
-                {!isBool && <label htmlFor={fieldId(f.key)} className="text-[10px] text-muted-foreground">{f.label}</label>}
+                {!isBool && <label htmlFor={fieldId(f.key)} className="text-[10px] text-muted-foreground" title={f.help}>{f.label}</label>}
                 <AutoField
                   model="edition" id={p.editionId} field={f.key} type={f.type} value={f.value} testId={`field-${f.key}`} inputId={fieldId(f.key)}
                   placeholder={isBool ? f.label : "À compléter…"} suffix={f.suffix} options={f.options}
@@ -113,7 +113,7 @@ export function FicheLayer(p: Props) {
           {/* En lecture, les rubriques vides d'une fiche validée ne s'affichent pas : on lit ce qui a été écrit. */}
           {readRows(p.fields).filter((r) => !(p.locked && r.empty && !p.remarks.some((k) => k.field === r.key))).map((r) => (
             <div key={r.key} className={cn("min-w-0", r.wide && "sm:col-span-2")}>
-              <dt className="text-[10px] text-muted-foreground">{r.label}</dt>
+              <dt className="text-[10px] text-muted-foreground" title={r.help}>{r.label}</dt>
               {/* Un clic sur le texte passe la couche en modification (19/09, retour de Gaël : une couche remplie « avait l'air en lecture seule »). */}
               <dd data-testid={`field-${r.key}`} data-readonly="true" onClick={p.writable && !p.locked ? () => setEditing(true) : undefined} title={p.writable && !p.locked ? "Cliquer pour modifier" : undefined} className={cn("mt-0.5 whitespace-pre-line text-sm leading-relaxed", r.empty ? "italic text-muted-foreground" : "text-foreground", p.writable && !p.locked && "cursor-text rounded-sm hover:bg-muted/60")}>{r.text}</dd>
               {remarksOf(r.key, r.label)}
@@ -127,10 +127,10 @@ export function FicheLayer(p: Props) {
 
 // Lignes de lecture d'une couche. La couche 4 (validation) n'en a plus : c'est le circuit (fiche-validation.tsx).
 function readRows(fields: LayerField[]) {
-  const out: { key: string; label: string; text: string; empty: boolean; wide: boolean }[] = [];
+  const out: { key: string; label: string; text: string; empty: boolean; wide: boolean; help?: string }[] = [];
   for (const f of fields) {
     const text = readableValue(f);
-    out.push({ key: f.key, label: f.label, text: text || "Non renseigné", empty: text === "", wide: f.type === "textarea" && text.length > 80 });
+    out.push({ key: f.key, label: f.label, text: text || "Non renseigné", empty: text === "", wide: f.type === "textarea" && text.length > 80, help: f.help });
   }
   return out;
 }

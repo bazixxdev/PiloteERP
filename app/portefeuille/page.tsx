@@ -64,7 +64,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title={codir ? `Mode ${V.codir.one}` : `Portefeuille des ${pl(V.projet)}`}
+        title={codir ? "Mode Arbitrages" : `Portefeuille des ${pl(V.projet)}`}
         subtitle={
           codir
             ? `${rows.length} ${rows.length > 1 ? pl(V.projet) : V.projet.one} en alerte ou avec des validations en attente · ${totalPending} validation${totalPending > 1 ? "s" : ""} à traiter`
@@ -72,9 +72,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         }
         actions={
           codir ? (
-            <Button asChild variant="outline"><Link href="/portefeuille">{`Quitter le mode ${V.codir.one}`}</Link></Button>
+            <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode Arbitrages</Link></Button>
           ) : isCodir(me) ? (
-            <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />{`Mode ${V.codir.one}`}</Link></Button></>
+            <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode Arbitrages</Link></Button></>
           ) : (
             <><Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button></>
           )
@@ -105,7 +105,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
       )}
 
       {rows.length === 0 ? (
-        <EmptyState icon="○" title={codir ? "Rien à signaler" : `${cap(aucun(V.projet))} pour ces filtres`} hint={codir ? `Aucune alerte ni validation en attente : la revue ${V.codir.one} peut être courte.` : "Changez le filtre pour retrouver les projets."} />
+        <EmptyState icon="○" title={codir ? "Rien à signaler" : `${cap(aucun(V.projet))} pour ces filtres`} hint={codir ? "Aucune alerte ni validation en attente : la réunion peut être courte." : "Changez le filtre pour retrouver les projets."} />
       ) : (
         <div className="scroll-shadow-x overflow-auto rounded-md border" tabIndex={0} aria-label={`Tableau des ${rows.length} ${pl(V.projet)}, défilement horizontal et vertical`}>
           {/* Les alertes se lisent sous le nom du projet, sans défilement horizontal ; le corps est en 13 px.

@@ -1,10 +1,10 @@
 // Champs modifiables en ligne : liste blanche par modèle, type et couche (pour les droits).
 import type { Layer } from "./rights";
-import { V, du } from "@/lib/vocab";
+import { V, cap } from "@/lib/vocab";
 
 export type FieldType = "text" | "textarea" | "number" | "date" | "bool" | "select";
 
-export type FieldDef = { type: FieldType; layer?: Layer; label?: string };
+export type FieldDef = { type: FieldType; layer?: Layer; label?: string; help?: string };
 
 export const FIELDS: Record<string, Record<string, FieldDef>> = {
   edition: {
@@ -22,7 +22,8 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     directExpenseEnvelope: { type: "number", layer: "means", label: "Budget prévisionnel · dépenses directes (€)" },
     fte: { type: "number", layer: "means", label: "ETP fléchés" },
     imposedIndicators: { type: "textarea", layer: "means", label: "Indicateurs imposés par les financeurs" },
-    sponsorId: { type: "select", layer: "means", label: `Sponsor (membre ${du(V.codir)})` },
+    // Sponsor = mot de l'instance (spec vocabulaire § 1) : CRESS « référent direction », TLST « référent CA ».
+    sponsorId: { type: "select", layer: "means", label: cap(V.sponsor), help: `La personne de la gouvernance (${V.direction.one}, CA) qui soutient le projet en instance ; à ne pas confondre avec le garant, qui répond du projet au quotidien.` },
     operationalObjectives: { type: "textarea", layer: "proposal", label: "Objectifs qualitatifs (quelle problématique)" },
     quantitativeObjectives: { type: "textarea", layer: "proposal", label: "Objectifs quantitatifs" },
     content: { type: "textarea", layer: "proposal", label: "Contenu développé, valeur ajoutée" },

@@ -114,7 +114,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <FilSheet editionId={e.id} defaultOpen={fil === "1"} comments={e.comments.map((c) => ({ id: c.id, author: c.author.name, when: fmtDate(c.createdAt, c.createdAt.getHours() === 0 && c.createdAt.getMinutes() === 0 ? "D MMM YYYY" : "D MMM YYYY HH:mm"), body: c.body }))} />
+          <FilSheet editionId={e.id} year={e.year} defaultOpen={fil === "1"} comments={e.comments.map((c) => ({ id: c.id, author: c.author.name, when: fmtDate(c.createdAt, c.createdAt.getHours() === 0 && c.createdAt.getMinutes() === 0 ? "D MMM YYYY" : "D MMM YYYY HH:mm"), body: c.body }))} />
           <CreateTaskButton editionId={e.id} actions={e.actions.filter(openForWork).map((a) => ({ id: a.id, name: a.name }))} />
           {/* Bouton plein pour ceux qui demandent (pilote, équipe, contributeurs) ; en contour pour les rôles qui décident
               (direction, responsable de pôle, RAF) : leur geste premier ici est de lire et d'arbitrer (critique du 16/09). */}
@@ -137,7 +137,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
           <Eye className="size-4 text-muted-foreground" />{`${cap(V.projet)} ${du(V.pole)} `}<strong>{e.project.pole.name}</strong>{`, hors de votre ${V.pole.one} : vous le consultez, vous n'y intervenez pas.`}</div>
       )}
-      <TabsNav editionId={e.id} current={tab} counts={counts} />
+      <TabsNav editionId={e.id} current={tab} counts={counts} year={e.year} />
 
       {tab === "apercu" && <ApercuTab {...ctx} />}
       {tab === "fiche" && <FicheTab {...ctx} />}

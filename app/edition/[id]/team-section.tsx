@@ -8,14 +8,15 @@ import { TeamPicker } from "./team-picker";
 import { V, le } from "@/lib/vocab";
 
 // L'équipe se lit (deux noms, pas quatorze chips) ; le sélecteur n'apparaît que sur « Modifier » (revue du 15/09).
-export function TeamSection({ editionId, people, selected, canEdit }: { editionId: string; people: { id: string; name: string; role: string; codir?: boolean }[]; selected: string[]; canEdit: boolean }) {
+// Millésime (spec vocabulaire § 2) : « Équipe {année} », pas « Équipe de l'année ».
+export function TeamSection({ editionId, year, people, selected, canEdit }: { editionId: string; year: number; people: { id: string; name: string; role: string; codir?: boolean }[]; selected: string[]; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const members = people.filter((p) => selected.includes(p.id));
   return (
     <section id="equipe" className="scroll-mt-20 rounded-md border bg-card px-[18px] py-4" data-testid="team-section">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <h4 className="text-sm font-bold">Équipe projet</h4>
+          <h4 className="text-sm font-bold">{`Équipe ${year}`}</h4>
           <span className="text-[10px] text-muted-foreground">{members.length ? `${members.length} personne${members.length > 1 ? "s" : ""} · choisie par ${le(V.pilote)}` : `choisie par ${le(V.pilote)}`}</span>
         </div>
         {canEdit && (editing

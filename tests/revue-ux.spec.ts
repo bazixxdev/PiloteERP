@@ -63,7 +63,7 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   // Contributeur : Ma semaine en premier, pas d'accès CODIR ni Admin, aucun compteur collectif sur Demandes (validations fusionnées).
   await iAm(page, "Lucas Perrin");
   const sidebar = page.locator("aside");
-  await expect(sidebar.getByRole("link", { name: `Écran ${W.codir.one}` })).toHaveCount(0);
+  await expect(sidebar.getByRole("link", { name: "Arbitrages" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Admin" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Validations" })).toHaveCount(0);
   // Le badge Demandes est personnel : il vaut exactement « À traiter par moi » (demandes adressées à Lucas ou à son pôle), pas un total collectif.

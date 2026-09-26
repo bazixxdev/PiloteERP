@@ -140,7 +140,8 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       id: "direction",
       label: cap(V.direction),
       items: [
-        { label: `Écran ${V.codir.one}`, href: "/codir", path: "/codir" },
+        // Ex-« Écran CODIR » (spec vocabulaire-gouvernance § 3) : le nom du groupe qui arbitre ne change pas, l'écran s'appelle « Arbitrages ».
+        { label: "Arbitrages", href: "/codir", path: "/codir" },
         // Ex-« Séminaire » (spec vocabulaire-gouvernance § 3) : l'année qu'on prépare, la suivante ; l'adresse ne change pas.
         { label: `Préparer ${new Date().getFullYear() + 1}`, href: "/seminaire", path: "/seminaire" },
         { label: "Écran café", href: "/cafe", path: "/cafe" },

@@ -3,7 +3,7 @@
 // ma propre demande — reste en code dans lib/rights.ts : une permission dit « au-delà de mon périmètre », le contexte dit le reste.
 // Ajouter une permission : une entrée ici (module, libellé, explication), puis la donner aux rôles par défaut ci-dessous ;
 // les installations existantes la reçoivent par l'écran Admin › Rôles et droits (ou au reseed).
-import { V, cap, le, un, du, de, au, son, tout, adj, e, pl } from "@/lib/vocab";
+import { V, cap, le, un, de, au, son, tout, adj, e, pl } from "@/lib/vocab";
 
 export type PermissionModule = "perimetre" | "editions" | "delegation" | "financements" | "adherents" | "tresorerie" | "materiel" | "temps" | "demandes" | "validations" | "direction" | "admin";
 
@@ -31,7 +31,8 @@ export const PERMISSIONS = [
   { key: "edition.status", module: "editions", label: `Change le statut d'${un(V.edition)}`, help: "Proposée, validée, en cours, bilan fait." },
   { key: "fiche.strategic", module: "editions", label: "Remplit le cadre stratégique", help: `Couche « à remplir par ${le(V.direction)} » de la fiche.` },
   { key: "fiche.means", module: "editions", label: "Remplit les moyens", help: `Enveloppe, jours, ressources : couche « ${V.raf.one} et ${V.direction.one} ».` },
-  { key: "fiche.validation", module: "editions", label: `Ancien droit : décision ${du(V.codir)} sur la fiche`, help: "Remplacé par les niveaux du circuit de validation (ci-dessous) ; gardé jusqu'au retrait des anciennes colonnes, il ne donne plus rien." },
+  // Libellé sans mention de l'ancienne décision du CODIR (26/09, relecture spec vocabulaire § 3) : gardé pour compatibilité, ne donne plus rien.
+  { key: "fiche.validation", module: "editions", label: "Ancien droit (obsolète)", help: "Remplacé par les niveaux du circuit de validation (ci-dessous) ; gardé jusqu'au retrait des anciennes colonnes, il ne donne plus rien." },
   // Circuit de validation de la fiche (26/09, spec vocabulaire § 3) : chaque niveau réglé dans Admin › Paramètres exige un de ces droits.
   { key: "fiche.validate.1", module: "editions", label: "Valide les fiches au niveau 1 du circuit", help: `Le libellé et l'ordre des niveaux se règlent dans Admin › Paramètres › Circuit de validation des fiches. Jamais sur une fiche dont la personne est ${le(V.pilote)}.` },
   { key: "fiche.validate.2", module: "editions", label: "Valide les fiches au niveau 2 du circuit", help: `Proposé une fois le niveau précédent validé. Jamais sur une fiche dont la personne est ${le(V.pilote)}.` },
@@ -59,7 +60,7 @@ export const PERMISSIONS = [
 
   { key: "decisions.consign_all", module: "validations", label: "Consigne les décisions d'instance", help: `${V.codir.one}, ${V.pole.one}, revue trimestrielle, CA, sur ${adj(V.projet, "tout", "toute")}.` },
 
-  { key: "codir.access", module: "direction", label: `Siège ${au(V.codir)}`, help: `Page ${V.codir.one}, séminaire, montants dans la matrice et le portefeuille, écran café, décisions.` },
+  { key: "codir.access", module: "direction", label: `Siège ${au(V.codir)}`, help: "Page Arbitrages, Préparer l'année suivante, montants dans la matrice et le portefeuille, écran café, décisions." },
 
   { key: "admin.manage", module: "admin", label: "Administre l'outil", help: "Personnes, comptes, référentiels, paramètres, import / export." },
   { key: "roles.manage", module: "admin", label: "Modifie les rôles et leurs droits", help: `Cet écran. Le rôle ${cap(V.direction)} garde toujours l'administration.` },

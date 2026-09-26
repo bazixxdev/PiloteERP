@@ -12,7 +12,7 @@ const ADMIN = ["director", "raf"];
 const GOS: Go[] = [
   { key: "p", href: "/portefeuille", label: "Portefeuille" }, { key: "s", href: "/ma-semaine", label: "Ma semaine" }, { key: "t", href: "/temps", label: "Temps" },
   { key: "a", href: "/annuel", label: "Vue annuelle" }, { key: "v", href: "/validations", label: "Validations" }, { key: "c", href: "/cafe", label: "Écran café" },
-  { key: "o", href: "/codir", label: `Écran ${V.codir.one}`, roles: CODIR }, { key: "m", href: "/seminaire", label: `Préparer ${new Date().getFullYear() + 1}`, roles: CODIR },
+  { key: "o", href: "/codir", label: "Arbitrages", roles: CODIR }, { key: "m", href: "/seminaire", label: `Préparer ${new Date().getFullYear() + 1}`, roles: CODIR },
   { key: "l", href: "/cloture", label: "Clôture", roles: ADMIN }, { key: "d", href: "/admin", label: "Admin", roles: ADMIN },
 ];
 

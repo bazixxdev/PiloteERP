@@ -17,7 +17,7 @@ import { DecisionForm } from "./decision-form";
 import { SessionTimer } from "./session-timer";
 import { V, cap, le, du, de, au, pl } from "@/lib/vocab";
 
-// Écran CODIR (EF-H2) : seulement ce qui appelle une décision — validations, jalons dépassés, livrables proches,
+// Arbitrages, ex-« Écran CODIR » (EF-H2, renommé 26/09) : seulement ce qui appelle une décision — validations, jalons dépassés, livrables proches,
 // enveloppes et temps en écart — et la décision se consigne sur l'édition sans quitter l'écran (EF-F4).
 export default async function CodirPage({ searchParams }: { searchParams: Promise<{ pole?: string; plein?: string }> }) {
   const raw = await searchParams;
@@ -27,7 +27,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   if (!isCodir(me)) {
     return (
       <div className="p-4 md:p-6">
-        <PageHeader title={`Écran ${V.codir.one}`} />
+        <PageHeader title="Arbitrages" />
         <EmptyState title={`Réservé ${au(V.codir)}`} hint={`${cap(V.direction)}, ${V.raf.one} et responsables ${de(V.pole)}. Choisissez « Claire Vasseur » dans le sélecteur pour le voir.`} />
       </div>
     );
@@ -98,7 +98,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
         subtitle={<span>{inAlert}{` ${inAlert > 1 ? pl(V.projet) : V.projet.one}`} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length}{` ${pl(V.projet)} · séance `}<SessionTimer minutes={20} /></span>}
         actions={
           <>
-            <Button asChild variant="outline"><Link href="/portefeuille">{`Quitter le mode ${V.codir.one} `}<span className="text-muted-foreground">· Échap</span></Link></Button>
+            <Button asChild variant="outline"><Link href="/portefeuille">{`Quitter le mode Arbitrages `}<span className="text-muted-foreground">· Échap</span></Link></Button>
             <Button asChild variant={big ? "outline" : "default"} data-testid="codir-project"><Link href={big ? qs({ plein: "" }) : qs({ plein: "1" })}><Maximize2 />{big ? "Quitter la projection" : "Projeter"}</Link></Button>
           </>
         }

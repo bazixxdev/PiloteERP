@@ -22,7 +22,8 @@ export async function addRemark(editionId: string, field: string, body: string, 
   const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true, pilot: true } } } });
   if (!e) return { ok: false, error: `${cap(V.edition)} introuvable.` };
   if (!FIELDS.edition[field]) return { ok: false, error: "Rubrique inconnue." };
-  if (!(await canRemark(me))) return { ok: false, error: `Les remarques sur la fiche sont un droit ${du(V.codir)} : ${V.direction.one}, ${V.raf.one}, responsables ${de(V.pole)}.` };
+  // Énumération sans V.direction (26/09) : à TLST, V.codir et V.direction valent tous deux « coordination », ce qui doublait le mot.
+  if (!(await canRemark(me))) return { ok: false, error: `Les remarques sur la fiche sont un droit ${du(V.codir)} : ${V.raf.one}, responsables ${de(V.pole)}.` };
   const text = body.trim();
   if (!text) return { ok: false, error: "Écrivez la remarque." };
   if (!REASONS.includes(reason)) return { ok: false, error: "Motif inconnu." };

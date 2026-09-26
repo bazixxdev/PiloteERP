@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { proposeProject } from "@/app/actions/edition";
 import { Select } from "@/components/common/searchable-select";
-import { V, cap, le, de, au } from "@/lib/vocab";
+import { V, cap, le, de } from "@/lib/vocab";
 
 // Proposer un projet (retour du 14/09) : n'importe quel chargé de mission, une idée en quelques lignes, et la fiche démarre son cycle.
 export function ProposeProjectForm({ missions, poles, defaultPoleId, years }: { missions: { id: string; name: string }[]; poles: { id: string; name: string }[]; defaultPoleId: string | null; years: number[] }) {
@@ -31,7 +31,7 @@ export function ProposeProjectForm({ missions, poles, defaultPoleId, years }: { 
         <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={6} required className="rounded-md border bg-card p-2 text-sm" placeholder="Un partenaire nous sollicite pour… Je propose de… Les têtes de réseau y gagneraient…" data-testid="propose-summary" />
       </label>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] text-muted-foreground">{`Vous serez ${V.pilote.one} de ce projet « en devenir ». Votre responsable ${de(V.pole)} et ${le(V.direction)} sont prévenus ; ils relisent la fiche, puis elle passe ${au(V.codir)} et, s'il le faut, au CA.`}</p>
+        <p className="text-[11px] text-muted-foreground">{`Vous serez ${V.pilote.one} de ce projet « en devenir ». Votre responsable ${de(V.pole)} et ${le(V.direction)} sont prévenus ; ils relisent la fiche, puis elle passe par le circuit de validation.`}</p>
         <Button type="submit" disabled={pending || !name.trim() || !summary.trim()} data-testid="propose-project-submit"><Send />Proposer ce projet</Button>
       </div>
     </form>

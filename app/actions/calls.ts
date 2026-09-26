@@ -47,7 +47,8 @@ export async function addCall(input: { funderId: string; funderName?: string | n
 export async function setCallStatus(id: string, status: string | null): Promise<Result> {
   const off = await moduleOn(); if (off) return { ok: false, error: off };
   const me = await getCurrentPerson();
-  if (!isCodir(me)) return { ok: false, error: `Le statut d'un appel se pose en ${V.codir.one} (${V.direction.one}, ${V.raf.one}, responsables ${de(V.pole)}).` };
+  // Énumération sans V.direction (26/09) : à TLST, V.codir et V.direction valent tous deux « coordination », ce qui doublait le mot.
+  if (!isCodir(me)) return { ok: false, error: `Le statut d'un appel se pose en ${V.codir.one} (${V.raf.one}, responsables ${de(V.pole)}).` };
   if (status !== null && !CALL_STATUSES.some((s) => s.value === status)) return { ok: false, error: "Statut inconnu." };
   const c = await prisma.call.findUnique({ where: { id } });
   if (!c) return { ok: false, error: "Appel introuvable" };
