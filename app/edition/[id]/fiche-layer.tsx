@@ -6,7 +6,6 @@ import { AutoField, readableValue, type Option } from "@/components/inline/auto-
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import type { FieldType } from "@/lib/fields";
-import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { FieldRemarks, type RemarkView } from "./remarks";
 
@@ -126,21 +125,10 @@ export function FicheLayer(p: Props) {
   );
 }
 
-// Lignes de lecture : un booléen daté se lit en une phrase (« Validé par le CA le 18 décembre 2025 »), jamais comme un champ vide.
+// Lignes de lecture d'une couche. La couche 4 (validation) n'en a plus : c'est le circuit (fiche-validation.tsx).
 function readRows(fields: LayerField[]) {
   const out: { key: string; label: string; text: string; empty: boolean; wide: boolean }[] = [];
-  const byKey = Object.fromEntries(fields.map((f) => [f.key, f]));
   for (const f of fields) {
-    if (f.key === "boardDate" && byKey.boardValidated) continue; // absorbé dans la ligne « Validation par le CA »
-    if (f.key === "boardValidated") {
-      const date = byKey.boardDate?.value as Date | string | null | undefined;
-      const codirDone = filledOf(byKey.codirDecision ?? f);
-      const text = f.value
-        ? `Validé par le CA${date ? ` le ${fmtDate(date, "D MMMM YYYY")}` : " (date non renseignée)"}`
-        : codirDone ? "En attente du CA" : "Non renseigné";
-      out.push({ key: f.key, label: "Validation par le CA", text, empty: !f.value && !codirDone, wide: false });
-      continue;
-    }
     const text = readableValue(f);
     out.push({ key: f.key, label: f.label, text: text || "Non renseigné", empty: text === "", wide: f.type === "textarea" && text.length > 80 });
   }

@@ -12,15 +12,16 @@ import { attachRefusal } from "@/lib/actions";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
+import { loadFicheLevels } from "@/lib/fiche-validation-db";
 import { V, cap, le, de, du, ce, seul, e as fem } from "@/lib/vocab";
 import { reportInternalError } from "@/lib/errors";
 
 export type SaveResult = { ok: true } | { ok: false; code?: string; error: string };
 
 async function editionContext(editionId: string, personId: string) {
-  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true } });
+  const e = await prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, team: true, ficheValidations: true } });
   if (!e) throw new Error(`${cap(V.edition)} introuvable`);
-  return { edition: e, isPilot: e.project.pilotId === personId, isTeam: e.team.some((t) => t.personId === personId), poleIds: projectPoleIds(e.project) };
+  return { edition: e, levels: await loadFicheLevels(), isPilot: e.project.pilotId === personId, isTeam: e.team.some((t) => t.personId === personId), poleIds: projectPoleIds(e.project) };
 }
 
 // Vérifie que la personne courante a le droit d'écrire ce champ (EF-K1, EF-B1b).
@@ -33,7 +34,7 @@ async function allowed(model: Model, id: string, field: string, personId: string
       return canSetEditionStatus(me) ? null : `${cap(le(V.direction))} et ${le(V.raf)} changent le statut.`;
     }
     // Fiche validée : les couches 1 à 3 ne se modifient plus en direct, seulement par proposition acceptée (retour du 14/09).
-    if (isLocked(ctx.edition) && ["strategic", "means", "proposal"].includes(layer)) return `Fiche validée : proposez une modification, elle sera acceptée par ${le(V.pilote)} ou ${le(V.direction)} et tracée.`;
+    if (isLocked(ctx.edition, ctx.levels) && ["strategic", "means", "proposal"].includes(layer)) return `Fiche validée : proposez une modification, elle sera acceptée par ${le(V.pilote)} ou ${le(V.direction)} et tracée.`;
     return canWriteLayer(me, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {

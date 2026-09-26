@@ -35,10 +35,8 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     ownIndicators: { type: "textarea", layer: "proposal", label: "Indicateurs propres" },
     timeNeed: { type: "text", layer: "proposal", label: "Besoin en temps" },
     budgetNeed: { type: "text", layer: "proposal", label: "Besoin en budget" },
-    codirDecision: { type: "select", layer: "validation", label: `Décision ${du(V.codir)}` },
-    codirDate: { type: "date", layer: "validation", label: "Date du séminaire" },
-    boardValidated: { type: "bool", layer: "validation", label: "Validé par le CA" },
-    boardDate: { type: "date", layer: "validation", label: "Date du CA" },
+    // Couche 4 : plus de champ ici (26/09, tâche 13). codirDecision, codirDate, boardValidated et boardDate sont remplacés par
+    // le circuit de validation (FicheValidation), qui a sa commande gardée : decideFiche (app/actions/fiche-validation.ts).
     venues: { type: "text", layer: "year", label: "Lieux et animation" },
     equipment: { type: "text", layer: "year", label: "Matériel, outils, mobilier, services" },
     evidenceToKeep: { type: "textarea", layer: "year", label: "Justificatifs à conserver, et à quelles échéances" },

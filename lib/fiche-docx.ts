@@ -5,7 +5,9 @@ import { attachYearActions } from "./actions-db";
 import { spanLabel } from "./actions";
 import { fmtDate } from "./format";
 import { refLabel, type RefMap } from "./refs";
-import { V, du, de } from "@/lib/vocab";
+import { asDecisions, circuitSteps, DECISION_LABEL, isCircuitComplete } from "./fiche-validation";
+import { ficheValidationsInclude, loadFicheLevels } from "./fiche-validation-db";
+import { V, de } from "@/lib/vocab";
 
 // Fiche projet au format du gabarit Word « À COPIER — FICHE PROJET » : mêmes rubriques, dans le même ordre, plus les remarques
 // ouvertes et les réalisations. Partagé entre l'export d'une fiche et le plan opérationnel assemblé (toutes les fiches d'une année).
@@ -13,11 +15,14 @@ export const ficheInclude = {
   project: { include: { pilot: true, pole: true, guarantor: true, mission: true } }, sponsor: true, team: { include: { person: true } },
   indicators: { orderBy: { order: "asc" as const } }, fundingLines: { include: { funder: true, convention: true } },
   remarks: { where: { resolvedAt: null }, include: { author: true } }, achievements: { orderBy: { date: "asc" as const }, include: { action: true } },
+  ficheValidations: ficheValidationsInclude,
 };
 
 // Les actions de l'année viennent d'attachYearActions (mode léger : champs, jalons, responsables), jamais d'`edition.actions`.
 export async function loadFiches(where: Prisma.EditionWhereInput, orderBy?: Prisma.EditionOrderByWithRelationInput[]) {
-  return attachYearActions(await prisma.edition.findMany({ where, include: ficheInclude, orderBy }), { lean: true });
+  const [rows, ficheLevels] = await Promise.all([prisma.edition.findMany({ where, include: ficheInclude, orderBy }), loadFicheLevels()]);
+  // Les niveaux du circuit de validation, communs à toutes les fiches : la rubrique « Validation » les lit avec les décisions.
+  return attachYearActions(rows.map((e) => ({ ...e, ficheLevels })), { lean: true });
 }
 export type FicheEdition = Awaited<ReturnType<typeof loadFiches>>[number];
 export async function loadFiche(id: string): Promise<FicheEdition | null> { return (await loadFiches({ id }))[0] ?? null; }
@@ -80,6 +85,15 @@ export function ficheParagraphs(e: FicheEdition, refs: RefMap, opts?: { nested?:
     H("Impacts attendus"), ...txt(e.expectedOutcome), ...rq("expectedOutcome"),
     H("Réalisations consignées"), ...(e.achievements.length ? e.achievements.map((a) => P(`• ${achLine(a)}`)) : [P("—")]),
     H("Évaluation"), ...txt(e.evaluation),
-    H("Validation"), P(`Décision ${du(V.codir)} : ${e.codirDecision ? refLabel(refs, "codir_decision", e.codirDecision) : "—"} (${fmtDate(e.codirDate)}) · CA : ${e.boardValidated ? `validé le ${fmtDate(e.boardDate)}` : "en attente"}`),
+    H("Validation"), P(validationLine(e)),
   ];
+}
+
+// La rubrique « Validation » : le circuit par niveaux (tour courant), ex. « Direction : validé le 11/12/2025 · CA : à décider ».
+function validationLine(e: FicheEdition): string {
+  const decisions = asDecisions(e.ficheValidations);
+  const steps = circuitSteps(e.ficheLevels, decisions);
+  if (steps.length === 0) return "Aucun niveau de validation.";
+  const parts = steps.map((s) => `${s.level.label} : ${s.decision ? `${DECISION_LABEL[s.decision.decision]} le ${fmtDate(s.decision.decidedAt)}${s.decision.comment ? ` (« ${s.decision.comment} »)` : ""}` : s.isNext ? "à décider" : "en attente"}`);
+  return `${isCircuitComplete(e.ficheLevels, decisions) ? "Validée — " : ""}${parts.join(" · ")}`;
 }

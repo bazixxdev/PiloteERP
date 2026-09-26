@@ -18,9 +18,12 @@ test("le budget écrit le dépassement, la validation CA se lit en clair, la cl�
   await expect(page.getByTestId("budget-pct")).toContainText("101 %");
   await expect(page.getByTestId("budget-pct")).toContainText("Enveloppe dépassée de 160 €");
 
-  // 3. Fiche : la validation CA se lit en une phrase, pas comme une case « Non renseigné ».
+  // 3. Fiche : la validation CA se lit en clair (niveau, décision, qui, quand), pas comme une case « Non renseigné ».
+  // Depuis le circuit par niveaux (26/09, tâche 13) : c'est la ligne du niveau « CA » de la couche 4.
   await page.getByRole("tab", { name: "Fiche" }).click();
-  await expect(page.getByTestId("field-boardValidated")).toHaveText("Validé par le CA le 18 décembre 2025");
+  await expect(page.getByTestId("fiche-level-2")).toContainText("2. CA");
+  await expect(page.getByTestId("fiche-level-2")).toContainText("Validé");
+  await expect(page.getByTestId("fiche-level-2")).toContainText("18 déc. 2025");
   await expect(page.getByTestId("layer-validation")).not.toContainText("Non renseigné");
 
   // 4. Actions : les objectifs de temps se lisent en entier (77 h, 105 h) en lecture.

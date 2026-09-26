@@ -4,6 +4,7 @@ import { dayjs } from "./format";
 import { budgetOf } from "./budget";
 import { attachLedgerSpent } from "./ledger-db";
 import { attachYearActions } from "./actions-db";
+import { ficheValidationsInclude, loadFicheLevels } from "./fiche-validation-db";
 
 export const editionListInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } } } },
@@ -71,6 +72,8 @@ export const editionFullInclude = {
   decisions: { include: { author: true, followUp: true }, orderBy: { decidedAt: "desc" as const } },
   proposals: { include: { author: true, decidedBy: true }, orderBy: { createdAt: "desc" as const } },
   achievements: { include: { author: true, action: true }, orderBy: { date: "desc" as const } },
+  // Circuit de validation de la fiche (couche 4, verrou) : les décisions par niveau, avec qui a décidé.
+  ficheValidations: ficheValidationsInclude,
 };
 
 export type EditionFull = NonNullable<Awaited<ReturnType<typeof loadEdition>>>;
@@ -84,5 +87,6 @@ export async function loadEdition(id: string) {
     where: { projectId: e.projectId, date: { gte: new Date(`${e.year}-01-01`), lt: new Date(`${e.year + 1}-01-01`) } },
     select: { hours: true, personId: true, actionId: true },
   });
-  return { ...e, yearEntries: entries };
+  // Les niveaux du circuit (réglés par instance) : isLocked(e, e.ficheLevels) et la couche 4 les lisent avec les décisions.
+  return { ...e, yearEntries: entries, ficheLevels: await loadFicheLevels() };
 }

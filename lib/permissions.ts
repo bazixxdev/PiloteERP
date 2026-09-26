@@ -31,7 +31,11 @@ export const PERMISSIONS = [
   { key: "edition.status", module: "editions", label: `Change le statut d'${un(V.edition)}`, help: "Proposée, validée, en cours, bilan fait." },
   { key: "fiche.strategic", module: "editions", label: "Remplit le cadre stratégique", help: `Couche « à remplir par ${le(V.direction)} » de la fiche.` },
   { key: "fiche.means", module: "editions", label: "Remplit les moyens", help: `Enveloppe, jours, ressources : couche « ${V.raf.one} et ${V.direction.one} ».` },
-  { key: "fiche.validation", module: "editions", label: `Renseigne la décision ${du(V.codir)} sur la fiche`, help: `Couche « renseigné par ${le(V.codir)} ».` },
+  { key: "fiche.validation", module: "editions", label: `Ancien droit : décision ${du(V.codir)} sur la fiche`, help: "Remplacé par les niveaux du circuit de validation (ci-dessous) ; gardé jusqu'au retrait des anciennes colonnes, il ne donne plus rien." },
+  // Circuit de validation de la fiche (26/09, spec vocabulaire § 3) : chaque niveau réglé dans Admin › Paramètres exige un de ces droits.
+  { key: "fiche.validate.1", module: "editions", label: "Valide les fiches au niveau 1 du circuit", help: `Le libellé et l'ordre des niveaux se règlent dans Admin › Paramètres › Circuit de validation des fiches. Jamais sur une fiche dont la personne est ${le(V.pilote)}.` },
+  { key: "fiche.validate.2", module: "editions", label: "Valide les fiches au niveau 2 du circuit", help: `Proposé une fois le niveau précédent validé. Jamais sur une fiche dont la personne est ${le(V.pilote)}.` },
+  { key: "fiche.validate.3", module: "editions", label: "Valide les fiches au niveau 3 du circuit", help: `Pour un troisième niveau, s'il est ajouté au circuit. Jamais sur une fiche dont la personne est ${le(V.pilote)}.` },
   { key: "fiche.budget", module: "editions", label: "Tient le budget", help: `Dépenses réalisées, engagements, couche « renseigné par ${le(V.raf)} ».` },
   { key: "budget.plan", module: "editions", label: "Prépare le budget prévisionnel", help: `Sur ses ${pl(V.projet)} (${le(V.pilote)}, équipe), ceux de ${son(V.pole)} pour qui le gère, ou partout avec « ${tout(V.org)} ».` },
   { key: "budget.validate", module: "editions", label: "Valide le budget prévisionnel", help: "Valide le prévu, saisit à la main un réalisé (avec motif), voit le détail du personnel par personne." },
@@ -70,7 +74,9 @@ export const isPermissionKey = (k: string): k is PermissionKey => (PERMISSION_KE
 // `validationLevel` : ce que la personne peut approuver (1 pilote sur son édition, 2 responsable sur son pôle, 3 direction partout).
 export type RoleDef = { code: string; label: string; description: string; validationLevel: number; permissions: PermissionKey[] };
 
-const ALL_EDITIONS: PermissionKey[] = ["edition.contribute", "edition.edit_all", "edition.status", "fiche.strategic", "fiche.means", "fiche.validation", "fiche.budget"];
+// Circuit de la fiche : la direction tient les deux niveaux par défaut (migration 20260927090000 : niveau 1 pour qui avait
+// « fiche.validation », niveau 2 pour la direction) ; l'instance les redistribue dans Admin › Rôles et droits.
+const ALL_EDITIONS: PermissionKey[] = ["edition.contribute", "edition.edit_all", "edition.status", "fiche.strategic", "fiche.means", "fiche.validation", "fiche.validate.1", "fiche.validate.2", "fiche.budget"];
 
 export const DEFAULT_ROLES: RoleDef[] = [
   { code: "director", label: cap(V.direction), description: "Voit tout, intervient partout, valide au niveau 3, administre l'outil.", validationLevel: 3,

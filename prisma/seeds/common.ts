@@ -116,20 +116,13 @@ export async function seedCommon(prisma: PrismaClient, uploads: string): Promise
   }
   // Rôles et droits (lot F2) : les six rôles système avec les droits du prototype.
   await prisma.role.createMany({ data: DEFAULT_ROLES.map((r, i) => ({ code: r.code, label: r.label, description: r.description, order: i, system: true, validationLevel: r.validationLevel, permissions: serializePermissions(r.permissions) })) });
-  // Circuit de validation de la fiche (26/09) : les deux niveaux et leurs droits, comme la migration
-  // 20260927090000_actions_composantes (niveau 1 pour qui avait « fiche.validation », niveau 2 pour la direction). Le niveau 1
-  // porte le mot de l'instance (la migration, qui ne la connaît pas, écrit « Direction »). Droits ajoutés tels quels :
-  // serializePermissions les filtrerait tant que le catalogue (lib/permissions.ts) ne les connaît pas.
+  // Circuit de validation de la fiche (26/09) : les deux niveaux, comme la migration 20260927090000_actions_composantes. Le
+  // niveau 1 porte le mot de l'instance (la migration, qui ne la connaît pas, écrit « Direction »). Les droits fiche.validate.1
+  // et .2 viennent des rôles par défaut (lib/permissions.ts), comme la migration les donne aux bases existantes.
   await prisma.ficheValidationLevel.createMany({ data: [
     { id: "fvl_1", order: 1, label: cap(V.direction), permission: "fiche.validate.1", active: true },
     { id: "fvl_2", order: 2, label: "CA", permission: "fiche.validate.2", active: true },
   ] });
-  for (const r of await prisma.role.findMany()) {
-    const keys = r.permissions ? r.permissions.split(",") : [];
-    if (keys.includes("fiche.validation") && !keys.includes("fiche.validate.1")) keys.push("fiche.validate.1");
-    if (r.code === "director" && !keys.includes("fiche.validate.2")) keys.push("fiche.validate.2");
-    if (keys.join(",") !== r.permissions) await prisma.role.update({ where: { code: r.code }, data: { permissions: keys.join(",") } });
-  }
   const rhythms = await Promise.all(DEFAULT_RHYTHMS.map((r, i) => prisma.rhythm.create({ data: { ...r, order: i } })));
   const rhythmByCode = (code: string) => rhythms.find((r) => r.code === code)!;
   const passwordHash = await hashPassword(process.env.DEMO_PASSWORD ?? "pilote-demo-2026");

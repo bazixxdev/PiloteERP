@@ -51,7 +51,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   // Anciennes adresses : « validations » ouvre l'Aperçu (à décider), « bilan » la fiche (chapitre Bilan).
   const wanted = onglet === "validations" ? "apercu" : onglet === "bilan" ? "fiche" : onglet === "financements" ? "budget" : onglet;
   // Atterrissage : l'Aperçu une fois la fiche validée (l'année d'exécution) ; la Fiche tant qu'elle se rédige.
-  const landing = isLocked(e) ? "apercu" : "fiche";
+  const landing = isLocked(e, e.ficheLevels) ? "apercu" : "fiche";
   const tab = (["apercu", "fiche", "actions", "budget", "temps", "documents"].includes(wanted ?? "") ? wanted : landing) as TabKey;
   const isPilot = e.project.pilotId === me.id;
   const isTeam = e.team.some((t) => t.personId === me.id);

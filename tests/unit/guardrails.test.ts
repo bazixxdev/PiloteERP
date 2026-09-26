@@ -22,8 +22,10 @@ const walk = (dir: string, out: string[] = []): string[] => {
 // et relations passent par une commande dédiée avec ses invariants. `settings.apiToken` et `fundingLine.status/amountGranted`
 // sont des exceptions historiques déjà gardées dans saveField (à sortir un jour, BLK-14). `expense.actionId` et
 // `indicator.actionId` (26/09) sont un rattachement gardé dans saveField (attachRefusal : même projet, période sur l'année).
+// 26/09 (tâche 13) : `edition.codirDecision/codirDate/boardValidated/boardDate` sortis — un état de validation, désormais
+// décidé par le circuit (decideFiche, garde par niveau, jamais sur sa propre fiche).
 const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
-  edition: "status decisionDate conditionalStart stakes axis sressMeasure snessLink otherTexts yearPriorities expectedOutcome plannedFunders directExpenseEnvelope fte imposedIndicators sponsorId operationalObjectives quantitativeObjectives content audience calendar deliveryDate partners method governance ownIndicators timeNeed budgetNeed codirDecision codirDate boardValidated boardDate venues equipment evidenceToKeep evaluation report budgetEnvelope spent",
+  edition: "status decisionDate conditionalStart stakes axis sressMeasure snessLink otherTexts yearPriorities expectedOutcome plannedFunders directExpenseEnvelope fte imposedIndicators sponsorId operationalObjectives quantitativeObjectives content audience calendar deliveryDate partners method governance ownIndicators timeNeed budgetNeed venues equipment evidenceToKeep evaluation report budgetEnvelope spent",
   action: "name ownerId timeTarget state description recurrence audience entrusted latitude",
   fundingLine: "funderId conventionId scheme status amountRequested amountGranted submittedAt answeredAt contractedAt analyticCode allocationKeyRef multiYear notes contactId",
   deliverable: "label dueDate done",

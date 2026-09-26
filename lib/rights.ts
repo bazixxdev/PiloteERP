@@ -17,7 +17,7 @@ export const LAYER_OWNER_LABEL: Record<Layer, string> = {
   strategic: `à remplir par ${le(V.direction)}`,
   means: `à remplir par ${le(V.raf)} et ${le(V.direction)}`,
   proposal: `à remplir par ${le(V.pilote)}`,
-  validation: `renseigné par ${le(V.codir)}`,
+  validation: "décidée niveau par niveau (circuit de validation)",
   year: `renseigné par ${le(V.pilote)} au fil de l'année`,
   budget: `renseigné par ${le(V.raf)}`,
 };
