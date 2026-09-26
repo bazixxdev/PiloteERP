@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { defaultPeriod, parseDay, periodIncluding, runsIn, validPeriod } from "./actions";
+import { DAY_INVALID, defaultPeriod, parseDay, periodIncluding, runsIn, validPeriod } from "./actions";
 import { V, cap, adj, ce } from "@/lib/vocab";
 
 // Écritures de l'action, utilisables dans une transaction (Prisma.TransactionClient). Pas de « use server » : les gardes sont
@@ -21,7 +21,7 @@ export async function newActionData(
   const def = defaultPeriod(ed.year);
   const start = input.startDate ? parseDay(input.startDate) : def.startDate;
   const end = input.endDate ? parseDay(input.endDate) : def.endDate;
-  if (!start || !end) return { ok: false, error: "Date invalide." };
+  if (!start || !end) return { ok: false, error: DAY_INVALID };
   const bad = validPeriod(start, end);
   if (bad) return { ok: false, error: bad };
   if (!runsIn({ startDate: start, endDate: end }, ed.year)) return { ok: false, error: `La période doit couvrir ${ed.year} pour que ${ce(V.action)} y apparaisse.` };

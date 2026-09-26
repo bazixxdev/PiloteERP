@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { setActionPeriod } from "@/app/actions/actions";
-import { useRun } from "./use-run";
+import { plausibleDay } from "@/lib/actions";
+import { useRun } from "@/components/common/use-run";
 
-// Période de l'action : deux dates et « Enregistrer ». Le refus (fin avant le début, jalon laissé dehors) s'affiche tel que
+// Période de l'action : deux dates et « Enregistrer » (seulement des dates complètes et plausibles, jamais en cours de frappe). Le refus (fin avant le début, jalon laissé dehors) s'affiche tel que
 // la commande le renvoie, sous les champs.
 export function PeriodForm({ actionId, start, end, readOnly }: { actionId: string; start: string; end: string; readOnly: boolean }) {
   const [s, setS] = useState(start);
@@ -24,7 +25,7 @@ export function PeriodForm({ actionId, start, end, readOnly }: { actionId: strin
         <label className="grid gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Fin<Input type="date" value={e} onChange={(x) => setE(x.target.value)} className="h-8 text-sm font-normal normal-case tracking-normal text-foreground" data-testid="period-end" required /></label>
       </div>
       {error && <p className="text-xs text-danger" role="alert" data-testid="period-error">{error}</p>}
-      <div className="flex justify-end"><Button type="submit" size="sm" variant="outline" disabled={pending || !dirty || !s || !e} data-testid="period-submit">Enregistrer</Button></div>
+      <div className="flex justify-end"><Button type="submit" size="sm" variant="outline" disabled={pending || !dirty || !plausibleDay(s) || !plausibleDay(e)} data-testid="period-submit">Enregistrer</Button></div>
     </form>
   );
 }

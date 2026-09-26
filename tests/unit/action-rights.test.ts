@@ -28,6 +28,14 @@ test("un jour saisi se lit à minuit UTC ; un texte qui n'est pas un jour est re
   assert.equal(parseDay("2026-3-1"), null);
   assert.equal(parseDay(""), null);
   assert.equal(parseDay("2026-03-01T12:00:00Z"), null);
+  // Un champ date natif en cours de frappe émet des années partielles : refusées (sinon la période s'étend à l'an 2).
+  assert.equal(parseDay("0002-03-18"), null);
+  assert.equal(parseDay("0020-03-18"), null);
+  assert.equal(parseDay("0202-03-18"), null);
+  assert.equal(parseDay("1899-12-31"), null);
+  assert.equal(parseDay("2100-01-01"), null);
+  assert.equal(parseDay("1900-01-01")?.toISOString(), "1900-01-01T00:00:00.000Z");
+  assert.equal(parseDay("2099-12-31")?.toISOString(), "2099-12-31T00:00:00.000Z");
 });
 
 test("moindre privilège : l'associé modifie, ne gère pas la liste, ne supprime pas ; le responsable gère la liste sans supprimer", () => {

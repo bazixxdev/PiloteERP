@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, type CurrentPerson } from "@/lib/session";
-import { milestonesOutside, parseDay, validPeriod } from "@/lib/actions";
+import { DAY_INVALID, milestonesOutside, parseDay, validPeriod } from "@/lib/actions";
 import { fmtDate } from "@/lib/format";
 import { actionCtx, editionActionCtx } from "@/lib/actions-rights-db";
 import { addMilestoneTx, createActionTx, extendPeriodTx, newActionData } from "@/lib/actions-write-db";
@@ -54,7 +54,7 @@ export async function setActionPeriod(actionId: string, startDate: string, endDa
   const g = await guard(me, actionId);
   if (!g.ok) return g;
   const s = parseDay(startDate), en = parseDay(endDate);
-  if (!s || !en) return { ok: false, error: "Date invalide." };
+  if (!s || !en) return { ok: false, error: DAY_INVALID };
   const bad = validPeriod(s, en);
   if (bad) return { ok: false, error: bad };
   // La période contient toujours ses jalons : on ne la resserre pas en laissant un jalon dehors (lu et écrit ensemble).
@@ -75,7 +75,7 @@ export async function addMilestone(actionId: string, input: { date: string; labe
   const g = await guard(me, actionId);
   if (!g.ok) return g;
   const date = parseDay(input.date);
-  if (!date) return { ok: false, error: "Date invalide." };
+  if (!date) return { ok: false, error: DAY_INVALID };
   const m = await prisma.$transaction((tx) => addMilestoneTx(tx, actionId, { ...input, date }));
   refresh(actionId);
   return { ok: true, data: { id: m.id } };
@@ -88,7 +88,7 @@ export async function updateMilestone(id: string, patch: { date?: string; label?
   const g = await guard(me, m.actionId);
   if (!g.ok) return g;
   const date = patch.date !== undefined ? parseDay(patch.date) : undefined;
-  if (date === null) return { ok: false, error: "Date invalide." };
+  if (date === null) return { ok: false, error: DAY_INVALID };
   const text = (v: string | null) => (v ?? "").trim() || null;
   // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
   await prisma.$transaction(async (tx) => {
