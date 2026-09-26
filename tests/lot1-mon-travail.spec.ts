@@ -20,7 +20,15 @@ test("l'assistante gère ses listes ; son responsable lit une liste partagée, s
   await expect(forum.getByTestId("task-bang-due")).toBeVisible();
   await forum.getByTestId("task-input").press("Enter");
   await expect(forum).toContainText("Réserver la salle du forum");
-  await expect(forum.locator("[data-testid^=task-due-]").first()).toContainText("Pour lun.");
+  // « !lundi » vise le prochain lundi strictement après aujourd'hui (parseBang) ; l'échéance s'affiche selon la même règle
+  // que l'app (task-list.tsx) : demain reste « Pour demain », jamais son nom de jour — un lundi tombant demain (dimanche
+  // aujourd'hui) ne doit pas faire échouer le test.
+  const today = dayjs().startOf("day");
+  let monday = today.day(1);
+  if (!monday.isAfter(today)) monday = monday.add(1, "week");
+  const n = monday.diff(today, "day");
+  const dueLabel = n === 0 ? "aujourd'hui" : n === 1 ? "demain" : monday.format("ddd D MMM");
+  await expect(forum.locator("[data-testid^=task-due-]").first()).toContainText(`Pour ${dueLabel}`);
   await expect(forum.locator("[data-testid^=list-visibility-]")).toHaveAttribute("data-value", "all");
   // Ranger une tâche : la pastille de liste est un menu ; le glisser-déposer sur la colonne fait la même chose.
   await forum.locator("[data-testid^=task-list-]").first().click();
