@@ -112,14 +112,16 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
   // (module budget) seulement pour qui voit le détail Personnel — une action d'une seule personne en révélerait le salaire.
   const budgetModule = instanceHas(settings, "budget");
   const valued = budgetModule && canSeePersonnelDetail(me) ? await actionTimeCost(a.id, year) : null;
-  const bal = balance({ fundings: fundingLinks.filter((l) => year === null || l.year === year).map((l) => l.amount), expenses, hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
+  // Toute la période : les seules lignes des années que la période couvre (un lien d'une année sortie de la période après
+  // un raccourcissement reste affiché, mais ne compte pas).
+  const bal = balance({ fundings: fundingLinks.filter((l) => (year === null ? years.includes(l.year) : l.year === year)).map((l) => l.amount), expenses, hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
   const balanceView: BalanceView = {
     title: year ? `Équilibre ${year}` : "Équilibre sur toute la période",
     income: bal.income, spending: bal.spending, hours: totalHours, gap: bal.gap,
     gapLabel: valued ? "Écart" : "Écart (hors temps)",
     time: !budgetModule ? null : valued
       ? { cost: bal.timeCost, note: valued.unvaluedHours > 0 ? `${fmtNumber(valued.unvaluedHours, 1)} h sans coût connu` : `${fmtNumber(totalHours, 1)} h` }
-      : { cost: null, note: "valorisation visible par la trésorerie" },
+      : { cost: null, note: "valorisation réservée à la trésorerie et à la validation du budget" },
   };
   const label = (s: string) => <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{s}</span>;
 

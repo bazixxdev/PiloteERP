@@ -187,8 +187,9 @@ export async function linkFunding(actionId: string, fundingLineId: string, amoun
       await tx.actionFunding.upsert({
         where: { actionId_fundingLineId: { actionId, fundingLineId: id } },
         create: { actionId, fundingLineId: id, amount: id === line.id ? amount : null },
-        // Une sœur déjà liée garde son montant ; la ligne choisie prend celui saisi.
-        update: id === line.id ? { amount } : {},
+        // Une sœur déjà liée garde son montant ; la ligne choisie prend celui saisi — un nouveau lien sans montant n'efface
+        // pas celui déjà posé (pour le vider : setFundingAmount).
+        update: id === line.id && amount !== null ? { amount } : {},
       });
     }
     return targets.length;
