@@ -10,7 +10,7 @@ import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
-import { actionsOfYear, renewedIndicatorAction, renewedLineIds, renewedMilestoneDate, renewedPeriod, renewSelection, runsIn } from "@/lib/actions";
+import { actionsOfYear, renewPlan, renewedIndicatorAction, renewedLineIds, renewedMilestoneDate, renewedPeriod, renewSelection } from "@/lib/actions";
 import { isPrepareChoice, prepareDecisionBody, prepareInstance, type PrepareChoice } from "@/lib/preparer";
 import { reportInternalError } from "@/lib/errors";
 import { actionRunsInEdition } from "@/lib/actions-db";
@@ -193,26 +193,30 @@ export async function renewEdition(editionId: string, opts?: { actionIds?: strin
   if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: `Seuls ${le(V.pilote)}, le responsable ${de(V.pole)}, ${le(V.raf)} et ${le(V.direction)} reconduisent ${un(V.edition)}.` };
   const src = await renewSource(editionId);
   if (!src) return { ok: false, error: `${cap(V.edition)} introuvable` };
+  if (src.project.archived) return { ok: false, error: archivedRefusal() };
   const year = src.year + 1;
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
   if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
   // Liste venue du client : des chaînes seulement ; renewSelection ne garde de toute façon que des actions à reconduire.
   const actionIds = Array.isArray(opts?.actionIds) ? opts.actionIds.filter((x): x is string => typeof x === "string") : null;
-  const created = await prisma.$transaction((tx) => renewInTx(tx, c.me.id, src, { year, status: "proposed", actionIds }), { timeout: 20_000 });
+  const created = await prisma.$transaction((tx) => renewInTx(tx, c.me.id, src, { status: "proposed", actionIds }), { timeout: 20_000 });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: created.id } };
 }
 
+// Un projet rangé (archivé) ne se reconduit plus : ni par le dialogue, ni par « Préparer ».
+const archivedRefusal = () => `${cap(le(V.projet))} est rangé : sortez-le des archives (fiche du ${V.projet.one}) avant de le reconduire.`;
+
 function renewSource(editionId: string) {
-  return prisma.edition.findUnique({ where: { id: editionId }, include: { project: { select: { name: true } }, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
+  return prisma.edition.findUnique({ where: { id: editionId }, include: { project: { include: { secondaryPoles: true } }, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
 }
 
 // Écriture de la reconduction, dans la transaction de l'appelant (renewEdition, ou une ligne de « Préparer ») — garde faite
 // avant. Frontière : l'année, son historique de création, les copies des actions retenues (jalons décalés, associés, liens
 // vers les lignes recréées du même financeur), les indicateurs (repointés sur les copies) et les liens des lignes gardées
 // sur un dossier aux actions qui courent l'année suivante (linkNewLineToRunningActions) — tout ou rien.
-async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: NonNullable<Awaited<ReturnType<typeof renewSource>>>, opts: { year: number; status: string; actionIds?: string[] | null }) {
-  const { year } = opts;
+async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: NonNullable<Awaited<ReturnType<typeof renewSource>>>, opts: { status: string; actionIds?: string[] | null }) {
+  const year = src.year + 1;
   const ed = await tx.edition.create({
     include: { fundingLines: { select: { id: true, conventionId: true, editionId: true, funderId: true } } },
     data: {
@@ -241,14 +245,15 @@ async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: No
   });
   await tx.changeLog.create({ data: { editionId: ed.id, field: "création", before: null, after: `Reconduite depuis ${src.year}`, authorId } });
 
-  // Les actions de l'année source (période qui chevauche l'année, comme attachYearActions), lues dans la transaction.
+  // Les actions de l'année source (période qui chevauche l'année, comme attachYearActions), lues dans la transaction. La
+  // requête est bornée large (un jour de marge de chaque côté, pour le fuseau) ; actionsOfYear applique la règle exacte.
   const all = await tx.action.findMany({
-    where: { projectId: src.projectId },
-    include: { milestones: { orderBy: [{ date: "asc" }, { order: "asc" }] }, people: true, fundings: { include: { fundingLine: { select: { funderId: true, conventionId: true } } } } },
+    where: { projectId: src.projectId, startDate: { lte: new Date(`${src.year + 1}-01-01T23:59:59Z`) }, endDate: { gte: new Date(`${src.year - 1}-12-31T00:00:00Z`) } },
+    include: { milestones: { orderBy: [{ date: "asc" }, { order: "asc" }] }, people: true, fundings: { include: { fundingLine: { select: { funderId: true, conventionId: true, editionId: true } } } } },
     orderBy: [{ startDate: "asc" }, { order: "asc" }],
   });
   const copies = new Map<string, string>();
-  const nextYear = src.year + 1;
+  const nextYear = year;
   const sourceActions = actionsOfYear(all, src);
   for (const a of renewSelection(sourceActions, src.year, opts.actionIds)) {
     // Copie : période et jalons un an plus tard, jamais avant le 1er janvier de l'année suivante (renewedPeriod : la copie
@@ -263,18 +268,18 @@ async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: No
         editionId: ed.id, projectId: src.projectId, ...renewedPeriod(a, nextYear), state: "todo", order: a.order,
         name: a.name, ownerId: a.ownerId, description: a.description, audience: a.audience, recurrence: a.recurrence,
         entrusted: a.entrusted, latitude: a.latitude, timeTarget: a.timeTarget,
-        milestones: { create: milestones },
-        people: { create: a.people.map((p) => ({ personId: p.personId })) },
+        milestones: { createMany: { data: milestones } },
+        people: { createMany: { data: a.people.map((p) => ({ personId: p.personId })) } },
       },
     });
     copies.set(a.id, copy.id);
-    const lineIds = renewedLineIds(a.fundings.map((f) => f.fundingLine), ed.fundingLines);
+    const lineIds = renewedLineIds(a.fundings.map((f) => f.fundingLine), ed.fundingLines, src.id);
     if (lineIds.length > 0) await tx.actionFunding.createMany({ data: lineIds.map((fundingLineId) => ({ actionId: copy.id, fundingLineId })) });
   }
   // Indicateurs : cibles recopiées ; celui d'une action recopiée suit sa copie, celui d'une action qui court encore l'année
-  // suivante reste sur elle, les autres ne sont rattachés à aucune action (renewedIndicatorAction).
+  // suivante (hors abandonnées, renewPlan) reste sur elle, les autres ne sont rattachés à aucune action (renewedIndicatorAction).
   if (src.indicators.length > 0) {
-    const continuing = new Set(sourceActions.filter((a) => runsIn(a, nextYear)).map((a) => a.id));
+    const continuing = new Set(renewPlan(sourceActions, src.year).continuing.map((a) => a.id));
     await tx.indicator.createMany({ data: src.indicators.map((i) => ({ editionId: ed.id, label: i.label, target: i.target, imposed: i.imposed, order: i.order, actionId: renewedIndicatorAction(i.actionId, copies, continuing) })) });
   }
   for (const line of ed.fundingLines) await linkNewLineToRunningActions(tx, line);
@@ -307,24 +312,29 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
     if (!d || typeof d.editionId !== "string" || !isPrepareChoice(d.decision)) continue;
     const src = await renewSource(d.editionId);
     if (!src) continue;
-    if (d.decision !== "stop" && (await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } }, select: { id: true } }))) {
-      skipped.push(`${src.project.name} : ${le(V.edition)} ${year} existe déjà.`);
-      continue;
-    }
-    const body = prepareDecisionBody(d.decision, year);
+    const skip = (why: string) => skipped.push(`${src.project.name} : ${why}`);
+    // Refus, par projet : projet rangé, année source qui n'est pas l'année précédente (la copie décale d'un an, pas plus),
+    // année visée déjà là, instance que je ne peux pas consigner sur ce projet (même règle que recordDecision).
+    if (src.project.archived) { skip(archivedRefusal()); continue; }
+    if (src.year !== year - 1) { skip(`${le(V.edition)} ${src.year} n'est pas ${le(V.edition)} ${year - 1} : reconduisez-la depuis sa page.`); continue; }
+    if (d.decision !== "stop" && (await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } }, select: { id: true } }))) { skip(`${le(V.edition)} ${year} existe déjà.`); continue; }
+    const decision = { instance, body: prepareDecisionBody(d.decision, year) };
+    const where = { id: src.id, samePole: inMyPole(me, src.project) };
+    const refusal = decisionRefusal(me, where.samePole, decision);
+    if (refusal) { skip(refusal); continue; }
     try {
       // Frontière de transaction, par projet : la décision consignée (et son historique), puis la reconduction ou le rangement.
       await prisma.$transaction(async (tx) => {
-        await tx.decision.create({ data: { editionId: src.id, instance, body, authorId: me.id } });
-        await tx.changeLog.create({ data: { editionId: src.id, field: "décision", before: null, after: `${instance} : ${body}`, authorId: me.id } });
+        const refused = await consignDecisionInTx(tx, me, where, decision);
+        if (refused) throw new Error(refused);
         if (d.decision === "stop") {
           if (d.archive === true) await tx.project.update({ where: { id: src.projectId }, data: { archived: true } });
           return;
         }
-        await renewInTx(tx, me.id, src, { year, status: d.decision === "adjust" ? "rechallenged" : "proposed" });
+        await renewInTx(tx, me.id, src, { status: d.decision === "adjust" ? "rechallenged" : "proposed" });
       }, { timeout: 20_000 });
     } catch (e) {
-      skipped.push(`${src.project.name} : ${reportInternalError("batchCreateEditions", e).error}`);
+      skip(reportInternalError("batchCreateEditions", e).error);
       continue;
     }
     if (d.decision === "stop") stopped++;
@@ -349,16 +359,31 @@ export async function addExpense(editionId: string, label: string, spent: number
 // Décision d'instance consignée sur l'édition, datée, avec suite éventuelle (EF-F4, EF-H2, EF-H3).
 export async function recordDecision(input: { editionId: string; instance: string; body: string; followUpId?: string | null; dueDate?: string | null; alertKind?: string | null }): Promise<Result> {
   const c = await ctx(input.editionId);
-  const allowed = canConsignDecision(c.me, c.samePole, input.instance);
-  if (!allowed) return { ok: false, error: `Les décisions d'instance sont consignées par ${le(V.codir)}.` };
-  if (!input.body.trim()) return { ok: false, error: "Décision vide." };
-  await prisma.decision.create({
-    // Une décision peut régler une alerte de l'édition (dépassement accepté, jalon reporté…) : elle s'éteint dans la bande d'état (revue du 15/09).
-    data: { editionId: input.editionId, instance: input.instance, body: input.body.trim(), authorId: c.me.id, followUpId: input.followUpId || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, alertKind: input.alertKind || null },
-  });
-  await prisma.changeLog.create({ data: { editionId: input.editionId, field: "décision", before: null, after: `${input.instance} : ${input.body.trim().slice(0, 200)}`, authorId: c.me.id } });
+  const decision = { instance: input.instance, body: input.body, followUpId: input.followUpId || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, alertKind: input.alertKind || null };
+  const refused = await prisma.$transaction((tx) => consignDecisionInTx(tx, c.me, { id: input.editionId, samePole: c.samePole }, decision));
+  if (refused) return { ok: false, error: refused };
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// Consigner une décision d'instance : la seule implémentation (recordDecision, « Préparer »). Garde : canConsignDecision sur
+// le projet de l'année (`samePole`), décision non vide ; rien n'est écrit si elle refuse (le texte du refus est rendu).
+type DecisionInput = { instance: string; body: string; followUpId?: string | null; dueDate?: Date | null; alertKind?: string | null };
+type Me = Awaited<ReturnType<typeof getCurrentPerson>>;
+function decisionRefusal(me: Me, samePole: boolean, input: DecisionInput): string | null {
+  if (typeof input.instance !== "string" || typeof input.body !== "string") return "Demande invalide.";
+  if (!canConsignDecision(me, samePole, input.instance)) return `Les décisions d'instance sont consignées par ${le(V.codir)}.`;
+  return input.body.trim() ? null : "Décision vide.";
+}
+
+async function consignDecisionInTx(tx: Prisma.TransactionClient, me: Me, edition: { id: string; samePole: boolean }, input: DecisionInput): Promise<string | null> {
+  const refusal = decisionRefusal(me, edition.samePole, input);
+  if (refusal) return refusal;
+  const body = input.body.trim();
+  // Une décision peut régler une alerte de l'édition (dépassement accepté, jalon reporté…) : elle s'éteint dans la bande d'état (revue du 15/09).
+  await tx.decision.create({ data: { editionId: edition.id, instance: input.instance, body, authorId: me.id, followUpId: input.followUpId ?? null, dueDate: input.dueDate ?? null, alertKind: input.alertKind ?? null } });
+  await tx.changeLog.create({ data: { editionId: edition.id, field: "décision", before: null, after: `${input.instance} : ${body.slice(0, 200)}`, authorId: me.id } });
+  return null;
 }
 
 // Conventions partagées (EF-C3) : création, rattachement d'une ligne, nouvelle ligne depuis une convention existante.

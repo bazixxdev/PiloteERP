@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
 import { batchCreateEditions } from "@/app/actions/edition";
 import { cn } from "@/lib/utils";
-import type { PrepareChoice } from "@/lib/preparer";
+import { toPrepare, type PrepareChoice } from "@/lib/preparer";
 import { V, cap, au, pl, le } from "@/lib/vocab";
 
 type Row = { projectId: string; name: string; pole: string; pilot: string; sourceId: string | null; sourceYear: number | null; sourceStatus: string | null; nextId: string | null; nextStatus: string | null; nextColor: string | null; decision: string | null };
@@ -29,7 +29,7 @@ export function BatchForm({ year, rows, canRun, instances }: { year: number; row
   const [instance, setInstance] = useState(instances[0]?.value ?? "");
   const [pending, start] = useTransition();
   const router = useRouter();
-  const todo = rows.filter((r) => !r.nextId && r.sourceId);
+  const todo = rows.filter((r) => toPrepare(r, year));
   const counts = { renew: todo.filter((r) => dec[r.projectId] === "renew").length, adjust: todo.filter((r) => dec[r.projectId] === "adjust").length, stop: todo.filter((r) => dec[r.projectId] === "stop").length };
 
   return (
@@ -52,6 +52,8 @@ export function BatchForm({ year, rows, canRun, instances }: { year: number; row
                     <span className="text-xs text-muted-foreground">décidé{r.decision ? ` : ${{ renew: "reconduire", adjust: "ajuster", stop: "arrêter" }[r.decision] ?? r.decision}` : ""}</span>
                   ) : r.decision === "stop" ? (
                     <span className="text-xs text-danger">arrêté</span>
+                  ) : r.sourceId && r.sourceYear !== year - 1 ? (
+                    <span className="text-xs text-muted-foreground">{`depuis ${r.sourceYear} : à reconduire depuis sa page`}</span>
                   ) : r.sourceId && canRun ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="inline-flex overflow-hidden rounded-full border" role="radiogroup">

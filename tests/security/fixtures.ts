@@ -3,7 +3,7 @@ import path from "node:path";
 import { type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 export type SecurityActor = {
-  key: "contributor" | "pilot" | "raf" | "director" | "disabled" | "resettable";
+  key: "contributor" | "pilot" | "poleLead" | "raf" | "director" | "disabled" | "resettable";
   name: string;
   email: string;
 };
@@ -13,6 +13,8 @@ export type SecurityActor = {
 export const SECURITY_ACTORS: Record<string, SecurityActor> = {
   contributor: { key: "contributor", name: "Lucas Perrin", email: "lucas.perrin@exemple.fr" },
   pilot: { key: "pilot", name: "Thomas Guérin", email: "thomas.guerin@exemple.fr" },
+  // Responsable du pôle « Représentation et observation » (pole.manage, codir.access) : SEC-36, décision sur un autre pôle.
+  poleLead: { key: "poleLead", name: "Julien Barbot", email: "julien.barbot@exemple.fr" },
   raf: { key: "raf", name: "Nadia Ferrand", email: "nadia.ferrand@exemple.fr" },
   director: { key: "director", name: "Claire Vasseur", email: "claire.vasseur@exemple.fr" },
   disabled: { key: "disabled", name: "Manon Girard", email: "manon.girard@exemple.fr" },

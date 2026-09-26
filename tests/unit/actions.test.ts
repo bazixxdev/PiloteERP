@@ -95,12 +95,14 @@ test("reconduction : chaque lien suit la ligne recréée du même financeur, cel
     { id: "n-etat", funderId: "etat", conventionId: null },
   ];
   // Dossier : la ligne du même dossier ; annuel : la première du financeur ; deux liens vers le même financeur : une cible.
-  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "dossier-r" }], lines), ["n-region-dossier"]);
-  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: null }], lines), ["n-region-annuel"]);
-  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "autre-dossier" }], lines), ["n-region-annuel"]);
-  assert.deepEqual(renewedLineIds([{ funderId: "etat", conventionId: null }, { funderId: "etat", conventionId: "vieux" }], lines), ["n-etat"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "dossier-r", editionId: "src" }], lines, "src"), ["n-region-dossier"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: null, editionId: "src" }], lines, "src"), ["n-region-annuel"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "autre-dossier", editionId: "src" }], lines, "src"), ["n-region-annuel"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "etat", conventionId: null, editionId: "src" }, { funderId: "etat", conventionId: "vieux", editionId: "src" }], lines, "src"), ["n-etat"]);
   // Financeur absent de la nouvelle année : pas de lien.
-  assert.deepEqual(renewedLineIds([{ funderId: "europe", conventionId: null }], lines), []);
+  assert.deepEqual(renewedLineIds([{ funderId: "europe", conventionId: null, editionId: "src" }], lines, "src"), []);
+  // Lien vers une ligne d'une autre année que l'action couvre (2025 pour une action 2025–2026) : pas suivi.
+  assert.deepEqual(renewedLineIds([{ funderId: "etat", conventionId: null, editionId: "annee-precedente" }, { funderId: "region", conventionId: null, editionId: "src" }], lines, "src"), ["n-region-annuel"]);
 });
 
 test("un lien vers un dossier pluriannuel s'étend aux années couvertes du même projet", () => {

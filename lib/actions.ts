@@ -125,11 +125,12 @@ export function renewSelection<A extends Period & { id: string; state: string }>
 
 // Les liens de financement d'une copie reconduite : chaque ligne d'origine (un financeur, un dossier éventuel) donne la ligne
 // recréée du même financeur dans la nouvelle année — celle du même dossier s'il y en a plusieurs ; aucune si le financeur n'y
-// est plus. Sans doublon (deux lignes d'origine du même financeur donnent une seule cible).
+// est plus. Sans doublon (deux lignes d'origine du même financeur donnent une seule cible). Seuls comptent les liens vers
+// une ligne de l'année source (`sourceEditionId`) : ceux d'une autre année que l'action couvre ne sont pas les siens à suivre.
 type LineRef = { funderId: string; conventionId: string | null };
-export function renewedLineIds(sources: LineRef[], lines: (LineRef & { id: string })[]): string[] {
+export function renewedLineIds(sources: (LineRef & { editionId: string })[], lines: (LineRef & { id: string })[], sourceEditionId: string): string[] {
   const out = new Set<string>();
-  for (const src of sources) {
+  for (const src of sources.filter((l) => l.editionId === sourceEditionId)) {
     const same = lines.filter((l) => l.funderId === src.funderId);
     const target = (src.conventionId ? same.find((l) => l.conventionId === src.conventionId) : undefined) ?? same[0];
     if (target) out.add(target.id);

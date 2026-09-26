@@ -23,3 +23,10 @@ export function prepareChoiceOf(bodies: string[], year: number): PrepareChoice |
 export function prepareInstance(instances: string[], chosen?: string | null): string | null {
   return chosen && instances.includes(chosen) ? chosen : instances[0] ?? null;
 }
+
+// Une ligne de « Préparer {year} » à décider en lot : pas encore d'année `year`, une année source qui est bien `year - 1`
+// (la reconduction décale d'un an, pas plus : batchCreateEditions refuse le reste), et pas déjà arrêtée pour `year`.
+// Les projets rangés (archivés) ne sont pas listés du tout.
+export function toPrepare(r: { nextId: string | null; sourceId: string | null; sourceYear: number | null; decision: string | null }, year: number): boolean {
+  return !r.nextId && Boolean(r.sourceId) && r.sourceYear === year - 1 && r.decision !== "stop";
+}

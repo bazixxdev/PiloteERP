@@ -21,15 +21,20 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
   const target = Number(sp.annee) || dayjs().year() + 1;
   const [me, refs] = await Promise.all([getCurrentPerson(), getRefs()]);
   const codir = isCodir(me);
+  // Les projets rangés (archivés, par exemple arrêtés ici avec confirmation) ne sont plus à préparer : pas listés.
   const projects = await prisma.project.findMany({
+    where: { archived: false },
     include: { pole: true, pilot: true, editions: { orderBy: { year: "desc" }, include: { decisions: { select: { body: true }, orderBy: { decidedAt: "desc" } } } } },
     orderBy: [{ pole: { name: "asc" } }, { name: "asc" }],
   });
   const rows = projects.map((p) => {
     const next = p.editions.find((e) => e.year === target);
     const source = p.editions.find((e) => e.year === target - 1) ?? p.editions.find((e) => e.year < target);
-    return { project: p, next, source };
+    // La décision consignée pour l'année visée ; à défaut, l'ancienne décision écrite dans la fiche (avant le 26/09).
+    const decision = source ? prepareChoiceOf(source.decisions.map((d) => d.body), target) ?? source.codirDecision ?? null : null;
+    return { project: p, next, source, decision };
   });
+  const stopped = rows.filter((r) => !r.next && r.decision === "stop").length;
   const roles = await getRoleMap();
   const people = (await prisma.person.findMany({
     where: { active: true },
@@ -42,7 +47,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={`Préparer ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur ${V.edition.one} ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
+      <PageHeader title={`Préparer ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length - stopped} projets ont déjà leur ${V.edition.one} ${target}${stopped ? ` (${stopped} arrêté${stopped > 1 ? "s" : ""})` : ""}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
 
       <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, financements, équipe, et les ${pl(V.action)} qui y finissent ; les autres courent déjà sur ${le(V.edition)} suivante). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien, et ne range ${le(V.projet)} que si vous le confirmez. Chaque décision est consignée, datée, sur ${le(V.edition)} précédente.`} className="mb-4">
         <BatchForm
@@ -53,8 +58,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
             projectId: r.project.id, name: r.project.name, pole: r.project.pole.name, pilot: r.project.pilot.name,
             sourceId: r.source?.id ?? null, sourceYear: r.source?.year ?? null, sourceStatus: r.source ? refLabel(refs, "edition_status", r.source.status) : null,
             nextId: r.next?.id ?? null, nextStatus: r.next ? refLabel(refs, "edition_status", r.next.status) : null, nextColor: r.next ? refColor(refs, "edition_status", r.next.status) : null,
-            // La décision consignée pour l'année visée ; à défaut, l'ancienne décision écrite dans la fiche (avant le 26/09).
-            decision: r.source ? prepareChoiceOf(r.source.decisions.map((d) => d.body), target) ?? r.source.codirDecision ?? null : null,
+            decision: r.decision,
           }))}
         />
       </Section>

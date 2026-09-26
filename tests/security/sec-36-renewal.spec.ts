@@ -20,10 +20,10 @@ async function call(baseURL: string, name: string, args: unknown[], actor = SECU
   return res.text();
 }
 
-const ids = { p: "", e1: "", conv: "", f1: "", f2: "", line1: "", line2: "", cont: "", fin: "", multi: "", aband: "", unchecked: "", indFin: "", indCont: "", q: "", qe: "", r: "", re: "", rCont: "", rFin: "" };
+const ids = { p: "", e1: "", conv: "", f1: "", f2: "", line1: "", line2: "", cont: "", fin: "", multi: "", aband: "", unchecked: "", indFin: "", indCont: "", q: "", qe: "", r: "", re: "", rCont: "", rFin: "", s: "", se: "", abandCont: "" };
 
 test.afterAll(async () => {
-  const projects = [ids.p, ids.q, ids.r].filter(Boolean);
+  const projects = [ids.p, ids.q, ids.r, ids.s].filter(Boolean);
   await prisma.action.deleteMany({ where: { projectId: { in: projects } } });
   await prisma.changeLog.deleteMany({ where: { edition: { projectId: { in: projects } } } });
   await prisma.edition.deleteMany({ where: { projectId: { in: projects } } });
@@ -70,6 +70,15 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     const aband = await mk("SEC36 abandonnée", `${Y}-01-01`, `${Y}-06-30`, "abandoned");
     const unchecked = await mk("SEC36 décochée", `${Y}-01-01`, `${Y}-12-31`);
     const indFin = await prisma.indicator.create({ data: { editionId: e1.id, label: "SEC36 ateliers tenus", target: "4", actual: "4", order: 0, actionId: fin.id } });
+    // Action qui court sur Y+1 mais abandonnée : son indicateur n'est pas gardé sur elle (renewPlan l'exclut des « continuent »).
+    const abandCont = await mk("SEC36 continue abandonnée", `${Y}-01-01`, `${Y + 1}-06-30`, "abandoned");
+    await prisma.indicator.create({ data: { editionId: e1.id, label: "SEC36 suivi abandonné", target: "2", order: 2, actionId: abandCont.id } });
+    // Une ligne 2030 (année précédente) liée à la finie : ce lien-là n'est pas suivi (seules les lignes de l'année source).
+    const e0 = await prisma.edition.create({ data: { projectId: p.id, year: Y - 1, status: "closed" } });
+    const f3 = (await prisma.organisation.findFirstOrThrow({ where: { id: { notIn: [f1, f2] } }, orderBy: { id: "asc" }, select: { id: true } })).id;
+    const line0 = await prisma.fundingLine.create({ data: { editionId: e0.id, funderId: f3, status: "justified" } });
+    await prisma.fundingLine.create({ data: { editionId: e1.id, funderId: f3, status: "contracted" } });
+    await prisma.actionFunding.create({ data: { actionId: fin.id, fundingLineId: line0.id, amount: 50 } });
     const indCont = await prisma.indicator.create({ data: { editionId: e1.id, label: "SEC36 suivi continu", target: "10", order: 1, actionId: cont.id } });
 
     // Deux autres projets pour « Préparer » : Q (arrêté), R (reconduit en lot, avec une action qui continue).
@@ -78,6 +87,12 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     const r = await prisma.project.create({ data: { ...base, name: "SEC36 projet préparé", analyticCode: "SEC36-R" } });
     const re = await prisma.edition.create({ data: { projectId: r.id, year: Y, status: "in_progress" } });
     const rCont = await prisma.action.create({ data: { editionId: re.id, projectId: r.id, name: "SEC36 R continue", startDate: day(`${Y}-01-01`), endDate: day(`${Y + 1}-12-31`) } });
+    // S : un projet d'un autre pôle que celui du responsable de pôle (acteur poleLead).
+    const lead = await prisma.person.findFirstOrThrow({ where: { email: SECURITY_ACTORS.poleLead.email }, select: { poleId: true } });
+    const otherPole = await prisma.pole.findFirstOrThrow({ where: { id: { not: lead.poleId ?? "" } }, orderBy: { id: "asc" }, select: { id: true } });
+    const sp = await prisma.project.create({ data: { ...base, poleId: otherPole.id, name: "SEC36 projet d'un autre pôle", analyticCode: "SEC36-S" } });
+    const se = await prisma.edition.create({ data: { projectId: sp.id, year: Y, status: "in_progress" } });
+    Object.assign(ids, { s: sp.id, se: se.id });
     const rFin = await prisma.action.create({ data: { editionId: re.id, projectId: r.id, name: "SEC36 R finie", startDate: day(`${Y}-01-01`), endDate: day(`${Y}-12-31`) } });
     Object.assign(ids, { p: p.id, e1: e1.id, conv: conv.id, f1, f2, line1: line1.id, line2: line2.id, cont: cont.id, fin: fin.id, multi: multi.id, aband: aband.id, unchecked: unchecked.id, indFin: indFin.id, indCont: indCont.id, q: q.id, qe: qe.id, r: r.id, re: re.id, rCont: rCont.id, rFin: rFin.id });
   });
@@ -141,6 +156,7 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     expect(e2.indicators.map((i) => [i.label, i.target, i.actual, i.actionId])).toEqual([
       ["SEC36 ateliers tenus", "4", null, copy.id],
       ["SEC36 suivi continu", "10", null, ids.cont],
+      ["SEC36 suivi abandonné", "2", null, null],
     ]);
     // Rien ne bouge dans l'année source.
     expect((await prisma.indicator.findUniqueOrThrow({ where: { id: ids.indFin } })).actionId).toBe(ids.fin);
@@ -171,5 +187,39 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     expect(body).toContain('"ok":true');
     expect((await prisma.project.findUniqueOrThrow({ where: { id: ids.q } })).archived).toBe(true);
     expect((await prisma.decision.findFirstOrThrow({ where: { editionId: ids.qe, instance: "board" } })).body).toBe(`Arrêté pour ${Y + 1}`);
+  });
+  test("un projet rangé ne se reconduit plus, ni par le dialogue ni par « Préparer » ; rien n'est consigné", async ({ baseURL }) => {
+    const url = String(baseURL);
+    expect((await prisma.project.findUniqueOrThrow({ where: { id: ids.q } })).archived).toBe(true);
+    const decisions = await prisma.decision.count({ where: { editionId: ids.qe } });
+    const renew = await call(url, "renewEdition", [ids.qe]);
+    expect(renew).toContain('"ok":false');
+    expect(renew).toContain("est rangé");
+    const batch = await call(url, "batchCreateEditions", [Y + 1, [{ editionId: ids.qe, decision: "renew" }]]);
+    expect(batch).toContain('"created":0');
+    expect(batch).toContain("est rangé");
+    expect(await prisma.edition.count({ where: { projectId: ids.q, year: Y + 1 } })).toBe(0);
+    expect(await prisma.decision.count({ where: { editionId: ids.qe } })).toBe(decisions);
+  });
+
+  test("« Préparer » refuse une année visée qui n'est pas l'année suivante de la source", async ({ baseURL }) => {
+    const body = await call(String(baseURL), "batchCreateEditions", [Y + 2, [{ editionId: ids.se, decision: "renew" }]]);
+    expect(body).toContain('"created":0');
+    expect(body).toContain("n'est pas");
+    expect(await prisma.edition.count({ where: { projectId: ids.s, year: { gt: Y } } })).toBe(0);
+    expect(await prisma.decision.count({ where: { editionId: ids.se } })).toBe(0);
+  });
+
+  test("un responsable de pôle ne consigne pas une décision « CA » sur le projet d'un autre pôle ; « CODIR » passe (témoin)", async ({ baseURL }) => {
+    const url = String(baseURL);
+    const refused = await call(url, "batchCreateEditions", [Y + 1, [{ editionId: ids.se, decision: "renew" }], "board"], SECURITY_ACTORS.poleLead);
+    expect(refused).toContain('"created":0');
+    expect(refused).toContain("consignées par");
+    expect(await prisma.decision.count({ where: { editionId: ids.se } })).toBe(0);
+    expect(await prisma.edition.count({ where: { projectId: ids.s, year: Y + 1 } })).toBe(0);
+    // La même instance que recordDecision permet à un responsable de pôle sur tout projet : le CODIR.
+    const allowed = await call(url, "batchCreateEditions", [Y + 1, [{ editionId: ids.se, decision: "renew" }], "codir"], SECURITY_ACTORS.poleLead);
+    expect(allowed).toContain('"created":1');
+    expect((await prisma.decision.findFirstOrThrow({ where: { editionId: ids.se } })).instance).toBe("codir");
   });
 });
