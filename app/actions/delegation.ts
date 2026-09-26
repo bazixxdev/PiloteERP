@@ -7,7 +7,7 @@ import { projectPoleIds } from "@/lib/scope";
 import { canWriteDelegation } from "@/lib/delegation";
 import { fmtDate } from "@/lib/format";
 import { reportInternalError } from "@/lib/errors";
-import { DAY_INVALID, parseDay, periodIncluding } from "@/lib/actions";
+import { dayInvalid, parseDay, periodIncluding } from "@/lib/actions";
 import { actionCtx, editionActionCtx } from "@/lib/actions-rights-db";
 import { addMilestoneTx, createActionTx, newActionData } from "@/lib/actions-write-db";
 
@@ -115,7 +115,7 @@ export async function addObjective(editionId: string, input: { name: string; own
   if (!ed) return { ok: false, error: "Introuvable." };
   if (!can) return { ok: false, error: "Vous ne pouvez pas ajouter d'objectif ici." };
   const due = input.date ? parseDay(input.date) : null;
-  if (input.date && !due) return { ok: false, error: `Échéance invalide. ${DAY_INVALID}` };
+  if (input.date && !due) return { ok: false, error: dayInvalid("Échéance") };
   const prepared = await newActionData(ed, me, { name: input.name, ownerId: input.ownerId });
   if (!prepared.ok) return prepared;
   const data = due ? { ...prepared.data, ...periodIncluding(prepared.data, due) } : prepared.data;

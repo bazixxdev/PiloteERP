@@ -49,16 +49,30 @@ test("la page de l'action : ouverte depuis l'onglet, période, jalons, personnes
   await expect(page.getByTestId("milestone-label-0")).toHaveValue("Bilan collectif");
   await expect(page.getByTestId("milestone-date-0")).toHaveValue(`${year}-11-20`);
 
-  // Date tapée au clavier : en cours de frappe, le champ natif émet « 0002-11-11 », « 0020-… » ; rien de cela ne part, la
-  // période ne s'étend pas jusqu'à l'an 2. Jour = mois (11/11) : l'ordre des segments (jj/mm ou mm/jj) ne compte pas.
+  // Dates tapées au clavier, sur une période qui commence après janvier : en cours de frappe, le champ natif émet chaque
+  // segment (« …-01-20 » au « 1 » de « 12 », « 0002-… » en tapant l'année) ; rien ne part avant de quitter le champ, et la
+  // période ne s'étend ni à janvier ni à l'an 2.
+  await page.getByTestId("period-start").fill(`${year}-09-01`);
+  await page.getByTestId("period-end").fill(`${year + 1}-06-30`);
+  await page.getByTestId("period-submit").click();
+  await expect(page.getByText("Période enregistrée")).toBeVisible();
+  // Le mois seul (premier segment du champ, mm/jj/aaaa dans le navigateur de test) : 11 → 12.
+  await page.getByTestId("milestone-date-0").pressSequentially("12", { delay: 60 });
+  await page.getByTestId("milestone-date-0").blur();
+  await expect(page.getByTestId("milestone-date-0")).toHaveValue(`${year}-12-20`);
+  await page.waitForLoadState("networkidle");
+  await page.reload();
+  await expect(page.getByTestId("milestone-date-0")).toHaveValue(`${year}-12-20`);
+  await expect(page.getByTestId("period-start")).toHaveValue(`${year}-09-01`);
+  // Mois, jour et année (jour = mois : l'ordre des segments ne compte pas).
   await page.getByTestId("milestone-date-0").pressSequentially(`1111${year}`, { delay: 60 });
   await page.getByTestId("milestone-date-0").blur();
   await expect(page.getByTestId("milestone-date-0")).toHaveValue(`${year}-11-11`);
   await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByTestId("milestone-date-0")).toHaveValue(`${year}-11-11`);
-  await expect(page.getByTestId("period-start")).toHaveValue(`${year}-01-01`);
-  await expect(page.getByTestId("action-years")).toHaveCount(0);
+  await expect(page.getByTestId("period-start")).toHaveValue(`${year}-09-01`);
+  await expect(page.getByTestId("period-end")).toHaveValue(`${year + 1}-06-30`);
 
   // Période : refusée quand elle laisse le jalon dehors ; le message de la commande s'affiche, rien ne change.
   await page.getByTestId("period-start").fill(`${year}-12-01`);
@@ -66,7 +80,7 @@ test("la page de l'action : ouverte depuis l'onglet, période, jalons, personnes
   await page.getByTestId("period-submit").click();
   await expect(page.getByTestId("period-error")).toContainText("Des jalons tomberaient hors de cette période");
   await page.reload();
-  await expect(page.getByTestId("period-start")).toHaveValue(`${year}-01-01`);
+  await expect(page.getByTestId("period-start")).toHaveValue(`${year}-09-01`);
 
   // Période sur trois années : l'année du milieu la dit « depuis … · jusqu'en … ».
   await page.getByTestId("period-start").fill(`${year - 1}-09-01`);

@@ -24,6 +24,7 @@ export function PeriodForm({ actionId, start, end, readOnly }: { actionId: strin
         <label className="grid gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Début<Input type="date" value={s} onChange={(x) => setS(x.target.value)} className="h-8 text-sm font-normal normal-case tracking-normal text-foreground" data-testid="period-start" required /></label>
         <label className="grid gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Fin<Input type="date" value={e} onChange={(x) => setE(x.target.value)} className="h-8 text-sm font-normal normal-case tracking-normal text-foreground" data-testid="period-end" required /></label>
       </div>
+      {[s, e].some((d) => /^\d{4}-/.test(d) && !plausibleDay(d)) && <p className="text-xs text-danger" data-testid="period-hint">Année entre 1900 et 2099.</p>}
       {error && <p className="text-xs text-danger" role="alert" data-testid="period-error">{error}</p>}
       <div className="flex justify-end"><Button type="submit" size="sm" variant="outline" disabled={pending || !dirty || !plausibleDay(s) || !plausibleDay(e)} data-testid="period-submit">Enregistrer</Button></div>
     </form>

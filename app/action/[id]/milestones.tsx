@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/common/reveal";
 import { addMilestone, deleteMilestone, updateMilestone } from "@/app/actions/actions";
 import { fmtDate } from "@/lib/format";
-import { plausibleDay } from "@/lib/actions";
+import { DAY_INVALID, plausibleDay } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { useRun } from "@/components/common/use-run";
 
@@ -58,14 +58,18 @@ function EditRow({ m, i }: { m: MilestoneView; i: number }) {
   const dateInput = useRef<HTMLInputElement>(null);
   useEffect(() => { if (dateInput.current !== document.activeElement) setDate(m.date); setLabel(m.label); setVenue(m.venue ?? ""); setParticipants(m.participants ?? ""); setDone(m.done); setIsPublic(m.isPublic); setIsCheckpoint(m.isCheckpoint); }, [m.date, m.label, m.venue, m.participants, m.done, m.isPublic, m.isCheckpoint]);
   const save = (patch: Parameters<typeof updateMilestone>[1], revert?: () => void) => run(() => updateMilestone(m.id, patch), undefined, (msg) => { toast.error(msg); revert?.(); });
-  // N'envoie qu'une date complète ET plausible : en cours de frappe, un champ date natif émet « 0002-03-18 », « 0020-… »
-  // (qui étendraient la période jusqu'à l'an 2) ; une date déjà envoyée ne repart pas. Vidé puis quitté, le champ reprend sa date.
+  // La date part en quittant le champ (ou sur Entrée), jamais pendant la frappe : un champ date natif émet chaque segment
+  // tapé (« 2026-01-20 » en tapant le « 1 » de « 12 », « 0020-… » en tapant l'année), et chaque envoi étendrait la période
+  // pour de bon. Seulement une date complète et plausible, jamais deux fois la même ; sinon le champ reprend sa date, en le disant.
   const lastSent = useRef(m.date);
   useEffect(() => { lastSent.current = m.date; }, [m.date]);
-  const sendDate = (v: string) => {
-    if (!plausibleDay(v) || v === lastSent.current) return;
-    lastSent.current = v;
-    save({ date: v }, () => { setDate(m.date); lastSent.current = m.date; });
+  const commitDate = () => {
+    const restore = () => setDate(lastSent.current);
+    if (date === lastSent.current) return;
+    if (date === "") { toast.error("Indiquez une date : le jalon est conservé. Pour l'enlever, supprimez-le."); return restore(); }
+    if (!plausibleDay(date)) { toast.error(`${DAY_INVALID} La date du jalon est rétablie.`); return restore(); }
+    lastSent.current = date;
+    save({ date }, () => { setDate(m.date); lastSent.current = m.date; });
   };
   return (
     <li className={cn("grid gap-1 py-2", pending && "opacity-70")} data-testid={`milestone-row-${i}`} data-done={m.done ? "true" : "false"}>
@@ -74,8 +78,8 @@ function EditRow({ m, i }: { m: MilestoneView; i: number }) {
           <input type="checkbox" className={box} checked={done} onChange={(e) => { const v = e.target.checked; setDone(v); save({ done: v }, () => setDone(m.done)); }} data-testid={`milestone-done-${i}`} aria-label={`Fait, ${m.label}`} />
           <span className="sr-only sm:not-sr-only">Fait</span>
         </label>
-        <input ref={dateInput} type="date" value={date} onChange={(e) => { setDate(e.target.value); sendDate(e.target.value); }}
-          onBlur={() => { if (date === "") toast.error("Indiquez une date : le jalon est conservé. Pour l'enlever, supprimez-le."); if (date !== lastSent.current) setDate(lastSent.current); }}
+        <input ref={dateInput} type="date" value={date} onChange={(e) => setDate(e.target.value)}
+          onBlur={commitDate} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitDate(); } }}
           className={cn(field, "w-[9.5rem] tabular", m.late && "font-medium text-danger")} data-testid={`milestone-date-${i}`} aria-label={`Date, ${m.label}`} />
         <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} onBlur={() => { if (label.trim() === "") setLabel(m.label); else if (label !== m.label) save({ label }, () => setLabel(m.label)); }}
           className={cn(field, "min-w-[10rem] flex-1 font-medium", m.done && "text-muted-foreground line-through")} data-testid={`milestone-label-${i}`} aria-label="Libellé du jalon" />
@@ -104,6 +108,7 @@ function AddMilestoneForm({ actionId }: { actionId: string }) {
         <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8 w-40" aria-label="Date du jalon" data-testid="milestone-add-date" required />
         <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Libellé : rendu, atelier, comité…" className="h-8 w-64 max-w-full" aria-label="Libellé du jalon" data-testid="milestone-add-label" />
         <Button type="submit" size="sm" variant="outline" disabled={pending || !plausibleDay(date) || !label.trim()} data-testid="milestone-add-submit"><Plus />Ajouter</Button>
+        {/^\d{4}-/.test(date) && !plausibleDay(date) && <p className="basis-full text-xs text-danger" data-testid="milestone-add-hint">Année entre 1900 et 2099.</p>}
       </form>
     </Reveal>
   );

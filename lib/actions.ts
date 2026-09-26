@@ -24,7 +24,8 @@ export function validPeriod(start: Date, end: Date): string | null {
 // Un jour saisi « AAAA-MM-JJ » (champ date) → minuit UTC, comme saveField (lib/fields.ts, coerce) ; null si le texte n'est
 // pas un jour du calendrier (« 2026-02-30 » compris) ou si l'année sort de 1900–2099 : un champ date natif en cours de
 // frappe émet « 0002-03-18 », qui étendrait la période jusqu'à l'an 2. Période et jalons passent tous par ici.
-export const DAY_INVALID = "Date invalide : un jour du calendrier, année entre 1900 et 2099.";
+export const dayInvalid = (what = "Date") => `${what} invalide : un jour du calendrier, année entre 1900 et 2099.`;
+export const DAY_INVALID = dayInvalid();
 // Même garde côté navigateur (champs date de la page de l'action) : n'envoyer qu'une date complète et plausible.
 export const plausibleDay = (s: string): boolean => /^(19|20)\d{2}-\d{2}-\d{2}$/.test(s);
 
