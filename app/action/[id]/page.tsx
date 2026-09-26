@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { CreateTaskButton } from "@/app/edition/[id]/create-task-button";
 import { Milestones } from "./milestones";
 import { PeriodForm } from "./period-form";
-import { PeoplePicker } from "./people-picker";
+import { PeopleSection } from "./people-picker";
 import { DeleteActionButton } from "./delete-action";
 import { ActionName } from "./action-name";
 import { V, cap, du, ce, pl } from "@/lib/vocab";
@@ -37,7 +37,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
     include: {
       project: { include: { pole: true, secondaryPoles: { select: { poleId: true } }, editions: { orderBy: { year: "asc" }, select: { id: true, year: true, team: { select: { personId: true } } } } } },
       owner: { select: { id: true, name: true } },
-      people: { select: { personId: true } },
+      people: { select: { personId: true, person: { select: { name: true } } } },
       milestones: { orderBy: [{ date: "asc" }, { order: "asc" }] },
       tasks: { where: { done: false }, include: { person: { select: { id: true, name: true } }, list: { select: { visibility: true, person: { select: { id: true, poleId: true } } } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] },
       achievements: { include: { edition: { select: { year: true } } }, orderBy: { date: "asc" } },
@@ -73,8 +73,10 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
     _sum: { hours: true },
   });
   const totalHours = hours.reduce((s, h) => s + (h._sum.hours ?? 0), 0);
+  // Noms pris dans toutes les personnes (une personne partie garde ses heures) ; visibilité selon son pôle.
+  const who = hours.length === 0 ? [] : await prisma.person.findMany({ where: { id: { in: hours.map((h) => h.personId) } }, select: { id: true, name: true, poleId: true } });
   const visible = hours
-    .flatMap((h) => { const person = people.find((p) => p.id === h.personId); return person && canSeeTimeOf(me, person, settings.timeVisibility) ? [{ person, hours: h._sum.hours ?? 0 }] : []; })
+    .flatMap((h) => { const person = who.find((p) => p.id === h.personId); return person && canSeeTimeOf(me, person, settings.timeVisibility) ? [{ person, hours: h._sum.hours ?? 0 }] : []; })
     .sort((x, y) => y.hours - x.hours);
   const hidden = hours.length - visible.length;
 
@@ -108,6 +110,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
               {a.recurrence && <><span aria-hidden>·</span><span>{a.recurrence}</span></>}
               <span aria-hidden>·</span>
               <span>Responsable <b className="font-semibold text-foreground">{a.owner?.name ?? "—"}</b></span>
+              {a.people.length > 0 && <><span aria-hidden>·</span><span data-testid="action-associates" title="Personnes associées">avec <b className="font-semibold text-foreground">{a.people.map((x) => x.person.name).join(", ")}</b></span></>}
             </p>
           </div>
         </div>
@@ -176,10 +179,8 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
                 {!can && <p className="px-2 text-sm">{`Du ${fmtDate(a.startDate)} au ${fmtDate(a.endDate)}`}</p>}
                 <PeriodForm actionId={a.id} start={fmtDateInput(a.startDate)} end={fmtDateInput(a.endDate)} readOnly={!can} />
               </div>
-              <div className="grid gap-1" data-testid="action-people">
-                {label("Personnes associées")}
-                <p className="text-[11px] text-muted-foreground">{`Elles modifient ${ce(V.action)} comme la personne responsable.`}</p>
-                <PeoplePicker actionId={a.id} people={people.filter((p) => p.id !== a.ownerId).map((p) => ({ id: p.id, name: p.name }))} selected={a.people.map((p) => p.personId)} readOnly={!canManagePeople} />
+              <div data-testid="action-people">
+                <PeopleSection actionId={a.id} people={people.filter((p) => p.id !== a.ownerId).map((p) => ({ id: p.id, name: p.name }))} selected={a.people.map((p) => p.personId)} canEdit={canManagePeople} />
               </div>
             </div>
           </Section>

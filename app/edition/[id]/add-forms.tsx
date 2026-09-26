@@ -11,22 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
 import { createAction } from "@/app/actions/actions";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
+import { useRun } from "@/components/common/use-run";
 import { V, cap, du } from "@/lib/vocab";
 
-type R = { ok: true } | { ok: false; error: string };
-
-function useRun() {
-  const [pending, start] = useTransition();
-  const router = useRouter();
-  const run = (fn: () => Promise<R>, after?: () => void) =>
-    start(async () => {
-      const res = await fn();
-      if (!res.ok) { toast.error(res.error); return; }
-      after?.();
-      router.refresh();
-    });
-  return { pending, run };
-}
 
 // Créer une action ouvre sa page : période, jalons, personnes et contenu s'y règlent.
 export function AddActionForm({ editionId, year }: { editionId: string; year: number }) {

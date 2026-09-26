@@ -24,7 +24,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   // Le tableau se lit ; le détail (contenu, période, jalons, personnes, tâches, heures) est sur la page de l'action.
   return (
     <div className="grid gap-4">
-      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} year={e.year} /> : undefined}>
+      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} year={e.year} /> : undefined}>
         {e.actions.length === 0 ? (
           <EmptyState title={cap(aucun(V.action))} hint={`Ajoutez la première ${V.action.one} de ${ce(V.edition)} : un nom, puis sa période et ses jalons sur sa page.`} />
         ) : (

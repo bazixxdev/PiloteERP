@@ -7,7 +7,8 @@ const include = {
   people: { include: { person: true } },
   milestones: { orderBy: { date: "asc" as const } },
   fundings: { include: { fundingLine: { include: { funder: true } } } },
-  tasks: { where: { done: false }, include: { person: true }, orderBy: { dueDate: "asc" as const } },
+  // Pas de tâches ici (26/09) : une tâche est personnelle ; la page de l'action lit les siennes, filtrées (mes tâches et
+  // listes partagées avec moi), jamais le chargeur d'une année qui les sérialiserait pour tout lecteur.
 };
 
 // Mode léger (relances, cloche, échéances : appelé par le layout à chaque navigation) : les champs de l'action, ses jalons,

@@ -68,7 +68,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
   // Compteurs d'onglet (revue du 15/09) : ce qui reste à faire, pas des totaux ; Documents = fichiers et liens seulement.
   const counts = {
     apercu: e.validations.filter((v) => v.status === "pending").length,
-    actions: e.actions.filter((a) => a.state !== "done").length,
+    actions: e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").length,
     documents: e.docLinks.filter((d) => !d.codirOnly || isCodir(me)).length + e.attachments.length,
   };
 
