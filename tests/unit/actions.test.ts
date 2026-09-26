@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
 import { computeReminders, nextMilestone } from "../../lib/alerts";
+import { deadlineKey } from "../../lib/deadline-notifications";
 import { dayjs } from "../../lib/format";
 
 const P = (a: string, b: string) => ({ startDate: new Date(a), endDate: new Date(b) });
@@ -127,4 +128,8 @@ test("relances : une action qui court sur deux années vivantes ne relance qu'un
   const y = dayjs(day(3)).year();
   const r = computeReminders([edition("prev", y - 1, [a]), edition("cur", y, [a])], null, [30, 7], 60);
   assert.deepEqual(r.map((x) => [x.editionId, x.label]), [["cur", "Forum · Bilan"]]);
+  // La clé de notification est celle du jalon : ni l'année où il est rangé, ni son titre n'y entrent.
+  const key = deadlineKey(r[0]);
+  assert.equal(key, `deadline:milestone:m:${dayjs(day(3)).format("YYYY-MM-DD")}:${r[0].stage}`);
+  assert.equal(deadlineKey({ ...r[0], editionId: "prev", label: "Autre titre" }), key);
 });

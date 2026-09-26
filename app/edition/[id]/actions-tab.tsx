@@ -22,7 +22,6 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   // « abandoned » (26/09) existe en base mais ne se choisit pas encore ici : ses règles viennent avec la page de l'action.
   const stateOpts = REF_DEFAULTS.action_state.filter((s) => s.code !== "abandoned").map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
-  const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));
   const consumed = (actionId: string) => e.yearEntries.filter((t) => t.actionId === actionId).reduce((s, t) => s + t.hours, 0);
 
   return (
@@ -61,10 +60,15 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                         <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || null, a.milestones.some((m) => m.isPublic) ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
                           <div className="grid gap-2 sm:grid-cols-3">
                             <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
-                            <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
-                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Participants, invités</span><AutoField model="action" id={a.id} field="participants" type="textarea" rows={2} value={a.participants} readOnly={!rw} placeholder="—" label={`Participants, ${a.name}`} /></div>
-                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Ligne de financement</span><AutoField model="action" id={a.id} field="fundingLineId" type="select" value={a.fundingLineId} options={lineOpts} readOnly={!rw} placeholder="— le projet, sans ligne dédiée —" label={`Ligne de financement, ${a.name}`} /></div>
-                            <div className="flex items-end pb-1"><AutoField model="action" id={a.id} field="isPublic" type="bool" value={a.isPublic} readOnly={!rw} testId={`${V.action.one}-public-${i}`} label={`Événement public, ${a.name}`} placeholder="Événement public (agenda du site)" /></div>
+                            {/* Lieu, participants et « public » sont portés par les jalons, le financement par les liens de l'action (26/09) :
+                                lecture seule ici en attendant la page de l'action ; plus aucun contrôle de l'ancien modèle. */}
+                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Financement</span><span className="px-2 py-1 text-sm" data-testid={`${V.action.one}-funders-${i}`}>{[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || "le projet, sans ligne dédiée"}</span></div>
+                            <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Agenda du site</span><span className="px-2 py-1 text-sm" data-testid={`${V.action.one}-public-${i}`}>{a.milestones.some((m) => m.isPublic) ? "jalon public" : "non publié"}</span></div>
+                            {a.milestones.some((m) => m.venue || m.participants || m.isPublic) && (
+                              <ul className="grid gap-0.5 text-xs text-muted-foreground sm:col-span-3">
+                                {a.milestones.filter((m) => m.venue || m.participants || m.isPublic).map((m) => <li key={m.id}>{`${dayjs(m.date).format("D MMM YYYY")} · ${m.label}${m.venue ? ` · ${m.venue}` : ""}${m.participants ? ` · ${m.participants}` : ""}${m.isPublic ? " · public" : ""}`}</li>)}
+                              </ul>
+                            )}
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>

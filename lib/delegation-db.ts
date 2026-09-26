@@ -37,16 +37,14 @@ export async function loadSheet(me: Viewer, personId: string, year: number, peri
   // Les actions de l'année (période qui chevauche l'année) ; objectifs et points de contrôle se lisent sur leurs jalons.
   const years = await attachYearActions(readable.map((r) => r.edition), { lean: true });
   const actionsOf = new Map(years.map((e) => [e.id, e.actions]));
-  const ids = years.flatMap((e) => e.actions.map((a) => a.id));
-  const checkpointIds = new Set(ids.length === 0 ? [] : (await prisma.milestone.findMany({ where: { actionId: { in: ids }, isCheckpoint: true }, select: { id: true } })).map((m) => m.id));
   const cards = readable.map((r) => {
     const e = r.edition;
     const actions = (actionsOf.get(e.id) ?? []).map((a) => {
-      const own = a.milestones.filter((m) => !checkpointIds.has(m.id));
+      const own = a.milestones.filter((m) => !m.isCheckpoint);
       // L'échéance d'un objectif : son prochain jalon non fait (hors points de contrôle), sinon le dernier tenu.
       return { ...a, due: own.find((m) => !m.done)?.date ?? own[own.length - 1]?.date ?? null, onlyCheckpoints: a.milestones.length > 0 && own.length === 0 };
     }).sort((x, y) => (x.due?.getTime() ?? Infinity) - (y.due?.getTime() ?? Infinity) || x.order - y.order);
-    const checkpoints = actions.flatMap((a) => a.milestones.filter((m) => checkpointIds.has(m.id) && dueInPeriod(m.date, period)).map((m) => ({ id: m.id, name: milestoneTitle(a.name, m.label), date: m.date, owner: a.owner })))
+    const checkpoints = actions.flatMap((a) => a.milestones.filter((m) => m.isCheckpoint && dueInPeriod(m.date, period)).map((m) => ({ id: m.id, name: milestoneTitle(a.name, m.label), date: m.date, owner: a.owner })))
       .sort((x, y) => x.date.getTime() - y.date.getTime());
     return {
       pole: e.project.pole.name,

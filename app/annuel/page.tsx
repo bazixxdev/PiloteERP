@@ -34,9 +34,10 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
   });
   const [editions, milestones] = await Promise.all([
     loadPortfolio(settings, { year, statuses: ["in_progress", "validated", "proposed", "rechallenged"] }),
-    // Les jalons de l'année des actions dont chaque personne est responsable (un jalon une fois, même si l'action est pluriannuelle).
+    // Les jalons de l'année des actions dont chaque personne est responsable (un jalon une fois, même si l'action est pluriannuelle),
+    // hors actions abandonnées.
     prisma.milestone.findMany({
-      where: { date: { gte: new Date(year, 0, 1), lt: new Date(year + 1, 0, 1) }, action: { ownerId: { in: people.map((p) => p.id) } } },
+      where: { date: { gte: new Date(year, 0, 1), lt: new Date(year + 1, 0, 1) }, action: { ownerId: { in: people.map((p) => p.id) }, state: { not: "abandoned" } } },
       include: { action: { select: { name: true, state: true, ownerId: true, project: { select: { id: true, name: true, editions: { where: { year }, select: { id: true } } } } } } },
       orderBy: { date: "asc" },
     }),

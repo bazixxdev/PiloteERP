@@ -39,6 +39,13 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   const row = page.getByTestId("action-row-0");
   await row.locator('input[type="date"]').fill("2026-01-15");
   await expect(page.getByText("Jalon dépassé : Atelier de lancement")).toBeVisible({ timeout: 10_000 });
+  // Vider le champ ne supprime pas le jalon (un champ date à moitié effacé envoie une valeur vide).
+  await row.locator('input[type="date"]').fill("");
+  await row.locator('input[type="date"]').blur();
+  await page.reload();
+  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
+  await expect(page.getByTestId("action-row-0").locator('input[type="date"]')).toHaveValue("2026-01-15");
+  await expect(page.getByText("Jalon dépassé : Atelier de lancement")).toBeVisible();
 
   // 3. Le portefeuille affiche l'édition avec son alerte.
   await page.goto("/portefeuille?alerte=danger");

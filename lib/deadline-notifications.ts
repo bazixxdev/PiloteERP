@@ -10,8 +10,12 @@ import { dayjs, fmtDate } from "./format";
 // pour que la cloche raconte une histoire cohérente même sur un jeu de données fraîchement semé.
 export const DEADLINE_KIND = "deadline";
 
+// Un jalon se reconnaît à son id (une action pluriannuelle, un titre qui change ne doublent pas la notification) ; la date
+// reste dans la clé, pour qu'un jalon replanifié relance comme avant.
 export function deadlineKey(r: Reminder): string {
-  return `deadline:${r.kind}:${r.editionId}:${r.label}:${dayjs(r.dueDate).format("YYYY-MM-DD")}:${r.stage}`;
+  const day = dayjs(r.dueDate).format("YYYY-MM-DD");
+  if (r.kind === "milestone" && r.milestoneId) return `deadline:milestone:${r.milestoneId}:${day}:${r.stage}`;
+  return `deadline:${r.kind}:${r.editionId}:${r.label}:${day}:${r.stage}`;
 }
 
 // Date d'envoi : le matin du palier (J-30, J-7, lendemain de l'échéance), jamais avant le dernier passage — une échéance

@@ -50,19 +50,19 @@ export async function addAction(editionId: string, name: string, opts?: { ownerI
 }
 
 // Onglet Actions (en attendant la page de l'action) : la date du prochain jalon non fait se modifie dans le tableau ; sans
-// jalon, on en crée un (libellé = nom de l'action) ; vider la date retire ce jalon. La période s'étend jusqu'au jalon s'il en
-// sort. Même garde que la modification d'une action par saveField (équipe, pilote, pôle, ou responsable).
+// jalon, on en crée un (libellé = nom de l'action). Une date vide ne supprime JAMAIS un jalon (un champ date à moitié effacé
+// envoie "") : la suppression est une commande à part (tâche 6). La période s'étend jusqu'au jalon s'il en sort. Même garde que la modification d'une action par saveField (équipe, pilote, pôle, ou responsable).
 export async function setNextMilestoneDate(actionId: string, date: string): Promise<Result> {
   const a = await prisma.action.findUnique({ where: { id: actionId }, include: { milestones: { where: { done: false }, orderBy: [{ date: "asc" }, { order: "asc" }], take: 1 } } });
   if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
   const c = await ctx(a.editionId);
   if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas modifier ${ce(V.action)}.` };
   const next = a.milestones[0] ?? null;
-  const when = date ? new Date(date) : null;
-  if (when && Number.isNaN(when.getTime())) return { ok: false, error: "Date invalide." };
+  if (!date) return { ok: false, error: "Indiquez une date : le jalon est conservé." };
+  const when = new Date(date);
+  if (Number.isNaN(when.getTime())) return { ok: false, error: "Date invalide." };
   // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
   await prisma.$transaction(async (tx) => {
-    if (!when) { if (next) await tx.milestone.delete({ where: { id: next.id } }); return; }
     if (next) await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
     else await tx.milestone.create({ data: { actionId, date: when, label: a.name } });
     if (a.startDate && when < a.startDate) await tx.action.update({ where: { id: actionId }, data: { startDate: when } });
@@ -390,14 +390,16 @@ export async function addFundingLineFromConvention(editionId: string, convention
   return { ok: true };
 }
 
-// Dupliquer une action (occurrences : petits-déjeuners, forums SPRO) : même contenu, lieu, participants et objectif ; jalon vidé, état « à faire ».
+// Dupliquer une action (occurrences : petits-déjeuners, forums SPRO) : même contenu, période, objectif et financements ; jalons (lieu,
+// participants, public) vidés, état « à faire ».
 export async function duplicateAction(actionId: string): Promise<Result<{ id: string }>> {
-  const a = await prisma.action.findUnique({ where: { id: actionId } });
+  const a = await prisma.action.findUnique({ where: { id: actionId }, include: { fundings: { select: { fundingLineId: true } } } });
   if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
   const c = await ctx(a.editionId);
   if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas dupliquer ${ce(V.action)}.` };
   const count = await prisma.action.count({ where: { editionId: a.editionId } });
-  const d = await prisma.action.create({ data: { editionId: a.editionId, projectId: a.projectId, startDate: a.startDate, endDate: a.endDate, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
+  // Lieu, participants et « public » vivent sur les jalons (vidés à la copie) ; le financement suit par les liens de l'action.
+  const d = await prisma.action.create({ data: { editionId: a.editionId, projectId: a.projectId, startDate: a.startDate, endDate: a.endDate, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, description: a.description, order: count, fundings: { create: a.fundings.map((f) => ({ fundingLineId: f.fundingLineId })) } } });
   revalidatePath(path(a.editionId));
   return { ok: true, data: { id: d.id } };
 }

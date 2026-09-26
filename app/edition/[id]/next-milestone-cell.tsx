@@ -30,8 +30,9 @@ export function NextMilestoneCell({ actionId, actionName, date, label, lastDone,
     : !date && lastDone ? <div className="px-2 text-[10px] text-muted-foreground">{`dernier jalon tenu le ${fmtDate(lastDone)}`}</div> : null;
   if (readOnly) return <div data-readonly="true" className={cn("px-2 py-1 text-sm", late ? "font-medium text-danger" : date ? "text-foreground" : "italic text-muted-foreground")}>{date ? fmtDate(date) : "—"}{sub}</div>;
 
+  // N'envoie qu'une date complète et plausible : un champ vidé ou en cours de frappe (« 0002-… ») n'écrit rien.
   const send = (next: string) => {
-    if (next === lastSent.current) return;
+    if (!/^(19|20)\d\d-\d\d-\d\d$/.test(next) || next === lastSent.current) return;
     lastSent.current = next;
     start(async () => {
       const r = await setNextMilestoneDate(actionId, next);
@@ -43,7 +44,7 @@ export function NextMilestoneCell({ actionId, actionName, date, label, lastDone,
   };
   return (
     <div className="relative">
-      <input type="date" value={val} onChange={(e) => { setVal(e.target.value); send(e.target.value); }} aria-label={`Prochain jalon, ${actionName}`}
+      <input type="date" value={val} onChange={(e) => { setVal(e.target.value); send(e.target.value); }} onBlur={() => { if (val !== lastSent.current) setVal(lastSent.current); }} aria-label={`Prochain jalon, ${actionName}`}
         className={cn("w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:border-border focus:border-ring focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring/20", late && "font-medium text-danger")} />
       {(pending || saved) && <span className="pointer-events-none absolute top-1.5 right-7 text-muted-foreground">{pending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5 text-mint" />}</span>}
       {sub}

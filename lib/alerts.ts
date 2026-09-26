@@ -87,7 +87,8 @@ export function nextMilestone(e: EditionForAlerts): { name: string; date: Date }
 // Rappels J-30 / J-7 (EF-C2), calculés à la volée. `stage` = le palier franchi (le plus proche de l'échéance, ou "retard") :
 // c'est lui qui déclenche une notification (`lib/deadline-notifications.ts`), une seule par palier et par destinataire.
 export type ReminderStage = number | "retard";
-export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone" | "payment" | "call"; who: string[]; whoIds: string[] };
+// `milestoneId` : pour un jalon, sa clé stable (la notification ne dépend ni de l'année où il est rangé, ni de son titre).
+export type Reminder = { editionId: string; project: string; label: string; dueDate: Date; daysLeft: number; stage: ReminderStage; kind: "deliverable" | "milestone" | "payment" | "call"; who: string[]; whoIds: string[]; milestoneId?: string };
 
 function stageOf(daysLeft: number, reminderDays: number[]): ReminderStage | null {
   if (daysLeft < 0) return "retard";
@@ -142,7 +143,7 @@ export function computeReminders(
         if (n > horizonDays || stage === null) continue;
         const people = new Map<string, string>();
         for (const p of [a.owner, ...a.people.map((x) => x.person), e.project.pilot]) if (p) people.set(p.id, p.name);
-        out.push({ editionId: e.id, project: e.project.name, label: milestoneTitle(a.name, m.label), dueDate: m.date, daysLeft: n, stage, kind: "milestone", who: [...people.values()], whoIds: [...people.keys()] });
+        out.push({ editionId: e.id, project: e.project.name, label: milestoneTitle(a.name, m.label), dueDate: m.date, daysLeft: n, stage, kind: "milestone", who: [...people.values()], whoIds: [...people.keys()], milestoneId: m.id });
       }
     }
   }
