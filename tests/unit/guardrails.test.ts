@@ -96,3 +96,18 @@ test("aucun artefact de suite de tests suivi par git", () => {
   if (r.status !== 0) return; // hors dépôt git (archive, CI sans .git) : rien à vérifier
   assert.equal(r.stdout.trim(), "", `fichiers à sortir de git :\n${r.stdout}`);
 });
+
+// Actions composantes (26/09) — les actions d'une année se lisent par attachYearActions (période qui chevauche l'année) et
+// les dates par leurs jalons (Milestone), plus par la relation d'origine `edition.actions` ni par l'ancien jalon unique.
+// Exceptions : lib/actions-db.ts (le chargeur) ; lib/fields.ts liste encore milestoneDate pour saveField jusqu'à la tâche 6
+// (FIELDS.action refait, voir la liste figée plus haut). prisma/ et les seeds ne sont pas parcourus.
+const sourceFiles = (dirs: string[]) => dirs.flatMap((d) => walk(path.join(ROOT, d))).filter((p) => /\.(ts|tsx)$/.test(p)).map((p) => path.relative(ROOT, p));
+const ACTIONS_EXCEPTIONS = new Set(["lib/actions-db.ts", "lib/fields.ts"]);
+
+test("les actions d'une année se lisent par attachYearActions, jamais par l'ancienne relation ni l'ancien jalon", () => {
+  const offenders = sourceFiles(["app", "lib", "components"]).filter((f) => !ACTIONS_EXCEPTIONS.has(f)).filter((f) => {
+    const s = readFileSync(path.join(ROOT, f), "utf8");
+    return /\bmilestoneDate\b|\.isCheckpoint\b|\bactions:\s*\{\s*(include|where|orderBy|select)/.test(s);
+  });
+  assert.deepEqual(offenders, []);
+});
