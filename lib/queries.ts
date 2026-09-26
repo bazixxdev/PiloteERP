@@ -7,7 +7,7 @@ import { attachYearActions } from "./actions-db";
 
 export const editionListInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } } } },
-  fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } }, payments: true } },
+  fundingLines: { include: { funder: true, deliverables: { orderBy: { dueDate: "asc" as const } }, payments: true, actionFundings: { select: { amount: true } } } },
   validations: true,
   expenses: true,
   team: { include: { person: true } },
@@ -55,7 +55,7 @@ export async function loadPortfolio(settings: { envelopeAlertPercent: number; de
 
 export const editionFullInclude = {
   project: { include: { pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } }, editions: { select: { id: true, year: true, status: true }, orderBy: { year: "asc" as const } } } },
-  fundingLines: { include: { funder: { include: { contacts: true } }, contact: true, convention: { include: { contact: true, lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } }, payments: true } }, deliverables: { orderBy: { dueDate: "asc" as const } }, payments: { orderBy: { expectedAt: "asc" as const } } }, orderBy: { id: "asc" as const } },
+  fundingLines: { include: { funder: { include: { contacts: true } }, contact: true, convention: { include: { contact: true, lines: { select: { id: true, amountGranted: true, amountRequested: true, editionId: true } }, payments: true } }, deliverables: { orderBy: { dueDate: "asc" as const } }, payments: { orderBy: { expectedAt: "asc" as const } }, actionFundings: { select: { amount: true } } }, orderBy: { id: "asc" as const } },
   validations: { include: { requester: true, decider: true, action: true }, orderBy: { createdAt: "desc" as const } },
   partnerLinks: { include: { organisation: true }, orderBy: { createdAt: "asc" as const } },
   team: { include: { person: true } },

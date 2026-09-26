@@ -1,8 +1,9 @@
 import { daysFromNow, dayjs, fmtEuro } from "./format";
 import { budgetOf, type ExpenseLike } from "./budget";
-import { actionAlerts, editionForMilestone, milestoneTitle } from "./actions";
+import { actionAlerts, editionForMilestone, fundingOverflow, milestoneTitle } from "./actions";
+import { V, des } from "./vocab";
 
-export type AlertKind = "milestone_overdue" | "action_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending" | "budget_over";
+export type AlertKind = "milestone_overdue" | "action_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending" | "budget_over" | "funding_over";
 
 export type Alert = { kind: AlertKind; level: "warning" | "danger"; label: string; when?: Date };
 
@@ -20,7 +21,8 @@ type EditionForAlerts = {
   expenses: ExpenseLike[];
   // Les actions de l'année (attachYearActions) et leurs jalons.
   actions: ActionForAlerts[];
-  fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[]; payments?: { label: string; amount: number; expectedAt: Date; receivedAt: Date | null }[] }[];
+  // Montants et liens aux actions : facultatifs (chargés par loadEdition et le portefeuille) — sans eux, pas d'alerte de dépassement.
+  fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[]; payments?: { label: string; amount: number; expectedAt: Date; receivedAt: Date | null }[]; amountGranted?: number | null; amountRequested?: number | null; actionFundings?: { amount: number | null }[] }[];
   validations: { status: string }[];
 };
 
@@ -38,6 +40,11 @@ export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[
       const n = daysFromNow(d.dueDate);
       if (n < 0) alerts.push({ kind: "deliverable_overdue", level: "danger", label: `Livrable en retard : ${d.label} (${f.funder.name})`, when: d.dueDate });
       else if (n <= s.deliverableAlertDays) alerts.push({ kind: "deliverable_soon", level: "warning", label: `Livrable dans ${n} j : ${d.label} (${f.funder.name})`, when: d.dueDate });
+    }
+    // Montants répartis sur les actions au-delà de l'obtenu (à défaut, du demandé) de la ligne : une seule règle, fundingOverflow.
+    if (f.actionFundings?.length) {
+      const over = fundingOverflow({ amountGranted: f.amountGranted ?? null, amountRequested: f.amountRequested ?? null }, f.actionFundings.map((x) => x.amount));
+      if (over !== null) alerts.push({ kind: "funding_over", level: "warning", label: `Montants ${des(V.action)} au-delà ${f.amountGranted != null ? "de l'obtenu" : "du demandé"} : ${f.funder.name} (+${fmtEuro(over)})` });
     }
     // Versement attendu dépassé (lot A) : une alerte d'argent, pas d'échéance de travail — la RAF et la direction la lisent.
     for (const p of f.payments ?? []) {

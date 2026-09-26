@@ -13,15 +13,13 @@ export async function loadCategories(): Promise<Category[]> {
 // Tout ce qu'il faut pour le tableau d'une édition. Le détail Personnel par personne (heures × coût = salaire) n'est
 // renvoyé qu'à qui a le droit de le voir : le filtre est ici, avant toute sérialisation vers le navigateur.
 export async function loadBudgetPlan(edition: { id: string; year: number; projectId: string }, me: Actor) {
-  const [ed, categories, lines, overrides, expenses, settings, rules, rhythms, entries] = await Promise.all([
+  const [ed, categories, lines, overrides, expenses, settings, entries] = await Promise.all([
     prisma.edition.findUnique({ where: { id: edition.id }, select: { budgetPlanStatus: true, budgetPlanValidatedAt: true, budgetPlanValidatedById: true } }),
     loadCategories(),
     prisma.budgetLine.findMany({ where: { editionId: edition.id }, orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
     prisma.budgetActualOverride.findMany({ where: { editionId: edition.id } }),
     prisma.expense.findMany({ where: { editionId: edition.id }, select: { budgetCategoryId: true, committed: true, spent: true, status: true } }),
     prisma.settings.findUnique({ where: { id: 1 }, select: { realizedSource: true } }),
-    prisma.cashRule.findMany({ where: { kind: "hr" } }),
-    loadRhythms(),
     prisma.timeEntry.findMany({ where: { projectId: edition.projectId, date: { gte: new Date(`${edition.year}-01-01`), lt: new Date(`${edition.year + 1}-01-01`) } }, select: { personId: true, date: true, hours: true } }),
   ]);
 
@@ -37,20 +35,8 @@ export async function loadBudgetPlan(edition: { id: string; year: number; projec
     for (const x of expenses) if (x.budgetCategoryId) computed.set(x.budgetCategoryId, (computed.get(x.budgetCategoryId) ?? 0) + x.spent);
   }
 
-  // Personnel : temps × coût horaire du mois (coût mensuel chargé ÷ heures attendues du mois selon le rythme).
-  const people = await prisma.person.findMany({ where: { id: { in: [...new Set(entries.map((e) => e.personId))] } }, select: { id: true, name: true, workRhythm: true, rhythmPeriods: { include: { rhythm: true } } } });
-  const personOf = new Map(people.map((p) => [p.id, p]));
-  const hourly = new Map<string, number | null>();
-  const costOf = (personId: string, month: string) => {
-    const key = `${personId}:${month}`;
-    if (hourly.has(key)) return hourly.get(key)!;
-    const monthly = monthlyCost(personId, month, rules);
-    const p = personOf.get(personId);
-    const hours = p ? expectedDaysOfMonth(p as PersonRhythms, month, rhythms, dayjs(`${month}-01`).endOf("month")).hours : 0;
-    const v = monthly !== null && hours > 0 ? monthly / hours : null;
-    hourly.set(key, v);
-    return v;
-  };
+  // Personnel : temps × coût horaire du mois (hourlyCosts).
+  const { personOf, costOf } = await hourlyCosts(entries.map((e) => e.personId));
   const personnel = personnelActual(entries.map((e) => ({ personId: e.personId, month: dayjs(e.date).format("YYYY-MM"), hours: e.hours })), costOf);
   for (const c of categories) if (c.source === "time") computed.set(c.id, (computed.get(c.id) ?? 0) + personnel.amount);
 
@@ -74,6 +60,42 @@ export async function loadBudgetPlan(edition: { id: string; year: number; projec
       unvaluedPeople: detailed ? personnel.unvalued.map((u) => personOf.get(u.personId)?.name ?? "—") : null,
     },
   };
+}
+
+// Coût horaire d'une personne un mois donné : coût mensuel chargé (règle RH de la trésorerie) ÷ heures attendues du mois selon
+// son rythme ; null si l'un manque. Une seule implémentation : Personnel du budget prévisionnel et temps valorisé de l'action.
+export async function hourlyCosts(personIds: string[]) {
+  const [rules, rhythms, people] = await Promise.all([
+    prisma.cashRule.findMany({ where: { kind: "hr" } }),
+    loadRhythms(),
+    prisma.person.findMany({ where: { id: { in: [...new Set(personIds)] } }, select: { id: true, name: true, workRhythm: true, rhythmPeriods: { include: { rhythm: true } } } }),
+  ]);
+  const personOf = new Map(people.map((p) => [p.id, p]));
+  const hourly = new Map<string, number | null>();
+  const costOf = (personId: string, month: string) => {
+    const key = `${personId}:${month}`;
+    if (hourly.has(key)) return hourly.get(key)!;
+    const monthly = monthlyCost(personId, month, rules);
+    const p = personOf.get(personId);
+    const hours = p ? expectedDaysOfMonth(p as PersonRhythms, month, rhythms, dayjs(`${month}-01`).endOf("month")).hours : 0;
+    const v = monthly !== null && hours > 0 ? monthly / hours : null;
+    hourly.set(key, v);
+    return v;
+  };
+  return { personOf, costOf };
+}
+
+// Temps valorisé d'une action (page de l'action, équilibre) : ses heures de l'année (ou de toute la période) × coût horaire du
+// mois de chaque personne. Révèle une rémunération dès qu'une seule personne y travaille : l'appelant ne le demande que pour
+// qui voit le détail Personnel (canSeePersonnelDetail), comme loadBudgetPlan.
+export async function actionTimeCost(actionId: string, year: number | null) {
+  const entries = await prisma.timeEntry.findMany({
+    where: { actionId, ...(year !== null ? { date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) } } : {}) },
+    select: { personId: true, date: true, hours: true },
+  });
+  const { costOf } = await hourlyCosts(entries.map((e) => e.personId));
+  const p = personnelActual(entries.map((e) => ({ personId: e.personId, month: dayjs(e.date).format("YYYY-MM"), hours: e.hours })), costOf);
+  return { amount: p.amount, unvaluedHours: p.unvalued.reduce((s, u) => s + u.hours, 0) };
 }
 
 export type BudgetPlanView = Awaited<ReturnType<typeof loadBudgetPlan>>;

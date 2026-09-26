@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, type CurrentPerson } from "@/lib/session";
-import { DAY_INVALID, milestonesOutside, parseDay, validPeriod } from "@/lib/actions";
+import { DAY_INVALID, milestonesOutside, parseDay, propagationTargets, runsIn, validPeriod } from "@/lib/actions";
 import { fmtDate } from "@/lib/format";
 import { actionCtx, editionActionCtx } from "@/lib/actions-rights-db";
 import { addMilestoneTx, createActionTx, extendPeriodTx, newActionData } from "@/lib/actions-write-db";
@@ -13,7 +13,8 @@ import { V, cap, ce, de, e } from "@/lib/vocab";
 // - contenu, période, jalons : le pilote du projet, l'équipe d'une des années que la période couvre, le responsable de pôle
 //   sur son pôle, la direction, le responsable de l'action et ses personnes associées ;
 // - personnes associées : les mêmes, sauf un simple associé ;
-// - suppression : pilote, équipe d'une année couverte, pôle, direction — ni le responsable ni les associés.
+// - suppression : pilote, équipe d'une année couverte, pôle, direction — ni le responsable ni les associés ;
+// - financements (lier une ligne, son montant, retirer le lien) : le droit de modifier l'action, sur une ligne du même projet.
 // Qui peut lire ? ce que les écrans chargent déjà.
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -153,5 +154,67 @@ export async function deleteAction(actionId: string): Promise<Result> {
   });
   if (blocked) return { ok: false, error: `Des heures ou des dépenses y sont rattachées : passez ${ce(V.action)} en « abandonné${e(V.action)} » plutôt.` };
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// Financements de l'action (spec actions § 2) : une action se rattache à plusieurs lignes, chacune avec un montant facultatif.
+// Qui peut écrire ? le droit de modifier l'action (guard « edit »). La ligne est relue côté serveur : du même projet, d'une
+// année que la période couvre. Qui peut lire ? comme la page de l'action (les montants des lignes sont déjà dans l'onglet Budget).
+const LINE_NOT_FOUND = "Ligne de financement introuvable sur ce projet.";
+const validAmount = (amount: unknown): amount is number | null => amount === null || (typeof amount === "number" && Number.isFinite(amount) && amount >= 0);
+
+// Lier une ligne d'un dossier (conventionId) lie aussi ses sœurs du même dossier, même projet, sur les autres années que
+// l'action couvre (propagationTargets) ; le montant ne va qu'à la ligne choisie. Renvoie le nombre de lignes liées.
+export async function linkFunding(actionId: string, fundingLineId: string, amount: number | null): Promise<Result<{ linked: number }>> {
+  const me = await getCurrentPerson();
+  const g = await guard(me, actionId);
+  if (!g.ok) return g;
+  if (!validAmount(amount)) return { ok: false, error: "Montant invalide." };
+  const a = g.a;
+  const period = { startDate: a.startDate, endDate: a.endDate };
+  const line = await prisma.fundingLine.findUnique({ where: { id: String(fundingLineId) }, select: { id: true, conventionId: true, edition: { select: { year: true, projectId: true } } } });
+  if (!line || line.edition.projectId !== a.projectId) return { ok: false, error: LINE_NOT_FOUND };
+  if (!runsIn(period, line.edition.year)) return { ok: false, error: `Cette ligne est de ${line.edition.year}, une année que ${ce(V.action)} ne couvre pas.` };
+  // Frontière de transaction : la ligne choisie (avec son montant) et ses sœurs du même dossier, lues et liées ensemble.
+  const linked = await prisma.$transaction(async (tx) => {
+    let targets = [line.id];
+    if (line.conventionId) {
+      const sameDossier = await tx.fundingLine.findMany({ where: { conventionId: line.conventionId }, select: { id: true, conventionId: true, edition: { select: { year: true, projectId: true } } } });
+      targets = propagationTargets({ ...period, projectId: a.projectId }, sameDossier.map((l) => ({ id: l.id, conventionId: l.conventionId, editionYear: l.edition.year, projectId: l.edition.projectId })), line.conventionId);
+      if (!targets.includes(line.id)) targets.push(line.id);
+    }
+    for (const id of targets) {
+      await tx.actionFunding.upsert({
+        where: { actionId_fundingLineId: { actionId, fundingLineId: id } },
+        create: { actionId, fundingLineId: id, amount: id === line.id ? amount : null },
+        // Une sœur déjà liée garde son montant ; la ligne choisie prend celui saisi.
+        update: id === line.id ? { amount } : {},
+      });
+    }
+    return targets.length;
+  });
+  refresh(actionId);
+  return { ok: true, data: { linked } };
+}
+
+export async function setFundingAmount(actionId: string, fundingLineId: string, amount: number | null): Promise<Result> {
+  const me = await getCurrentPerson();
+  const g = await guard(me, actionId);
+  if (!g.ok) return g;
+  if (!validAmount(amount)) return { ok: false, error: "Montant invalide." };
+  const { count } = await prisma.actionFunding.updateMany({ where: { actionId, fundingLineId: String(fundingLineId) }, data: { amount } });
+  if (count === 0) return { ok: false, error: LINE_NOT_FOUND };
+  refresh(actionId);
+  return { ok: true };
+}
+
+// Retirer un lien : seulement celui-ci ; les autres années du même dossier restent liées (on les retire une à une).
+export async function unlinkFunding(actionId: string, fundingLineId: string): Promise<Result> {
+  const me = await getCurrentPerson();
+  const g = await guard(me, actionId);
+  if (!g.ok) return g;
+  const { count } = await prisma.actionFunding.deleteMany({ where: { actionId, fundingLineId: String(fundingLineId) } });
+  if (count === 0) return { ok: false, error: LINE_NOT_FOUND };
+  refresh(actionId);
   return { ok: true };
 }

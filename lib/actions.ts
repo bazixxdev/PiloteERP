@@ -127,12 +127,14 @@ export function actionAlerts(a: { name: string; state: string; endDate: Date; ti
   return out;
 }
 
-export function balance(x: { fundings: (number | null)[]; expenses: { committed: number; spent: number }[]; hours: number; hourlyCost: number | null }) {
+// Temps valorisé : heures × coût horaire unique, ou `timeCost` déjà calculé (page de l'action : coût horaire de chaque
+// personne chaque mois, lib/budget-plan-db.ts actionTimeCost) — null quand on ne le valorise pas (module, droit).
+export function balance(x: { fundings: (number | null)[]; expenses: { committed: number; spent: number }[]; hours: number; hourlyCost: number | null; timeCost?: number | null }) {
   const income = x.fundings.reduce<number>((s, a) => s + (a ?? 0), 0);
   // Même règle que lib/budget.ts (budgetOf, lignes 9-10) : réalisé + engagements restants, sans double comptage —
   // remainingCommitments = max(0, committed − spent) ; ici sans distinction de statut « ouvert » (absent de cette forme
   // légère), donc chaque dépense pèse pour spent + max(0, committed − spent) = max(committed, spent).
   const spending = x.expenses.reduce((s, e) => s + e.spent + Math.max(0, e.committed - e.spent), 0);
-  const timeCost = x.hourlyCost === null ? null : Math.round(x.hours * x.hourlyCost);
+  const timeCost = x.timeCost !== undefined ? (x.timeCost === null ? null : Math.round(x.timeCost)) : x.hourlyCost === null ? null : Math.round(x.hours * x.hourlyCost);
   return { income, spending, timeCost, gap: income - spending - (timeCost ?? 0) };
 }

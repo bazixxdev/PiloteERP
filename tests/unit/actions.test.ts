@@ -71,6 +71,9 @@ test("équilibre d'une action : l'engagé ne double pas le réalisé rattaché (
   assert.deepEqual(balance({ fundings: [12_000, null, 3_000], expenses: [{ committed: 1_000, spent: 4_000 }], hours: 100, hourlyCost: 30 }), { income: 15_000, spending: 4_000, timeCost: 3_000, gap: 8_000 });
   assert.equal(balance({ fundings: [10_000], expenses: [{ committed: 6_000, spent: 2_000 }], hours: 0, hourlyCost: null }).spending, 6_000);
   assert.equal(balance({ fundings: [], expenses: [], hours: 10, hourlyCost: null }).timeCost, null);
+  // Coût déjà calculé (coût horaire par personne et par mois) : il prime sur heures × coût unique.
+  assert.deepEqual(balance({ fundings: [5_000], expenses: [], hours: 10, hourlyCost: null, timeCost: 1_234.4 }), { income: 5_000, spending: 0, timeCost: 1_234, gap: 3_766 });
+  assert.equal(balance({ fundings: [5_000], expenses: [], hours: 10, hourlyCost: 30, timeCost: null }).gap, 5_000);
 });
 
 test("les actions d'une année : même projet, période qui chevauche l'année, heures de CETTE année", () => {

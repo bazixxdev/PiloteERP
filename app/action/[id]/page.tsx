@@ -9,10 +9,12 @@ import { SectionIcon } from "@/components/shell/section-icon";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { actionCtx } from "@/lib/actions-rights-db";
-import { runsIn, spanLabel, yearsLabel, yearsOf } from "@/lib/actions";
+import { balance, fundingOverflow, runsIn, spanLabel, yearsLabel, yearsOf } from "@/lib/actions";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { canSeeTimeOf } from "@/lib/rights";
-import { canReadShared } from "@/lib/modules";
+import { canReadShared, instanceHas } from "@/lib/modules";
+import { canSeePersonnelDetail } from "@/lib/budget-plan";
+import { actionTimeCost } from "@/lib/budget-plan-db";
 import { inMyScope, isTransversal } from "@/lib/scope";
 import { dayjs, fmtDate, fmtDateInput, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,7 @@ import { PeriodForm } from "./period-form";
 import { PeopleSection } from "./people-picker";
 import { DeleteActionButton } from "./delete-action";
 import { ActionName } from "./action-name";
+import { Fundings, type BalanceView, type FundingLinkView } from "./fundings";
 import { V, cap, du, ce, pl } from "@/lib/vocab";
 
 // La page de l'action (spec actions § 3) : l'action est une composante du projet, sur une période qui peut couvrir plusieurs
@@ -88,6 +91,36 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
   const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const span = year !== null ? spanLabel(period, year) : years.length > 1 ? yearsLabel(period) : null;
   const multi = years.length > 1;
+  // Financements (spec actions § 2) : les lignes liées (toutes années), et à lier celles du projet sur les années couvertes.
+  // Les montants des lignes sont déjà lisibles dans l'onglet Budget ; rien de plus ne sort ici.
+  const lineSelect = { id: true, scheme: true, amountGranted: true, amountRequested: true, funder: { select: { name: true } }, edition: { select: { year: true } }, convention: { select: { reference: true } }, actionFundings: { select: { amount: true } } } as const;
+  const [links, freeLines, expenses] = await Promise.all([
+    prisma.actionFunding.findMany({ where: { actionId: a.id }, select: { amount: true, fundingLine: { select: lineSelect } } }),
+    can ? prisma.fundingLine.findMany({ where: { edition: { projectId: project.id, year: { in: years } }, actionFundings: { none: { actionId: a.id } } }, select: lineSelect }) : Promise.resolve([]),
+    prisma.expense.findMany({ where: { actionId: a.id, ...(year ? { edition: { year } } : {}) }, select: { committed: true, spent: true } }),
+  ]);
+  const lineName = (l: { funder: { name: string }; scheme: string | null; edition: { year: number } }) => `${l.funder.name} · ${l.edition.year}${l.scheme ? ` · ${l.scheme}` : ""}`;
+  const fundingLinks: FundingLinkView[] = links
+    .map(({ amount, fundingLine: l }) => ({
+      lineId: l.id, funder: l.funder.name, scheme: l.scheme, year: l.edition.year, convention: l.convention?.reference ?? null, amount,
+      ceiling: l.amountGranted ?? l.amountRequested, ceilingKind: l.amountGranted != null ? "obtenu" as const : l.amountRequested != null ? "demandé" as const : null,
+      allocated: l.actionFundings.reduce((s, x) => s + (x.amount ?? 0), 0), over: fundingOverflow(l, l.actionFundings.map((x) => x.amount)),
+    }))
+    .sort((x, y) => x.year - y.year || x.funder.localeCompare(y.funder));
+  const candidates = freeLines.sort((x, y) => x.edition.year - y.edition.year || x.funder.name.localeCompare(y.funder.name)).map((l) => ({ value: l.id, label: lineName(l), hint: l.convention ? `dossier ${l.convention.reference}` : undefined }));
+  // Équilibre de l'année affichée (ou de toute la période) : recettes = montants affectés, dépenses de l'action, temps valorisé
+  // (module budget) seulement pour qui voit le détail Personnel — une action d'une seule personne en révélerait le salaire.
+  const budgetModule = instanceHas(settings, "budget");
+  const valued = budgetModule && canSeePersonnelDetail(me) ? await actionTimeCost(a.id, year) : null;
+  const bal = balance({ fundings: fundingLinks.filter((l) => year === null || l.year === year).map((l) => l.amount), expenses, hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
+  const balanceView: BalanceView = {
+    title: year ? `Équilibre ${year}` : "Équilibre sur toute la période",
+    income: bal.income, spending: bal.spending, hours: totalHours, gap: bal.gap,
+    gapLabel: valued ? "Écart" : "Écart (hors temps)",
+    time: !budgetModule ? null : valued
+      ? { cost: bal.timeCost, note: valued.unvaluedHours > 0 ? `${fmtNumber(valued.unvaluedHours, 1)} h sans coût connu` : `${fmtNumber(totalHours, 1)} h` }
+      : { cost: null, note: "valorisation visible par la trésorerie" },
+  };
   const label = (s: string) => <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{s}</span>;
 
   return (
@@ -153,7 +186,9 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
             <Milestones actionId={a.id} readOnly={!can} items={a.milestones.map((m) => ({ id: m.id, date: fmtDateInput(m.date), label: m.label, done: m.done, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, late: !m.done && a.state !== "done" && a.state !== "abandoned" && dayjs(m.date).isBefore(today, "day") }))} />
           </Section>
 
-          {/* Task 9 : la section « Financements et équilibre » vient ici, sous les jalons. */}
+          <Section title="Financements et équilibre" description={`Les lignes qui financent ${ce(V.action)}, avec le montant affecté ; lier une ligne d'un dossier pluriannuel lie ses autres années couvertes.`} testId="action-fundings">
+            <Fundings actionId={a.id} canEdit={can} links={fundingLinks} candidates={candidates} balance={balanceView} />
+          </Section>
 
           <Section title="Tâches" description={`Les tâches en cours rattachées à ${ce(V.action)} : les vôtres, et celles des listes partagées avec vous.`} testId="action-tasks"
             actions={edition ? <CreateTaskButton editionId={edition.id} actions={[{ id: a.id, name: a.name }]} actionId={a.id} /> : undefined}>

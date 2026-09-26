@@ -12,6 +12,7 @@ import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
 import { defaultPeriod, shiftYear } from "@/lib/actions";
 import { actionRunsInEdition } from "@/lib/actions-db";
+import { linkNewLineToRunningActions } from "@/lib/actions-funding-db";
 import { V, cap, le, un, du, de, au, ce, seul } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -195,42 +196,49 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
   if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
 
-  const created = await prisma.edition.create({
-    data: {
-      projectId: src.projectId,
-      year,
-      status: "proposed",
-      stakes: src.stakes, axis: src.axis, sressMeasure: src.sressMeasure, yearPriorities: src.yearPriorities, expectedOutcome: src.expectedOutcome,
-      plannedFunders: src.plannedFunders, directExpenseEnvelope: src.directExpenseEnvelope, fte: src.fte, imposedIndicators: src.imposedIndicators,
-      operationalObjectives: src.operationalObjectives, calendar: src.calendar, partners: src.partners, method: src.method, governance: src.governance,
-      ownIndicators: src.ownIndicators, timeNeed: src.timeNeed, budgetNeed: src.budgetNeed,
-      team: { create: src.team.map((t) => ({ personId: t.personId })) },
-      personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays, plannedDays: p.plannedDays })) },
-      indicators: { create: src.indicators.map((i) => ({ label: i.label, target: i.target, imposed: i.imposed, order: i.order })) },
-      docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
-      actions: {
-        // Projet et période décalés d'un an : sans eux, la copie n'apparaîtrait dans aucune année.
-        create: src.actions.map((a) => ({
-          name: a.name, ownerId: a.ownerId, timeTarget: a.timeTarget, order: a.order, state: "todo",
-          milestones: { create: milestonesOf.get(a.id) ?? [] },
-          projectId: src.projectId,
-          ...(a.startDate && a.endDate ? shiftYear({ startDate: a.startDate, endDate: a.endDate }) : defaultPeriod(year)),
-        })),
+  // Frontière de transaction : l'année, son historique de création et les liens des lignes gardées sur un dossier aux actions
+  // qui courent l'année suivante (linkNewLineToRunningActions) — la tâche 12 réécrit la reconduction sans doublons d'actions.
+  const created = await prisma.$transaction(async (tx) => {
+    const ed = await tx.edition.create({
+      include: { fundingLines: { select: { id: true, conventionId: true, editionId: true } } },
+      data: {
+        projectId: src.projectId,
+        year,
+        status: "proposed",
+        stakes: src.stakes, axis: src.axis, sressMeasure: src.sressMeasure, yearPriorities: src.yearPriorities, expectedOutcome: src.expectedOutcome,
+        plannedFunders: src.plannedFunders, directExpenseEnvelope: src.directExpenseEnvelope, fte: src.fte, imposedIndicators: src.imposedIndicators,
+        operationalObjectives: src.operationalObjectives, calendar: src.calendar, partners: src.partners, method: src.method, governance: src.governance,
+        ownIndicators: src.ownIndicators, timeNeed: src.timeNeed, budgetNeed: src.budgetNeed,
+        team: { create: src.team.map((t) => ({ personId: t.personId })) },
+        personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays, plannedDays: p.plannedDays })) },
+        indicators: { create: src.indicators.map((i) => ({ label: i.label, target: i.target, imposed: i.imposed, order: i.order })) },
+        docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
+        actions: {
+          // Projet et période décalés d'un an : sans eux, la copie n'apparaîtrait dans aucune année.
+          create: src.actions.map((a) => ({
+            name: a.name, ownerId: a.ownerId, timeTarget: a.timeTarget, order: a.order, state: "todo",
+            milestones: { create: milestonesOf.get(a.id) ?? [] },
+            projectId: src.projectId,
+            ...(a.startDate && a.endDate ? shiftYear({ startDate: a.startDate, endDate: a.endDate }) : defaultPeriod(year)),
+          })),
+        },
+        fundingLines: {
+          // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
+          create: src.fundingLines.map((f) => {
+            const keeps = f.convention && conventionCovers(f.convention, year);
+            return {
+              funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
+              conventionId: keeps ? f.conventionId : null,
+              status: keeps && ["notified", "contracted", "justified"].includes(f.convention!.status) ? "contracted" : "to_submit",
+            };
+          }),
+        },
       },
-      fundingLines: {
-        // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
-        create: src.fundingLines.map((f) => {
-          const keeps = f.convention && conventionCovers(f.convention, year);
-          return {
-            funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
-            conventionId: keeps ? f.conventionId : null,
-            status: keeps && ["notified", "contracted", "justified"].includes(f.convention!.status) ? "contracted" : "to_submit",
-          };
-        }),
-      },
-    },
-  });
-  await prisma.changeLog.create({ data: { editionId: created.id, field: "création", before: null, after: `Reconduite depuis ${src.year}`, authorId: c.me.id } });
+    });
+    await tx.changeLog.create({ data: { editionId: ed.id, field: "création", before: null, after: `Reconduite depuis ${src.year}`, authorId: c.me.id } });
+    for (const line of ed.fundingLines) await linkNewLineToRunningActions(tx, line);
+    return ed;
+  }, { timeout: 20_000 });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: created.id } };
 }
@@ -331,16 +339,25 @@ export async function addFundingLineFromConvention(editionId: string, convention
   const status = ["notified", "contracted", "justified"].includes(conv.status) ? "contracted" : conv.status;
   const multiYear = conv.endYear > conv.startYear;
   const existing = reusableLine(await prisma.fundingLine.findMany({ where: { editionId, funderId: conv.funderId, conventionId: null } }), conv.funderId);
-  if (existing) {
-    // La ligne reprise compte aussitôt dans les affectations : même plafond que si on saisissait son montant obtenu.
-    const lines = await prisma.fundingLine.findMany({ where: { conventionId }, select: { id: true, amountGranted: true, amountRequested: true } });
-    const check = allocationCheck({ amountNotified: conv.amountNotified, amountRequested: conv.amountRequested, lines }, existing.id, existing.amountGranted);
-    if (!check.ok) return check;
-    await prisma.fundingLine.update({ where: { id: existing.id }, data: { conventionId, scheme: existing.scheme ?? conv.scheme, status, multiYear } });
-  } else {
-    await prisma.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status, multiYear } });
-  }
-  revalidatePath(path(editionId));
+  // Frontière de transaction : la ligne (reprise ou créée) et ses liens aux actions du projet déjà financées par ce dossier
+  // qui courent cette année-là (linkNewLineToRunningActions) — jamais une ligne rattachée sans ses actions.
+  const res = await prisma.$transaction(async (tx): Promise<Result> => {
+    let line: { id: string; conventionId: string | null; editionId: string };
+    if (existing) {
+      // La ligne reprise compte aussitôt dans les affectations : même plafond que si on saisissait son montant obtenu.
+      const lines = await tx.fundingLine.findMany({ where: { conventionId }, select: { id: true, amountGranted: true, amountRequested: true } });
+      const check = allocationCheck({ amountNotified: conv.amountNotified, amountRequested: conv.amountRequested, lines }, existing.id, existing.amountGranted);
+      if (!check.ok) return check;
+      line = await tx.fundingLine.update({ where: { id: existing.id }, data: { conventionId, scheme: existing.scheme ?? conv.scheme, status, multiYear } });
+    } else {
+      line = await tx.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status, multiYear } });
+    }
+    await linkNewLineToRunningActions(tx, line);
+    return { ok: true };
+  });
+  if (!res.ok) return res;
+  // Le layout : les actions liées (page de l'action, autres années du projet) changent aussi.
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
