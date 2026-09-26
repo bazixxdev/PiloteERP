@@ -26,7 +26,7 @@ export function AttachEditionForm({ conventionId, editions }: { conventionId: st
   return (
     <div className="flex flex-wrap gap-2">
       <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder={`Rattacher ${un(V.edition)}…`} aria-label={`${cap(V.edition)} à rattacher`} data-testid="attach-edition-select" className="w-[320px]" />
-      <Button size="sm" variant="outline" disabled={pending || !id} onClick={() => run(() => addFundingLineFromConvention(id, conventionId), () => { toast.success(`${cap(V.edition)} rattachée : une ligne de financement conventionnée est créée`); setId(""); })} data-testid="attach-edition-submit"><Link2 />Rattacher</Button>
+      <Button size="sm" variant="outline" disabled={pending || !id} onClick={() => run(() => addFundingLineFromConvention(id, conventionId), () => { toast.success(`${cap(V.edition)} rattachée : sa ligne de financement suit désormais ce dossier`); setId(""); })} data-testid="attach-edition-submit"><Link2 />Rattacher</Button>
     </div>
   );
 }

@@ -24,3 +24,11 @@ export function allocationCheck(c: ConventionLike, lineId: string, newGranted: n
 export function conventionCovers(c: { startYear: number; endYear: number }, year: number): boolean {
   return c.startYear <= year && year <= c.endYear;
 }
+
+// Rattacher une année à un dossier (26/09) : si l'année a déjà une ligne de ce financeur hors dossier — typiquement la ligne
+// « à déposer » recréée en reconduisant —, on la rattache au lieu d'en créer une seconde. Seulement s'il n'y en a qu'une :
+// avec plusieurs, on ne devine pas laquelle, une nouvelle ligne est créée.
+export function reusableLine<L extends { id: string; funderId: string; conventionId: string | null }>(lines: L[], funderId: string): L | null {
+  const free = lines.filter((l) => l.funderId === funderId && l.conventionId === null);
+  return free.length === 1 ? free[0] : null;
+}

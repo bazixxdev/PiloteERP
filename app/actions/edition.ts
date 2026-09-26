@@ -9,6 +9,7 @@ import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
+import { allocationCheck, conventionCovers, reusableLine } from "@/lib/conventions";
 import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -222,7 +223,7 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
       fundingLines: {
         // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
         create: src.fundingLines.map((f) => {
-          const keeps = f.convention && f.convention.startYear <= year && year <= f.convention.endYear;
+          const keeps = f.convention && conventionCovers(f.convention, year);
           return {
             funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
             conventionId: keeps ? f.conventionId : null,
@@ -328,9 +329,20 @@ export async function addFundingLineFromConvention(editionId: string, convention
   if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) ajoute une ligne de financement.` };
   const conv = await prisma.convention.findUnique({ where: { id: conventionId } });
   if (!conv) return { ok: false, error: "Convention introuvable" };
-  if (c.e.year < conv.startYear || c.e.year > conv.endYear) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };
+  if (!conventionCovers(conv, c.e.year)) return { ok: false, error: `Cette convention couvre ${conv.startYear}-${conv.endYear}, pas ${c.e.year}.` };
   if (await prisma.fundingLine.findFirst({ where: { editionId, conventionId } })) return { ok: false, error: `${cap(ce(V.edition))} est déjà rattachée à cette convention.` };
-  await prisma.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status: ["notified", "contracted", "justified"].includes(conv.status) ? "contracted" : conv.status, multiYear: conv.endYear > conv.startYear } });
+  const status = ["notified", "contracted", "justified"].includes(conv.status) ? "contracted" : conv.status;
+  const multiYear = conv.endYear > conv.startYear;
+  const existing = reusableLine(await prisma.fundingLine.findMany({ where: { editionId, funderId: conv.funderId, conventionId: null } }), conv.funderId);
+  if (existing) {
+    // La ligne reprise compte aussitôt dans les affectations : même plafond que si on saisissait son montant obtenu.
+    const lines = await prisma.fundingLine.findMany({ where: { conventionId }, select: { id: true, amountGranted: true, amountRequested: true } });
+    const check = allocationCheck({ amountNotified: conv.amountNotified, amountRequested: conv.amountRequested, lines }, existing.id, existing.amountGranted);
+    if (!check.ok) return check;
+    await prisma.fundingLine.update({ where: { id: existing.id }, data: { conventionId, scheme: existing.scheme ?? conv.scheme, status, multiYear } });
+  } else {
+    await prisma.fundingLine.create({ data: { editionId, funderId: conv.funderId, conventionId, scheme: conv.scheme, status, multiYear } });
+  }
   revalidatePath(path(editionId));
   return { ok: true };
 }
