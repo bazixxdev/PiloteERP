@@ -116,11 +116,12 @@ export async function seedCommon(prisma: PrismaClient, uploads: string): Promise
   }
   // Rôles et droits (lot F2) : les six rôles système avec les droits du prototype.
   await prisma.role.createMany({ data: DEFAULT_ROLES.map((r, i) => ({ code: r.code, label: r.label, description: r.description, order: i, system: true, validationLevel: r.validationLevel, permissions: serializePermissions(r.permissions) })) });
-  // Circuit de validation de la fiche (26/09) : les deux niveaux et leurs droits, exactement comme la migration
-  // 20260927090000_actions_composantes (niveau 1 pour qui avait « fiche.validation », niveau 2 pour la direction). Droits
-  // ajoutés tels quels : serializePermissions les filtrerait tant que le catalogue (lib/permissions.ts) ne les connaît pas.
+  // Circuit de validation de la fiche (26/09) : les deux niveaux et leurs droits, comme la migration
+  // 20260927090000_actions_composantes (niveau 1 pour qui avait « fiche.validation », niveau 2 pour la direction). Le niveau 1
+  // porte le mot de l'instance (la migration, qui ne la connaît pas, écrit « Direction »). Droits ajoutés tels quels :
+  // serializePermissions les filtrerait tant que le catalogue (lib/permissions.ts) ne les connaît pas.
   await prisma.ficheValidationLevel.createMany({ data: [
-    { id: "fvl_1", order: 1, label: "Direction", permission: "fiche.validate.1", active: true },
+    { id: "fvl_1", order: 1, label: cap(V.direction), permission: "fiche.validate.1", active: true },
     { id: "fvl_2", order: 2, label: "CA", permission: "fiche.validate.2", active: true },
   ] });
   for (const r of await prisma.role.findMany()) {
@@ -164,4 +165,12 @@ export async function createAction(prisma: PrismaClient, edition: { projectId: s
 export async function setActionFunding(prisma: PrismaClient, actionId: string, fundingLineId: string) {
   await prisma.action.update({ where: { id: actionId }, data: { fundingLineId } });
   await prisma.actionFunding.create({ data: { actionId, fundingLineId, amount: null } });
+}
+
+// Circuit de validation (26/09) : ce que la migration 20260927090000 tire de codirDecision / boardValidated d'une année, pour
+// qu'une base semée se lise comme une base migrée — renew → approved, adjust → rework, stop → refused « arrêt décidé » au
+// niveau 1 (à codirDate) ; boardValidated → approved au niveau 2 (à boardDate). Les anciennes colonnes restent écrites.
+export async function seedFicheValidations(prisma: PrismaClient, e: { id: string; codirDecision: string | null; codirDate: Date | null; boardValidated: boolean; boardDate: Date | null; updatedAt: Date }, deciderId: string) {
+  if (e.codirDecision) await prisma.ficheValidation.create({ data: { id: `fv1_${e.id}`, editionId: e.id, levelId: "fvl_1", decision: e.codirDecision === "renew" ? "approved" : e.codirDecision === "adjust" ? "rework" : "refused", comment: e.codirDecision === "stop" ? "arrêt décidé" : null, deciderId, decidedAt: e.codirDate ?? e.updatedAt } });
+  if (e.boardValidated) await prisma.ficheValidation.create({ data: { id: `fv2_${e.id}`, editionId: e.id, levelId: "fvl_2", decision: "approved", comment: null, deciderId, decidedAt: e.boardDate ?? e.updatedAt } });
 }

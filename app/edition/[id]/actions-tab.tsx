@@ -17,7 +17,8 @@ import { V, cap, le, du, ce, aucun, pl } from "@/lib/vocab";
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
   const yearRw = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project));
-  const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
+  // « abandoned » (26/09) existe en base mais ne se choisit pas encore ici : ses règles viennent avec la page de l'action.
+  const stateOpts = REF_DEFAULTS.action_state.filter((s) => s.code !== "abandoned").map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
   const lineOpts = e.fundingLines.map((f) => ({ value: f.id, label: `${f.funder.name}${f.scheme ? " · " + f.scheme : ""}` }));
   const consumed = (actionId: string) => e.yearEntries.filter((t) => t.actionId === actionId).reduce((s, t) => s + t.hours, 0);

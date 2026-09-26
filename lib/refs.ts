@@ -29,9 +29,11 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "closed", label: "Bilan fait", color: "muted" },
   ],
   action_state: [
-    { code: "todo", label: "À faire", color: "muted" },
+    // 26/09 (spec actions § 1) : mêmes libellés que la migration 20260927090000 ; l'ancien « late » est devenu « doing ».
+    { code: "todo", label: "À développer", color: "muted" },
     { code: "doing", label: "En cours", color: "primary" },
-    { code: "done", label: "Fait", color: "mint" },
+    { code: "done", label: "Terminée", color: "mint" },
+    { code: "abandoned", label: "Abandonnée", color: "muted" },
   ],
   funding_status: [
     { code: "to_submit", label: "À déposer", color: "muted" },

@@ -156,21 +156,26 @@ INSERT INTO "FicheValidationLevel" ("id", "order", "label", "permission", "activ
   ('fvl_1', 1, 'Direction', 'fiche.validate.1', true),
   ('fvl_2', 2, 'CA', 'fiche.validate.2', true);
 
--- 8. Anciennes décisions → circuit. Auteur : la personne tracée dans l'historique, sinon une personne « direction ».
+-- 8. Anciennes décisions → circuit. Auteur : la personne tracée dans l'historique, sinon une personne « direction », sinon le
+--    pilote du projet (Project.pilotId est NOT NULL : l'insertion ne peut pas échouer faute d'auteur).
 INSERT INTO "FicheValidation" ("id", "editionId", "levelId", "decision", "comment", "deciderId", "decidedAt")
 SELECT 'fv1_' || e."id", e."id", 'fvl_1',
   CASE e."codirDecision" WHEN 'renew' THEN 'approved' WHEN 'adjust' THEN 'rework' ELSE 'refused' END,
   CASE e."codirDecision" WHEN 'stop' THEN 'arrêt décidé' ELSE NULL END,
   COALESCE(
     (SELECT c."authorId" FROM "ChangeLog" c WHERE c."editionId" = e."id" AND c."field" = 'codirDecision' ORDER BY c."createdAt" DESC LIMIT 1),
-    (SELECT p."id" FROM "Person" p WHERE p."role" = 'director' ORDER BY p."order" LIMIT 1)),
+    (SELECT p."id" FROM "Person" p WHERE p."role" = 'director' ORDER BY p."order" LIMIT 1),
+    pr."pilotId"),
   COALESCE(e."codirDate", e."updatedAt")
-FROM "Edition" e WHERE e."codirDecision" IS NOT NULL;
+FROM "Edition" e JOIN "Project" pr ON pr."id" = e."projectId" WHERE e."codirDecision" IS NOT NULL;
 INSERT INTO "FicheValidation" ("id", "editionId", "levelId", "decision", "comment", "deciderId", "decidedAt")
 SELECT 'fv2_' || e."id", e."id", 'fvl_2', 'approved', NULL,
-  (SELECT p."id" FROM "Person" p WHERE p."role" = 'director' ORDER BY p."order" LIMIT 1),
+  COALESCE(
+    (SELECT c."authorId" FROM "ChangeLog" c WHERE c."editionId" = e."id" AND c."field" = 'boardValidated' ORDER BY c."createdAt" DESC LIMIT 1),
+    (SELECT p."id" FROM "Person" p WHERE p."role" = 'director' ORDER BY p."order" LIMIT 1),
+    pr."pilotId"),
   COALESCE(e."boardDate", e."updatedAt")
-FROM "Edition" e WHERE e."boardValidated" = true;
+FROM "Edition" e JOIN "Project" pr ON pr."id" = e."projectId" WHERE e."boardValidated" = true;
 
 -- 9. Droits des nouveaux niveaux (Role.permissions = liste séparée par des virgules, même motif que 20260925120000_budget_plan) :
 --    niveau 1 pour les rôles qui avaient « fiche.validation », niveau 2 pour la direction.

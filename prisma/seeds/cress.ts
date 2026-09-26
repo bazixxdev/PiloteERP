@@ -7,7 +7,7 @@ import { syncDeadlineNotifications, DEADLINE_KIND } from "../../lib/deadline-not
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { createAction, setActionFunding, type Common } from "./common";
+import { createAction, seedFicheValidations, setActionFunding, type Common } from "./common";
 import { client } from "../../config/clients";
 
 
@@ -479,6 +479,8 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
           },
         },
       });
+      // Décisions CODIR / CA (26/09) : aussi dans le circuit par niveaux, auteur = la direction (celle du ChangeLog de 2026).
+      await seedFicheValidations(prisma, edition, director.id);
 
       // Dépenses directes 2026 : devis engagés (dont certains issus d'une validation), factures rattachées, circuit facture.
       if (!isFuture) {
@@ -846,6 +848,7 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
   // ─────────────────────────────────────────────────────────────────────────────────────────────
   const vieProject = await prisma.project.create({ data: { name: "Vie statutaire (CA, bureaux, AG)", analyticCode: "REP-04", poleId: poles[0].id, pilotId: director.id, guarantorId: leadA.id, missionId: missions[0].id, recurring: true, createdAt: dayjs("2024-01-15").toDate() } });
   const vieEd = await prisma.edition.create({ data: { projectId: vieProject.id, year: 2026, status: "in_progress", decisionDate: dayjs("2025-12-11").toDate(), codirDecision: "renew", codirDate: dayjs("2025-12-11").toDate(), boardValidated: true, boardDate: dayjs("2025-12-18").toDate(), stakes: "Faire vivre la gouvernance : cinq conseils d'administration, des bureaux mensuels, une assemblée générale.", axis: "Mission 1 du plan opérationnel", operationalObjectives: "Convocations, logistique, comptes rendus et relevés de décision dans les délais statutaires.", quantitativeObjectives: "5 CA, 8 bureaux, 1 AG ; convocations à J-15 ; PV diffusés sous 15 jours.", sponsorId: director.id, budgetEnvelope: 4000, spent: 900, team: { create: [{ personId: assistant.id }, { personId: director.id }] }, personDays: { create: [{ personId: assistant.id, soldDays: 0, plannedDays: 25 }, { personId: director.id, soldDays: 0, plannedDays: 12 }] }, docLinks: { create: [{ label: "Dossier de référence", url: "\\\\cress\\Partage\\Siege\\Vie statutaire\\2026", codirOnly: false }, { label: "PV et relevés de décision", url: "\\\\cress\\Partage\\Siege\\Vie statutaire\\2026\\PV", codirOnly: true }] } } });
+  await seedFicheValidations(prisma, vieEd, director.id);
   const vieActions = [["CA du 12 février", "2026-02-12"], ["Bureau de mars", "2026-03-10"], ["CA du 22 avril", "2026-04-22"], ["Assemblée générale", "2026-06-18"], ["CA du 1er octobre", "2026-10-01"], ["Bureau de novembre", "2026-11-05"], ["CA de décembre", "2026-12-15"]] as const;
   for (const [i, [name, day]] of vieActions.entries()) await createAction(prisma, vieEd, { editionId: vieEd.id, name, ownerId: assistant.id, milestoneDate: dayjs(day).toDate(), state: stateOf(dayjs(day)), order: i, timeTarget: name.startsWith("Assemblée") ? 35 : 7, venue: name.startsWith("Assemblée") ? "Hôtel de Région, Orléans" : "Siège de la CRESS, Orléans", participants: name.startsWith("Assemblée") ? "Adhérents, partenaires institutionnels, salariés" : "Administrateurs, direction, assistante de direction", description: name.startsWith("CA") ? "Convocation à J-15, dossier du CA à J-7, relevé de décision sous 15 jours." : null });
   editions2026.push({ id: vieEd.id, projectId: vieProject.id, code: "REP-04", year: 2026, poleIdx: 0, pilotId: director.id, actionIds: [], actionOwners: {}, teamIds: [assistant.id, director.id] });
