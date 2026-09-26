@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { iAm, pick } from "./helpers";
 import { dayjs } from "../lib/format";
+import { W, cap, le, pl } from "./vocab";
 
 // Simulation collective : une édition vit une semaine entre six personnes, dans l'ordre réel du fonctionnement cible.
 // Direction (couche 1) → RAF (couche 2, financement) → pilote (couche 3, équipe, actions, devis) → contributeur (temps, discussion)
@@ -65,7 +66,7 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("field-operationalObjectives").blur();
   await page.getByTestId("team-edit").click();
   await page.getByRole("button", { name: "Lucas Perrin" }).click();
-  await page.getByRole("tab", { name: "Actions" }).click();
+  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
   await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Cartographie des élus");
   await page.getByTestId("add-action-submit").click();
@@ -179,6 +180,6 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await expect(lucas).toContainText("Verrouillé", { timeout: 10_000 });
   await iAm(page, "Lucas Perrin");
   await page.goto(`/temps?semaine=${thisWeek}`);
-  await expect(page.getByText(/verrouillé par la RAF/).first()).toBeVisible();
+  await expect(page.getByText(new RegExp(`verrouillé par ${le(W.raf)}`)).first()).toBeVisible();
   await expect(myRow.locator('input[type="number"]').nth(dayIndex)).toHaveAttribute("readonly", "");
 });

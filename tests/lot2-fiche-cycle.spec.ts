@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, openEditionByName, pick } from "./helpers";
+import { W, cap, pl } from "./vocab";
 
 // Lot 2 « La fiche et son cycle » : fiche validée verrouillée et propositions de modification, proposition de projet,
 // réalisations au fil de l'année, export assemblé, plan de charge figé, motif des remarques, occurrences d'action.
@@ -53,7 +54,7 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
   // Les réalisations vivent dans Actions (revue du 15/09) ; le bilan est un chapitre de la fiche.
-  await page.getByRole("tab", { name: /Actions/ }).click();
+  await page.getByRole("tab", { name: new RegExp(cap(pl(W.action))) }).click();
   await page.getByTestId("achievement-open").click();
   await expect(page.getByTestId("achievement-totals")).toContainText("55 personnes");
   await page.getByTestId("achievement-label").fill("Inscrits au petit-déjeuner d'octobre");
@@ -64,13 +65,13 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   const md = await page.request.get(page.url().replace(/\?.*$/, "") + "/export?format=md");
   expect(await md.text()).toContain("Inscrits au petit-déjeuner d'octobre");
   // Occurrences : le petit-déjeuner de mars a sa fiche ; « dupliquer » crée l'occurrence suivante.
-  await page.getByRole("tab", { name: /Actions/ }).click();
+  await page.getByRole("tab", { name: new RegExp(cap(pl(W.action))) }).click();
   const idx = 2; // troisième action du jeu de démo : le petit-déjeuner de mars
   await expect(page.getByTestId(`action-name-${idx}`)).toHaveValue("Petit-déjeuner ORESS · mars · emploi");
   await page.getByTestId(`action-details-${idx}`).click();
   await expect(page.getByTestId(`action-extras-${idx}`)).toContainText("Chiffres de l'emploi ESS 2025");
   await page.getByTestId(`action-duplicate-${idx}`).click();
-  await expect(page.getByText("Action dupliquée")).toBeVisible();
+  await expect(page.getByText(`${cap(W.action)} dupliquée`)).toBeVisible();
   await expect(page.locator("[data-testid^=action-name-]").last()).toHaveValue("Petit-déjeuner ORESS · mars · emploi (copie)");
 });
 
@@ -97,8 +98,8 @@ test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et
   // Remarque avec motif, en relecture, sur une fiche ouverte (proposée 2027).
   await page.goto("/portefeuille");
   await openEditionByName(page, "Réseau Femmes et ESS");
-  await page.getByTestId("edition-years").getByRole("link", { name: "Édition 2027" }).click();
-  await expect(page.getByTestId("edition-years").getByRole("link", { name: "Édition 2027" })).toHaveAttribute("aria-current", "page");
+  await page.getByTestId("edition-years").getByRole("link", { name: `${cap(W.edition)} 2027` }).click();
+  await expect(page.getByTestId("edition-years").getByRole("link", { name: `${cap(W.edition)} 2027` })).toHaveAttribute("aria-current", "page");
   await page.getByTestId("edition-menu").click();
   await page.getByTestId("feedback-toggle").click();
   await expect(page.getByTestId("feedback-bar")).toBeVisible();

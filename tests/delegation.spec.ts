@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { dayjs } from "../lib/format";
 import { iAm } from "./helpers";
+import { W, du } from "./vocab";
 
 // Délégation (25/09) : la direction délègue à une personne sur un projet, la personne en prend connaissance ; une
 // modification redemande la lecture et garde l'ancien texte ; la présentation au CA devient une décision sur la fiche.
 const OBS = "Observatoire régional (ORESS)";
+const LIMITS = `Pas de publication sans relecture ${du(W.direction)}.`;
 
 test("la direction délègue, la personne prend connaissance, une modification redemande la lecture, le CA est consigné", async ({ page, request }) => {
   await page.goto("/ma-semaine");
@@ -18,7 +20,7 @@ test("la direction délègue, la personne prend connaissance, une modification r
   await form.getByTestId("delegation-new-submit").click();
   await expect(page).toHaveURL(/personne=/);
   const card = page.locator("[data-testid^=delegation-card-]").filter({ hasText: OBS });
-  await card.getByLabel("Limites").fill("Pas de publication sans relecture de la direction.");
+  await card.getByLabel("Limites").fill(LIMITS);
   await card.getByRole("button", { name: /Enregistrer/ }).click();
   await expect(card.getByText("à relire")).toBeVisible();
 
@@ -32,7 +34,7 @@ test("la direction délègue, la personne prend connaissance, une modification r
   await iAm(page, "Inès Cabral");
   await page.goto("/delegation");
   await expect(page.getByTestId("delegation-ack-state")).toContainText("à relire");
-  await expect(page.getByText("Pas de publication sans relecture de la direction.")).toBeVisible();
+  await expect(page.getByText(LIMITS)).toBeVisible();
   await page.getByTestId("delegation-ack").click();
   await expect(page.getByTestId("delegation-ack-state")).toContainText("Lu, pris en compte");
 

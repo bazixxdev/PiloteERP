@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm } from "./helpers";
+import { W, le } from "./vocab";
 
 // Recette 2 (lot 2) : chaque personne saisit une semaine en moins d'une minute, la RAF verrouille un mois et exporte.
 test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un mois et exporte", async ({ page }) => {
@@ -48,6 +49,6 @@ test("une personne saisit sa semaine en moins d'une minute, la RAF verrouille un
   // Une fois verrouillé, la personne ne peut plus saisir.
   await iAm(page, "Maxime Roussel");
   await page.goto("/temps?semaine=2026-W33");
-  await expect(page.getByText(/verrouillé par la RAF/).first()).toBeVisible();
+  await expect(page.getByText(new RegExp(`verrouillé par ${le(W.raf)}`)).first()).toBeVisible();
   await expect(page.getByTestId("cell-0-0")).toHaveAttribute("readonly", "");
 });

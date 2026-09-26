@@ -12,7 +12,7 @@ test("le pilote modifie un budget validé : il repasse à valider ; la RAF le va
   await page.getByRole("tab", { name: "Budget" }).click();
   const section = page.getByTestId("budget-plan");
   await expect(section.getByTestId("budget-plan-status")).toContainText("Validé");
-  await expect(section.getByTestId("budget-row-bcat_personnel")).toContainText("Chargée de mission et appui du pôle");
+  await expect(section.getByTestId("budget-row-bcat_personnel")).toContainText("Chargée de mission et appui du pôle"); // vocab-ok : libellé du seed (prisma/seeds/cress.ts), pas composé
   await expect(section.getByTestId("budget-personnel-hours")).toContainText("h saisies");
   // Le pilote ne voit pas le coût par personne.
   await expect(section.getByTestId("budget-personnel-detail")).toHaveCount(0);

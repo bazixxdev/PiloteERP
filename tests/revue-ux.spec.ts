@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FRESH, iAm, login, openEditionByName } from "./helpers";
+import { W, cap, pl } from "./vocab";
 
 // Revue UI/UX du 13/09 : les valeurs lues sont fiables (P1) et le travail à traiter ressort (P2).
 test("le budget écrit le dépassement, la validation CA se lit en clair, la clôture dit ce qui manque", async ({ page }) => {
@@ -24,7 +25,7 @@ test("le budget écrit le dépassement, la validation CA se lit en clair, la cl�
 
   // 4. Actions : les objectifs de temps se lisent en entier (77 h, 105 h) en lecture.
   await iAm(page, "Lucas Perrin");
-  await page.getByRole("tab", { name: "Actions" }).click();
+  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
   await expect(page.getByTestId("actions-table")).toContainText("77 h");
   await expect(page.getByTestId("actions-table")).toContainText("105 h");
   await expect(page.getByRole("heading", { name: "Frise chronologique" })).toBeVisible();
@@ -59,7 +60,7 @@ test("Ma semaine sépare retard, semaine et plus tard ; le CODIR ouvre sur un or
   // Contributeur : Ma semaine en premier, pas d'accès CODIR ni Admin, aucun compteur collectif sur Demandes (validations fusionnées).
   await iAm(page, "Lucas Perrin");
   const sidebar = page.locator("aside");
-  await expect(sidebar.getByRole("link", { name: "Écran CODIR" })).toHaveCount(0);
+  await expect(sidebar.getByRole("link", { name: `Écran ${W.codir.one}` })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Admin" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Validations" })).toHaveCount(0);
   // Le badge Demandes est personnel : il vaut exactement « À traiter par moi » (demandes adressées à Lucas ou à son pôle), pas un total collectif.

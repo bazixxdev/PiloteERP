@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "node:child_process";
+import { WTlst, cap, le, pl, tout } from "./vocab";
 
 // Lot I : l'instance TLST s'habille à ses couleurs et parle sa langue — aucun mot CRESS dans ce qui s'affiche.
 // Tourne dans le projet Playwright « tlst » (serveur NEXT_PUBLIC_CLIENT=tlst, base pilote_test_tlst, seed TLST).
@@ -20,22 +21,22 @@ test("titre, logo, favicon, thème, police", async ({ page }) => {
 
 test("les mots de TLST", async ({ page }) => {
   await page.goto("/portefeuille");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Portefeuille des projets");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(`Portefeuille des ${pl(WTlst.projet)}`);
   // La vue large des demandes (direction) porte le nom court du client avec son genre : « Tout le TLST », pas « Toute la ».
   await page.goto("/demandes?vue=toutes");
-  await expect(page.getByText("Tout le TLST · en cours")).toBeVisible();
+  await expect(page.getByText(`${cap(tout(WTlst.org))} · en cours`)).toBeVisible();
   await page.goto("/portefeuille");
   await page.getByRole("link", { name: /Jardin partagé/ }).first().click();
   await expect(page).toHaveURL(/\/edition\//);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Jardin partagé");
-  await expect(page.getByRole("tab", { name: /^Actions/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: new RegExp(`^${cap(pl(WTlst.action))}`) })).toBeVisible();
   await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
   const lexique = page.getByTestId("lexique");
-  await expect(lexique).toContainText("Année");
-  await expect(lexique).toContainText("Action");
+  await expect(lexique).toContainText(cap(WTlst.edition));
+  await expect(lexique).toContainText(cap(WTlst.action));
   await expect(lexique).not.toContainText("dition");
-  await expect(lexique).toContainText("le TLST");
+  await expect(lexique).toContainText(le(WTlst.org));
 });
 
 for (const path of PAGES) {

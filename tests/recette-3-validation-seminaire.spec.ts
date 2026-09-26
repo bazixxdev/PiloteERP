@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, openEditionByName } from "./helpers";
+import { W, pl } from "./vocab";
 
 // Recette 3 (lot 3) : un devis demandé, validé au bon niveau, engagé sur l'édition ; les éditions 2027 créées en lot avec le contrôle de charge.
 test("un devis est demandé, validé au bon niveau et engagé ; les éditions 2027 se créent en lot", async ({ page }) => {
@@ -39,8 +40,8 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   await iAm(page, "Claire Vasseur");
   await page.goto("/seminaire?annee=2027");
   await page.getByTestId("batch-create").click();
-  await expect(page.getByText(/année\(s\) 2027 créée\(s\)/)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(/^(\d+) sur \1 projets ont déjà leur année 2027/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(new RegExp(`${W.edition.one}\\(s\\) 2027 créée\\(s\\)`))).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(new RegExp(`^(\\d+) sur \\1 ${pl(W.projet)} ont déjà leur ${W.edition.one} 2027`))).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("load-table").locator("tr[data-testid^=load-row-]").first()).toBeVisible();
   await expect(page.getByTestId("batch-create")).toHaveCount(0);
 });

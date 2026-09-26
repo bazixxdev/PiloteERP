@@ -43,5 +43,6 @@ export const cress: Client = {
     raf: { one: "RAF", many: "RAF", gender: "f" },
     direction: { one: "direction", many: "directions", gender: "f" },
     pilote: { one: "pilote", many: "pilotes", gender: "m" },
+    sponsor: { one: "référent direction", many: "référents direction", gender: "m" },
   },
 };

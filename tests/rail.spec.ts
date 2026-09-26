@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm } from "./helpers";
+import { W, cap, tout } from "./vocab";
 
 // Barre latérale repliée (retour de Gaël, 17/09) : au clic sur l'icône d'une section, un sous-menu flottant à droite —
 // nom, feuilles, compteurs ; un seul ouvert ; se ferme après un choix, un clic dehors, un second clic ou Échap (focus sur l'icône).
@@ -17,7 +18,7 @@ test("le rail ouvre un sous-menu flottant par section, un seul à la fois, qui s
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("Demandes");
   await expect(panel).toContainText("Qu'on me fait");
-  await expect(panel).toContainText("Toute la CRESS");
+  await expect(panel).toContainText(cap(tout(W.org)));
   await expect(panel.locator("a").first()).toContainText(/\d+/);
   await expect(page.getByRole("button", { name: "Déployer le menu" })).toBeVisible();
 

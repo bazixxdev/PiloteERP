@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, openEditionByName, pick } from "./helpers";
+import { W, aucun, cap } from "./vocab";
 
 // Convention partagée : une FSE 2026-2028 existe une fois, les éditions y sont affectées, la somme ne dépasse pas le notifié, la reconduction la conserve.
 test("la convention FSE est unique, ses affectations sont plafonnées, la reconduction la rattache", async ({ page }) => {
@@ -36,14 +37,14 @@ test("la convention FSE est unique, ses affectations sont plafonnées, la recond
   await page.getByTestId("cc-submit").click();
   // La création ouvre la page de la convention ; la liste la montre ensuite sans édition rattachée.
   await expect(page.getByRole("heading", { level: 1 })).toContainText("ADEME-TEST-2026-2027");
-  await expect(page.getByTestId("convention-lines")).toContainText(/aucune année rattachée/i);
+  await expect(page.getByTestId("convention-lines")).toContainText(new RegExp(`${aucun(W.edition)} rattachée`, "i"));
   // Depuis la convention : rattacher une édition couverte par la période, puis la détacher (ligne vide → supprimée).
   await pick(page, "attach-edition-select", "Observatoire régional (ORESS) · 2026");
   await page.getByTestId("attach-edition-submit").click();
   await expect(page.getByTestId("convention-lines-table")).toContainText("Observatoire régional (ORESS) · 2026");
   page.once("dialog", (d) => d.accept());
   await page.getByTestId("convention-lines").getByRole("button", { name: "Détacher" }).click();
-  await expect(page.getByText(/Ligne vide supprimée|Année détachée/)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Ligne vide supprimée|${cap(W.edition)} détachée`))).toBeVisible();
   await expect(page.getByTestId("convention-lines-table")).toHaveCount(0);
   await page.goto("/conventions?vue=obtenus");
   await expect(page.getByTestId("convention-ADEME-TEST-2026-2027")).toContainText("aucune");

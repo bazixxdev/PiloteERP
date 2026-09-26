@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { expandLayer, iAm } from "./helpers";
+import { W, pl } from "./vocab";
 
 // Périmètre : une personne de pôle voit son pôle par défaut, peut élargir ; un projet commun apparaît dans ses deux pôles.
 test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet commun est vu par ses deux pôles", async ({ page }) => {
@@ -14,18 +15,18 @@ test("le portefeuille et les validations s'ouvrent sur mon pôle ; un projet com
 
   // Ce qui me concerne d'abord : « Je pilote » en tête, puis « Je contribue », puis « Mon pôle ».
   const groups = table.locator("tr[data-testid^=group-]");
-  await expect(groups.first()).toContainText("Je pilote");
+  await expect(groups.first()).toContainText("Je pilote"); // vocab-ok : libellé fixe (lib/scope.ts TIER_LABEL), pas composé avec V.pilote
   const firstRowAfterHeader = table.locator("tbody tr").nth(1);
   await expect(firstRowAfterHeader).toContainText("Inès Cabral");
 
   // Élargir à toute la CRESS : les autres pôles arrivent en dernier.
   await page.getByTestId("perimeter-cress").click();
   await expect(table.getByRole("link", { name: "Chroniquer la TESS" })).toBeVisible();
-  await expect(table.locator("tr[data-testid=group-3]")).toContainText("Autres pôles");
+  await expect(table.locator("tr[data-testid=group-3]")).toContainText(`Autres ${pl(W.pole)}`);
 
   // Une édition hors de son pôle : consultable, avec le bandeau.
   await table.getByRole("link", { name: "Chroniquer la TESS" }).click();
-  await expect(page.getByTestId("outside-scope")).toContainText("hors de votre pôle");
+  await expect(page.getByTestId("outside-scope")).toContainText(`hors de votre ${W.pole.one}`);
   await page.getByRole("tab", { name: "Fiche" }).click();
   await expandLayer(page, "proposal");
   await expect(page.getByTestId("field-operationalObjectives")).toHaveAttribute("data-readonly", "true");

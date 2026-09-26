@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, openEditionByName, pick } from "./helpers";
+import { W, cap, tout } from "./vocab";
 
 // Lot 3 « Demandes, devis, factures, documents » : un seul tableau des demandes, bon pour accord à la validation d'un devis,
 // facture reçue → service fait → payée avec le pilote prévenu, règle des documents écrite.
@@ -121,7 +122,7 @@ test("chacun ne voit que les demandes qui le concernent : son pôle pour un resp
   // La direction voit tout, et ne peut que réaiguiller : la demande passe à Élise, Inès (à l'origine) est prévenue.
   await iAm(page, "Claire Vasseur");
   await page.goto("/demandes?vue=toutes");
-  await expect(page.getByTestId("requests-view-toutes")).toContainText("Toute la CRESS");
+  await expect(page.getByTestId("requests-view-toutes")).toContainText(cap(tout(W.org)));
   const line = page.getByTestId("requests-open").locator("[data-testid^=request-line-]", { hasText: "Commander les badges du jury" });
   await expect(line).toBeVisible();
   await expect(line.locator("[data-testid^=request-done-]")).toHaveCount(0);

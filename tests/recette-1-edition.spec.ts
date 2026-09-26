@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, pick } from "./helpers";
+import { W, cap, pl } from "./vocab";
 
 // Recette 1 (lot 1) : la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes.
 test("la direction crée une édition, le pilote la complète, le portefeuille l'affiche avec ses alertes", async ({ page }) => {
@@ -30,7 +31,7 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   // 2. Le pilote complète la couche 3 et ajoute une action avec un jalon dépassé.
   await page.getByTestId("field-operationalObjectives").fill("Trois ateliers et un bilan.");
   await page.getByTestId("field-operationalObjectives").blur();
-  await page.getByRole("tab", { name: "Actions" }).click();
+  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
   await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Atelier de lancement");
   await page.getByTestId("add-action-submit").click();

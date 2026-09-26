@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm } from "./helpers";
+import { W, le, au } from "./vocab";
 
 // Écran CODIR : seulement les points à décider, et la décision se consigne sur l'édition sans quitter l'écran.
 test("le CODIR voit les points à traiter, consigne une décision, qui apparaît sur l'édition", async ({ page }) => {
@@ -14,15 +15,15 @@ test("le CODIR voit les points à traiter, consigne une décision, qui apparaît
   await first.getByTestId("decision-open").click();
   await page.getByTestId("decision-body").fill("Jalon reporté au 15 octobre, le pilote informe le financeur.");
   await page.getByTestId("decision-submit").click();
-  await expect(page.getByText("Décision consignée sur l'année")).toBeVisible();
+  await expect(page.getByText(`Décision consignée sur ${le(W.edition)}`)).toBeVisible();
   await expect(page.getByTestId("recent-decisions")).toContainText("Jalon reporté au 15 octobre");
 
   await page.getByTestId("recent-decisions").getByRole("link", { name: new RegExp(project.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
   await expect(page.getByTestId("instance-decisions")).toContainText("Jalon reporté au 15 octobre");
-  await expect(page.getByTestId("instance-decisions")).toContainText("CODIR");
+  await expect(page.getByTestId("instance-decisions")).toContainText(W.codir.one);
 
   // Un pilote ne consigne pas de décision d'instance.
   await iAm(page, "Inès Cabral");
   await page.goto("/codir");
-  await expect(page.getByText("Réservé au CODIR")).toBeVisible();
+  await expect(page.getByText(`Réservé ${au(W.codir)}`)).toBeVisible();
 });

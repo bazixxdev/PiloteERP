@@ -63,7 +63,7 @@ test("une note écrite en texte brut avant l'éditeur riche s'affiche en paragra
   await page.goto("/notes");
   await iAm(page, "Julien Barbot");
   // Note du jeu de démo (texte brut avec sauts de ligne) : rendue en paragraphes, pas en une seule ligne.
-  await page.getByTestId("my-notes").getByRole("link", { name: /Réunion de pôle du 8 septembre/ }).click();
+  await page.getByTestId("my-notes").getByRole("link", { name: /Réunion de pôle du 8 septembre/ }).click(); // vocab-ok : titre de note du seed (prisma/seeds/cress.ts), pas composé
   const paras = page.getByTestId("note-body").locator("p");
   await expect.poll(() => paras.count()).toBeGreaterThan(1);
   await expect(page.getByTestId("note-body")).toContainText("Décisions");

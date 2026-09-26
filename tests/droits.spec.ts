@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iAm, pick } from "./helpers";
+import { W, cap } from "./vocab";
 
 // Lot F2 — Rôles et droits en base : la matrice de l'admin change ce qu'une personne peut faire tout de suite ; un rôle se crée
 // par copie, se supprime seulement s'il n'est porté par personne ; la Direction garde toujours l'administration.
@@ -73,7 +74,7 @@ test("un rôle se crée par copie, se donne à une personne, ne se supprime que 
 
   // Garde-fou : « Administre l'outil » ne se retire pas à la Direction.
   await page.getByTestId("perm-director-admin.manage").uncheck();
-  await expect(page.getByText("Le rôle Direction garde toujours l'administration")).toBeVisible();
+  await expect(page.getByText(`Le rôle ${cap(W.direction)} garde toujours l'administration`)).toBeVisible();
   await page.reload();
   await expect(page.getByTestId("perm-director-admin.manage")).toBeChecked();
 });

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FRESH, iAm } from "./helpers";
+import { W, cap, le } from "./vocab";
 
 // Lot C — « Qui finance quoi » : la matrice éditions × financeurs de l'année, montants pour le CODIR, pastilles pour les autres,
 // zones d'attention, export CSV par le jeton, lexique partagé.
@@ -28,7 +29,7 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   await page.waitForURL(/ligne=/);
   const panel = page.getByTestId("matrix-panel");
   await expect(panel).toContainText("Cycle de conférences transition 2026");
-  await expect(panel).toContainText("Ligne tenue par la RAF");
+  await expect(panel).toContainText(`Ligne tenue par ${le(W.raf)}`);
   const focused = panel.locator("input[data-highlight=true]");
   await expect(focused).toHaveCount(1);
   await expect(focused).toHaveAttribute("aria-label", /Montant obtenu/);
@@ -66,7 +67,7 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   await page.goto("/portefeuille");
   await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
-  await expect(page.getByTestId("lexique")).toContainText("Année");
+  await expect(page.getByTestId("lexique")).toContainText(cap(W.edition));
 });
 
 test("un contributeur voit la matrice en pastilles, sans montants ni export", async ({ page, playwright }) => {

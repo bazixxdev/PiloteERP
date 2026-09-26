@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { dayjs } from "../lib/format";
 import { iAm, openEditionByName, pick } from "./helpers";
+import { W, du, un } from "./vocab";
+
+// Texte d'exemple pour la tâche du jour : composé avec le mot de l'instance pour ne pas casser la recette si le mot change.
+const TASK_TITLE = `Préparer le support ${du(W.codir)}`;
 
 // To-do personnelle : une tâche privée, son échéance (pour quand) et ses créneaux (quand je m'y mets), visibles dans Ma semaine et dans l'agenda.
 test("une tâche personnelle se crée, se date, se planifie en créneau et sort dans le flux agenda", async ({ page }) => {
@@ -8,16 +12,16 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await iAm(page, "Romain Tessier");
 
   // Ajout en une ligne.
-  await page.getByTestId("task-input").fill("Préparer le support du CODIR");
+  await page.getByTestId("task-input").fill(TASK_TITLE);
   await page.getByTestId("task-input").press("Enter");
-  const task = page.getByTestId("my-tasks").locator("li", { hasText: "Préparer le support du CODIR" });
+  const task = page.getByTestId("my-tasks").locator("li", { hasText: TASK_TITLE });
   await expect(task).toBeVisible();
 
   // Échéance : aujourd'hui → la tâche apparaît dans « Aujourd'hui ».
   await task.locator("[data-testid^=task-due-]").click();
   await page.getByRole("button", { name: "Aujourd'hui" }).click();
   await expect(task).toContainText("Pour aujourd'hui");
-  await expect(page.getByTestId("today")).toContainText("Préparer le support du CODIR");
+  await expect(page.getByTestId("today")).toContainText(TASK_TITLE);
 
   // Créneau : le 23/09/2026 de 9 h à 11 h, distinct de l'échéance.
   await task.locator("[data-testid^=task-plan-]").click();
@@ -43,10 +47,10 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   // Flux agenda : le créneau est une plage horaire occupée, l'échéance une journée.
   const url = await page.getByTestId("ics-url-me").innerText();
   const ics = await (await page.request.get(url)).text();
-  expect(ics).toContain("SUMMARY:Travail · Préparer le support du CODIR");
+  expect(ics).toContain(`SUMMARY:Travail · ${TASK_TITLE}`);
   expect(ics).toContain("DTSTART:20260923T070000Z");
   expect(ics).toContain("TRANSP:OPAQUE");
-  expect(ics).toContain("SUMMARY:Tâche · Préparer le support du CODIR");
+  expect(ics).toContain(`SUMMARY:Tâche · ${TASK_TITLE}`);
 
   // Terminer : la tâche passe dans « Terminées ».
   await task.locator("[data-testid^=task-done-]").check();
@@ -82,7 +86,7 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await expect(relire).toContainText("· Communication");
   await relire.locator("[data-testid^=task-detach-]").click();
   await expect(relire).not.toContainText("Mois de l'ESS");
-  await expect(relire.locator("[data-testid^=task-edition-]")).toHaveAttribute("aria-label", "Rattacher un projet");
+  await expect(relire.locator("[data-testid^=task-edition-]")).toHaveAttribute("aria-label", `Rattacher ${un(W.projet)}`);
 
   // Une autre personne ne voit pas ces tâches.
   await iAm(page, "Lucas Perrin");

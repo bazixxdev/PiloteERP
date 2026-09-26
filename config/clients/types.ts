@@ -11,6 +11,7 @@ export type Vocab = {
   raf: Word; // la personne qui suit les factures
   direction: Word; // la personne qui tranche
   pilote: Word; // la personne responsable d'un projet
+  sponsor: Word; // la personne de la gouvernance qui soutient le projet en instance
 };
 
 export type Img = { src: string; width: number; height: number };
