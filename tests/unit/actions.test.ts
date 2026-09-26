@@ -68,8 +68,8 @@ test("alertes : comparaison par jour, pas par horodatage (jalon ou fin datés d'
 test("équilibre d'une action : l'engagé ne double pas le réalisé rattaché (même règle que lib/budget.ts)", () => {
   // committed peut déjà inclure le facturé (spent) : la dépense pèse pour max(committed, spent), jamais la somme des deux
   // (lib/budget.ts, budgetOf : réalisé + engagements restants = spent + max(0, committed - spent)).
-  assert.deepEqual(balance({ fundings: [12_000, null, 3_000], expenses: [{ committed: 1_000, spent: 4_000 }], hours: 100, hourlyCost: 30 }), { income: 15_000, spending: 4_000, timeCost: 3_000, gap: 8_000 });
-  assert.equal(balance({ fundings: [10_000], expenses: [{ committed: 6_000, spent: 2_000 }], hours: 0, hourlyCost: null }).spending, 6_000);
+  assert.deepEqual(balance({ fundings: [12_000, null, 3_000], expenses: [{ committed: 1_000, spent: 4_000, status: "open" }], hours: 100, hourlyCost: 30 }), { income: 15_000, spending: 4_000, timeCost: 3_000, gap: 8_000 });
+  assert.equal(balance({ fundings: [10_000], expenses: [{ committed: 6_000, spent: 2_000, status: "open" }], hours: 0, hourlyCost: null }).spending, 6_000);
   assert.equal(balance({ fundings: [], expenses: [], hours: 10, hourlyCost: null }).timeCost, null);
   // Coût déjà calculé (coût horaire par personne et par mois) : il prime sur heures × coût unique.
   assert.deepEqual(balance({ fundings: [5_000], expenses: [], hours: 10, hourlyCost: null, timeCost: 1_234.4 }), { income: 5_000, spending: 0, timeCost: 1_234, gap: 3_766 });
@@ -135,4 +135,18 @@ test("relances : une action qui court sur deux années vivantes ne relance qu'un
   const key = deadlineKey(r[0]);
   assert.equal(key, `deadline:milestone:m:${dayjs(day(3)).format("YYYY-MM-DD")}:${r[0].stage}`);
   assert.equal(deadlineKey({ ...r[0], editionId: "prev", label: "Autre titre" }), key);
+});
+
+// Une seule règle de dépense (revue tâche 11) : l'équilibre de l'action compte comme l'onglet Budget (budgetOf).
+import { budgetOf } from "../../lib/budget";
+
+test("équilibre de l'action : une dépense soldée ne pèse que son réalisé, comme dans l'onglet Budget", () => {
+  const open = { committed: 1_000, spent: 400, status: "open" };
+  const closed = { committed: 900, spent: 300, status: "closed" }; // reliquat soldé : les 600 € ne sont plus engagés
+  const spending = balance({ fundings: [], expenses: [open, closed], hours: 0, hourlyCost: null }).spending;
+  // ouverte : 400 réalisés + 600 restants ; soldée : 300 réalisés seulement.
+  assert.equal(spending, 1_300);
+  const b = budgetOf({ budgetEnvelope: null, spent: 0, expenses: [open, closed] });
+  assert.equal(spending, b.used);
+  assert.equal(balance({ fundings: [], expenses: [closed], hours: 0, hourlyCost: null }).spending, 300);
 });

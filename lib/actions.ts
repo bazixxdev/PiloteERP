@@ -1,4 +1,6 @@
 // L'action, composante du projet (spec 2026-09-26) : une période décide des années où elle apparaît. Fonctions pures, sans base.
+import { expenseTotals, type ExpenseLike } from "./budget";
+
 export type Period = { startDate: Date; endDate: Date };
 
 const yearOf = (d: Date) => d.getFullYear();
@@ -103,12 +105,17 @@ export function actionsOfYear<A extends { projectId: string | null; startDate: D
   return actions.filter((a): a is A & Period & { projectId: string } => a.projectId === e.projectId && a.startDate !== null && a.endDate !== null && runsIn({ startDate: a.startDate, endDate: a.endDate }, e.year));
 }
 
-// Rattacher une dépense ou un indicateur d'une année à une action (26/09, saveField) : l'action est du même projet et sa
-// période chevauche l'année (actionsOfYear, la règle d'actionRunsInEdition) ; sinon la raison du refus.
-export function attachRefusal(a: { projectId: string | null; startDate: Date | null; endDate: Date | null } | null, e: { projectId: string; year: number }): "missing" | "project" | "year" | null {
+// Rattacher quelque chose d'une année à une action (26/09) — dépense, indicateur (saveField), réalisation, demande, tâche
+// (actionRunsInEdition) : l'action est du même projet, sa période chevauche l'année (actionsOfYear), et elle n'est pas
+// abandonnée — ni terminée pour une tâche (mêmes règles que les sélecteurs, attachable / openForWork). Garder la valeur
+// actuelle (`current`, réenregistrée telle quelle) passe toujours : attachOptions la propose même si elle ne l'est plus.
+export type AttachAction = { id: string; projectId: string | null; startDate: Date | null; endDate: Date | null; state: string };
+export function attachRefusal(a: AttachAction | null, e: { projectId: string; year: number }, opts: { use?: "record" | "task"; current?: string | null } = {}): "missing" | "project" | "year" | "state" | null {
   if (!a) return "missing";
+  if (opts.current && a.id === opts.current) return null;
   if (a.projectId !== e.projectId) return "project";
-  return actionsOfYear([a], e).length > 0 ? null : "year";
+  if (actionsOfYear([a], e).length === 0) return "year";
+  return (opts.use === "task" ? openForWork(a) : attachable(a)) ? null : "state";
 }
 
 // Une action proposée dans un sélecteur (26/09) : une abandonnée ne l'est jamais ; pour du travail à faire (tâche), une
@@ -149,12 +156,12 @@ export function actionAlerts(a: { name: string; state: string; endDate: Date; ti
 
 // Temps valorisé : heures × coût horaire unique, ou `timeCost` déjà calculé (page de l'action : coût horaire de chaque
 // personne chaque mois, lib/budget-plan-db.ts actionTimeCost) — null quand on ne le valorise pas (module, droit).
-export function balance(x: { fundings: (number | null)[]; expenses: { committed: number; spent: number }[]; hours: number; hourlyCost: number | null; timeCost?: number | null }) {
+export function balance(x: { fundings: (number | null)[]; expenses: ExpenseLike[]; hours: number; hourlyCost: number | null; timeCost?: number | null }) {
   const income = x.fundings.reduce<number>((s, a) => s + (a ?? 0), 0);
-  // Même règle que lib/budget.ts (budgetOf, lignes 9-10) : réalisé + engagements restants, sans double comptage —
-  // remainingCommitments = max(0, committed − spent) ; ici sans distinction de statut « ouvert » (absent de cette forme
-  // légère), donc chaque dépense pèse pour spent + max(0, committed − spent) = max(committed, spent).
-  const spending = x.expenses.reduce((s, e) => s + e.spent + Math.max(0, e.committed - e.spent), 0);
+  // La règle de l'onglet Budget (lib/budget.ts, expenseTotals) : réalisé + engagements restants, sans double comptage ;
+  // une dépense soldée ne pèse plus que son réalisé.
+  const { realizedLinked, remainingCommitments } = expenseTotals(x.expenses);
+  const spending = realizedLinked + remainingCommitments;
   const timeCost = x.timeCost !== undefined ? (x.timeCost === null ? null : Math.round(x.timeCost)) : x.hourlyCost === null ? null : Math.round(x.hours * x.hourlyCost);
   return { income, spending, timeCost, gap: income - spending - (timeCost ?? 0) };
 }

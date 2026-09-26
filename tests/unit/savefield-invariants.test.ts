@@ -29,18 +29,29 @@ import { attachOptions, attachRefusal, attachable, openForWork } from "../../lib
 
 test("une dépense ou un indicateur ne se rattache qu'à une action du projet qui court l'année", () => {
   const year = { projectId: "p1", year: 2026 };
-  const run = (projectId: string | null, start: string, end: string) => ({ projectId, startDate: new Date(start), endDate: new Date(end) });
+  const run = (projectId: string | null, start: string, end: string, state = "doing") => ({ id: "a1", projectId, startDate: new Date(start), endDate: new Date(end), state });
   // Action d'un autre projet : refus, même si sa période couvre l'année.
   assert.equal(attachRefusal(run("p2", "2026-01-01", "2026-12-31"), year), "project");
   // Même projet, mais la période ne touche pas l'année : refus.
   assert.equal(attachRefusal(run("p1", "2025-01-01", "2025-12-31"), year), "year");
   assert.equal(attachRefusal(run("p1", "2027-01-01", "2027-06-30"), year), "year");
-  assert.equal(attachRefusal({ projectId: "p1", startDate: null, endDate: null }, year), "year");
+  assert.equal(attachRefusal({ id: "a1", projectId: "p1", startDate: null, endDate: null, state: "doing" }, year), "year");
   // Action introuvable : refus.
   assert.equal(attachRefusal(null, year), "missing");
   // Même projet, période qui chevauche l'année (y compris pluriannuelle) : accepté.
   assert.equal(attachRefusal(run("p1", "2026-03-01", "2026-06-30"), year), null);
   assert.equal(attachRefusal(run("p1", "2025-09-01", "2027-06-30"), year), null);
+  // Abandonnée : refusée partout ; terminée : refusée pour une tâche seulement.
+  const ok = "2026-01-01", end = "2026-12-31";
+  assert.equal(attachRefusal(run("p1", ok, end, "abandoned"), year), "state");
+  assert.equal(attachRefusal(run("p1", ok, end, "abandoned"), year, { use: "task" }), "state");
+  assert.equal(attachRefusal(run("p1", ok, end, "done"), year), null);
+  assert.equal(attachRefusal(run("p1", ok, end, "done"), year, { use: "task" }), "state");
+  // La valeur actuelle, réenregistrée telle quelle, passe toujours (attachOptions la propose) — pas une autre.
+  assert.equal(attachRefusal(run("p1", ok, end, "abandoned"), year, { current: "a1" }), null);
+  assert.equal(attachRefusal(run("p1", ok, end, "done"), year, { use: "task", current: "a1" }), null);
+  assert.equal(attachRefusal(run("p1", "2025-01-01", "2025-06-30"), year, { current: "a1" }), null);
+  assert.equal(attachRefusal(run("p1", ok, end, "abandoned"), year, { current: "autre" }), "state");
   // Le champ est bien ouvert à saveField sur les deux modèles (et nulle part ailleurs dans ce lot).
   assert.ok(FIELDS.expense.actionId);
   assert.ok(FIELDS.indicator.actionId);

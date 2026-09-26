@@ -94,13 +94,14 @@ export async function milestonesInEditions(where: Prisma.MilestoneWhereInput, st
   });
 }
 
-// Une action choisie pour une année (tâche, réalisation, demande de validation) : même projet, période qui chevauche l'année —
-// la règle d'attachYearActions, pas l'édition de création de l'action.
-export async function actionRunsInEdition(actionId: string, editionId: string | null | undefined): Promise<boolean> {
+// Une action choisie pour une année (tâche, réalisation, demande de validation, dépense) : même projet, période qui chevauche
+// l'année — la règle d'attachYearActions, pas l'édition de création de l'action — et pas abandonnée (ni terminée pour une
+// tâche). Toute la règle est dans attachRefusal (lib/actions.ts) ; `current` = la valeur déjà enregistrée, qu'on peut garder.
+export async function actionRunsInEdition(actionId: string, editionId: string | null | undefined, opts: { use?: "record" | "task"; current?: string | null } = {}): Promise<boolean> {
   if (!editionId) return false;
   const [a, e] = await Promise.all([
-    prisma.action.findUnique({ where: { id: actionId }, select: { projectId: true, startDate: true, endDate: true } }),
+    prisma.action.findUnique({ where: { id: actionId }, select: { id: true, projectId: true, startDate: true, endDate: true, state: true } }),
     prisma.edition.findUnique({ where: { id: editionId }, select: { projectId: true, year: true } }),
   ]);
-  return Boolean(e && attachRefusal(a, e) === null);
+  return Boolean(e && attachRefusal(a, e, opts) === null);
 }

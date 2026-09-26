@@ -165,6 +165,7 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   if (decision === "approved" && (v.kind === "quote" || v.kind === "expense") && v.amount) {
     // Le devis approuvé crée l'engagement une seule fois (validationId unique) ; le réalisé viendra s'y rattacher. L'action
     // de la demande (vérifiée à la demande : même projet, période sur l'année) devient celle de la dépense.
+    // Pas revérifiée ici, exprès : la décision ne doit pas tomber parce que l'action a changé depuis ; attachOptions l'affiche quand même.
     await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, supplier: v.supplier, committed: v.amount, validationId: v.id, actionId: v.actionId }, update: {} });
     await prisma.changeLog.create({ data: { editionId: v.editionId, field: "engagement", before: null, after: `+${v.amount} € (${v.label})`, authorId: me.id } });
   }

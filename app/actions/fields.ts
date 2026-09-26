@@ -12,7 +12,7 @@ import { attachRefusal } from "@/lib/actions";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
-import { V, cap, le, de, du, ce, seul } from "@/lib/vocab";
+import { V, cap, le, de, du, ce, seul, e as fem } from "@/lib/vocab";
 import { reportInternalError } from "@/lib/errors";
 
 export type SaveResult = { ok: true } | { ok: false; code?: string; error: string };
@@ -169,17 +169,19 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       ]);
     } else if ((model === "expense" || model === "indicator") && field === "actionId") {
       // Rattachement à une action (26/09) : une action du projet de l'année, dont la période chevauche l'année (attachRefusal,
-      // même règle qu'actionRunsInEdition) — vérifié ici, jamais sur la foi du sélecteur.
-      const select = { edition: { select: { projectId: true, year: true } } } as const;
+      // même règle qu'actionRunsInEdition), pas abandonnée ; la valeur déjà enregistrée se garde — vérifié ici, jamais sur la
+      // foi du sélecteur.
+      const select = { actionId: true, edition: { select: { projectId: true, year: true } } } as const;
       const row = model === "expense" ? await prisma.expense.findUnique({ where: { id }, select }) : await prisma.indicator.findUnique({ where: { id }, select });
       if (!row) return { ok: false, error: model === "expense" ? "Dépense introuvable." : "Indicateur introuvable." };
       const actionId = value === null ? null : String(value);
       if (actionId) {
-        const a = await prisma.action.findUnique({ where: { id: actionId }, select: { projectId: true, startDate: true, endDate: true } });
-        const refusal = attachRefusal(a, row.edition);
+        const a = await prisma.action.findUnique({ where: { id: actionId }, select: { id: true, projectId: true, startDate: true, endDate: true, state: true } });
+        const refusal = attachRefusal(a, row.edition, { use: "record", current: row.actionId });
         if (refusal === "missing") return { ok: false, error: `${cap(V.action)} introuvable.` };
         if (refusal === "project") return { ok: false, error: `${cap(ce(V.action))} appartient à un autre projet.` };
         if (refusal === "year") return { ok: false, error: `${cap(ce(V.action))} ne court pas en ${row.edition.year}.` };
+        if (refusal === "state") return { ok: false, error: `${cap(ce(V.action))} est abandonné${fem(V.action)} : on n'y rattache plus rien.` };
       }
       if (model === "expense") await prisma.expense.update({ where: { id }, data: { actionId } });
       else await prisma.indicator.update({ where: { id }, data: { actionId } });

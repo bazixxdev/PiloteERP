@@ -33,7 +33,7 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
     if (!editionId && l.editionId) editionId = l.editionId;
   }
   if (input.conventionId && !(await prisma.convention.findUnique({ where: { id: input.conventionId } }))) return { ok: false, error: "Dossier introuvable." };
-  if (input.actionId && !(await actionRunsInEdition(input.actionId, editionId))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
+  if (input.actionId && !(await actionRunsInEdition(input.actionId, editionId, { use: "task" }))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
   const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId, actionId: input.actionId || null, listId: input.listId || null, conventionId: input.conventionId || null } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: t.id } };
@@ -53,7 +53,9 @@ export async function updateTask(id: string, patch: { label?: string; descriptio
   }
   if (patch.actionId) {
     const editionId = patch.editionId !== undefined ? patch.editionId : t.editionId;
-    if (!(await actionRunsInEdition(patch.actionId, editionId))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
+    // Garder l'action déjà rattachée (même terminée depuis) passe, tant que la tâche reste sur la même année.
+    const current = editionId === t.editionId ? t.actionId : null;
+    if (!(await actionRunsInEdition(patch.actionId, editionId, { use: "task", current }))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
   }
   // Tâche née d'une demande : la cocher fait la demande (le demandeur est prévenu), la décocher la rouvre.
   if (patch.done !== undefined && t.requestId) {

@@ -115,8 +115,9 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
   const valued = budgetModule && canSeePersonnelDetail(me) ? await actionTimeCost(a.id, year) : null;
   // Toute la période : les seules lignes des années que la période couvre (un lien d'une année sortie de la période après
   // un raccourcissement reste affiché, mais ne compte pas).
-  // Une dépense soldée n'a plus d'engagement restant (budgetOf, onglet Budget) : seul son réalisé compte.
-  const bal = balance({ fundings: fundingLinks.filter((l) => (year === null ? years.includes(l.year) : l.year === year)).map((l) => l.amount), expenses: expenses.map((x) => ({ committed: x.status === "open" ? x.committed : 0, spent: x.spent })), hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
+  // Même borne pour les dépenses : sur toute la période, seules celles des années couvertes comptent (listées quand même).
+  const counted = (y: number) => (year === null ? years.includes(y) : y === year);
+  const bal = balance({ fundings: fundingLinks.filter((l) => counted(l.year)).map((l) => l.amount), expenses: expenses.filter((x) => counted(x.edition.year)), hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
   const balanceView: BalanceView = {
     title: year ? `Équilibre ${year}` : "Équilibre sur toute la période",
     income: bal.income, spending: bal.spending, hours: totalHours, gap: bal.gap,
