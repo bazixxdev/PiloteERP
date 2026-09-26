@@ -10,9 +10,7 @@ import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
-import { defaultPeriod, parseDay, shiftYear } from "@/lib/actions";
-import { actionCtx } from "@/lib/actions-rights-db";
-import { addMilestoneTx, extendPeriodTx } from "@/lib/actions-write-db";
+import { defaultPeriod, shiftYear } from "@/lib/actions";
 import { actionRunsInEdition } from "@/lib/actions-db";
 import { V, cap, le, un, du, de, au, ce, seul } from "@/lib/vocab";
 
@@ -27,30 +25,6 @@ async function ctx(editionId: string) {
 }
 
 const path = (id: string) => `/edition/${id}`;
-
-// Onglet Actions (en attendant la page de l'action) : la date du prochain jalon non fait se modifie dans le tableau ; sans
-// jalon, on en crée un (libellé = nom de l'action). Une date vide ne supprime JAMAIS un jalon (un champ date à moitié effacé
-// envoie "") : la suppression est une commande à part (deleteMilestone). La période s'étend jusqu'au jalon s'il en sort. Même
-// garde que toutes les commandes de l'action (actionCtx : pilote, équipe d'une année couverte, pôle, responsable, associés).
-export async function setNextMilestoneDate(actionId: string, date: string): Promise<Result> {
-  const me = await getCurrentPerson();
-  const { a, can } = await actionCtx(actionId, me);
-  if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
-  if (!can) return { ok: false, error: `Vous ne pouvez pas modifier ${ce(V.action)}.` };
-  if (!date) return { ok: false, error: "Indiquez une date : le jalon est conservé." };
-  const when = parseDay(date);
-  if (!when) return { ok: false, error: "Date invalide." };
-  const next = await prisma.milestone.findFirst({ where: { actionId, done: false }, orderBy: [{ date: "asc" }, { order: "asc" }] });
-  // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
-  await prisma.$transaction(async (tx) => {
-    if (next) {
-      await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
-      await extendPeriodTx(tx, actionId, when);
-    } else await addMilestoneTx(tx, actionId, { date: when, label: a.name });
-  });
-  revalidatePath(path(a.editionId));
-  return { ok: true };
-}
 
 export async function addFundingLine(editionId: string, funderId: string): Promise<Result> {
   const c = await ctx(editionId);

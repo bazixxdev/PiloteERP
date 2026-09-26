@@ -30,6 +30,8 @@ export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: {
     const id = pathname.match(/^\/edition\/([^/?]+)/)?.[1];
     const label = id ? editions.find((e) => e.id === id)?.label : null;
     parts.push(...(label ? label.split(" / ") : [cap(V.edition)]), EDITION_TABS[sp.get("onglet") ?? "apercu"] ?? "Aperçu");
+  } else if (/^\/action\//.test(pathname)) {
+    parts.push(cap(V.action));
   } else if (/^\/projets\/proposer/.test(pathname)) {
     parts.push(`${cap(pl(V.projet))} et ${pl(V.edition)}`, `Proposer ${un(V.projet)}`);
   } else {

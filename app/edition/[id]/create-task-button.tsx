@@ -12,10 +12,11 @@ import { Select } from "@/components/common/searchable-select";
 import { V, cap, le, ce } from "@/lib/vocab";
 
 // « Me créer une tâche » : une tâche personnelle rattachée à l'édition (et, au choix, à une action) ; elle vit dans Ma semaine.
-export function CreateTaskButton({ editionId, actions, compact }: { editionId: string; actions: { id: string; name: string }[]; compact?: boolean }) {
+// `actionId` : l'action présélectionnée (page de l'action).
+export function CreateTaskButton({ editionId, actions, compact, actionId: preset }: { editionId: string; actions: { id: string; name: string }[]; compact?: boolean; actionId?: string }) {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
-  const [actionId, setActionId] = useState("");
+  const [actionId, setActionId] = useState(preset ?? "");
   const [due, setDue] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -23,7 +24,7 @@ export function CreateTaskButton({ editionId, actions, compact }: { editionId: s
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild><Button variant="outline" size={compact ? "xs" : "default"} data-testid={compact ? "task-from-apercu" : "task-from-edition"} title={`Une tâche pour moi, rattachée à ${ce(V.edition)}`}><ListTodo />{compact ? "Tâche" : "Tâche"}</Button></PopoverTrigger>
       <PopoverContent className="w-80" align="end">
-        <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addTask({ label, dueDate: due || null, editionId, actionId: actionId || null }); if (!r.ok) { toast.error(r.error); return; } toast.success("Tâche ajoutée à « Ma semaine »"); setOpen(false); setLabel(""); setDue(""); router.refresh(); }); }}>
+        <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await addTask({ label, dueDate: due || null, editionId, actionId: actionId || null }); if (!r.ok) { toast.error(r.error); return; } toast.success("Tâche ajoutée à « Ma semaine »"); setOpen(false); setLabel(""); setDue(""); setActionId(preset ?? ""); router.refresh(); }); }}>
           <div className="text-sm font-semibold">Une tâche pour moi</div>
           <p className="text-[11px] text-muted-foreground">{`Privée : elle n'apparaît que dans votre « Ma semaine », rattachée à ${ce(V.edition)}.`}</p>
           <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Relancer le financeur, préparer le support…" aria-label="Tâche" data-testid="task-from-edition-label" />

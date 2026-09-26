@@ -29,8 +29,8 @@ export function parseDay(s: string): Date | null {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? d : null;
 }
 
-// Un jalon hors de la période l'étend (une seule règle : création d'action avec échéance, addMilestone, updateMilestone,
-// setNextMilestoneDate) ; une date déjà dans la période la laisse telle quelle.
+// Un jalon hors de la période l'étend (une seule règle : création d'action avec échéance, addMilestone, updateMilestone) ;
+// une date déjà dans la période la laisse telle quelle.
 export function periodIncluding(p: Period, date: Date): Period {
   return { startDate: date < p.startDate ? date : p.startDate, endDate: date > p.endDate ? date : p.endDate };
 }

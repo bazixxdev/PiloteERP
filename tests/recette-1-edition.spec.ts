@@ -35,17 +35,24 @@ test("la direction crée une édition, le pilote la complète, le portefeuille l
   await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Atelier de lancement");
   await page.getByTestId("add-action-submit").click();
-  await expect(page.getByTestId("action-name-0")).toHaveValue("Atelier de lancement");
-  const row = page.getByTestId("action-row-0");
-  await row.locator('input[type="date"]').fill("2026-01-15");
-  await expect(page.getByText("Jalon dépassé : Atelier de lancement")).toBeVisible({ timeout: 10_000 });
-  // Vider le champ ne supprime pas le jalon (un champ date à moitié effacé envoie une valeur vide).
-  await row.locator('input[type="date"]').fill("");
-  await row.locator('input[type="date"]').blur();
+  // Créer l'action ouvre sa page : le jalon s'y pose.
+  await expect(page.getByTestId("action-page")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Atelier de lancement");
+  await page.getByTestId("milestone-add").click();
+  await page.getByTestId("milestone-add-date").fill("2026-01-15");
+  await page.getByTestId("milestone-add-label").fill("Atelier de lancement");
+  await page.getByTestId("milestone-add-submit").click();
+  await expect(page.getByTestId("milestone-date-0")).toHaveValue("2026-01-15");
+  // Vider la date ne supprime pas le jalon (un champ date à moitié effacé envoie une valeur vide) : refusé, la date revient.
+  await page.getByTestId("milestone-date-0").fill("");
+  await page.getByTestId("milestone-date-0").blur();
+  await expect(page.getByText("Indiquez une date : le jalon est conservé")).toBeVisible();
   await page.reload();
-  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
-  await expect(page.getByTestId("action-row-0").locator('input[type="date"]')).toHaveValue("2026-01-15");
-  await expect(page.getByText("Jalon dépassé : Atelier de lancement")).toBeVisible();
+  await expect(page.getByTestId("milestone-date-0")).toHaveValue("2026-01-15");
+  await page.getByTestId("action-back").click();
+  await expect(page.getByTestId("action-row-0")).toBeVisible();
+  await expect(page.getByTestId("action-late-0")).toBeVisible();
+  await expect(page.getByText("Jalon dépassé : Atelier de lancement")).toBeVisible({ timeout: 10_000 });
 
   // 3. Le portefeuille affiche l'édition avec son alerte.
   await page.goto("/portefeuille?alerte=danger");

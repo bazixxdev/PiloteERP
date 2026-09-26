@@ -28,12 +28,20 @@ function useRun() {
   return { pending, run };
 }
 
-export function AddActionForm({ editionId }: { editionId: string }) {
+// Créer une action ouvre sa page : période, jalons, personnes et contenu s'y règlent.
+export function AddActionForm({ editionId, year }: { editionId: string; year: number }) {
   const [name, setName] = useState("");
-  const { pending, run } = useRun();
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const create = () => start(async () => {
+    const r = await createAction(editionId, { name });
+    if (!r.ok) { toast.error(r.error); return; }
+    setName("");
+    if (r.data) router.push(`/action/${r.data.id}?annee=${year}`); else router.refresh();
+  });
   return (
     <Reveal label={cap(V.action)} testId="add-action-open">
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => createAction(editionId, { name }), () => setName("")); }}>
+      <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; create(); }}>
         <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={`Nom ${du(V.action)} (Entrée pour ajouter)`} className="h-7 w-72" data-testid="add-action-input" />
         <Button type="submit" size="sm" variant="outline" disabled={pending || !name.trim()} data-testid="add-action-submit"><Plus />Ajouter</Button>
       </form>

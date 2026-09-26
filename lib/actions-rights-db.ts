@@ -4,7 +4,7 @@ import { inMyPole, type Viewer } from "./scope";
 import { runsIn } from "./actions";
 
 // Droits sur une action (spec actions § 2), chargés une fois avant toute lecture ou écriture : les commandes de l'action
-// (app/actions/actions.ts), saveField (branche « action »), la cellule provisoire du prochain jalon et le point de contrôle de
+// (app/actions/actions.ts), saveField (branche « action ») et le point de contrôle de
 // la délégation passent tous par ici. Pas de « use server » : ce n'est pas une commande appelable du navigateur, seulement la
 // règle partagée côté serveur. Une action sans projet ni période n'est dans aucune année : personne ne la modifie (a = null).
 // `can` : modifier contenu, période, jalons ; `canManagePeople` : la liste des associés ; `canDelete` : supprimer.

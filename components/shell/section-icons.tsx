@@ -5,6 +5,7 @@ import { BookUser, HandCoins, CalendarDays, CalendarClock, Clock, LayoutGrid, Co
 const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/projets\/proposer/, Lightbulb],
   [/^\/(portefeuille|edition|projets)/, FileSignature],
+  [/^\/action\//, FileSignature],
   [/^\/ma-semaine/, CalendarDays],
   [/^\/taches/, ListTodo],
   [/^\/notes/, NotebookPen],

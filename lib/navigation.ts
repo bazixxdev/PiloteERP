@@ -56,7 +56,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
     {
       id: "projets",
       label: "Projets",
-      also: ["/edition"],
+      also: ["/edition", "/action"],
       items: [
         { label: "Projets", href: "/projets", path: "/projets" },
         { label: codir ? "Portefeuille" : "Mes projets", href: "/portefeuille", path: "/portefeuille" },

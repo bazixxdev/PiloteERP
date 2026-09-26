@@ -9,7 +9,7 @@ import { iconFor } from "./section-icons";
 const ITEMS = [
   { href: "/ma-semaine", label: "Ma semaine" },
   { href: "/temps", label: "Temps" },
-  { href: "/portefeuille", label: "Projets", match: ["/portefeuille", "/edition"] },
+  { href: "/portefeuille", label: "Projets", match: ["/portefeuille", "/edition", "/action/"] },
 ];
 // Tâches et Notes (modules) : sur mobile, la barre haute n'a pas les menus rapides, elles viennent ici.
 const OPTIONAL = [

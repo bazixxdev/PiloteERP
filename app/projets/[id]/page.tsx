@@ -1,4 +1,5 @@
-import { actionsOfYear } from "@/lib/actions";
+import { actionsOfYear, yearsLabel } from "@/lib/actions";
+import { projectActions } from "@/lib/actions-db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -9,12 +10,12 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
 import { refColor, refLabel } from "@/lib/refs";
-import { fmtEuro } from "@/lib/format";
+import { fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { AddSimpleForm, ProjectPolesPicker } from "@/app/admin/forms";
 import { PROJECT_STATES, projectState } from "@/lib/projects";
 import { SectionIcon } from "@/components/shell/section-icon";
 import { cn } from "@/lib/utils";
-import { V, cap, le, de, aucun, ppe, pl, e as accord } from "@/lib/vocab";
+import { V, cap, le, de, du, un, aucun, ppe, pl, e as accord } from "@/lib/vocab";
 
 // Fiche projet (lot 1 du 19/09, retour de Gaël) : le projet est ce qui dure — un programme de dix ans a des éditions chaque
 // année, financées différemment. Ici : raison d'être, pôle, pilote, garant, code ; puis ses éditions, ses financements, son équipe.
@@ -27,12 +28,13 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
     editions: { orderBy: { year: "desc" }, include: { team: { include: { person: true } }, fundingLines: { include: { funder: { select: { id: true, name: true } } } } } },
   } });
   if (!p) notFound();
-  const [people, poles, missions, actions] = await Promise.all([
+  const [people, poles, missions, actions, components] = await Promise.all([
     prisma.person.findMany({ where: { active: true }, orderBy: { order: "asc" } }),
     prisma.pole.findMany({ orderBy: { name: "asc" } }),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
     // Nombre d'actions par année : celles dont la période chevauche l'année (même règle qu'attachYearActions).
     prisma.action.findMany({ where: { projectId: id }, select: { projectId: true, startDate: true, endDate: true } }),
+    projectActions(id),
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
   const state = projectState(p);
@@ -76,6 +78,25 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
                   ))}
                 </tbody>
               </table>
+            )}
+          </Section>
+          <Section title={cap(pl(V.action))} description={`Toutes les ${pl(V.action)} ${du(V.projet)}, sur leur période : ${un(V.action)} peut courir sur plusieurs années.`} testId="project-actions">
+            {components.length === 0 ? <p className="text-sm text-muted-foreground">{`${cap(aucun(V.action))} encore.`}</p> : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-[13px]">
+                  <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">{cap(V.action)}</th><th className="py-1.5 pr-2">Période</th><th className="py-1.5 pr-2">État</th><th className="py-1.5 text-right">Heures</th></tr></thead>
+                  <tbody className="divide-y">
+                    {components.map((a) => (
+                      <tr key={a.id} data-testid={`project-action-${a.id}`}>
+                        <td className="py-1.5 pr-2"><Link href={`/action/${a.id}`} className={cn("font-medium text-primary hover:underline", a.state === "abandoned" && "text-muted-foreground line-through")}>{a.name}</Link></td>
+                        <td className="py-1.5 pr-2 text-xs"><span className="tabular">{fmtDate(a.startDate, "D MMM YY")} – {fmtDate(a.endDate, "D MMM YY")}</span>{a.startDate && a.endDate && <span className="text-muted-foreground">{` · ${yearsLabel({ startDate: a.startDate, endDate: a.endDate })}`}</span>}</td>
+                        <td className="py-1.5 pr-2"><StatusBadge label={refLabel(refs, "action_state", a.state)} color={refColor(refs, "action_state", a.state)} /></td>
+                        <td className="py-1.5 text-right tabular text-xs">{fmtNumber(a.hoursTotal, 1)} h</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Section>
           <Section title="Financements" description={`Qui finance quoi, pour chaque année du ${V.projet.one}. Le détail et les versements sont sur ${le(V.edition)} concerné${accord(V.edition)} (onglet Budget).`} testId="project-fundings">

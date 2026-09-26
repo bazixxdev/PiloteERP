@@ -1,94 +1,78 @@
+import Link from "next/link";
 import { AutoField } from "@/components/inline/auto-field";
 import { Section } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { canEditActions, canWriteLayer } from "@/lib/rights";
-import { dayjs, fmtNumber } from "@/lib/format";
+import { dayjs, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TabCtx } from "./types";
 import { inMyPole } from "@/lib/scope";
 import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
-import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
-import { NextMilestoneCell } from "./next-milestone-cell";
-import { milestoneTitle } from "@/lib/actions";
-import { V, cap, le, du, ce, aucun, pl } from "@/lib/vocab";
+import { milestoneTitle, spanLabel } from "@/lib/actions";
+import { V, cap, le, ce, aucun, pl } from "@/lib/vocab";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
   const yearRw = canWriteLayer(me, "year", isPilot, isTeam, inMyPole(me, e.project));
-  // « abandoned » (26/09) existe en base mais ne se choisit pas encore ici : ses règles viennent avec la page de l'action.
-  const stateOpts = REF_DEFAULTS.action_state.filter((s) => s.code !== "abandoned").map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
+  const stateOpts = REF_DEFAULTS.action_state.map((s) => ({ value: s.code, label: refLabel(refs, "action_state", s.code) }));
   const ownerOpts = people.map((p) => ({ value: p.id, label: p.name }));
-  const consumed = (actionId: string) => e.yearEntries.filter((t) => t.actionId === actionId).reduce((s, t) => s + t.hours, 0);
 
+  // Le tableau se lit ; le détail (contenu, période, jalons, personnes, tâches, heures) est sur la page de l'action.
   return (
     <div className="grid gap-4">
-      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} /> : undefined}>
+      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} year={e.year} /> : undefined}>
         {e.actions.length === 0 ? (
-          <EmptyState title={cap(aucun(V.action))} hint={`Ajoutez la première ${V.action.one} de ${ce(V.edition)} : un nom, un responsable, un jalon.`} />
+          <EmptyState title={cap(aucun(V.action))} hint={`Ajoutez la première ${V.action.one} de ${ce(V.edition)} : un nom, puis sa période et ses jalons sur sa page.`} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm" data-testid="actions-table">
+            <table className="w-full min-w-[820px] text-sm" data-testid="actions-table">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
                 <tr>
                   <th className="w-8 py-1.5 pr-2">#</th>
                   <th className="py-1.5 pr-2">{cap(V.action)}</th>
                   <th className="py-1.5 pr-2">Responsable</th>
+                  <th className="py-1.5 pr-2">Période</th>
                   <th className="py-1.5 pr-2">Prochain jalon</th>
                   <th className="py-1.5 pr-2">État</th>
-                  <th className="min-w-[180px] py-1.5 pr-2" title={`Heures saisies sur ${le(V.action)}, face à l'objectif fixé`}>Temps</th>
+                  <th className="min-w-[150px] py-1.5 pr-2" title={`Heures saisies sur ${le(V.action)} en ${e.year}, face à l'objectif fixé`}>{`Heures ${e.year}`}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {e.actions.map((a, i) => {
-                  const c = consumed(a.id);
                   const own = a.ownerId === me.id;
-                  const rw = writable || own;
-                  const over = a.timeTarget != null && c > a.timeTarget;
+                  const associate = a.people.some((p) => p.personId === me.id);
+                  // Mêmes droits que les commandes (actionRights) : le responsable et l'équipe de l'année gèrent le responsable ;
+                  // les personnes associées modifient état et objectif. Les commandes se gardent elles-mêmes.
+                  const rwOwner = writable || own;
+                  const rw = rwOwner || associate;
+                  const over = a.timeTarget != null && a.hoursYear > a.timeTarget;
                   const next = a.milestones.find((m) => !m.done) ?? null;
                   const lateMilestone = Boolean(next && a.state !== "done" && a.state !== "abandoned" && dayjs(next.date).isBefore(dayjs(), "day"));
+                  const span = spanLabel(a, e.year);
                   return (
-                    <tr key={a.id} className="group" data-testid={`${V.action.one}-row-${i}`}>
-                      <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
-                      <td className="min-w-[220px] py-1 pr-2">
-                        <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`${V.action.one}-name-${i}`} inputClassName="font-medium" label={`Nom ${du(V.action)} ${i + 1}`} />
-                        {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire). */}
-                        {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
-                        <ActionPanel name={a.name} index={i} hints={[[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || null, a.milestones.some((m) => m.isPublic) ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
-                          <div className="grid gap-2 sm:grid-cols-3">
-                            <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
-                            {/* Lieu, participants et « public » sont portés par les jalons, le financement par les liens de l'action (26/09) :
-                                lecture seule ici en attendant la page de l'action ; plus aucun contrôle de l'ancien modèle. */}
-                            <div className="grid gap-0.5 sm:col-span-2"><span className="text-[10px] text-muted-foreground">Financement</span><span className="px-2 py-1 text-sm" data-testid={`${V.action.one}-funders-${i}`}>{[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || "le projet, sans ligne dédiée"}</span></div>
-                            <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Agenda du site</span><span className="px-2 py-1 text-sm" data-testid={`${V.action.one}-public-${i}`}>{a.milestones.some((m) => m.isPublic) ? "jalon public" : "non publié"}</span></div>
-                            {a.milestones.some((m) => m.venue || m.participants || m.isPublic) && (
-                              <ul className="grid gap-0.5 text-xs text-muted-foreground sm:col-span-3">
-                                {a.milestones.filter((m) => m.venue || m.participants || m.isPublic).map((m) => <li key={m.id}>{`${dayjs(m.date).format("D MMM YYYY")} · ${m.label}${m.venue ? ` · ${m.venue}` : ""}${m.participants ? ` · ${m.participants}` : ""}${m.isPublic ? " · public" : ""}`}</li>)}
-                              </ul>
-                            )}
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <div className="text-[10px] font-semibold text-muted-foreground">{`Tâches en cours sur ${ce(V.action)}`}</div>
-                              {a.tasks.length === 0 ? <p className="text-xs text-muted-foreground">Aucune.</p> : <ul className="mt-1 divide-y text-xs">{a.tasks.map((t) => <li key={t.id} className="flex items-center justify-between gap-2 py-1"><span className="truncate">{t.label}</span><span className="shrink-0 text-muted-foreground">{t.person.name}{t.dueDate ? ` · ${dayjs(t.dueDate).format("D MMM")}` : ""}</span></li>)}</ul>}
-                            </div>
-                            <div>
-                              <div className="text-[10px] font-semibold text-muted-foreground">Temps saisi par personne</div>
-                              {byPerson(e.yearEntries.filter((t) => t.actionId === a.id)).length === 0 ? <p className="text-xs text-muted-foreground">Aucune heure saisie.</p> : <ul className="mt-1 divide-y text-xs">{byPerson(e.yearEntries.filter((t) => t.actionId === a.id)).map(([pid, h]) => <li key={pid} className="flex items-center justify-between gap-2 py-1"><span>{people.find((p) => p.id === pid)?.name ?? "—"}</span><b className="tabular">{fmtNumber(h, 1)} h</b></li>)}</ul>}
-                            </div>
-                            <div className="sm:col-span-2">
-                              <div className="text-[10px] font-semibold text-muted-foreground">Réalisations consignées</div>
-                              {e.achievements.filter((x) => x.actionId === a.id).length === 0 ? <p className="text-xs text-muted-foreground">{`Aucune : consignez-les sous le tableau, en liant ${le(V.action)}.`}</p> : <ul className="mt-1 divide-y text-xs">{e.achievements.filter((x) => x.actionId === a.id).map((x) => <li key={x.id} className="py-1"><span className="text-muted-foreground">{dayjs(x.date).format("D MMM")} · </span>{x.value != null ? <b className="tabular">{x.value}{x.unit ? ` ${x.unit}` : ""} · </b> : null}{x.label}</li>)}</ul>}
-                            </div>
-                          </div>
-                        </ActionPanel>
+                    <tr key={a.id} className="group align-top" data-testid={`${V.action.one}-row-${i}`}>
+                      <td className="py-1.5 pr-2 text-xs text-muted-foreground">{i + 1}</td>
+                      <td className="min-w-[190px] py-1.5 pr-2">
+                        <Link href={`/action/${a.id}?annee=${e.year}`} className={cn("font-medium text-primary hover:underline", a.state === "abandoned" && "text-muted-foreground line-through")} data-testid={`${V.action.one}-link-${i}`}>{a.name}</Link>
                       </td>
-                      <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
-                      <td className="min-w-[150px] py-1 pr-2"><NextMilestoneCell actionId={a.id} actionName={a.name} date={next?.date ?? null} label={next?.label ?? null} lastDone={a.milestones.filter((m) => m.done).at(-1)?.date ?? null} late={lateMilestone} readOnly={!rw} /></td>
-                      <td className="min-w-[130px] py-1 pr-2">
+                      <td className="min-w-[140px] py-0.5 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rwOwner} placeholder="—" label={`Responsable, ${a.name}`} /></td>
+                      <td className="min-w-[120px] py-1.5 pr-2 text-xs" data-testid={`${V.action.one}-period-${i}`}>
+                        <div className="tabular">{fmtDate(a.startDate, "D MMM YY")} – {fmtDate(a.endDate, "D MMM YY")}</div>
+                        {span && <div className="text-[10px] text-muted-foreground">{span}</div>}
+                      </td>
+                      <td className="min-w-[110px] max-w-[180px] py-1.5 pr-2 text-xs" data-testid={`${V.action.one}-next-${i}`}>
+                        {next ? (
+                          <>
+                            <div className={cn("tabular", lateMilestone ? "font-medium text-danger" : "text-foreground")}>{fmtDate(next.date)}</div>
+                            {next.label !== a.name && <div className="truncate text-[10px] text-muted-foreground" title={milestoneTitle(a.name, next.label)}>{next.label}</div>}
+                          </>
+                        ) : <span className="italic text-muted-foreground">—</span>}
+                      </td>
+                      <td className="min-w-[120px] py-0.5 pr-2">
                         {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`${V.action.one}-late-${i}`}>en retard</span>}
                         {rw ? (
                           <AutoField model="action" id={a.id} field="state" type="select" value={a.state} options={stateOpts} allowEmpty={false} refreshOnSave testId={`${V.action.one}-state-${i}`} label={`État, ${a.name}`} />
@@ -96,8 +80,8 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                           <StatusBadge label={refLabel(refs, "action_state", a.state)} color={refColor(refs, "action_state", a.state)} />
                         )}
                       </td>
-                      {/* Une colonne Temps compacte : consommé / objectif, avec sa jauge ; l'objectif se modifie en cliquant sur le crayon. */}
-                      <td className="py-1 pr-2"><TimeCell actionId={a.id} name={a.name} consumed={c} target={a.timeTarget} canEdit={rw} over={over} /></td>
+                      {/* Heures de l'année, face à l'objectif ; l'objectif se modifie en cliquant sur le crayon. */}
+                      <td className="py-1.5 pr-2"><TimeCell actionId={a.id} name={a.name} consumed={a.hoursYear} target={a.timeTarget} canEdit={rw} over={over} /></td>
                     </tr>
                   );
                 })}
@@ -142,13 +126,6 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
 }
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-
-// Heures d'une action par personne, décroissantes.
-function byPerson(entries: { hours: number; personId: string }[]): [string, number][] {
-  const m = new Map<string, number>();
-  for (const t of entries) m.set(t.personId, (m.get(t.personId) ?? 0) + t.hours);
-  return [...m.entries()].sort((a, b) => b[1] - a[1]);
-}
 
 // Frise provisoire (la frise par action vient avec la tâche 8) : un point par jalon de l'année, au nom de l'action.
 function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"]["actions"]; refs: TabCtx["refs"] }) {

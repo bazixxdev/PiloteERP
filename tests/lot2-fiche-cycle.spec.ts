@@ -67,9 +67,11 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   // Occurrences : le petit-déjeuner de mars a sa fiche (la duplication a disparu avec l'action composante, 26/09).
   await page.getByRole("tab", { name: new RegExp(cap(pl(W.action))) }).click();
   const idx = 2; // troisième action du jeu de démo : le petit-déjeuner de mars
-  await expect(page.getByTestId(`action-name-${idx}`)).toHaveValue("Petit-déjeuner ORESS · mars · emploi");
-  await page.getByTestId(`action-details-${idx}`).click();
-  await expect(page.getByTestId(`action-extras-${idx}`)).toContainText("Chiffres de l'emploi ESS 2025");
+  await expect(page.getByTestId(`action-link-${idx}`)).toHaveText("Petit-déjeuner ORESS · mars · emploi");
+  // Le détail d'une action est sa page (26/09) : contenu, lieu et participants du jalon.
+  await page.getByTestId(`action-link-${idx}`).click();
+  await expect(page.getByTestId("action-description")).toHaveValue(/Chiffres de l'emploi ESS 2025/);
+  await expect(page.getByTestId("milestone-venue-0")).toHaveValue("CRESS, Orléans — salle du CA");
 });
 
 test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et trace les modifications ; une remarque porte son motif", async ({ page }) => {

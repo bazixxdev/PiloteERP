@@ -52,6 +52,22 @@ for (const path of PAGES) {
   });
 }
 
+// La page d'une action (26/09) n'a pas d'adresse fixe : on l'ouvre depuis l'onglet de l'année.
+test("aucun mot CRESS sur la page d'une action", async ({ page }) => {
+  await page.goto("/portefeuille");
+  await page.getByRole("link", { name: /Jardin partagé/ }).first().click();
+  await expect(page).toHaveURL(/\/edition\//);
+  await page.goto(`${page.url().split("?")[0]}?onglet=actions`);
+  await page.locator("[data-testid$=-link-0]").first().click();
+  await expect(page.getByTestId("action-page")).toBeVisible();
+  const text = await page.locator("body").innerText();
+  const attrs = await page.evaluate(() => [...document.querySelectorAll("[title],[placeholder],[aria-label]")].flatMap((el) => ["title", "placeholder", "aria-label"].map((a) => el.getAttribute(a) ?? "")).join("\n"));
+  for (const re of FORBIDDEN) {
+    expect(text, `la page d'une action affiche ${re}`).not.toMatch(re);
+    expect(attrs, `la page d'une action porte ${re} dans un attribut`).not.toMatch(re);
+  }
+});
+
 test("check:vocab est vert", () => {
   execSync("node scripts/check-vocab.mjs", { stdio: "inherit" });
 });

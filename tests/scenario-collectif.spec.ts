@@ -70,12 +70,19 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.getByTestId("add-action-open").click();
   await page.getByTestId("add-action-input").fill("Cartographie des élus");
   await page.getByTestId("add-action-submit").click();
-  const row = page.getByTestId("action-row-0");
-  await pick(page, row.getByRole("combobox").first(), "Lucas Perrin");
-  await row.locator('input[type="date"]').fill(soon);
-  await row.locator("[data-testid^=action-target-edit-]").click();
-  await row.locator('input[type="number"]').fill("21");
-  await row.locator('input[type="number"]').blur();
+  // L'action créée s'ouvre sur sa page : responsable, jalon et objectif de temps s'y règlent.
+  await expect(page.getByTestId("action-page")).toBeVisible({ timeout: 30_000 });
+  await pick(page, "action-owner", "Lucas Perrin");
+  await expect(page.getByTestId("action-summary")).toContainText("Lucas Perrin");
+  await page.getByTestId("milestone-add").click();
+  await page.getByTestId("milestone-add-date").fill(soon);
+  await page.getByTestId("milestone-add-label").fill("Cartographie des élus");
+  await page.getByTestId("milestone-add-submit").click();
+  await expect(page.getByTestId("milestone-date-0")).toHaveValue(soon);
+  await page.getByTestId("action-target").fill("21");
+  await page.getByTestId("action-target").blur();
+  await expect(page.getByTestId("action-hours")).toContainText("sur 21 h prévues");
+  await page.goto(editionUrl);
   await page.getByTestId("fil-open").click();
   await page.getByTestId("comment-input").fill("Lucas, peux-tu démarrer la cartographie cette semaine ?");
   await page.getByTestId("comment-submit").click();
