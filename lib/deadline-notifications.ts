@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { computeReminders, type Reminder } from "./alerts";
+import { attachYearActions } from "./actions-db";
 import { dayjs, fmtDate } from "./format";
 
 // Passerelle échéances → notifications. En V1, c'est le cron quotidien qui envoie les mails J-30 / J-7 / retard
@@ -34,8 +35,8 @@ export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder
     prisma.settings.findUniqueOrThrow({ where: { id: 1 } }),
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
-      include: { project: { include: { pilot: true } }, actions: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true },
-    }),
+      include: { project: { include: { pilot: true } }, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true },
+    }).then(attachYearActions),
     prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
     prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);

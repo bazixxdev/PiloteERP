@@ -8,6 +8,7 @@ import { getCurrentPerson, getSettings } from "@/lib/session";
 import { inMyScope, isTransversal, perimeterFrom, relevanceTier, TIER_LABEL, type Tier } from "@/lib/scope";
 import { PerimeterChips } from "@/components/common/perimeter";
 import { computeReminders, type Reminder } from "@/lib/alerts";
+import { attachYearActions } from "@/lib/actions-db";
 import { instanceHas } from "@/lib/modules";
 import { daysFromNow } from "@/lib/format";
 import { fmtDate } from "@/lib/format";
@@ -21,7 +22,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
   const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
   const perimeter = perimeterFrom(me, perimetre);
   const [editions, raf, director] = await Promise.all([
-    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, actions: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true } }),
+    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true } }).then(attachYearActions),
     prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
     prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);

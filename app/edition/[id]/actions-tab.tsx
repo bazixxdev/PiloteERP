@@ -55,7 +55,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                         <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`${V.action.one}-name-${i}`} inputClassName="font-medium" label={`Nom ${du(V.action)} ${i + 1}`} />
                         {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
                         {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
-                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[a.fundingLine ? a.fundingLine.funder.name : null, a.isPublic ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
+                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[e.fundingLines.find((f) => f.id === a.fundingLineId)?.funder.name ?? null, a.isPublic ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
                           <div className="grid gap-2 sm:grid-cols-3">
                             <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
                             <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
@@ -70,7 +70,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                             </div>
                             <div>
                               <div className="text-[10px] font-semibold text-muted-foreground">Temps saisi par personne</div>
-                              {byPerson(a.timeEntries).length === 0 ? <p className="text-xs text-muted-foreground">Aucune heure saisie.</p> : <ul className="mt-1 divide-y text-xs">{byPerson(a.timeEntries).map(([pid, h]) => <li key={pid} className="flex items-center justify-between gap-2 py-1"><span>{people.find((p) => p.id === pid)?.name ?? "—"}</span><b className="tabular">{fmtNumber(h, 1)} h</b></li>)}</ul>}
+                              {byPerson(e.yearEntries.filter((t) => t.actionId === a.id)).length === 0 ? <p className="text-xs text-muted-foreground">Aucune heure saisie.</p> : <ul className="mt-1 divide-y text-xs">{byPerson(e.yearEntries.filter((t) => t.actionId === a.id)).map(([pid, h]) => <li key={pid} className="flex items-center justify-between gap-2 py-1"><span>{people.find((p) => p.id === pid)?.name ?? "—"}</span><b className="tabular">{fmtNumber(h, 1)} h</b></li>)}</ul>}
                             </div>
                             <div className="sm:col-span-2">
                               <div className="text-[10px] font-semibold text-muted-foreground">Réalisations consignées</div>

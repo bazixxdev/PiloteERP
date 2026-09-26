@@ -10,6 +10,7 @@ import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
+import { defaultPeriod, shiftYear } from "@/lib/actions";
 import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -33,7 +34,11 @@ export async function addAction(editionId: string, name: string, opts?: { ownerI
   const milestone = opts?.milestoneDate ? new Date(opts.milestoneDate) : null;
   if (milestone && Number.isNaN(milestone.getTime())) return { ok: false, error: "Échéance invalide." };
   const count = await prisma.action.count({ where: { editionId } });
-  const a = await prisma.action.create({ data: { editionId, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), milestoneDate: milestone, isCheckpoint: Boolean(opts?.isCheckpoint), order: count } });
+  // Période : l'année, prolongée jusqu'au jalon s'il tombe après le 31/12 (comme la migration) ; sans elle, l'action
+  // n'apparaîtrait dans aucune année.
+  const period = defaultPeriod(c.e.year);
+  const endDate = milestone && milestone > period.endDate ? milestone : period.endDate;
+  const a = await prisma.action.create({ data: { editionId, projectId: c.e.projectId, startDate: period.startDate, endDate, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), milestoneDate: milestone, isCheckpoint: Boolean(opts?.isCheckpoint), order: count } });
   revalidatePath(path(editionId));
   return { ok: true, data: { id: a.id } };
 }
@@ -215,9 +220,12 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
       indicators: { create: src.indicators.map((i) => ({ label: i.label, target: i.target, imposed: i.imposed, order: i.order })) },
       docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
       actions: {
+        // Projet et période décalés d'un an : sans eux, la copie n'apparaîtrait dans aucune année.
         create: src.actions.map((a) => ({
           name: a.name, ownerId: a.ownerId, timeTarget: a.timeTarget, order: a.order, state: "todo",
           milestoneDate: a.milestoneDate ? dayjs(a.milestoneDate).add(1, "year").toDate() : null,
+          projectId: src.projectId,
+          ...(a.startDate && a.endDate ? shiftYear({ startDate: a.startDate, endDate: a.endDate }) : defaultPeriod(year)),
         })),
       },
       fundingLines: {
@@ -354,7 +362,7 @@ export async function duplicateAction(actionId: string): Promise<Result<{ id: st
   const c = await ctx(a.editionId);
   if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas dupliquer ${ce(V.action)}.` };
   const count = await prisma.action.count({ where: { editionId: a.editionId } });
-  const d = await prisma.action.create({ data: { editionId: a.editionId, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
+  const d = await prisma.action.create({ data: { editionId: a.editionId, projectId: a.projectId, startDate: a.startDate, endDate: a.endDate, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, fundingLineId: a.fundingLineId, description: a.description, venue: a.venue, participants: a.participants, isPublic: a.isPublic, order: count } });
   revalidatePath(path(a.editionId));
   return { ok: true, data: { id: d.id } };
 }

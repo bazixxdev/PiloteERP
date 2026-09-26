@@ -9,7 +9,8 @@ type EditionForAlerts = {
   budgetEnvelope: number | null;
   spent: number;
   expenses: ExpenseLike[];
-  actions: { name: string; milestoneDate: Date | null; state: string; timeTarget: number | null; timeEntries?: { hours: number }[] }[];
+  // Les actions de l'année (attachYearActions) ; `milestoneDate`, l'ancien jalon, reste lu jusqu'au passage aux jalons.
+  actions: { name: string; state: string; endDate: Date | null; timeTarget: number | null; hoursYear: number; milestones: { date: Date; done: boolean; label: string }[]; milestoneDate: Date | null }[];
   fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[]; payments?: { label: string; amount: number; expectedAt: Date; receivedAt: Date | null }[] }[];
   validations: { status: string }[];
 };
@@ -23,7 +24,7 @@ export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[
     if (a.milestoneDate && a.state !== "done" && daysFromNow(a.milestoneDate) < 0) {
       alerts.push({ kind: "milestone_overdue", level: "danger", label: `Jalon dépassé : ${a.name}`, when: a.milestoneDate });
     }
-    const consumed = (a.timeEntries ?? []).reduce((sum, t) => sum + t.hours, 0);
+    const consumed = a.hoursYear;
     if (a.timeTarget && consumed > a.timeTarget) {
       alerts.push({ kind: "time_over", level: "warning", label: `Temps dépassé : ${a.name} (${Math.round(consumed)} h / ${a.timeTarget} h)` });
     }

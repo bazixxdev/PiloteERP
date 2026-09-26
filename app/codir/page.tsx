@@ -42,7 +42,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   const lateMilestones = editions.flatMap((e) => e.actions.filter((a) => a.milestoneDate && a.state !== "done" && daysFromNow(a.milestoneDate) < 0).map((a) => ({ e, a, days: -daysFromNow(a.milestoneDate!) }))).sort((x, y) => y.days - x.days);
   const deliverables = editions.flatMap((e) => e.fundingLines.flatMap((f) => f.deliverables.filter((d) => !d.done && daysFromNow(d.dueDate) <= settings.deliverableAlertDays).map((d) => ({ e, f, d, days: daysFromNow(d.dueDate) })))).sort((x, y) => x.days - y.days);
   const envelopes = editions.filter((e) => e.budgetEnvelope && (e.used / e.budgetEnvelope) * 100 >= settings.envelopeAlertPercent).sort((x, y) => y.used / y.budgetEnvelope! - x.used / x.budgetEnvelope!);
-  const timeOver = editions.flatMap((e) => e.actions.filter((a) => a.timeTarget && a.timeEntries.reduce((s, t) => s + t.hours, 0) > a.timeTarget).map((a) => ({ e, a, consumed: a.timeEntries.reduce((s, t) => s + t.hours, 0) })));
+  const timeOver = editions.flatMap((e) => e.actions.filter((a) => a.timeTarget && a.hoursYear > a.timeTarget).map((a) => ({ e, a, consumed: a.hoursYear })));
   const total = pending.length + lateMilestones.length + deliverables.length + envelopes.length + timeOver.length;
   const big = sp.plein === "1";
   const poles = [...new Map(rows.map((r) => [r.project.poleId, r.project.pole.name])).entries()];
