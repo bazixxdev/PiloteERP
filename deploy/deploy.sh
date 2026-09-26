@@ -54,9 +54,12 @@ echo "═══ Pilote [$INSTANCE] → $HOST ($STAMP UTC, $GIT_COMMIT) ═══
 # 0. Vérifications complètes en local (vocab, unitaires, lint, tsc, build, recette, sécurité) : rien ne part vers le
 # serveur si une suite est rouge. Pas de variable pour sauter cette étape (.agents/rules/production-deploiement.md).
 echo "→ npm run check:full"
-mkdir -p "$LOCAL/test-results"
-(cd "$LOCAL" && npm run check:full >"$LOCAL/test-results/check-full-$STAMP.log" 2>&1) || {
-  echo "✖ check:full rouge : déploiement refusé (journal : test-results/check-full-$STAMP.log)" >&2
+# Journal hors de test-results/ : Playwright vide ce dossier au début de la recette (le journal y disparaissait).
+mkdir -p "$LOCAL/.deploy-logs"
+CHECK_LOG="$LOCAL/.deploy-logs/check-full-$INSTANCE-$STAMP.log"
+(cd "$LOCAL" && npm run check:full >"$CHECK_LOG" 2>&1) || {
+  echo "✖ check:full rouge : déploiement refusé (journal : .deploy-logs/$(basename "$CHECK_LOG"))" >&2
+  grep -E "✘|✖|failed|Error:" "$CHECK_LOG" | head -15 >&2 || true
   exit 1
 }
 

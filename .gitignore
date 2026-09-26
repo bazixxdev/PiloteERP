@@ -70,3 +70,5 @@ prisma/prototype.db-journal
 
 # tout dossier de build Next (aperçus locaux compris)
 /.next*/
+# journaux de deploy.sh (check:full avant envoi)
+/.deploy-logs/

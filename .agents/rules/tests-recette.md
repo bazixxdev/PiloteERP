@@ -26,6 +26,7 @@ Trois suites, chacune sur sa base locale jetable, jamais sur une base de product
 - Les recettes tournent en `NODE_ENV=production` avec `PILOTE_DEMO=1` : c'est permis **uniquement** par le profil explicite `PILOTE_ENV_PROFILE=test` + hôte loopback (`lib/auth.ts`, SEC-20). Ne pas contourner autrement.
 - `prisma migrate reset --force` est lancé par le globalSetup sur `pilote_test` : un agent doit obtenir l'accord explicite de Gaël et le passer dans `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
 - Playwright ne ramasse que `*.spec.ts` hors `tests/security/` (`testMatch` / `testIgnore`, vérifiés par sentinelle). Un test unitaire est un `*.test.ts` dans `tests/unit/`.
+- Port 3100 (et 3101 pour TLST) déjà pris par un autre projet du poste : `PW_PORT=3140 npm run check:full` (ou devant `./deploy/deploy.sh`) ; ne jamais arrêter le processus d'un autre projet.
 - Itération rapide : `PW_DEV=1 npx playwright test tests/x.spec.ts` réutilise le serveur de dev ; `--project chromium` évite le build TLST.
 
 ## Sentinelles (`tests/unit/guardrails.test.ts`)
