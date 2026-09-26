@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { AutoField } from "@/components/inline/auto-field";
+import { FIELDS } from "@/lib/fields";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
@@ -129,6 +130,10 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
               {F({ field: "pilotId", label: `${cap(V.pilote)}`, type: "select", value: p.pilotId, options: opt(people), allowEmpty: false })}
               {F({ field: "guarantorId", label: `Garant (responsable ${de(V.pole)})`, type: "select", value: p.guarantorId, options: opt(people) })}
               {F({ field: "analyticCode", label: "Code analytique", value: p.analyticCode })}
+              <div className="grid gap-0.5">
+                {F({ field: "kind", label: "Type", type: "select", value: p.kind, options: [{ value: "funded", label: "Financé" }, { value: "internal", label: "Interne" }], allowEmpty: false })}
+                <p className="text-[10px] text-muted-foreground">{FIELDS.project.kind.help}</p>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex items-center gap-2 text-xs"><AutoField model="project" id={p.id} field="recurring" type="bool" value={p.recurring} readOnly={!rw} label="Récurrent" testId="project-recurring" />{"Récurrent (revient chaque année)"}</label>
                 <label className={cn("flex items-center gap-2 text-xs", p.archived && "text-muted-foreground")}><AutoField model="project" id={p.id} field="archived" type="bool" value={p.archived} readOnly={!rw} label="Archivé" refreshOnSave testId="project-archived" />Archivé</label>

@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { PortfolioFilters } from "./filters";
 import { V, cap, aucun, pl, nb, tous, e as accord } from "@/lib/vocab";
 
-type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string };
+type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string; type?: string };
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
@@ -32,6 +32,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   let rows = all;
   if (sp.pole) rows = rows.filter((r) => r.project.poleId === sp.pole);
   if (sp.statut) rows = rows.filter((r) => r.status === sp.statut);
+  // Financés / internes (spec actions § 2) : un projet interne n'est jamais un cas de « sans financement » ; ici, un simple filtre.
+  if (sp.type === "finances") rows = rows.filter((r) => r.project.kind !== "internal");
+  if (sp.type === "internes") rows = rows.filter((r) => r.project.kind === "internal");
   if (sp.alerte === "oui") rows = rows.filter((r) => r.alerts.length > 0);
   if (sp.alerte === "danger") rows = rows.filter((r) => r.hasDanger);
   if (sp.alerte === "calme") rows = rows.filter((r) => r.alerts.length === 0);
@@ -97,7 +100,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <PortfolioFilters
           poles={poles.map((p) => ({ value: p.id, label: p.name }))}
           statuses={["in_progress", "validated"].map((s) => ({ value: s, label: refLabel(refs, "edition_status", s) }))}
-          current={{ pole: sp.pole ?? "", statut: sp.statut ?? "", alerte: sp.alerte ?? "", trimestre: sp.trimestre ?? "", perimetre: sp.perimetre ?? "" }}
+          current={{ pole: sp.pole ?? "", statut: sp.statut ?? "", alerte: sp.alerte ?? "", trimestre: sp.trimestre ?? "", perimetre: sp.perimetre ?? "", type: sp.type ?? "" }}
           showPole={isTransversal(me) || perimeter === "cress"}
           thisQuarter={thisQuarter}
           year={year}

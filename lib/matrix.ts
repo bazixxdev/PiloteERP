@@ -8,7 +8,7 @@ import { daysFromNow } from "./format";
 export type MatrixLine = { id: string; funderId: string; status: string; amountGranted: number | null; amountRequested: number | null; conventionId: string | null; deliverables: { label: string; dueDate: Date; done: boolean }[] };
 export type MatrixEdition = {
   id: string; year: number; status: string; budgetEnvelope: number | null;
-  project: { id: string; name: string; analyticCode: string; poleId: string; pole: { name: string }; pilot: { name: string } };
+  project: { id: string; name: string; analyticCode: string; poleId: string; kind: string; pole: { name: string }; pilot: { name: string } };
   fundingLines: MatrixLine[];
 };
 export type MatrixFunder = { id: string; name: string };
@@ -63,6 +63,8 @@ export function buildMatrix(year: number, editions: MatrixEdition[], funders: Ma
   const funderById = new Map(funders.map((f) => [f.id, f]));
   const rows: MatrixRow[] = editions
     .filter((e) => e.year === year)
+    // Projet interne sans ligne : jamais signalé sans financement, absent de la matrice — avec une ligne, une édition comme une autre.
+    .filter((e) => !(e.project.kind === "internal" && e.fundingLines.length === 0))
     .map((e) => {
       const byFunder = new Map<string, MatrixLine[]>();
       for (const l of e.fundingLines) byFunder.set(l.funderId, [...(byFunder.get(l.funderId) ?? []), l]);

@@ -29,3 +29,15 @@ test("« Préparer » : à décider en lot seulement sans année visée, depuis 
   assert.equal(toPrepare({ ...row, sourceYear: 2025 }, 2027), false);
   assert.equal(toPrepare({ ...row, sourceId: null, sourceYear: null }, 2027), false);
 });
+
+test("« Préparer » : un projet interne n'est proposé que s'il est récurrent (spec actions § 2)", () => {
+  const row = { nextId: null, sourceId: "e26", sourceYear: 2026, decision: null };
+  // Ni kind ni recurring renseignés (anciens appels) : le reste de la règle s'applique sans changement.
+  assert.equal(toPrepare(row, 2027), true);
+  // Financé, récurrent ou non : la règle interne ne le concerne pas.
+  assert.equal(toPrepare({ ...row, kind: "funded", recurring: false }, 2027), true);
+  // Interne et récurrent : proposé comme un projet financé.
+  assert.equal(toPrepare({ ...row, kind: "internal", recurring: true }, 2027), true);
+  // Interne et non récurrent : jamais proposé.
+  assert.equal(toPrepare({ ...row, kind: "internal", recurring: false }, 2027), false);
+});

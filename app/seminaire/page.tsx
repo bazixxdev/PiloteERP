@@ -59,7 +59,7 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
             projectId: r.project.id, name: r.project.name, pole: r.project.pole.name, pilot: r.project.pilot.name,
             sourceId: r.source?.id ?? null, sourceYear: r.source?.year ?? null, sourceStatus: r.source ? refLabel(refs, "edition_status", r.source.status) : null,
             nextId: r.next?.id ?? null, nextStatus: r.next ? refLabel(refs, "edition_status", r.next.status) : null, nextColor: r.next ? refColor(refs, "edition_status", r.next.status) : null,
-            decision: r.decision,
+            decision: r.decision, kind: r.project.kind, recurring: r.project.recurring,
           }))}
         />
       </Section>

@@ -11,7 +11,7 @@ const Filter = ({ label, children }: { label: string; children: React.ReactNode 
 );
 
 // Barre de filtres V2 : des sélecteurs discrets à gauche, l'année à droite.
-export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, showPole = true }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string; perimetre?: string }; thisQuarter: string; year: number; showPole?: boolean }) {
+export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, showPole = true }: { poles: Opt[]; statuses: Opt[]; current: { pole: string; statut: string; alerte: string; trimestre: string; perimetre?: string; type?: string }; thisQuarter: string; year: number; showPole?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const set = (key: string, value: string) => {
@@ -49,6 +49,13 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, 
           <Select className={sel} value={current.trimestre} onChange={(e) => set("trimestre", e.target.value)} aria-label="Filtrer par trimestre">
             <option value="">Toute l'année</option>
             <option value={thisQuarter}>Ce trimestre ({thisQuarter.replace("-", " ")})</option>
+          </Select>
+        </Filter>
+        <Filter label="Type">
+          <Select className={sel} value={current.type ?? ""} onChange={(e) => set("type", e.target.value)} aria-label="Filtrer le portefeuille par type" data-testid="portfolio-type">
+            <option value="">Tous</option>
+            <option value="finances">Financés</option>
+            <option value="internes">Internes</option>
           </Select>
         </Filter>
       </div>

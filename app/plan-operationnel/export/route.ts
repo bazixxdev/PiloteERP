@@ -19,14 +19,19 @@ export async function GET(req: Request) {
     [{ project: { pole: { name: "asc" } } }, { project: { mission: { order: "asc" } } }, { project: { name: "asc" } }],
   );
   const refs = await getRefs();
-  const byPole = new Map<string, typeof editions>();
-  for (const e of editions) byPole.set(e.project.pole.name, [...(byPole.get(e.project.pole.name) ?? []), e]);
+  // Projets internes (spec actions § 2) : jamais mêlés aux projets financés, sous leur propre chapitre, en fin de document.
+  const funded = editions.filter((e) => e.project.kind !== "internal");
+  const internal = editions.filter((e) => e.project.kind === "internal");
+  const byPole = new Map<string, typeof funded>();
+  for (const e of funded) byPole.set(e.project.pole.name, [...(byPole.get(e.project.pole.name) ?? []), e]);
   const children: Paragraph[] = [
     new Paragraph({ text: `Plan opérationnel ${year} — ${V.orgLong}`, heading: HeadingLevel.TITLE }),
     new Paragraph({ text: `${editions.length} fiche${editions.length > 1 ? "s" : ""} projet · assemblé le ${fmtDate(new Date())} depuis Pilote (prototype). Chaque fiche est au format du gabarit « Fiche projet ».` }),
     new Paragraph({ text: "Sommaire", heading: HeadingLevel.HEADING_1 }),
     ...[...byPole.entries()].flatMap(([pole, list]) => [new Paragraph({ text: pole, heading: HeadingLevel.HEADING_2 }), ...list.map((e) => new Paragraph({ text: `• ${e.project.name} — ${e.project.mission.name} — ${V.pilote.one} ${e.project.pilot.name}` }))]),
-    ...editions.flatMap((e) => ficheParagraphs(e, refs, { nested: true })),
+    ...(internal.length ? [new Paragraph({ text: "Structuration interne", heading: HeadingLevel.HEADING_2 }), ...internal.map((e) => new Paragraph({ text: `• ${e.project.name} — ${V.pilote.one} ${e.project.pilot.name}` }))] : []),
+    ...funded.flatMap((e) => ficheParagraphs(e, refs, { nested: true })),
+    ...(internal.length ? [new Paragraph({ text: "Structuration interne", heading: HeadingLevel.TITLE, pageBreakBefore: true }), ...internal.flatMap((e) => ficheParagraphs(e, refs, { nested: true }))] : []),
   ];
   const doc = new Document({ sections: [{ children }] });
   const buffer = await Packer.toBuffer(doc);

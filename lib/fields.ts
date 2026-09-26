@@ -68,7 +68,11 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     arrivedAt: { type: "date", label: "Arrivée" }, leftAt: { type: "date", label: "Départ" }, note: { type: "textarea", label: "Note" },
     role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" }, email: { type: "text" },
   },
-  project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" }, archived: { type: "bool" } },
+  project: {
+    name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" }, archived: { type: "bool" },
+    // Projet interne (26/09, spec actions § 2) : jamais signalé sans financement, reconduit au séminaire seulement s'il est récurrent.
+    kind: { type: "select", label: "Type", help: "Un projet interne structure la maison : site, outils, contenus ; il n'est jamais signalé sans financement." },
+  },
   editionPersonDays: { soldDays: { type: "number" }, plannedDays: { type: "number" }, availableDays: { type: "number" } },
   expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" }, actionId: { type: "select" } },
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },

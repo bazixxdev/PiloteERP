@@ -47,3 +47,33 @@ test("la liste des projets dit l'état ; la fiche porte l'identité, les éditio
   await iAm(page, "Maxime Roussel");
   await expect(page.getByTestId("project-strategicAxis")).toHaveAttribute("data-readonly", "true");
 });
+
+test("un projet passé interne disparaît de « sans financement » et se retrouve dans le filtre Internes du portefeuille", async ({ page }) => {
+  // Vie statutaire (REP-04) : un projet financé sans aucune ligne de financement, signalé « sans financement » dans la matrice.
+  await page.goto("/matrice");
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/matrice");
+  await expect(page.getByTestId("matrix-row-REP-04")).toHaveAttribute("data-orphan", "1");
+  await expect(page.getByTestId("matrix-attention")).toContainText("Vie statutaire");
+
+  // Sur sa fiche : le type passe à interne, avec l'aide qui l'explique.
+  await page.goto("/projets");
+  await page.getByTestId("projects-search").fill("Vie statutaire");
+  await page.getByTestId("projects-search").press("Enter");
+  await page.locator("[data-testid^=project-open-]").first().click();
+  await expect(page.getByTestId("project-page")).toBeVisible();
+  await expect(page.getByTestId("project-identity")).toContainText("jamais signalé sans financement");
+  await pick(page, "project-kind", "Interne");
+  await page.waitForTimeout(500);
+
+  // La matrice : plus de ligne du tout (ni orphelin, ni « sans financement »).
+  await page.goto("/matrice");
+  await expect(page.getByTestId("matrix-row-REP-04")).toHaveCount(0);
+  await expect(page.getByTestId("matrix-attention")).not.toContainText("Vie statutaire");
+
+  // Le portefeuille : visible sous « Internes », absent sous « Financés ».
+  await page.goto("/portefeuille?type=internes");
+  await expect(page.getByTestId("portfolio-table")).toContainText("Vie statutaire");
+  await page.goto("/portefeuille?type=finances");
+  await expect(page.getByTestId("portfolio-table")).not.toContainText("Vie statutaire");
+});

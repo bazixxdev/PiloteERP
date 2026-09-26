@@ -26,7 +26,12 @@ export function prepareInstance(instances: string[], chosen?: string | null): st
 
 // Une ligne de « Préparer {year} » à décider en lot : pas encore d'année `year`, une année source qui est bien `year - 1`
 // (la reconduction décale d'un an, pas plus : batchCreateEditions refuse le reste), et pas déjà arrêtée pour `year`.
-// Les projets rangés (archivés) ne sont pas listés du tout.
-export function toPrepare(r: { nextId: string | null; sourceId: string | null; sourceYear: number | null; decision: string | null }, year: number): boolean {
-  return !r.nextId && Boolean(r.sourceId) && r.sourceYear === year - 1 && r.decision !== "stop";
+// Les projets rangés (archivés) ne sont pas listés du tout. Un projet interne (spec actions § 2) n'est proposé que s'il
+// est récurrent : `kind`/`recurring` absents (anciens appels, tests) ne changent rien, seul un projet explicitement interne
+// et non récurrent est écarté.
+export function toPrepare(r: { nextId: string | null; sourceId: string | null; sourceYear: number | null; decision: string | null; kind?: string | null; recurring?: boolean }, year: number): boolean {
+  if (!r.nextId && Boolean(r.sourceId) && r.sourceYear === year - 1 && r.decision !== "stop") {
+    return r.kind !== "internal" || Boolean(r.recurring);
+  }
+  return false;
 }

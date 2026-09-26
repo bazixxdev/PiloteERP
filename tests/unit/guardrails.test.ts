@@ -34,7 +34,7 @@ const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
   convention: "reference scheme label description startYear endYear status form amountRequested amountKind amountNotified targetProjectId deadline ownerId helpers sources decisionNote submittedAt notifiedAt signedAt notes contactId",
   indicator: "label target actual imposed actionId",
   person: "name firstName lastName jobTitle phone arrivedAt leftAt note role workRhythm availableDays poleId active email",
-  project: "name analyticCode poleId pilotId guarantorId missionId strategicAxis recurring archived",
+  project: "name analyticCode poleId pilotId guarantorId missionId strategicAxis recurring archived kind",
   editionPersonDays: "soldDays plannedDays availableDays",
   expense: "label supplier committed spent status reference nature actionId",
   rhythm: "label hoursEven hoursOdd",

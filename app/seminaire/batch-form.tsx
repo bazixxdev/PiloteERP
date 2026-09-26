@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { toPrepare, type PrepareChoice } from "@/lib/preparer";
 import { V, cap, au, pl, le } from "@/lib/vocab";
 
-type Row = { projectId: string; name: string; pole: string; pilot: string; sourceId: string | null; sourceYear: number | null; sourceStatus: string | null; nextId: string | null; nextStatus: string | null; nextColor: string | null; decision: string | null };
+type Row = { projectId: string; name: string; pole: string; pilot: string; sourceId: string | null; sourceYear: number | null; sourceStatus: string | null; nextId: string | null; nextStatus: string | null; nextColor: string | null; decision: string | null; kind: string; recurring: boolean };
 type Decision = PrepareChoice;
 
 const OPTS: { value: Decision; label: string; cls: string }[] = [
@@ -54,7 +54,7 @@ export function BatchForm({ year, rows, canRun, instances }: { year: number; row
                     <span className="text-xs text-danger">arrêté</span>
                   ) : r.sourceId && r.sourceYear !== year - 1 ? (
                     <span className="text-xs text-muted-foreground">{`depuis ${r.sourceYear} : à reconduire depuis sa page`}</span>
-                  ) : r.sourceId && canRun ? (
+                  ) : r.sourceId && canRun && toPrepare(r, year) ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="inline-flex overflow-hidden rounded-full border" role="radiogroup">
                         {OPTS.map((o) => (
