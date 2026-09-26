@@ -21,6 +21,12 @@ export function allocationCheck(c: ConventionLike, lineId: string, newGranted: n
   return { ok: true };
 }
 
+// Une affectation détachée n'est supprimée que si rien n'y tient : ni montant, ni livrable, ni pièce, ni paiement, ni action —
+// par l'ancien fundingLineId (gardé jusqu'au contract) comme par ActionFunding (26/09, FK Restrict : sinon la suppression lève P2003).
+export function detachedLineIsEmpty(line: { amountRequested: number | null; amountGranted: number | null; deliverables: unknown[]; attachments: unknown[]; actions: unknown[]; actionFundings: unknown[]; payments: unknown[] }): boolean {
+  return !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0 && line.actionFundings.length === 0 && line.payments.length === 0;
+}
+
 export function conventionCovers(c: { startYear: number; endYear: number }, year: number): boolean {
   return c.startYear <= year && year <= c.endYear;
 }

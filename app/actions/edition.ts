@@ -9,7 +9,7 @@ import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
-import { allocationCheck, conventionCovers, reusableLine } from "@/lib/conventions";
+import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
 import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -313,11 +313,11 @@ export async function createConvention(input: { funderId: string; reference: str
 export async function detachFundingLineFromConvention(lineId: string): Promise<Result<{ deleted: boolean }>> {
   const me = await getCurrentPerson();
   if (!canEditFunding(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) modifie les affectations.` };
-  const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true, payments: true } });
+  const line = await prisma.fundingLine.findUnique({ where: { id: lineId }, include: { deliverables: true, attachments: true, actions: true, actionFundings: true, payments: true } });
   if (!line || !line.conventionId) return { ok: false, error: "Affectation introuvable." };
   // Un paiement est un usage métier, même attendu : ne jamais supprimer la
   // ligne parente et laisser la FK Cascade effacer son historique financier.
-  const empty = !line.amountRequested && !line.amountGranted && line.deliverables.length === 0 && line.attachments.length === 0 && line.actions.length === 0 && line.payments.length === 0;
+  const empty = detachedLineIsEmpty(line);
   if (empty) await prisma.fundingLine.delete({ where: { id: lineId } });
   else await prisma.fundingLine.update({ where: { id: lineId }, data: { conventionId: null } });
   revalidatePath("/", "layout");

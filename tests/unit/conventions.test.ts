@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allocationCheck, allocationOf, conventionCovers, reusableLine } from "../../lib/conventions";
+import { allocationCheck, allocationOf, conventionCovers, detachedLineIsEmpty, reusableLine } from "../../lib/conventions";
 
 // Financements pluriannuels (question de Gaël, 26/09) : un dossier sur une seule année ne suit pas le projet l'année
 // suivante (la ligne reconduite repart « à déposer ») ; un dossier sur plusieurs années reste rattaché et plafonne ses affectations.
@@ -40,4 +40,16 @@ test("rattacher une année à un dossier reprend sa ligne libre du même finance
   // Deux lignes libres du même financeur : on ne devine pas.
   assert.equal(reusableLine([ademe, { id: "l4", funderId: "ademe", conventionId: null }], "ademe"), null);
   assert.equal(reusableLine([], "ademe"), null);
+});
+
+// 26/09 (actions composantes) : ActionFunding → FundingLine est Restrict. Une affectation encore liée à une action par
+// ActionFunding (ex. lien copié par la migration, ancien fundingLineId vidé ensuite) n'est pas « vide » : on la détache sans la
+// supprimer, au lieu d'une erreur P2003 non gérée.
+test("une affectation détachée n'est supprimée que si aucune action n'y tient, ni par fundingLineId ni par ActionFunding", () => {
+  const empty = { amountRequested: null, amountGranted: null, deliverables: [], attachments: [], actions: [], actionFundings: [], payments: [] };
+  assert.equal(detachedLineIsEmpty(empty), true);
+  assert.equal(detachedLineIsEmpty({ ...empty, actionFundings: [{ actionId: "a1" }] }), false);
+  assert.equal(detachedLineIsEmpty({ ...empty, actions: [{ id: "a1" }] }), false);
+  assert.equal(detachedLineIsEmpty({ ...empty, payments: [{ id: "p1" }] }), false);
+  assert.equal(detachedLineIsEmpty({ ...empty, amountGranted: 1000 }), false);
 });
