@@ -323,7 +323,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
           </Section>
           {ficheLevels && (
-            <Section title="Circuit de validation des fiches" description={`Les niveaux qui valident la fiche d'${V.edition.one}, dans l'ordre : chacun n'est proposé qu'une fois le précédent validé ; le dernier verrouille la fiche. Qui décide à un niveau : les rôles qui tiennent son droit (Rôles et droits), jamais ${le(V.pilote)} sur sa propre fiche.`} testId="fiche-levels-section" className="lg:col-span-2">
+            <Section title="Circuit de validation des fiches" description={`Les niveaux qui valident la fiche ${de(V.edition)}, dans l'ordre : chacun n'est proposé qu'une fois le précédent validé ; le dernier verrouille la fiche. Qui décide à un niveau : les rôles qui tiennent son droit (Rôles et droits), jamais ${le(V.pilote)} sur sa propre fiche. Attention : ajouter ou réactiver un niveau le fait attendre à toutes les fiches, et celles des ${pl(V.edition)} en cours se rouvrent jusqu'à sa décision ; à l'inverse, désactiver un niveau verrouille les fiches qui n'attendaient plus que lui.`} testId="fiche-levels-section" className="lg:col-span-2">
               {/* Clé = l'état en base : après « Enregistrer », le formulaire repart des niveaux relus (ids des niveaux créés compris). */}
               <FicheLevelsForm key={ficheLevels.levels.map((l) => `${l.id}:${l.label}:${l.permission}:${l.active}`).join("|")} levels={ficheLevels.levels} permissions={ficheLevels.permissions} readOnly={!rw} />
             </Section>

@@ -89,6 +89,29 @@ test("la direction valide le niveau 1, le CA le niveau 2 : la fiche se verrouill
   await expect(page.getByTestId("changelog")).toContainText("CA : à retravailler");
 });
 
+test("« à retravailler » sur une année en cours : la fiche se rouvre, le circuit repart, l'année reste en cours", async ({ page }) => {
+  const fiche = await createProject(page, "Projet recette en cours", "REC-13C", "Thomas Guérin");
+  // Circuit terminé et année en cours (posés en base : les deux validations et le passage en cours).
+  const e = await prisma.edition.findFirstOrThrow({ where: { project: { analyticCode: "REC-13C" } }, select: { id: true } });
+  const [claire, nadia] = await Promise.all(["Claire Vasseur", "Nadia Ferrand"].map((name) => prisma.person.findFirstOrThrow({ where: { name }, select: { id: true } })));
+  await prisma.ficheValidation.createMany({ data: [
+    { editionId: e.id, levelId: "fvl_1", decision: "approved", deciderId: claire.id, decidedAt: new Date(Date.now() - 120_000) },
+    { editionId: e.id, levelId: "fvl_2", decision: "approved", deciderId: nadia.id, decidedAt: new Date(Date.now() - 60_000) },
+  ] });
+  await prisma.edition.update({ where: { id: e.id }, data: { status: "in_progress" } });
+  await page.goto(fiche);
+  const layer = page.getByTestId("layer-validation");
+  await expect(page.getByTestId("fiche-locked")).toBeVisible();
+  await expect(page.getByTestId("edition-status")).toContainText("En cours");
+  await expect(layer.getByTestId("fiche-reopen-hint")).toContainText("une année en cours le reste");
+  await layer.getByTestId("fiche-reopen").locator("summary").click();
+  await decide(page, "rework", "Public à revoir");
+  await expect(page.getByTestId("fiche-locked")).toHaveCount(0);
+  await expect(page.getByTestId("edition-status")).toContainText("En cours");
+  await expect(layer.getByTestId("fiche-level-1")).toContainText("à décider");
+  expect((await prisma.edition.findUniqueOrThrow({ where: { id: e.id } })).status).toBe("in_progress");
+});
+
 test("le pilote ne décide pas sa propre fiche : pas de bouton, et l'impasse est dite quand lui seul tient le droit", async ({ page }) => {
   const fiche = await createProject(page, "Projet recette sa propre fiche", "REC-13B", "Claire Vasseur");
   await page.goto(fiche);

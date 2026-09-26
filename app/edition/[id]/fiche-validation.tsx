@@ -28,6 +28,8 @@ type Props = {
   // Décisions des tours précédents (avant le dernier « à retravailler ») : lisibles, repliées.
   past: PastDecisionView[];
   complete: boolean;
+  // Année close (bilan fait) : le circuit ne se rouvre plus, on ne dit donc pas comment le rouvrir.
+  closed: boolean;
   // Ce que je peux faire ici, calculé côté serveur par la garde de decideFiche (ficheDecisionRefusal) — la commande revérifie.
   can: { approved: boolean; rework: boolean; refused: boolean };
   // Pourquoi je ne décide pas le niveau en attente (sa propre fiche, pas le droit…), et l'impasse éventuelle du niveau
@@ -58,7 +60,7 @@ export function FicheValidationSection(p: Props) {
   const decideForm = (
     <form className="mt-3 grid gap-2 rounded-md border bg-muted/40 p-3" onSubmit={(e) => e.preventDefault()} data-testid="fiche-decide">
       <label className="grid gap-1 text-xs">
-        <span className="font-semibold">{p.complete ? "Rouvrir la fiche validée : dites quoi reprendre" : `Décision au niveau « ${next?.label ?? ""} »`} <span className="font-normal text-muted-foreground">(commentaire obligatoire pour « À retravailler » et « Refuser »)</span></span>
+        <span className="font-semibold">{p.complete ? "Rouvrir la fiche validée : dites quoi reprendre" : `Décision au niveau « ${next?.label ?? ""} »`} <span className="font-normal text-muted-foreground">{p.complete ? "(commentaire obligatoire)" : "(commentaire obligatoire pour « À retravailler » et « Refuser »)"}</span></span>
         <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={2000} className="rounded-md border bg-card p-2 text-sm" placeholder="Ce qui est validé, ce qui est à reprendre, pourquoi…" data-testid="fiche-decide-comment" />
       </label>
       <div className="flex flex-wrap gap-2">
@@ -103,7 +105,7 @@ export function FicheValidationSection(p: Props) {
       )}
 
       {/* Fiche validée : comment elle se rouvre, dit à tous (le bouton, lui, n'est qu'à qui tient le droit du dernier niveau). */}
-      {p.complete && last && <p className="mt-2 text-xs text-muted-foreground lg:ml-9" data-testid="fiche-reopen-hint">{`Fiche validée : elle se rouvre par « À retravailler » au dernier niveau (« ${last.label} »), par qui en tient le droit ; le circuit repart alors du premier niveau.`}</p>}
+      {p.complete && !p.closed && last && <p className="mt-2 text-xs text-muted-foreground lg:ml-9" data-testid="fiche-reopen-hint">{`Fiche validée : elle se rouvre par « À retravailler » au dernier niveau (« ${last.label} »), par qui en tient le droit ; le circuit repart alors du premier niveau (une année en cours le reste).`}</p>}
       {p.deadEnd && <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning-foreground lg:ml-9" data-testid="fiche-level-dead-end">{p.deadEnd}</p>}
       {p.blocked && !anyAction && <p className="mt-2 text-xs text-muted-foreground lg:ml-9" data-testid="fiche-decide-blocked">{p.blocked}</p>}
 

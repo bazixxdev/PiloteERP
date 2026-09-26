@@ -34,13 +34,17 @@ export function isCircuitComplete(levels: Level[], decisions: Decision[]): boole
   return active(levels).length > 0 && nextLevel(levels, decisions) === null;
 }
 
-// Statut de l'année après une décision : « validée » au bout du circuit (sans faire reculer une année déjà en cours ou
-// close), « re-challengée » après un « à retravailler », inchangé sinon (un refus garde l'année telle quelle).
+// Statut de l'année après une décision (la seule règle) : « validée » au bout du circuit, « re-challengée » après un « à
+// retravailler », inchangé sinon (un refus garde l'année telle quelle). Une année en cours ou close ne recule jamais : en
+// cours, « à retravailler » rouvre la fiche (le circuit repart) mais l'année s'exécute, elle reste en cours (décision du
+// contrôleur, 26/09) ; close, elle ne se décide plus (ficheDecisionRefusal).
+const EXECUTING = ["in_progress", "closed"];
 export function statusAfter(levels: Level[], decisions: Decision[], current: string): string {
   const last = byDate(decisions).at(-1);
+  if (EXECUTING.includes(current)) return current;
   if (last?.decision === "rework") return "rechallenged";
   if (!isCircuitComplete(levels, decisions)) return current;
-  return current === "in_progress" || current === "closed" ? current : "validated";
+  return "validated";
 }
 
 // Ce que la fiche affiche : chaque niveau actif, sa dernière décision du tour courant, et lequel est à décider.

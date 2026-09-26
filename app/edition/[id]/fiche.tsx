@@ -129,7 +129,7 @@ export function FicheTab({ e, me, refs, isPilot, isTeam, people, organisations, 
           const chapters = layer.key === "validation";
           return (<Fragment key={layer.key}>
             {chapters ? (
-              <FicheValidationSection editionId={e.id} no={layer.no} title={layer.title} owner={circuit.owner} steps={circuit.steps} past={circuit.past} complete={circuit.complete} can={circuit.can} blocked={circuit.blocked} deadEnd={circuit.deadEnd} />
+              <FicheValidationSection editionId={e.id} no={layer.no} title={layer.title} owner={circuit.owner} steps={circuit.steps} past={circuit.past} complete={circuit.complete} closed={e.status === "closed"} can={circuit.can} blocked={circuit.blocked} deadEnd={circuit.deadEnd} />
             ) : <FicheLayer
               key={layer.key} editionId={e.id} layerKey={layer.key} no={layer.no} title={layer.title} owner={layer.owner}
               ownerMissingLabel={LAYER_OWNER_LABEL[layer.key]} fields={layerFields(layer)} writable={writable} defaultEditing={writable && !layerFilled(layer)} optional={layer.optional} hideCount={locked}

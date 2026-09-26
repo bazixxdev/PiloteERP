@@ -38,6 +38,16 @@ test("un circuit terminé ne fait pas reculer une année déjà en cours ou clos
   assert.equal(statusAfter(L, done, "rechallenged"), "validated");
 });
 
+test("« à retravailler » sur une année en cours : le circuit repart, l'année reste en cours ; validée → re-challengée", () => {
+  const reopened = [d("l1", "approved", 1), d("l2", "approved", 2), d("l2", "rework", 3)];
+  assert.equal(statusAfter(L, reopened, "in_progress"), "in_progress");
+  assert.equal(isCircuitComplete(L, reopened), false);
+  assert.equal(nextLevel(L, reopened)?.id, "l1");
+  assert.equal(statusAfter(L, reopened, "validated"), "rechallenged");
+  assert.equal(statusAfter(L, reopened, "rechallenged"), "rechallenged");
+  assert.equal(statusAfter(L, reopened, "closed"), "closed");
+});
+
 test("sans niveau actif, le circuit n'est jamais terminé", () => {
   const off = L.map((l) => ({ ...l, active: false }));
   assert.equal(isCircuitComplete(off, []), false);

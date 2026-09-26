@@ -31,14 +31,18 @@ test("après migration : toute codirDecision est validée au niveau 1 et consign
     const oldLocked = (e: (typeof editions)[number]) => LOCKED_STATUSES.includes(e.status) || Boolean(e.codirDecision);
     const newLocked = editions.filter((e) => isLocked(e, levels));
     const before = editions.filter(oldLocked);
-    const differ = editions.filter((e) => oldLocked(e) !== isLocked(e, levels));
+    // Cas accepté (décision du contrôleur) : une décision CODIR sans validation du CA verrouillait la fiche ; dans le circuit,
+    // le niveau CA attend encore. Compté à part, hors de l'égalité des verrous.
+    const codirWithoutBoard = (e: (typeof editions)[number]) => Boolean(e.codirDecision) && !e.boardValidated;
+    const accepted = editions.filter((e) => codirWithoutBoard(e) && oldLocked(e) !== isLocked(e, levels));
+    const differ = editions.filter((e) => !codirWithoutBoard(e) && oldLocked(e) !== isLocked(e, levels));
     console.log(JSON.stringify({
       editions: editions.length, codirDecision: withCodir.length, boardValidated: editions.filter((e) => e.boardValidated).length,
       ficheValidation: byDecision.map((r) => `${r.levelId}:${r.decision}=${r._count._all}`), dprepDecisions: prep,
-      lockedOld: before.length, lockedNew: newLocked.length,
+      lockedOld: before.length, lockedNew: newLocked.length, codirWithoutBoard: editions.filter(codirWithoutBoard).length, unlockedCodirWithoutBoard: accepted.length,
       differ: differ.map((e) => ({ id: e.id, status: e.status, codirDecision: e.codirDecision, boardValidated: e.boardValidated })),
     }));
-    assert.equal(differ.length, 0, "verrou différent de l'ancienne règle (codirDecision posée ou statut verrouillé)");
+    assert.equal(differ.length, 0, "verrou différent de l'ancienne règle (codirDecision posée ou statut verrouillé), hors décision CODIR sans CA");
   } finally {
     await prisma.$disconnect();
   }
