@@ -7,13 +7,6 @@ import { W, cap, pl } from "./vocab";
 
 test("une fiche validée est verrouillée : la modification passe par une proposition, acceptée par le pilote et tracée", async ({ page }) => {
   await page.goto("/portefeuille");
-  // Circuit par niveaux (26/09, tâche 13) : la fiche 2026 du Forum a été « à ajuster » au niveau 1 (migré en « à retravailler »)
-  // puis validée par le CA : le niveau 1 attend de nouveau. La direction le valide, la fiche se verrouille.
-  await iAm(page, "Claire Vasseur");
-  await openEditionByName(page, "Forum régional de l'ESS");
-  await expect(page.getByTestId("fiche-level-1")).toContainText("à décider");
-  await page.getByTestId("fiche-decide-approved").click();
-  await expect(page.getByTestId("fiche-locked")).toBeVisible();
   await iAm(page, "Hugo Lemaire");
   await openEditionByName(page, "Forum régional de l'ESS");
   await expect(page.getByTestId("fiche-locked")).toBeVisible();

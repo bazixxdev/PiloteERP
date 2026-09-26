@@ -10,6 +10,7 @@ import { REF_DEFAULTS } from "../../lib/refs";
 import { DEFAULT_ROLES, serializePermissions } from "../../lib/permissions";
 import { DEFAULT_RHYTHMS } from "../../lib/time";
 import { V, cap, le } from "../../lib/vocab";
+import { isPrepareChoice, prepareDecisionBody } from "../../lib/preparer";
 
 export type Common = {
   passwordHash: string;
@@ -160,10 +161,17 @@ export async function setActionFunding(prisma: PrismaClient, actionId: string, f
   await prisma.actionFunding.create({ data: { actionId, fundingLineId, amount: null } });
 }
 
-// Circuit de validation (26/09) : ce que la migration 20260927090000 tire de codirDecision / boardValidated d'une année, pour
-// qu'une base semée se lise comme une base migrée — renew → approved, adjust → rework, stop → refused « arrêt décidé » au
-// niveau 1 (à codirDate) ; boardValidated → approved au niveau 2 (à boardDate). Les anciennes colonnes restent écrites.
-export async function seedFicheValidations(prisma: PrismaClient, e: { id: string; codirDecision: string | null; codirDate: Date | null; boardValidated: boolean; boardDate: Date | null; updatedAt: Date }, deciderId: string) {
-  if (e.codirDecision) await prisma.ficheValidation.create({ data: { id: `fv1_${e.id}`, editionId: e.id, levelId: "fvl_1", decision: e.codirDecision === "renew" ? "approved" : e.codirDecision === "adjust" ? "rework" : "refused", comment: e.codirDecision === "stop" ? "arrêt décidé" : null, deciderId, decidedAt: e.codirDate ?? e.updatedAt } });
+// Circuit de validation (26/09) : ce que les migrations 20260927090000 et 20260927100000 tirent de codirDecision /
+// boardValidated d'une année, pour qu'une base semée se lise comme une base migrée. codirDecision avait deux sens : la fiche
+// validée (toute valeur → approved au niveau 1, à codirDate) et la décision pour l'année suivante (une Decision
+// « Reconduit / Ajusté / Arrêté pour {année + 1} », instance codir) ; boardValidated → approved au niveau 2 (à boardDate).
+// Les anciennes colonnes restent écrites.
+export async function seedFicheValidations(prisma: PrismaClient, e: { id: string; year: number; codirDecision: string | null; codirDate: Date | null; boardValidated: boolean; boardDate: Date | null; updatedAt: Date }, deciderId: string) {
+  if (e.codirDecision) {
+    const decidedAt = e.codirDate ?? e.updatedAt;
+    await prisma.ficheValidation.create({ data: { id: `fv1_${e.id}`, editionId: e.id, levelId: "fvl_1", decision: "approved", comment: null, deciderId, decidedAt } });
+    const choice = isPrepareChoice(e.codirDecision) ? e.codirDecision : "stop";
+    await prisma.decision.create({ data: { id: `dprep_${e.id}`, editionId: e.id, instance: "codir", body: prepareDecisionBody(choice, e.year + 1), authorId: deciderId, decidedAt } });
+  }
   if (e.boardValidated) await prisma.ficheValidation.create({ data: { id: `fv2_${e.id}`, editionId: e.id, levelId: "fvl_2", decision: "approved", comment: null, deciderId, decidedAt: e.boardDate ?? e.updatedAt } });
 }
