@@ -60,6 +60,23 @@ test.describe("SEC-32 — commandes de l'action", () => {
     expect(after.people.map((p) => p.personId).sort()).toEqual(before.people.map((p) => p.personId).sort());
   });
 
+  test("une personne associée ne se nomme pas responsable par saveField ; le responsable, lui, passe la main", async ({ baseURL }) => {
+    const url = String(baseURL);
+    const lucas = await prisma.person.findUniqueOrThrow({ where: { email: SECURITY_ACTORS.contributor.email }, select: { id: true } });
+    const id = fixture("associate");
+    const before = await prisma.action.findUniqueOrThrow({ where: { id }, select: { ownerId: true } });
+    const grab = await call(url, "app/actions/fields.ts", "saveField", ["action", id, "ownerId", lucas.id]);
+    expect(grab).toContain('"ok":false');
+    expect(grab).toMatch(/Vous ne pouvez pas/);
+    expect((await prisma.action.findUniqueOrThrow({ where: { id }, select: { ownerId: true } })).ownerId).toBe(before.ownerId);
+    // Positif : responsable d'une action, il la confie à la direction.
+    const owned = fixture("owned");
+    const director = await prisma.person.findUniqueOrThrow({ where: { email: SECURITY_ACTORS.director.email }, select: { id: true } });
+    const hand = await call(url, "app/actions/fields.ts", "saveField", ["action", owned, "ownerId", director.id]);
+    expect(hand).toContain('"ok":true');
+    expect((await prisma.action.findUniqueOrThrow({ where: { id: owned }, select: { ownerId: true } })).ownerId).toBe(director.id);
+  });
+
   test("l'équipe d'une AUTRE année que la période couvre modifie l'action (runsIn), pas seulement celle de sa création", async ({ baseURL }) => {
     const id = fixture("multiyear");
     const body = await call(String(baseURL), FILE, "addMilestone", [id, { date: "2027-06-15", label: "SEC32_MULTIYEAR_MILESTONE" }]);

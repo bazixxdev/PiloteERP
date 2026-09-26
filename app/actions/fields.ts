@@ -11,7 +11,7 @@ import { activePerson } from "@/lib/actions-write-db";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
-import { V, cap, le, de, ce, seul } from "@/lib/vocab";
+import { V, cap, le, de, du, ce, seul } from "@/lib/vocab";
 import { reportInternalError } from "@/lib/errors";
 
 export type SaveResult = { ok: true } | { ok: false; code?: string; error: string };
@@ -37,8 +37,11 @@ async function allowed(model: Model, id: string, field: string, personId: string
   }
   if (model === "action") {
     // Même règle que les commandes de l'action (app/actions/actions.ts) : toutes les années que sa période couvre.
-    const { a, can } = await actionCtx(id, { ...me, id: personId, poleId: myPoleId });
+    const { a, can, canManagePeople } = await actionCtx(id, { ...me, id: personId, poleId: myPoleId });
     if (!a) return `${cap(V.action)} introuvable`;
+    // Changer de responsable, c'est gérer les personnes de l'action : un simple associé ne se nomme pas responsable
+    // (il gagnerait la gestion de la liste). Même droit que setActionPeople.
+    if (field === "ownerId") return canManagePeople ? null : `Vous ne pouvez pas changer le responsable ${du(V.action)} : son responsable ou l'équipe de l'année le fait.`;
     return can ? null : `Vous ne pouvez pas modifier ${ce(V.action)}.`;
   }
   if (model === "call") return canEditCalls(me) ? null : `Un appel à projets se modifie par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.`;

@@ -81,13 +81,16 @@ export default async function globalSetup(config: FullConfig) {
       ...(lucas.poleId ? { poleId: { not: lucas.poleId }, secondaryPoles: { none: { poleId: lucas.poleId } } } : {}),
     },
   };
-  const outside = await prisma.action.findMany({ where: outsideWhere, orderBy: { id: "asc" }, take: 2, select: { id: true } });
-  if (outside.length < 2) throw new Error("Fixture SEC-32 : pas assez d'actions hors du périmètre du contributeur.");
+  const outside = await prisma.action.findMany({ where: outsideWhere, orderBy: { id: "asc" }, take: 3, select: { id: true } });
+  if (outside.length < 3) throw new Error("Fixture SEC-32 : pas assez d'actions hors du périmètre du contributeur.");
   writeFileSync(path.join(authDir, "../.security-outside-action-id"), outside[0].id);
   // 3. est seulement personne associée d'une troisième : il la modifie, mais ne gère pas la liste et ne la supprime pas ;
   await prisma.actionPerson.createMany({ data: [{ actionId: outside[1].id, personId: lucas.id }], skipDuplicates: true });
   writeFileSync(path.join(authDir, "../.security-associate-action-id"), outside[1].id);
-  // 4. une action avec des heures saisies : même la direction ne la supprime pas (« abandonnée » plutôt).
+  // 4. est responsable d'une quatrième (hors de son périmètre sinon) : il peut en passer la responsabilité à quelqu'un d'autre ;
+  await prisma.action.update({ where: { id: outside[2].id }, data: { ownerId: lucas.id } });
+  writeFileSync(path.join(authDir, "../.security-owned-action-id"), outside[2].id);
+  // 5. une action avec des heures saisies : même la direction ne la supprime pas (« abandonnée » plutôt).
   const withHours = await prisma.action.findFirst({ where: { timeEntries: { some: {} }, startDate: { not: null }, endDate: { not: null }, projectId: { not: null } }, orderBy: { id: "asc" }, select: { id: true } });
   if (!withHours) throw new Error("Fixture SEC-32 : aucune action avec des heures.");
   writeFileSync(path.join(authDir, "../.security-hours-action-id"), withHours.id);

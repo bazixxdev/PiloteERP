@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { defaultPeriod, parseDay, periodIncluding, runsIn, validPeriod, type Period } from "./actions";
+import { defaultPeriod, parseDay, periodIncluding, runsIn, validPeriod } from "./actions";
 import { V, cap, adj, ce } from "@/lib/vocab";
 
 // Écritures de l'action, utilisables dans une transaction (Prisma.TransactionClient). Pas de « use server » : les gardes sont
@@ -42,17 +42,21 @@ export async function createActionTx(tx: Tx, data: NewAction) {
   return tx.action.create({ data: { ...data, order, state: "todo" } });
 }
 
-// Un jalon hors de la période l'étend (periodIncluding) : dans la même transaction que le jalon.
-export async function extendPeriodTx(tx: Tx, action: { id: string } & Period, date: Date) {
-  const p = periodIncluding(action, date);
-  if (p.startDate.getTime() !== action.startDate.getTime() || p.endDate.getTime() !== action.endDate.getTime()) {
-    await tx.action.update({ where: { id: action.id }, data: p });
+// Un jalon hors de la période l'étend (periodIncluding) : dans la même transaction que le jalon, sur la période lue DANS la
+// transaction (pas celle lue avant, par la garde).
+export async function extendPeriodTx(tx: Tx, actionId: string, date: Date) {
+  const a = await tx.action.findUnique({ where: { id: actionId }, select: { startDate: true, endDate: true } });
+  if (!a?.startDate || !a.endDate) return;
+  const cur = { startDate: a.startDate, endDate: a.endDate };
+  const p = periodIncluding(cur, date);
+  if (p.startDate.getTime() !== cur.startDate.getTime() || p.endDate.getTime() !== cur.endDate.getTime()) {
+    await tx.action.update({ where: { id: actionId }, data: p });
   }
 }
 
-export async function addMilestoneTx(tx: Tx, action: { id: string } & Period, input: { date: Date; label: string; isPublic?: boolean; isCheckpoint?: boolean }) {
-  const order = await tx.milestone.count({ where: { actionId: action.id } });
-  const m = await tx.milestone.create({ data: { actionId: action.id, date: input.date, label: input.label.trim() || "Jalon", isPublic: Boolean(input.isPublic), isCheckpoint: Boolean(input.isCheckpoint), order } });
-  await extendPeriodTx(tx, action, input.date);
+export async function addMilestoneTx(tx: Tx, actionId: string, input: { date: Date; label: string; isPublic?: boolean; isCheckpoint?: boolean }) {
+  const order = await tx.milestone.count({ where: { actionId } });
+  const m = await tx.milestone.create({ data: { actionId, date: input.date, label: input.label.trim() || "Jalon", isPublic: Boolean(input.isPublic), isCheckpoint: Boolean(input.isCheckpoint), order } });
+  await extendPeriodTx(tx, actionId, input.date);
   return m;
 }

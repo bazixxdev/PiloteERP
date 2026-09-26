@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, type CurrentPerson } from "@/lib/session";
-import { parseDay, validPeriod } from "@/lib/actions";
+import { milestonesOutside, parseDay, validPeriod } from "@/lib/actions";
+import { fmtDate } from "@/lib/format";
 import { actionCtx, editionActionCtx } from "@/lib/actions-rights-db";
 import { addMilestoneTx, createActionTx, extendPeriodTx, newActionData } from "@/lib/actions-write-db";
 import { V, cap, ce, de, e } from "@/lib/vocab";
@@ -56,7 +57,14 @@ export async function setActionPeriod(actionId: string, startDate: string, endDa
   if (!s || !en) return { ok: false, error: "Date invalide." };
   const bad = validPeriod(s, en);
   if (bad) return { ok: false, error: bad };
-  await prisma.action.update({ where: { id: actionId }, data: { startDate: s, endDate: en } });
+  // La période contient toujours ses jalons : on ne la resserre pas en laissant un jalon dehors (lu et écrit ensemble).
+  const outside = await prisma.$transaction(async (tx) => {
+    const ms = await tx.milestone.findMany({ where: { actionId }, select: { date: true }, orderBy: { date: "asc" } });
+    const out = milestonesOutside({ startDate: s, endDate: en }, ms.map((m) => m.date));
+    if (out.length === 0) await tx.action.update({ where: { id: actionId }, data: { startDate: s, endDate: en } });
+    return out;
+  });
+  if (outside.length > 0) return { ok: false, error: `Des jalons tomberaient hors de cette période (${outside.map((d) => fmtDate(d)).join(", ")}) : déplacez-les d'abord.` };
   refresh(actionId);
   return { ok: true };
 }
@@ -68,7 +76,7 @@ export async function addMilestone(actionId: string, input: { date: string; labe
   if (!g.ok) return g;
   const date = parseDay(input.date);
   if (!date) return { ok: false, error: "Date invalide." };
-  const m = await prisma.$transaction((tx) => addMilestoneTx(tx, g.a, { ...input, date }));
+  const m = await prisma.$transaction((tx) => addMilestoneTx(tx, actionId, { ...input, date }));
   refresh(actionId);
   return { ok: true, data: { id: m.id } };
 }
@@ -93,7 +101,7 @@ export async function updateMilestone(id: string, patch: { date?: string; label?
       ...(patch.isPublic !== undefined ? { isPublic: Boolean(patch.isPublic) } : {}),
       ...(patch.isCheckpoint !== undefined ? { isCheckpoint: Boolean(patch.isCheckpoint) } : {}),
     } });
-    if (date) await extendPeriodTx(tx, g.a, date);
+    if (date) await extendPeriodTx(tx, m.actionId, date);
   });
   refresh(m.actionId);
   return { ok: true };

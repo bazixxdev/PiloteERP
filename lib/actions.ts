@@ -35,6 +35,12 @@ export function periodIncluding(p: Period, date: Date): Period {
   return { startDate: date < p.startDate ? date : p.startDate, endDate: date > p.endDate ? date : p.endDate };
 }
 
+// L'autre sens de la même règle (la période contient toujours ses jalons) : les dates de jalon qu'une nouvelle période
+// laisserait dehors — comparées au jour (dayOf), pas à l'heure.
+export function milestonesOutside(p: Period, dates: Date[]): Date[] {
+  return dates.filter((d) => beforeDay(d, p.startDate) || beforeDay(p.endDate, d));
+}
+
 export function yearsOf(p: Period): number[] {
   const out: number[] = [];
   for (let y = yearOf(p.startDate); y <= yearOf(p.endDate); y++) out.push(y);

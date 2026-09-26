@@ -122,7 +122,7 @@ export async function addObjective(editionId: string, input: { name: string; own
   // Frontière de transaction : l'objectif et son échéance naissent ensemble, ou pas du tout.
   const a = await prisma.$transaction(async (tx) => {
     const created = await createActionTx(tx, data);
-    if (due) await addMilestoneTx(tx, { id: created.id, startDate: data.startDate, endDate: data.endDate }, { date: due, label: data.name, isCheckpoint: input.isCheckpoint });
+    if (due) await addMilestoneTx(tx, created.id, { date: due, label: data.name, isCheckpoint: input.isCheckpoint });
     return created;
   });
   revalidatePath("/", "layout");

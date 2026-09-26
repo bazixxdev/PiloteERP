@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { actionRights, canEditAction } from "../../lib/rights";
-import { parseDay, periodIncluding } from "../../lib/actions";
+import { milestonesOutside, parseDay, periodIncluding } from "../../lib/actions";
 
 // Même forme d'acteur que les autres tests de droits (lib/roles.ts, Actor) : rôle, permissions, niveau de validation.
 const actor = (permissions: string[]) => ({ id: "me", role: "pilot", permissions, validationLevel: 0, poleId: "pole-a" });
@@ -46,4 +46,12 @@ test("un jalon hors de la période l'étend ; dedans, la période ne bouge pas",
   assert.deepEqual(periodIncluding(p, new Date("2027-03-01")), { startDate: p.startDate, endDate: new Date("2027-03-01") });
   assert.deepEqual(periodIncluding(p, new Date("2025-11-20")), { startDate: new Date("2025-11-20"), endDate: p.endDate });
   assert.deepEqual(periodIncluding(p, new Date("2026-12-31")), p);
+});
+
+test("une période ne laisse aucun jalon dehors : on liste ceux qui tomberaient hors d'elle, au jour près", () => {
+  const p = { startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31") };
+  const inside = [new Date("2026-01-01"), new Date("2026-06-15"), new Date("2026-12-31")];
+  assert.deepEqual(milestonesOutside(p, inside), []);
+  const late = new Date("2027-02-01"), early = new Date("2025-12-01");
+  assert.deepEqual(milestonesOutside(p, [early, ...inside, late]), [early, late]);
 });

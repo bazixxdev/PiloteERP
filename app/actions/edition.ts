@@ -45,8 +45,8 @@ export async function setNextMilestoneDate(actionId: string, date: string): Prom
   await prisma.$transaction(async (tx) => {
     if (next) {
       await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
-      await extendPeriodTx(tx, a, when);
-    } else await addMilestoneTx(tx, a, { date: when, label: a.name });
+      await extendPeriodTx(tx, actionId, when);
+    } else await addMilestoneTx(tx, actionId, { date: when, label: a.name });
   });
   revalidatePath(path(a.editionId));
   return { ok: true };
