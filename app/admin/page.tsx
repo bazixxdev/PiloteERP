@@ -21,6 +21,9 @@ import { InstanceModulesForm } from "./instance-modules-form";
 import { instanceHas, modulesOf } from "@/lib/modules";
 import { loadCategories } from "@/lib/budget-plan-db";
 import { BudgetCategoriesForm } from "./budget-categories";
+import { FicheLevelsForm } from "./fiche-levels";
+import { FICHE_LEVEL_PERMISSIONS } from "@/lib/fiche-validation";
+import { PERMISSIONS } from "@/lib/permissions";
 import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
 import { yearsLabel } from "@/lib/actions";
 import { loadUnknownCodes } from "@/lib/ledger-db";
@@ -57,6 +60,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const roles = await getRoles();
   const suppliers = await prisma.organisation.findMany({ where: { active: true, ...kindFilter("supplier") }, include: { _count: { select: { validations: true } } }, orderBy: { name: "asc" } });
   const budgetCategories = instanceHas(settings, "budget") ? await loadCategories() : null;
+  // Circuit de validation des fiches (Paramètres) : les niveaux, leurs décisions (un niveau décidé ne se supprime pas), et
+  // pour chaque droit du circuit les rôles qui le tiennent.
+  const ficheLevels = current === "parametres" ? {
+    levels: (await prisma.ficheValidationLevel.findMany({ include: { _count: { select: { validations: true } } }, orderBy: [{ order: "asc" }, { id: "asc" }] })).map((l) => ({ id: l.id, label: l.label, permission: l.permission, active: l.active, decisions: l._count.validations })),
+    permissions: FICHE_LEVEL_PERMISSIONS.map((key) => ({ key, label: PERMISSIONS.find((p) => p.key === key)?.label ?? key, holders: roles.filter((r) => r.permissions.includes(key)).map((r) => r.label).join(", ") })),
+  } : null;
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
@@ -313,6 +322,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <Row label="Seuil niveau 2 → 3 (€)"><AutoField model="settings" id="1" field="validationThresholdLevel2" type="number" value={settings.validationThresholdLevel2} readOnly={!rw} suffix="€" /></Row>
             </div>
           </Section>
+          {ficheLevels && (
+            <Section title="Circuit de validation des fiches" description={`Les niveaux qui valident la fiche d'${V.edition.one}, dans l'ordre : chacun n'est proposé qu'une fois le précédent validé ; le dernier verrouille la fiche. Qui décide à un niveau : les rôles qui tiennent son droit (Rôles et droits), jamais ${le(V.pilote)} sur sa propre fiche.`} testId="fiche-levels-section" className="lg:col-span-2">
+              {/* Clé = l'état en base : après « Enregistrer », le formulaire repart des niveaux relus (ids des niveaux créés compris). */}
+              <FicheLevelsForm key={ficheLevels.levels.map((l) => `${l.id}:${l.label}:${l.permission}:${l.active}`).join("|")} levels={ficheLevels.levels} permissions={ficheLevels.permissions} readOnly={!rw} />
+            </Section>
+          )}
           <Section title="Alertes et rappels">
             <div className="grid gap-3">
               <Row label="Rappels avant échéance (jours, séparés par une virgule)"><AutoField model="settings" id="1" field="reminderDaysBefore" type="text" value={settings.reminderDaysBefore} readOnly={!rw} /></Row>
