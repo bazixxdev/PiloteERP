@@ -50,6 +50,8 @@ model Action {
   endDate     DateTime? // NOUVEAU : fin de la période ; ≥ startDate
   recurrence  String?   // NOUVEAU : texte libre, « 12 ateliers de 3,5 h/an »
   audience    String?   // NOUVEAU : public, bénéficiaires
+  entrusted   String?   // NOUVEAU : « Ce qui est confié » (ex-attendus de la délégation, spec vocabulaire § 4)
+  latitude    String?   // NOUVEAU : « Marge de décision » (ex-limites de la délégation)
   people      ActionPerson[]
   milestones  Milestone[]
   fundings    ActionFunding[]
@@ -178,8 +180,8 @@ responsable ou personne associée d'une action, membre de l'équipe d'une année
   réalisations, montant) ; export CSV « temps par action financée », par financeur et par année.
 - **Agenda** : le flux public du site diffuse les jalons publics ; le flux personnel, les jalons des actions dont on est
   responsable ou associé, et ses tâches datées. Ma semaine, l'écran café et la vue annuelle lisent les jalons.
-- **Délégation** : les objectifs de la personne = ses actions (responsable ou associée) et ses tâches sur l'année ; les
-  contrôles = les jalons « point de contrôle » de ces actions.
+- **Délégation** : remplacée par « Mes actions » (spec `2026-09-26-vocabulaire-gouvernance-design.md`, § 4) : ses actions
+  (responsable ou associée), ce qui est confié, la marge de décision, les jalons « point de contrôle », ses tâches.
 - **Admin › Personnes** : case « suit son temps ». **Fiche du projet › Identité** : type financé / interne.
 - **Guide de l'outil** (`lib/lexique.ts`) : Action, Jalon, Tâche, Point de contrôle, projet interne, « suit son temps »
   réécrits ; la règle « une date qui compte pour le pilotage = un jalon ; un geste = une tâche ».
