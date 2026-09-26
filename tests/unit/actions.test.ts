@@ -27,6 +27,11 @@ test("reconduction : on propose les actions qui finissent dans l'année, pas cel
   assert.deepEqual(shiftYear(P("2026-03-01", "2026-06-30")), P("2027-03-01", "2027-06-30"));
 });
 
+test("reconduction : une action terminée dont la période court déjà sur l'année suivante n'est pas proposée (déjà là)", () => {
+  const a = [{ id: "termine-mais-continue", ...P("2026-01-01", "2027-06-30"), state: "done" }];
+  assert.deepEqual(toRenew(a, 2026).map((x) => x.id), []);
+});
+
 test("un lien vers un dossier pluriannuel s'étend aux années couvertes du même projet", () => {
   const lines = [
     { id: "l26", conventionId: "ademe", editionYear: 2026, projectId: "p" },

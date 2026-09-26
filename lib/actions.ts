@@ -4,6 +4,7 @@ export type Period = { startDate: Date; endDate: Date };
 const yearOf = (d: Date) => d.getFullYear();
 // Jour calendaire local (année/mois/jour), pour comparer des dates « à la journée près » sans que l'heure ne compte :
 // un jalon ou une fin datés d'aujourd'hui ne sont pas en retard, seulement ce qui est strictement avant.
+// Convention du calendrier local, comme yearOf ci-dessus : correcte sur un hôte Europe/Paris ou UTC (pas testé au-delà).
 const dayOf = (d: Date) => d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
 const beforeDay = (a: Date, b: Date) => dayOf(a) < dayOf(b);
 
@@ -33,6 +34,9 @@ export function spanLabel(p: Period, year: number): string | null {
 }
 
 // Reconduire l'année `year` : les actions qui continuent l'année suivante sont déjà là ; on propose celles qui finissent.
+// « Terminées » n'ajoute rien à ce filtre : une action « done » qui court encore l'année suivante y apparaît déjà
+// (la reconduire créerait le doublon que la règle interdit), et une action « done » finie avant `year` n'est pas
+// dans `year` du tout — seule reste la fin dans l'année source.
 export function toRenew<A extends Period & { state: string }>(actions: A[], year: number): A[] {
   return actions.filter((a) => a.state !== "abandoned" && runsIn(a, year) && yearOf(a.endDate) === year);
 }
