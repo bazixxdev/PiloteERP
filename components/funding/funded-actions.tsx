@@ -28,7 +28,7 @@ export async function FundedActions({ lines, year, title, exportHref, showProjec
   return (
     <div className={cn("rounded-lg border p-2", className)} data-testid={testId} data-year={year}>
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold text-muted-foreground">{title ?? `${cap(pl(V.action))} financé${e(V.action)}s en ${year}`} · heures, jalons faits et réalisations de l&apos;année</span>
+        <span className="text-[10px] font-semibold text-muted-foreground">{title ?? `${cap(pl(V.action))} financé${e(V.action)}s en ${year}`}{` · heures de chaque ${V.action.one} sur l'année, entières (non réparties entre financeurs) · jalons faits · réalisations`}</span>
         {exportHref && isCodir(me) && items.length > 0 && (
           <a href={withBase(exportHref)} className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline" data-testid={`${testId}-export`}><Download className="size-3" />CSV</a>
         )}

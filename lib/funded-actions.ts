@@ -19,17 +19,31 @@ export type FundedAction = {
 };
 
 // Répartit les heures par personne selon la visibilité du temps : le détail des seules personnes visibles, le reste agrégé.
-export function splitHours(hours: { person: TimePerson; hours: number }[], canSee: (p: TimePerson) => boolean): Pick<FundedAction, "totalHours" | "visible" | "hidden"> {
+// Le total est la somme brute de toutes les lignes (personne introuvable comprise, comptée dans l'agrégat) : il reste égal à
+// celui de la page de l'action.
+export function splitHours(hours: { person: TimePerson | null; hours: number }[], canSee: (p: TimePerson) => boolean): Pick<FundedAction, "totalHours" | "visible" | "hidden"> {
   const visible: FundedAction["visible"] = [];
   const hidden = { count: 0, hours: 0 };
-  let totalHours = 0;
+  const totalHours = hours.reduce((s, h) => s + h.hours, 0);
   for (const h of hours) {
-    totalHours += h.hours;
-    if (canSee(h.person)) visible.push({ person: { id: h.person.id, name: h.person.name }, hours: h.hours });
+    if (h.person && canSee(h.person)) visible.push({ person: { id: h.person.id, name: h.person.name }, hours: h.hours });
     else { hidden.count += 1; hidden.hours += h.hours; }
   }
   visible.sort((x, y) => y.hours - x.hours || x.person.name.localeCompare(y.person.name));
   return { totalHours, visible, hidden };
+}
+
+// Une action liée à plusieurs lignes du même dossier la même année (deux lignes d'une même année du projet) ne compte qu'une
+// fois : ses heures sont celles de l'action, pas d'une ligne ; les montants affectés s'additionnent (null si aucun n'est posé).
+export function mergeByAction(items: FundedAction[]): FundedAction[] {
+  const byKey = new Map<string, FundedAction>();
+  for (const f of items) {
+    const key = `${f.year}|${f.action.id}`;
+    const prev = byKey.get(key);
+    if (!prev) { byKey.set(key, f); continue; }
+    byKey.set(key, { ...prev, amount: prev.amount === null && f.amount === null ? null : (prev.amount ?? 0) + (f.amount ?? 0) });
+  }
+  return [...byKey.values()];
 }
 
 // Le libellé de l'agrégat, le même que sur la page de l'action (onglet Heures).

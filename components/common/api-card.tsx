@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { withBase } from "@/lib/base-path";
 import { FileSpreadsheet, Globe } from "lucide-react";
 import { CopyButton } from "@/components/common/copy-button";
-import { V, cap, le, pl } from "@/lib/vocab";
+import { V, cap, e, le, pl } from "@/lib/vocab";
 
 // Adresses prêtes à coller : Excel (Données → À partir du web) et agenda public du site.
 export function ApiCard({ apiToken }: { apiToken: string | null }) {
@@ -30,6 +30,8 @@ export function ApiCard({ apiToken }: { apiToken: string | null }) {
             {row("Temps (toutes saisies)", `/admin/export?table=temps&jeton=${apiToken}`, "api-url-temps")}
             {row("Temps du mois par projet", `/cloture/export?mois=AAAA-MM&par=projet&jeton=${apiToken}`)}
             {row("Qui finance quoi (année)", `/matrice/export?annee=AAAA&jeton=${apiToken}`, "api-url-matrice")}
+            {row(`${cap(pl(V.action))} financé${e(V.action)}s (dossier, année)`, `/financements/export?dossier=IDENTIFIANT&annee=AAAA&jeton=${apiToken}`, "api-url-financements")}
+            <li className="py-1 pl-2 text-xs text-muted-foreground" data-testid="api-note-financements">{`Contient les heures par personne (tout le détail avec le jeton, quelle que soit la visibilité du temps) ; une seule ligne : ?ligne=IDENTIFIANT à la place de dossier et annee.`}</li>
             {row("Financements", `/admin/export?table=financements&jeton=${apiToken}`)}
             {row(`${cap(pl(V.edition))} (budget)`, `/admin/export?table=editions&jeton=${apiToken}`)}
           </ul>

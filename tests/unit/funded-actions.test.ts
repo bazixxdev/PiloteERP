@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fundedActionsCsv, hiddenPeopleLabel, splitHours, type FundedAction } from "../../lib/funded-actions";
+import { fundedActionsCsv, hiddenPeopleLabel, mergeByAction, splitHours, type FundedAction } from "../../lib/funded-actions";
 
 const P = (id: string, name: string, poleId: string | null = "p1") => ({ id, name, poleId });
 
@@ -28,4 +28,30 @@ test("CSV : en-tête fixe, une ligne par personne, montant sur la première seul
   assert.equal(csv[2], `'+Projet;"'=HYPERLINK(""x"")";1 autre personne : détail non visible;2,50;`);
   assert.equal(csv[3], "Projet;Bilan;;0,00;");
   assert.equal(csv.length, 4);
+});
+
+test("le total vient des lignes brutes : une personne introuvable compte dans le total et dans l'agrégat", () => {
+  const r = splitHours([{ person: P("a", "Alice"), hours: 4 }, { person: null, hours: 1.5 }], () => true);
+  assert.equal(r.totalHours, 5.5);
+  assert.deepEqual(r.hidden, { count: 1, hours: 1.5 });
+});
+
+test("dossier : une action liée à deux lignes de la même année ne compte qu'une fois, montants additionnés", () => {
+  const a = { id: "a", name: "Atelier", projectName: "Projet" };
+  const merged = mergeByAction([
+    F({ lineId: "l1", action: a, amount: 1000, totalHours: 8, visible: [{ person: { id: "p", name: "Alice" }, hours: 8 }] }),
+    F({ lineId: "l2", action: a, amount: 500, totalHours: 8, visible: [{ person: { id: "p", name: "Alice" }, hours: 8 }] }),
+    F({ lineId: "l3", action: a, year: 2027, amount: 200 }),
+    F({ lineId: "l1", action: { ...a, id: "b" }, amount: null }),
+    F({ lineId: "l2", action: { ...a, id: "b" }, amount: null }),
+  ]);
+  assert.equal(merged.length, 3);
+  const y26 = merged.find((f) => f.action.id === "a" && f.year === 2026)!;
+  assert.equal(y26.amount, 1500);
+  assert.equal(y26.totalHours, 8);
+  assert.equal(merged.find((f) => f.action.id === "a" && f.year === 2027)!.amount, 200);
+  assert.equal(merged.find((f) => f.action.id === "b")!.amount, null);
+  assert.deepEqual(mergeByAction([F({ amount: null }), F({ amount: 300 })]).map((f) => f.amount), [300]);
+  // Le CSV d'un dossier ne compte les heures de l'action qu'une fois.
+  assert.equal(fundedActionsCsv(merged.filter((f) => f.year === 2026 && f.action.id === "a")).split("\n").length, 2);
 });

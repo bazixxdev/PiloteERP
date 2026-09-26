@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { splitHours, sortFunded, type FundedAction, type TimePerson } from "./funded-actions";
+import { mergeByAction, splitHours, sortFunded, type FundedAction, type TimePerson } from "./funded-actions";
 
 const yearRange = (y: number) => ({ gte: new Date(`${y}-01-01`), lt: new Date(`${y + 1}-01-01`) });
 
@@ -27,10 +27,11 @@ export async function loadFundedActions(lineIds: string[], canSee: (p: TimePerso
   // Noms pris dans toutes les personnes (une personne partie garde ses heures), comme la page de l'action.
   const people = personIds.length === 0 ? [] : await prisma.person.findMany({ where: { id: { in: personIds } }, select: { id: true, name: true, poleId: true } });
 
-  return sortFunded(links.map((l) => {
+  // Une action liée à deux lignes de la même année (même dossier) ne compte qu'une fois, montants additionnés.
+  return sortFunded(mergeByAction(links.map((l) => {
     const year = l.fundingLine.edition.year;
     const rows = hoursByYear.find((h) => h.y === year)!.rows.filter((r) => r.actionId === l.action.id);
-    const hours = rows.flatMap((r) => { const person = people.find((p) => p.id === r.personId); return person ? [{ person, hours: r._sum.hours ?? 0 }] : []; });
+    const hours = rows.map((r) => ({ person: people.find((p) => p.id === r.personId) ?? null, hours: r._sum.hours ?? 0 }));
     return {
       lineId: l.fundingLineId,
       year,
@@ -40,5 +41,5 @@ export async function loadFundedActions(lineIds: string[], canSee: (p: TimePerso
       milestonesDone: milestones.filter((m) => m.actionId === l.action.id && m.date.getUTCFullYear() === year).length,
       achievements: achievements.filter((a) => a.actionId === l.action.id && a.edition.year === year).length,
     };
-  }));
+  })));
 }

@@ -17,6 +17,12 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const ligne = url.searchParams.get("ligne");
   const dossier = url.searchParams.get("dossier");
+  const annee = url.searchParams.get("annee");
+  // Paramètres validés avant toute requête : un identifiant ou une année mal formés répondent 400, jamais 500.
+  const ID = /^[A-Za-z0-9_-]{1,64}$/;
+  if (ligne !== null && !ID.test(ligne)) return bad("Paramètre « ligne » invalide : identifiant de ligne de financement attendu.");
+  if (dossier !== null && !ID.test(dossier)) return bad("Paramètre « dossier » invalide : identifiant de dossier attendu.");
+  if (annee !== null && !(/^\d{4}$/.test(annee) && Number(annee) >= 2000 && Number(annee) <= 2100)) return bad("Paramètre « annee » invalide : une année entre 2000 et 2100 est attendue.");
 
   let lineIds: string[];
   let year: number;
@@ -26,12 +32,12 @@ export async function GET(req: Request) {
     lineIds = [line.id];
     year = line.edition.year;
   } else if (dossier) {
-    year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
+    year = annee !== null ? Number(annee) : new Date().getFullYear();
     const c = await prisma.convention.findUnique({ where: { id: dossier }, select: { lines: { where: { edition: { year } }, select: { id: true } } } });
     if (!c) return new NextResponse("Introuvable", { status: 404 });
     lineIds = c.lines.map((l) => l.id);
   } else {
-    return new NextResponse("Paramètre ligne ou dossier requis", { status: 400 });
+    return bad("Paramètre « ligne » ou « dossier » requis.");
   }
 
   // Jeton présenté (déjà vérifié par exportDenial) : tout le détail. Session : la visibilité du temps de la personne.
@@ -41,4 +47,8 @@ export async function GET(req: Request) {
   return new NextResponse("\uFEFF" + fundedActionsCsv(items), {
     headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="financements-temps-${year}.csv"` },
   });
+}
+
+function bad(message: string) {
+  return new NextResponse(message, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }

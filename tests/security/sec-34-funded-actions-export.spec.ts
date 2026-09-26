@@ -6,13 +6,15 @@ import { contextFor, SECURITY_ACTORS, INVALID_COOKIE } from "./fixtures";
 // anonyme, cookie invalide ou jeton faux → 401 ; contributeur ou chargé de mission → 403 ; direction et RAF → CSV. Les heures
 // par personne suivent en plus la visibilité du temps de qui exporte : réglée sur « chacun les siennes », la direction ne lit
 // plus que l'agrégat. Données propres au test (base de sécurité jetable) : une ligne 2026 finançant une action au nom piégé
-// (formule), avec 7 h saisies par le chargé de mission.
+// (formule), avec 7 h saisies par le chargé de mission. Le jeton d'API valide donne tout le détail ; un paramètre mal formé → 400.
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.SECURITY_DATABASE_URL } } });
 const HEADER = "projet;action;personne;heures;montant";
 
 test.describe.serial("SEC-34 — export des actions financées", () => {
   const ids = { project: "", edition: "", line: "", action: "" };
   let visibility = "";
+  let previousToken: string | null = null;
+  const TOKEN = "sec34-jeton-de-recette-0000000000";
   const path = () => `/financements/export?ligne=${ids.line}`;
 
   test.beforeAll(async () => {
@@ -25,12 +27,15 @@ test.describe.serial("SEC-34 — export des actions financées", () => {
     const a = await prisma.action.create({ data: { editionId: e.id, projectId: p.id, name: "=HYPERLINK(\"http://x\")", ownerId: base.pilotId, startDate: new Date(Date.UTC(2026, 0, 1)), endDate: new Date(Date.UTC(2026, 11, 31)) } });
     await prisma.actionFunding.create({ data: { actionId: a.id, fundingLineId: line.id, amount: 1_500 } });
     await prisma.timeEntry.create({ data: { personId: pilot.id, projectId: p.id, actionId: a.id, date: new Date(Date.UTC(2026, 2, 10)), hours: 7 } });
-    visibility = (await prisma.settings.findUniqueOrThrow({ where: { id: 1 }, select: { timeVisibility: true } })).timeVisibility;
+    const settings = await prisma.settings.findUniqueOrThrow({ where: { id: 1 }, select: { timeVisibility: true, apiToken: true } });
+    visibility = settings.timeVisibility;
+    previousToken = settings.apiToken;
+    await prisma.settings.update({ where: { id: 1 }, data: { apiToken: TOKEN } });
     Object.assign(ids, { project: p.id, edition: e.id, line: line.id, action: a.id });
   });
 
   test.afterAll(async () => {
-    await prisma.settings.update({ where: { id: 1 }, data: { timeVisibility: visibility } });
+    await prisma.settings.update({ where: { id: 1 }, data: { timeVisibility: visibility, apiToken: previousToken } });
     await prisma.timeEntry.deleteMany({ where: { actionId: ids.action } });
     await prisma.action.deleteMany({ where: { projectId: ids.project } });
     await prisma.changeLog.deleteMany({ where: { edition: { projectId: ids.project } } });
@@ -86,5 +91,32 @@ test.describe.serial("SEC-34 — export des actions financées", () => {
     expect(text).toContain("1 autre personne : détail non visible;7,00;1500");
     await context.close();
     await prisma.settings.update({ where: { id: 1 }, data: { timeVisibility: visibility } });
+  });
+
+  test("jeton d'API valide, sans session : tout le détail (nom et heures), même réglé sur « chacun les siennes »", async ({ request }) => {
+    await prisma.settings.update({ where: { id: 1 }, data: { timeVisibility: "self" } });
+    const res = await request.get(`${path()}&jeton=${TOKEN}`);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toMatch(/text\/csv/);
+    const lines = (await res.text()).replace(/^\uFEFF/, "").split("\n");
+    expect(lines[0]).toBe(HEADER);
+    expect(lines).toContain(`'-SEC34 projet financé;"'=HYPERLINK(""http://x"")";${SECURITY_ACTORS.pilot.name};7,00;1500`);
+    expect(lines.join("\n")).not.toContain("détail non visible");
+    await prisma.settings.update({ where: { id: 1 }, data: { timeVisibility: visibility } });
+  });
+
+  test("paramètres invalides : 400 avec un message clair, jamais 500", async ({ browser, baseURL }) => {
+    const context = await contextFor(browser, SECURITY_ACTORS.director, baseURL);
+    for (const [p, msg] of [
+      [`/financements/export?dossier=${ids.line}&annee=abc`, "annee"],
+      [`/financements/export?dossier=x&annee=1999`, "annee"],
+      [`/financements/export?ligne=${encodeURIComponent("x' OR 1=1")}`, "ligne"],
+      [`/financements/export`, "requis"],
+    ] as const) {
+      const res = await context.request.get(p);
+      expect(res.status(), p).toBe(400);
+      expect(await res.text(), p).toContain(msg);
+    }
+    await context.close();
   });
 });
