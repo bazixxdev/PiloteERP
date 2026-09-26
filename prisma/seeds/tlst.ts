@@ -2,7 +2,7 @@
 // à vider avant la reprise des vraies données depuis erp-tlst. Tout est fictif.
 import { PrismaClient } from "@prisma/client";
 import { dayjs } from "../../lib/format";
-import { createPerson, type Common } from "./common";
+import { createAction, createPerson, type Common } from "./common";
 
 export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { skeleton: boolean }) {
   const today = dayjs().startOf("day");
@@ -49,7 +49,7 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
     const edition = await prisma.edition.create({ data: { projectId: project.id, year, status: "in_progress", budgetEnvelope: p.envelope, directExpenseEnvelope: p.envelope, stakes: `Ce que ${p.name.toLowerCase()} apporte au lieu et au territoire.`, calendar: "Toute l'année, temps forts au printemps et à l'automne.", decisionDate: dayjs(`${year}-01-20`).toDate() } });
     editions.push(edition);
     await prisma.editionTeam.create({ data: { editionId: edition.id, personId: p.pilot.id } });
-    for (const [j, s] of p.steps.entries()) await prisma.action.create({ data: { editionId: edition.id, name: s, ownerId: p.pilot.id, milestoneDate: d(-60 + j * 60 + i * 7), state: j === 0 ? "done" : j === 1 ? "doing" : "todo", order: j, isPublic: j === 2 } });
+    for (const [j, s] of p.steps.entries()) await createAction(prisma, edition, { editionId: edition.id, name: s, ownerId: p.pilot.id, milestoneDate: d(-60 + j * 60 + i * 7), state: j === 0 ? "done" : j === 1 ? "doing" : "todo", order: j, isPublic: j === 2 });
     const line = await prisma.fundingLine.create({ data: { editionId: edition.id, funderId: i === 2 ? fondation.id : region.id, scheme: i === 2 ? "Appel à projets réemploi" : "Soutien aux tiers-lieux", status: "contracted", amountRequested: p.envelope * 0.6, amountGranted: p.envelope * 0.5, analyticCode: `${p.code}-FIN`, submittedAt: dayjs(`${year - 1}-11-15`).toDate(), answeredAt: dayjs(`${year}-01-30`).toDate(), contractedAt: dayjs(`${year}-02-15`).toDate() } });
     await prisma.payment.create({ data: { fundingLineId: line.id, label: "Acompte", amount: p.envelope * 0.3, expectedAt: dayjs(`${year}-03-31`).toDate(), receivedAt: dayjs(`${year}-04-08`).toDate() } });
     await prisma.payment.create({ data: { fundingLineId: line.id, label: "Solde sur bilan", amount: p.envelope * 0.2, expectedAt: dayjs(`${year + 1}-01-31`).toDate() } });
