@@ -12,6 +12,7 @@ import { InvoiceCell } from "./invoice-cell";
 import { ExpenseCategorySelect } from "./budget-plan-forms";
 import { RowPanel } from "@/components/common/row-panel";
 import Link from "next/link";
+import { attachOptions } from "@/lib/actions";
 import { V, cap, le, du, ce } from "@/lib/vocab";
 
 // Budget des dépenses directes : quatre montants, formules sans double comptage (devis → engagement, facture rattachée → réalisé).
@@ -74,7 +75,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam, budgetCategories }
 
       <Section title="Dépenses" description={<span className="inline-flex items-center gap-1.5">Devis approuvés et factures ; la facture arrive à l'adresse de facturation <HelpTip title="Le circuit d'une dépense" testId="expenses-help">
         <p className="mt-1">{`Un devis approuvé crée l'engagement une seule fois. ${cap(le(V.raf))} rattache le réalisé (les factures) à cette ligne, la marque reçue puis payée ; ${le(V.pilote)} est prévenu et confirme le service fait, sans bloquer. Aucun fichier facture ici : la facture arrive à l'adresse de facturation.`}</p>
-      </HelpTip></span>} actions={rw ? <AddExpenseForm editionId={e.id} /> : undefined}>
+      </HelpTip></span>} actions={rw ? <AddExpenseForm editionId={e.id} actions={attachOptions(e.actions, null)} /> : undefined}>
         {/* Un devis encore en attente de validation n'est pas une dépense : on le dit ici, sans l'engager (revue du 15/09). */}
         {pendingQuotes.length > 0 && (
           <p className="mb-3 rounded-md bg-warning-soft/60 px-3 py-2 text-xs text-warning-foreground" data-testid="budget-pending-quotes">
@@ -83,18 +84,20 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam, budgetCategories }
         )}
         {e.expenses.length === 0 ? <p className="text-sm text-muted-foreground">{`Aucune dépense sur ${ce(V.edition)}.`}</p> : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm" data-testid="expenses">
+            <table className="w-full min-w-[860px] text-sm" data-testid="expenses">
               <thead className="text-left text-[10px] font-semibold text-muted-foreground">
-                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">Facture</th><th className="py-1.5" /></tr>
+                <tr><th className="py-1.5 pr-2">Objet</th><th className="py-1.5 pr-2">Fournisseur</th><th className="py-1.5 pr-2">{cap(V.action)}</th><th className="py-1.5 pr-2 text-right">Engagé</th><th className="py-1.5 pr-2 text-right">Réalisé</th><th className="py-1.5 pr-2 text-right">Reste engagé</th><th className="py-1.5 pr-2">Facture</th><th className="py-1.5" /></tr>
               </thead>
               <tbody className="divide-y">
-                {/* Six colonnes lisibles ; nature, référence, origine et état se tiennent dans le panneau de la ligne (revue du 15/09). */}
-                {e.expenses.map((x) => {
+                {/* Colonnes lisibles ; nature, référence, origine et état se tiennent dans le panneau de la ligne (revue du 15/09). L'action
+                    (26/09) se choisit dans la ligne : c'est elle qui compte la dépense dans l'équilibre de sa page. */}
+                {e.expenses.map((x, i) => {
                   const rest = x.status === "open" ? Math.max(0, x.committed - x.spent) : 0;
                   return (
                     <tr key={x.id} className="align-top">
                       <td className="min-w-[180px] py-1.5 pr-2"><div className="font-medium">{x.label}</div><div className="text-[10px] text-muted-foreground">{natureOpts.find((n) => n.value === x.nature)?.label ?? "—"}{x.reference ? ` · ${x.reference}` : ""}{x.status === "closed" ? " · soldée" : ""}</div></td>
                       <td className="min-w-[120px] py-1.5 pr-2 text-muted-foreground">{x.supplier || "—"}</td>
+                      <td className="min-w-[150px] max-w-[200px] py-0.5 pr-2"><AutoField model="expense" id={x.id} field="actionId" type="select" value={x.actionId} options={attachOptions(e.actions, x.action)} readOnly={!rw} placeholder="—" refreshOnSave label={`${cap(V.action)}, ${x.label}`} testId={`expense-action-${i}`} /></td>
                       <td className="w-24 py-1.5 pr-2 text-right tabular">{fmtEuro(x.committed)}</td>
                       <td className="w-24 py-1.5 pr-2 text-right tabular font-medium">{fmtEuro(x.spent)}</td>
                       <td className={cn("w-24 py-1.5 pr-2 text-right tabular", x.spent > x.committed && x.committed > 0 && "text-danger font-medium")} title={x.spent > x.committed && x.committed > 0 ? "Facture supérieure à l'engagement : écart à faire remonter" : undefined}>{fmtEuro(rest)}</td>

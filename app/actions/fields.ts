@@ -8,6 +8,7 @@ import { canAdmin, canEditCalls, canEditFunding, canManageEquipment, canManageMe
 import { projectPoleIds } from "@/lib/scope";
 import { actionCtx } from "@/lib/actions-rights-db";
 import { activePerson } from "@/lib/actions-write-db";
+import { attachRefusal } from "@/lib/actions";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
@@ -159,6 +160,29 @@ export async function saveField(model: Model, id: string, field: string, raw: un
       const bad = callFieldInvariant(field, value, call);
       if (bad) return { ok: false, error: bad };
       await prisma.call.update({ where: { id }, data: { [field]: value } });
+    } else if (model === "action" && field === "ownerId") {
+      // Le nouveau responsable quitte les personnes associées (sinon « Responsable X · avec X ») : même transaction.
+      const ownerId = value === null ? null : String(value);
+      await prisma.$transaction([
+        prisma.action.update({ where: { id }, data: { ownerId } }),
+        ...(ownerId ? [prisma.actionPerson.deleteMany({ where: { actionId: id, personId: ownerId } })] : []),
+      ]);
+    } else if ((model === "expense" || model === "indicator") && field === "actionId") {
+      // Rattachement à une action (26/09) : une action du projet de l'année, dont la période chevauche l'année (attachRefusal,
+      // même règle qu'actionRunsInEdition) — vérifié ici, jamais sur la foi du sélecteur.
+      const select = { edition: { select: { projectId: true, year: true } } } as const;
+      const row = model === "expense" ? await prisma.expense.findUnique({ where: { id }, select }) : await prisma.indicator.findUnique({ where: { id }, select });
+      if (!row) return { ok: false, error: model === "expense" ? "Dépense introuvable." : "Indicateur introuvable." };
+      const actionId = value === null ? null : String(value);
+      if (actionId) {
+        const a = await prisma.action.findUnique({ where: { id: actionId }, select: { projectId: true, startDate: true, endDate: true } });
+        const refusal = attachRefusal(a, row.edition);
+        if (refusal === "missing") return { ok: false, error: `${cap(V.action)} introuvable.` };
+        if (refusal === "project") return { ok: false, error: `${cap(ce(V.action))} appartient à un autre projet.` };
+        if (refusal === "year") return { ok: false, error: `${cap(ce(V.action))} ne court pas en ${row.edition.year}.` };
+      }
+      if (model === "expense") await prisma.expense.update({ where: { id }, data: { actionId } });
+      else await prisma.indicator.update({ where: { id }, data: { actionId } });
     } else if (model === "settings") {
       await prisma.settings.update({ where: { id: 1 }, data: { [field]: value } });
     } else {

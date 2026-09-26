@@ -12,7 +12,7 @@ import { inMyPole } from "@/lib/scope";
 import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
 import { TimeCell } from "./time-cell";
-import { milestoneTitle, spanLabel } from "@/lib/actions";
+import { attachable, attachOptions, milestoneTitle, spanLabel } from "@/lib/actions";
 import { V, cap, le, ce, aucun, pl } from "@/lib/vocab";
 import { Timeline } from "./timeline";
 
@@ -100,7 +100,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
           se mettent à jour au réel. La fiche les relit, le bilan les reprend. */}
       <div id="realisations" className="grid scroll-mt-20 gap-4 xl:grid-cols-2">
         <Section title="Réalisations au fil de l'année" description="Inscrits, publics, livrables produits : notez au fil de l'eau, ce sera le bilan." testId="achievements-section">
-          <Achievements editionId={e.id} items={e.achievements.map((a) => ({ id: a.id, kind: a.kind, label: a.label, value: a.value, unit: a.unit, date: dayjs(a.date).format("YYYY-MM-DD"), author: a.author.name, authorId: a.authorId, action: a.action?.name ?? null }))} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} canWrite={yearRw} meId={me.id} canDeleteAll={me.role === "director" || isPilot} />
+          <Achievements editionId={e.id} items={e.achievements.map((a) => ({ id: a.id, kind: a.kind, label: a.label, value: a.value, unit: a.unit, date: dayjs(a.date).format("YYYY-MM-DD"), author: a.author.name, authorId: a.authorId, action: a.action?.name ?? null }))} actions={e.actions.filter(attachable).map((a) => ({ id: a.id, name: a.name }))} canWrite={yearRw} meId={me.id} canDeleteAll={me.role === "director" || isPilot} />
         </Section>
         <Section title="Indicateurs" description="Cible fixée à la rédaction de la fiche, réalisé mis à jour dans l'année ; imposés par un financeur ou propres au projet.">
           <table className="mb-3 w-full text-sm" data-testid="indicators">
@@ -108,9 +108,13 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
               <tr><th className="py-1">Indicateur</th><th className="w-24 py-1 text-right">Cible</th><th className="w-24 py-1 text-right">Réalisé</th><th className="w-16 py-1 text-center" title="Imposé par un financeur">Imposé</th></tr>
             </thead>
             <tbody className="divide-y">
-              {e.indicators.map((i) => (
+              {e.indicators.map((i, n) => (
                 <tr key={i.id}>
-                  <td className="py-0.5"><AutoField model="indicator" id={i.id} field="label" type="text" value={i.label} readOnly={!yearRw} /></td>
+                  <td className="py-0.5">
+                    <AutoField model="indicator" id={i.id} field="label" type="text" value={i.label} readOnly={!yearRw} />
+                    {/* Son action (26/09) : l'indicateur se lit aussi sur la page de l'action. */}
+                    <div className="flex items-center gap-1 pl-2 text-[11px] text-muted-foreground"><span className="shrink-0">{cap(V.action)}</span><AutoField model="indicator" id={i.id} field="actionId" type="select" value={i.actionId} options={attachOptions(e.actions, i.action)} readOnly={!yearRw} placeholder="—" refreshOnSave label={`${cap(V.action)}, ${i.label}`} testId={`indicator-action-${n}`} className="min-w-0 max-w-[220px] flex-1" inputClassName="text-[11px]" /></div>
+                  </td>
                   <td className="py-0.5"><AutoField model="indicator" id={i.id} field="target" type="text" value={i.target} readOnly={!yearRw} inputClassName="text-right tabular" /></td>
                   <td className="py-0.5"><AutoField model="indicator" id={i.id} field="actual" type="text" value={i.actual} readOnly={!yearRw} inputClassName="text-right tabular font-medium" placeholder="—" /></td>
                   <td className="py-0.5 text-center"><AutoField model="indicator" id={i.id} field="imposed" type="bool" value={i.imposed} readOnly={!yearRw} /></td>

@@ -62,7 +62,8 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   payment: { label: { type: "text" }, amount: { type: "number" }, expectedAt: { type: "date" }, receivedAt: { type: "date" }, reference: { type: "text" }, note: { type: "text" } },
   call: { funderId: { type: "select" }, label: { type: "text" }, scheme: { type: "text" }, deadline: { type: "date" }, rolling: { type: "bool" }, recurring: { type: "bool" }, amountValue: { type: "number" }, amountKind: { type: "select" }, durationYears: { type: "number" }, targetProjectId: { type: "select" }, link: { type: "text" }, description: { type: "textarea" } },
   convention: { reference: { type: "text" }, scheme: { type: "text" }, label: { type: "text" }, description: { type: "textarea" }, startYear: { type: "number" }, endYear: { type: "number" }, status: { type: "select" }, form: { type: "select" }, amountRequested: { type: "number" }, amountKind: { type: "select" }, amountNotified: { type: "number" }, targetProjectId: { type: "select" }, deadline: { type: "date" }, ownerId: { type: "select" }, helpers: { type: "text" }, sources: { type: "textarea" }, decisionNote: { type: "textarea" }, submittedAt: { type: "date" }, notifiedAt: { type: "date" }, signedAt: { type: "date" }, notes: { type: "textarea" }, contactId: { type: "select" } },
-  indicator: { label: { type: "text" }, target: { type: "text" }, actual: { type: "text" }, imposed: { type: "bool" } },
+  // actionId (26/09) : garde dans saveField — une action du projet de l'année, qui court cette année (attachRefusal).
+  indicator: { label: { type: "text" }, target: { type: "text" }, actual: { type: "text" }, imposed: { type: "bool" }, actionId: { type: "select" } },
   person: {
     name: { type: "text" }, firstName: { type: "text", label: "Prénom" }, lastName: { type: "text", label: "Nom" }, jobTitle: { type: "text", label: "Fonction" }, phone: { type: "text", label: "Téléphone" },
     arrivedAt: { type: "date", label: "Arrivée" }, leftAt: { type: "date", label: "Départ" }, note: { type: "textarea", label: "Note" },
@@ -70,7 +71,7 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
   },
   project: { name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" }, archived: { type: "bool" } },
   editionPersonDays: { soldDays: { type: "number" }, plannedDays: { type: "number" }, availableDays: { type: "number" } },
-  expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" } },
+  expense: { label: { type: "text" }, supplier: { type: "text" }, committed: { type: "number" }, spent: { type: "number" }, status: { type: "select" }, reference: { type: "text" }, nature: { type: "select", label: "Nature" }, actionId: { type: "select" } },
   rhythm: { label: { type: "text" }, hoursEven: { type: "text" }, hoursOdd: { type: "text" } },
   settings: {
     validationThresholdLevel1: { type: "number" }, validationThresholdLevel2: { type: "number" }, reminderDaysBefore: { type: "text" }, envelopeAlertPercent: { type: "number" },

@@ -163,8 +163,9 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   const changed = await prisma.validationRequest.updateMany({ where: { id, status: "pending" }, data: { status: decision, deciderId: me.id, decidedAt: new Date(), decisionComment: comment.trim() || null } });
   if (changed.count === 0) return { ok: false, error: "Cette demande vient d'être traitée par quelqu'un d'autre." };
   if (decision === "approved" && (v.kind === "quote" || v.kind === "expense") && v.amount) {
-    // Le devis approuvé crée l'engagement une seule fois (validationId unique) ; le réalisé viendra s'y rattacher.
-    await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, supplier: v.supplier, committed: v.amount, validationId: v.id }, update: {} });
+    // Le devis approuvé crée l'engagement une seule fois (validationId unique) ; le réalisé viendra s'y rattacher. L'action
+    // de la demande (vérifiée à la demande : même projet, période sur l'année) devient celle de la dépense.
+    await prisma.expense.upsert({ where: { validationId: v.id }, create: { editionId: v.editionId, label: v.label, supplier: v.supplier, committed: v.amount, validationId: v.id, actionId: v.actionId }, update: {} });
     await prisma.changeLog.create({ data: { editionId: v.editionId, field: "engagement", before: null, after: `+${v.amount} € (${v.label})`, authorId: me.id } });
   }
   // Lot 3 : le demandeur est prévenu ; pour un devis approuvé, le « bon pour accord » est prêt à envoyer (plus d'impression ni de tampon).
@@ -274,12 +275,14 @@ export async function batchCreateEditions(year: number, decisions: { editionId: 
 }
 
 
-// Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé.
-export async function addExpense(editionId: string, label: string, spent: number, reference: string): Promise<Result> {
+// Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé. Action
+// facultative (26/09) : du projet, et qui court l'année — même règle que saveField (expense.actionId).
+export async function addExpense(editionId: string, label: string, spent: number, reference: string, actionId?: string | null): Promise<Result> {
   const c = await ctx(editionId);
   if (!canEditFunding(c.me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) enregistre une dépense.` };
   if (!reference.trim()) return { ok: false, error: "Une référence (facture, ligne du suivi) est requise." };
-  await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed" } });
+  if (actionId && !(await actionRunsInEdition(actionId, editionId))) return { ok: false, error: `${cap(V.action)} introuvable sur ${ce(V.edition)}.` };
+  await prisma.expense.create({ data: { editionId, label: label.trim() || "Dépense", committed: 0, spent: Math.max(0, spent), reference: reference.trim(), status: "closed", actionId: actionId || null } });
   revalidatePath(path(editionId));
   return { ok: true };
 }

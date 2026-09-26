@@ -37,6 +37,7 @@ import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
 import { V, cap, du, ppe } from "@/lib/vocab";
+import { attachable, openForWork } from "@/lib/actions";
 
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string; champ?: string }> }) {
   const { id } = await params;
@@ -114,7 +115,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FilSheet editionId={e.id} defaultOpen={fil === "1"} comments={e.comments.map((c) => ({ id: c.id, author: c.author.name, when: fmtDate(c.createdAt, c.createdAt.getHours() === 0 && c.createdAt.getMinutes() === 0 ? "D MMM YYYY" : "D MMM YYYY HH:mm"), body: c.body }))} />
-          <CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} />
+          <CreateTaskButton editionId={e.id} actions={e.actions.filter(openForWork).map((a) => ({ id: a.id, name: a.name }))} />
           {/* Bouton plein pour ceux qui demandent (pilote, équipe, contributeurs) ; en contour pour les rôles qui décident
               (direction, responsable de pôle, RAF) : leur geste premier ici est de lire et d'arbitrer (critique du 16/09). */}
           <RequestValidationDialog
@@ -122,7 +123,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             variant={isPilot || isTeam || !isCodir(me) ? "default" : "outline"}
             defaultOpen={validation === "1"}
             suppliers={suppliers}
-            actions={e.actions.map((a) => ({ id: a.id, name: a.name }))}
+            actions={e.actions.filter(attachable).map((a) => ({ id: a.id, name: a.name }))}
             kinds={REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) }))}
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.
             recipients={(() => { const lead = owners.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null; const dir = people.find((p) => p.role === "director")?.name ?? null; return { 1: isPilot ? (lead ?? dir) : owners.pilot.name, 2: lead ?? dir, 3: dir }; })()}

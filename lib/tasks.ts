@@ -3,6 +3,7 @@ import { listSuppliers } from "./organisations";
 import { prisma } from "./db";
 import { dayjs } from "./format";
 import { canReadShared } from "./modules";
+import { openForWork } from "./actions";
 import type { EditionOpt, TaskView } from "@/components/tasks/task-list";
 
 const toView = (t: { id: string; label: string; description: string | null; dueDate: Date | null; done: boolean; listId: string | null; requestId: string | null; list: { id: string; name: string; color: string | null } | null; edition: { id: string; year: number; project: { name: string } } | null; convention: { id: string; label: string | null; reference: string } | null; action: { id: string; name: string } | null; slots: { id: string; startAt: Date; endAt: Date; allDay: boolean }[] }): TaskView => ({
@@ -51,7 +52,7 @@ export async function loadEditionOpts(me: Viewer, settings: { envelopeAlertPerce
   const { byRelevance } = await import("./scope");
   const portfolio = await loadPortfolio(settings, { statuses: ["in_progress", "validated"] });
   return byRelevance(me, portfolio, (e) => ({ project: e.project, teamIds: e.team.map((t) => t.personId), ownerIds: e.actions.map((a) => a.ownerId ?? "") }), (a, b) => a.project.name.localeCompare(b.project.name, "fr") || a.year - b.year)
-    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter((a) => a.state !== "done").map((a) => ({ id: a.id, name: a.name })) }));
+    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter(openForWork).map((a) => ({ id: a.id, name: a.name })) }));
 }
 
 

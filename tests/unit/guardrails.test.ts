@@ -20,7 +20,8 @@ const walk = (dir: string, out: string[] = []): string[] => {
 // SEC-27 / BLK-14 — les champs ouverts à saveField sont figés ici. Ajouter un champ = relire
 // .agents/rules/securite-autorisation.md : statuts, permissions, montants financiers, paiements, états de validation
 // et relations passent par une commande dédiée avec ses invariants. `settings.apiToken` et `fundingLine.status/amountGranted`
-// sont des exceptions historiques déjà gardées dans saveField (à sortir un jour, BLK-14).
+// sont des exceptions historiques déjà gardées dans saveField (à sortir un jour, BLK-14). `expense.actionId` et
+// `indicator.actionId` (26/09) sont un rattachement gardé dans saveField (attachRefusal : même projet, période sur l'année).
 const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
   edition: "status decisionDate conditionalStart stakes axis sressMeasure snessLink otherTexts yearPriorities expectedOutcome plannedFunders directExpenseEnvelope fte imposedIndicators sponsorId operationalObjectives quantitativeObjectives content audience calendar deliveryDate partners method governance ownIndicators timeNeed budgetNeed codirDecision codirDate boardValidated boardDate venues equipment evidenceToKeep evaluation report budgetEnvelope spent",
   action: "name ownerId timeTarget state description recurrence audience entrusted latitude",
@@ -29,11 +30,11 @@ const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
   payment: "label amount expectedAt receivedAt reference note",
   call: "funderId label scheme deadline rolling recurring amountValue amountKind durationYears targetProjectId link description",
   convention: "reference scheme label description startYear endYear status form amountRequested amountKind amountNotified targetProjectId deadline ownerId helpers sources decisionNote submittedAt notifiedAt signedAt notes contactId",
-  indicator: "label target actual imposed",
+  indicator: "label target actual imposed actionId",
   person: "name firstName lastName jobTitle phone arrivedAt leftAt note role workRhythm availableDays poleId active email",
   project: "name analyticCode poleId pilotId guarantorId missionId strategicAxis recurring archived",
   editionPersonDays: "soldDays plannedDays availableDays",
-  expense: "label supplier committed spent status reference nature",
+  expense: "label supplier committed spent status reference nature actionId",
   rhythm: "label hoursEven hoursOdd",
   settings: "validationThresholdLevel1 validationThresholdLevel2 reminderDaysBefore envelopeAlertPercent deliverableAlertDays timeVisibility horizonDays timeRules serverPathTemplate apiToken hoursPerDay operatingDaysPerMonth billingEmail billingNote realizedSource pennylaneAxes",
   refValue: "label color",

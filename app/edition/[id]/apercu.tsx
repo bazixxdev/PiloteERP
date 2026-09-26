@@ -16,6 +16,7 @@ import { kindLabel } from "@/lib/achievements";
 import { CreateTaskButton } from "./create-task-button";
 import { TaskTick } from "./task-tick";
 import { V, cap, du, ce, pl } from "@/lib/vocab";
+import { openForWork } from "@/lib/actions";
 
 // L'Aperçu (revue du 15/09) : où en est le projet, en un écran — jalons et retards, budget, temps, livrables, ce qui attend
 // une décision, la dernière décision d'instance, le fil, mes tâches, les réalisations. Il n'invente rien : il assemble.
@@ -89,7 +90,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
           )}
         </Section>
 
-        <Section title={`Mes tâches sur ${ce(V.edition)}`} description={myTasks.length ? `${myTasks.length} à faire` : `Rien en cours pour vous sur ${ce(V.edition)}.`} actions={<CreateTaskButton editionId={e.id} actions={e.actions.map((a) => ({ id: a.id, name: a.name }))} compact />} testId="apercu-taches">
+        <Section title={`Mes tâches sur ${ce(V.edition)}`} description={myTasks.length ? `${myTasks.length} à faire` : `Rien en cours pour vous sur ${ce(V.edition)}.`} actions={<CreateTaskButton editionId={e.id} actions={e.actions.filter(openForWork).map((a) => ({ id: a.id, name: a.name }))} compact />} testId="apercu-taches">
           {myTasks.length > 0 && (
             <ul className="divide-y text-sm">
               {myTasks.map((t) => (

@@ -23,3 +23,38 @@ test("un appel modifié champ par champ garde les invariants de la création", (
   assert.ok(callFieldInvariant("funderId", "f2", { conventionId: "c1" }));
   assert.equal(callFieldInvariant("label", "x", { conventionId: "c1" }), null);
 });
+
+// Dépenses et indicateurs rattachés à une action (26/09) : saveField n'accepte qu'une action du même projet qui court l'année.
+import { attachOptions, attachRefusal, attachable, openForWork } from "../../lib/actions";
+
+test("une dépense ou un indicateur ne se rattache qu'à une action du projet qui court l'année", () => {
+  const year = { projectId: "p1", year: 2026 };
+  const run = (projectId: string | null, start: string, end: string) => ({ projectId, startDate: new Date(start), endDate: new Date(end) });
+  // Action d'un autre projet : refus, même si sa période couvre l'année.
+  assert.equal(attachRefusal(run("p2", "2026-01-01", "2026-12-31"), year), "project");
+  // Même projet, mais la période ne touche pas l'année : refus.
+  assert.equal(attachRefusal(run("p1", "2025-01-01", "2025-12-31"), year), "year");
+  assert.equal(attachRefusal(run("p1", "2027-01-01", "2027-06-30"), year), "year");
+  assert.equal(attachRefusal({ projectId: "p1", startDate: null, endDate: null }, year), "year");
+  // Action introuvable : refus.
+  assert.equal(attachRefusal(null, year), "missing");
+  // Même projet, période qui chevauche l'année (y compris pluriannuelle) : accepté.
+  assert.equal(attachRefusal(run("p1", "2026-03-01", "2026-06-30"), year), null);
+  assert.equal(attachRefusal(run("p1", "2025-09-01", "2027-06-30"), year), null);
+  // Le champ est bien ouvert à saveField sur les deux modèles (et nulle part ailleurs dans ce lot).
+  assert.ok(FIELDS.expense.actionId);
+  assert.ok(FIELDS.indicator.actionId);
+});
+
+test("sélecteurs d'action : une abandonnée n'est jamais proposée, une terminée l'est pour rattacher, pas pour une tâche", () => {
+  assert.deepEqual(["todo", "doing", "done", "abandoned"].map((state) => openForWork({ state })), [true, true, false, false]);
+  assert.deepEqual(["todo", "doing", "done", "abandoned"].map((state) => attachable({ state })), [true, true, true, false]);
+});
+
+test("sélecteur d'une dépense ou d'un indicateur : les rattachables, plus l'actuelle si elle n'en est plus", () => {
+  const actions = [{ id: "a", name: "A", state: "doing" }, { id: "b", name: "B", state: "abandoned" }, { id: "c", name: "C", state: "done" }];
+  assert.deepEqual(attachOptions(actions, null).map((o) => o.value), ["a", "c"]);
+  assert.deepEqual(attachOptions(actions, { id: "b", name: "B" }).map((o) => o.value), ["a", "c", "b"]);
+  assert.deepEqual(attachOptions(actions, { id: "a", name: "A" }).map((o) => o.value), ["a", "c"]);
+  assert.deepEqual(attachOptions(actions, { id: "z", name: "Z" }).map((o) => o.value), ["a", "c", "z"]);
+});

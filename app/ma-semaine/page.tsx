@@ -21,6 +21,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { hasModule } from "@/lib/modules";
 import { loadMyLists } from "@/lib/tasks";
 import { V, cap, aucun, pl } from "@/lib/vocab";
+import { openForWork } from "@/lib/actions";
 
 // Ma semaine (EF-G2), recentrée sur la semaine : « En retard », « Cette semaine », puis mes validations et mes temps ;
 // les échéances lointaines (jusqu'à l'horizon réglé dans l'admin) restent repliées.
@@ -81,7 +82,7 @@ export default async function MaSemainePage() {
   const todaySlots = tasks.flatMap((t) => t.slots.filter((sl) => dayjs(sl.startAt).isSame(dayjs(), "day")).map((sl) => ({ sl, t }))).sort((a, b) => a.sl.startAt.localeCompare(b.sl.startAt));
   const openTasks = tasks.filter((t) => !t.done).length;
   const editionOpts = byRelevance(me, portfolio, (e) => ({ project: e.project, teamIds: e.team.map((t) => t.personId), ownerIds: e.actions.map((a) => a.ownerId ?? "") }), (a, b) => a.project.name.localeCompare(b.project.name, "fr") || a.year - b.year)
-    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter((a) => a.state !== "done").map((a) => ({ id: a.id, name: a.name })) }));
+    .map((e) => ({ id: e.id, name: e.project.name, year: e.year, actions: e.actions.filter(openForWork).map((a) => ({ id: a.id, name: a.name })) }));
 
   const overdueValidation = toDecide.filter((v) => v.age > v.targetDelayDays).sort((a, b) => b.age - a.age)[0];
   const attention = late[0]

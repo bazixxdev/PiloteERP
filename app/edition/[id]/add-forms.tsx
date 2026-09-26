@@ -126,17 +126,19 @@ export function AddCommentForm({ editionId }: { editionId: string }) {
   );
 }
 
-export function AddExpenseForm({ editionId }: { editionId: string }) {
+export function AddExpenseForm({ editionId, actions }: { editionId: string; actions: { value: string; label: string }[] }) {
   const [label, setLabel] = useState("");
   const [spent, setSpent] = useState("");
   const [ref, setRef] = useState("");
+  const [actionId, setActionId] = useState("");
   const { pending, run } = useRun();
   return (
     <Reveal label="Dépense" testId="add-expense-open">
-      <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !ref.trim()) return; run(() => addExpense(editionId, label, Number(spent.replace(",", ".")) || 0, ref), () => { setLabel(""); setSpent(""); setRef(""); }); }}>
+      <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); if (!label.trim() || !ref.trim()) return; run(() => addExpense(editionId, label, Number(spent.replace(",", ".")) || 0, ref, actionId || null), () => { setLabel(""); setSpent(""); setRef(""); setActionId(""); }); }}>
         <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Objet (dépense sans devis)" className="h-7 w-48 text-xs" data-testid="add-expense-label" />
         <Input type="number" step="any" value={spent} onChange={(e) => setSpent(e.target.value)} placeholder="Réalisé €" className="h-7 w-28 text-xs" data-testid="add-expense-spent" />
         <Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Référence (n° facture)" className="h-7 w-44 text-xs" data-testid="add-expense-ref" />
+        {actions.length > 0 && <Select value={actionId} onChange={(e) => setActionId(e.target.value)} className="h-7 max-w-[200px] text-xs" aria-label={`${cap(V.action)} de la dépense`} data-testid="add-expense-action"><option value="">{`— ${V.action.one} (facultatif) —`}</option>{actions.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</Select>}
         <Button type="submit" size="xs" variant="outline" disabled={pending || !label.trim() || !ref.trim()} data-testid="add-expense-submit"><Plus />Enregistrer</Button>
       </form>
     </Reveal>

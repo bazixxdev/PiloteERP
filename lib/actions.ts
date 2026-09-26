@@ -103,6 +103,26 @@ export function actionsOfYear<A extends { projectId: string | null; startDate: D
   return actions.filter((a): a is A & Period & { projectId: string } => a.projectId === e.projectId && a.startDate !== null && a.endDate !== null && runsIn({ startDate: a.startDate, endDate: a.endDate }, e.year));
 }
 
+// Rattacher une dépense ou un indicateur d'une année à une action (26/09, saveField) : l'action est du même projet et sa
+// période chevauche l'année (actionsOfYear, la règle d'actionRunsInEdition) ; sinon la raison du refus.
+export function attachRefusal(a: { projectId: string | null; startDate: Date | null; endDate: Date | null } | null, e: { projectId: string; year: number }): "missing" | "project" | "year" | null {
+  if (!a) return "missing";
+  if (a.projectId !== e.projectId) return "project";
+  return actionsOfYear([a], e).length > 0 ? null : "year";
+}
+
+// Une action proposée dans un sélecteur (26/09) : une abandonnée ne l'est jamais ; pour du travail à faire (tâche), une
+// terminée non plus. Une dépense, un indicateur, une réalisation ou une demande se rattachent encore à une action terminée
+// (la facture, le résultat arrivent après la fin).
+export const openForWork = (a: { state: string }) => a.state !== "done" && a.state !== "abandoned";
+export const attachable = (a: { state: string }) => a.state !== "abandoned";
+// Options du sélecteur « action » d'une dépense ou d'un indicateur : les actions rattachables de l'année, plus l'actuelle
+// si elle n'en est plus (abandonnée, ou période raccourcie) — sinon la liste afficherait « — » au lieu du rattachement réel.
+export function attachOptions(actions: { id: string; name: string; state: string }[], current: { id: string; name: string } | null): { value: string; label: string }[] {
+  const opts = actions.filter(attachable).map((a) => ({ value: a.id, label: a.name }));
+  return current && !opts.some((o) => o.value === current.id) ? [...opts, { value: current.id, label: current.name }] : opts;
+}
+
 // Partie pure d'attachYearActions : chaque année reçoit ses actions, avec les heures saisies dans CETTE année et le total.
 export function withYearActions<E extends { projectId: string; year: number }, A extends { id: string; projectId: string | null; startDate: Date | null; endDate: Date | null }>(
   editions: E[], actions: A[], hoursByYear: Map<number, Map<string | null, number>>, hoursTotal: Map<string | null, number>,

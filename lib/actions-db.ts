@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { actionsOfYear, editionForMilestone, withYearActions } from "./actions";
+import { actionsOfYear, attachRefusal, editionForMilestone, withYearActions } from "./actions";
 
 const include = {
   owner: true,
@@ -102,5 +102,5 @@ export async function actionRunsInEdition(actionId: string, editionId: string | 
     prisma.action.findUnique({ where: { id: actionId }, select: { projectId: true, startDate: true, endDate: true } }),
     prisma.edition.findUnique({ where: { id: editionId }, select: { projectId: true, year: true } }),
   ]);
-  return Boolean(a && e && actionsOfYear([a], e).length > 0);
+  return Boolean(e && attachRefusal(a, e) === null);
 }

@@ -17,7 +17,7 @@ import { canReadShared, instanceHas } from "@/lib/modules";
 import { canSeePersonnelDetail } from "@/lib/budget-plan";
 import { actionTimeCost } from "@/lib/budget-plan-db";
 import { inMyScope, isTransversal } from "@/lib/scope";
-import { dayjs, fmtDate, fmtDateInput, fmtNumber } from "@/lib/format";
+import { dayjs, fmtDate, fmtDateInput, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CreateTaskButton } from "@/app/edition/[id]/create-task-button";
 import { Milestones } from "./milestones";
@@ -98,7 +98,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
   const [links, freeLines, expenses] = await Promise.all([
     prisma.actionFunding.findMany({ where: { actionId: a.id }, select: { amount: true, fundingLine: { select: lineSelect } } }),
     can ? prisma.fundingLine.findMany({ where: { edition: { projectId: project.id, year: { in: years } }, actionFundings: { none: { actionId: a.id } } }, select: lineSelect }) : Promise.resolve([]),
-    prisma.expense.findMany({ where: { actionId: a.id, ...(year ? { edition: { year } } : {}) }, select: { committed: true, spent: true } }),
+    prisma.expense.findMany({ where: { actionId: a.id, ...(year ? { edition: { year } } : {}) }, select: { id: true, label: true, committed: true, spent: true, status: true, edition: { select: { id: true, year: true } } }, orderBy: { createdAt: "asc" } }),
   ]);
   const lineName = (l: { funder: { name: string }; scheme: string | null; edition: { year: number } }) => `${l.funder.name} · ${l.edition.year}${l.scheme ? ` · ${l.scheme}` : ""}`;
   const fundingLinks: FundingLinkView[] = links
@@ -115,7 +115,8 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
   const valued = budgetModule && canSeePersonnelDetail(me) ? await actionTimeCost(a.id, year) : null;
   // Toute la période : les seules lignes des années que la période couvre (un lien d'une année sortie de la période après
   // un raccourcissement reste affiché, mais ne compte pas).
-  const bal = balance({ fundings: fundingLinks.filter((l) => (year === null ? years.includes(l.year) : l.year === year)).map((l) => l.amount), expenses, hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
+  // Une dépense soldée n'a plus d'engagement restant (budgetOf, onglet Budget) : seul son réalisé compte.
+  const bal = balance({ fundings: fundingLinks.filter((l) => (year === null ? years.includes(l.year) : l.year === year)).map((l) => l.amount), expenses: expenses.map((x) => ({ committed: x.status === "open" ? x.committed : 0, spent: x.spent })), hours: totalHours, hourlyCost: null, timeCost: valued ? valued.amount : null });
   const balanceView: BalanceView = {
     title: year ? `Équilibre ${year}` : "Équilibre sur toute la période",
     income: bal.income, spending: bal.spending, hours: totalHours, gap: bal.gap,
@@ -191,6 +192,20 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
 
           <Section title="Financements et équilibre" description={`Les lignes qui financent ${ce(V.action)}, avec le montant affecté ; lier une ligne d'un dossier pluriannuel lie ses autres années couvertes.`} testId="action-fundings">
             <Fundings actionId={a.id} canEdit={can} links={fundingLinks} candidates={candidates} balance={balanceView} />
+            {/* Les dépenses comptées dans l'équilibre : rattachées dans l'onglet Budget (colonne de la liste des dépenses). */}
+            <div className="mt-4" data-testid="action-expenses">
+              {label("Dépenses rattachées")}
+              {expenses.length === 0 ? <p className="mt-1 text-sm text-muted-foreground">{`Aucune : rattachez-les dans l'onglet Budget ${du(V.edition)}.`}</p> : (
+                <ul className="mt-1 divide-y text-sm">
+                  {expenses.map((x) => (
+                    <li key={x.id} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1">
+                      <Link href={`/edition/${x.edition.id}?onglet=budget#depenses`} className="min-w-0 flex-1 text-primary hover:underline">{x.label}{multi && <span className="text-xs text-muted-foreground">{` · ${x.edition.year}`}</span>}</Link>
+                      <span className="shrink-0 text-xs tabular text-muted-foreground">réalisé <b className="text-foreground">{fmtEuro(x.spent)}</b>{x.status === "open" && x.committed > x.spent ? <> · reste engagé <b className="text-foreground">{fmtEuro(x.committed - x.spent)}</b></> : null}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </Section>
 
           <Section title="Tâches" description={`Les tâches en cours rattachées à ${ce(V.action)} : les vôtres, et celles des listes partagées avec vous.`} testId="action-tasks"
