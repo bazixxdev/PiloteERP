@@ -28,6 +28,9 @@ export function Timeline({ year, actions, deliverables, refs }: { year: number; 
   const today = dayjs();
   const todayPct = today.year() === year ? (today.diff(start, "day") / total) * 100 : null;
   const pctOf = (d: Date) => Math.min(100, Math.max(0, (dayjs(d).diff(start, "day") / total) * 100));
+  // Livrables de l'année seulement (comme les jalons) : une ligne de financement pluriannuelle porte des livrables sur
+  // plusieurs années ; sans ce filtre, un livrable de l'année suivante s'affichait plaqué au 31 décembre.
+  const yearDeliverables = deliverables.filter((d) => dayjs(d.dueDate).year() === year);
 
   if (actions.length === 0) return <p className="text-sm text-muted-foreground" data-testid="timeline">{cap(aucun(V.action))} cette année.</p>;
 
@@ -37,7 +40,7 @@ export function Timeline({ year, actions, deliverables, refs }: { year: number; 
         <div className="mb-1 grid grid-cols-12 text-center text-[10px] font-semibold text-muted-foreground">
           {MONTHS.map((m, i) => <div key={i} className="border-l first:border-l-0">{m}</div>)}
         </div>
-        <div className="relative mt-1">
+        <div className="relative mt-4">
           {todayPct !== null && (
             <div className="absolute top-0 bottom-0 z-10 w-px bg-coral" style={{ left: `${todayPct}%` }} title="Aujourd'hui">
               <span className="absolute -top-4 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-coral">aujourd&apos;hui</span>
@@ -71,8 +74,8 @@ export function Timeline({ year, actions, deliverables, refs }: { year: number; 
                   )}
                   {namePlacement === "inside" && (
                     <span
-                      className="truncate text-[11px] font-medium text-foreground/90"
-                      style={{ paddingLeft: overflowsBefore ? 14 : 8, paddingRight: overflowsAfter ? 14 : 8 }}
+                      className="truncate rounded-sm bg-card/75 px-1 text-[11px] font-medium text-foreground shadow-sm"
+                      style={{ marginLeft: overflowsBefore ? 16 : 6, marginRight: overflowsAfter ? 16 : 6 }}
                       title={a.name}
                     >
                       {a.name}
@@ -110,10 +113,10 @@ export function Timeline({ year, actions, deliverables, refs }: { year: number; 
               </div>
             );
           })}
-          {deliverables.length > 0 && (
+          {yearDeliverables.length > 0 && (
             <div className="relative border-t" style={{ height: ROW_HEIGHT }} data-testid="timeline-deliverables">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted-foreground">Livrables</div>
-              {deliverables.map((d, di) => {
+              {yearDeliverables.map((d, di) => {
                 const late = !d.done && beforeDay(d.dueDate, new Date());
                 const pct = pctOf(d.dueDate);
                 const dLabel = `${d.label} · ${fmtDate(d.dueDate)}${late ? " · en retard" : d.done ? " · fait" : ""}`;

@@ -82,6 +82,20 @@ test("la frise : une barre par action, la flèche d'une période qui déborde, u
   await expect(page.getByTestId("timeline-deliverables")).toBeVisible();
   await expect(page.getByTestId("timeline-deliverable-0")).toBeVisible();
   await expect(page.getByTestId("timeline-deliverable-0")).toHaveAttribute("title", /Rapport intermédiaire/);
+
+  // Un second livrable de la même ligne, dû l'année suivante : la frise de cette année ne le montre pas (ni plaqué au
+  // 31 décembre) — seul le livrable de l'année compte, comme pour les jalons.
+  await page.getByRole("tab", { name: "Budget" }).click();
+  await page.getByTestId("funding-panel-0-open").click();
+  await panel.getByTestId("add-deliverable-open").click();
+  await panel.getByTestId("add-deliverable-label").fill("Bilan final");
+  await panel.getByTestId("add-deliverable-date").fill(`${year + 1}-02-15`);
+  await panel.getByTestId("add-deliverable-submit").click();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
+  await expect(page.getByTestId("timeline-deliverable-0")).toHaveAttribute("title", /Rapport intermédiaire/);
+  await expect(page.getByTestId("timeline-deliverable-1")).toHaveCount(0);
 });
 
 test("la frise : aucune action de l'année se lit en clair, sans mot du vocabulaire en dur", async ({ page }) => {
