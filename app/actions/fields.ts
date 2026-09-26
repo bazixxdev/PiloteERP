@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { FIELDS, coerce, type Model } from "@/lib/fields";
-import { canAdmin, canEditActions, canEditCalls, canEditFunding, canManageEquipment, canManageMembers, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
+import { canAdmin, canEditCalls, canEditFunding, canManageEquipment, canManageMembers, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
+import { actionCtx } from "@/lib/actions-rights-db";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
@@ -34,11 +35,10 @@ async function allowed(model: Model, id: string, field: string, personId: string
     return canWriteLayer(me, layer, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) ? null : "Vous n'avez pas le droit d'écrire cette couche.";
   }
   if (model === "action") {
-    const a = await prisma.action.findUnique({ where: { id } });
+    // Même règle que les commandes de l'action (app/actions/actions.ts) : toutes les années que sa période couvre.
+    const { a, can } = await actionCtx(id, { ...me, id: personId, poleId: myPoleId });
     if (!a) return `${cap(V.action)} introuvable`;
-    const ctx = await editionContext(a.editionId, personId);
-    const own = a.ownerId === personId;
-    return canEditActions(me, ctx.isPilot, ctx.isTeam, (myPoleId !== null && ctx.poleIds.includes(myPoleId))) || own ? null : `Vous ne pouvez pas modifier ${ce(V.action)}.`;
+    return can ? null : `Vous ne pouvez pas modifier ${ce(V.action)}.`;
   }
   if (model === "call") return canEditCalls(me) ? null : `Un appel à projets se modifie par ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)}.`;
   // Les contacts (lot Contacts et listes) sont un annuaire commun : chacun les tient à jour.

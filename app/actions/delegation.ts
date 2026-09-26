@@ -8,6 +8,8 @@ import { inMyPole, projectPoleIds } from "@/lib/scope";
 import { canWriteDelegation } from "@/lib/delegation";
 import { fmtDate } from "@/lib/format";
 import { reportInternalError } from "@/lib/errors";
+import { parseDay } from "@/lib/actions";
+import { addMilestone, createAction, setActionPeriod } from "./actions";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -102,6 +104,26 @@ export async function deleteDelegation(id: string): Promise<Result> {
   await prisma.delegation.delete({ where: { id } });
   revalidatePath("/delegation");
   return { ok: true };
+}
+
+// Objectif d'une délégation (25/09) : une action de l'année avec son responsable ; une échéance devient un jalon (26/09),
+// point de contrôle ou non. Pas de règle propre : createAction (droit d'ajouter une action à l'année), puis addMilestone
+// et setActionPeriod (droit sur l'action) — le moteur de l'onglet Actions. La date est vérifiée avant toute écriture.
+export async function addObjective(editionId: string, input: { name: string; ownerId: string; date?: string; isCheckpoint?: boolean }): Promise<Result<{ id: string }>> {
+  const due = input.date ? parseDay(input.date) : null;
+  if (input.date && !due) return { ok: false, error: "Échéance invalide." };
+  const created = await createAction(editionId, { name: input.name, ownerId: input.ownerId });
+  if (!created.ok || !due || !input.date) return created;
+  const id = created.data!.id;
+  const m = await addMilestone(id, { date: input.date, label: input.name, isCheckpoint: input.isCheckpoint });
+  if (!m.ok) return m;
+  // Une échéance après la fin de l'année prolonge la période (comme la migration) : l'action ne finit pas avant son jalon.
+  const a = await prisma.action.findUnique({ where: { id }, select: { startDate: true, endDate: true } });
+  if (a?.startDate && a.endDate && due > a.endDate) {
+    const p = await setActionPeriod(id, a.startDate.toISOString().slice(0, 10), input.date);
+    if (!p.ok) return p;
+  }
+  return { ok: true, data: { id } };
 }
 
 // Point de contrôle (26/09 : une propriété du jalon) : marque ou démarque les jalons de l'action. Même droit que la

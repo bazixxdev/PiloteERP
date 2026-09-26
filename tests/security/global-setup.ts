@@ -54,6 +54,24 @@ export default async function globalSetup(config: FullConfig) {
   if (!thomas || !deleg) throw new Error("Fixture délégation introuvable.");
   await prisma.task.create({ data: { personId: thomas.id, editionId: deleg.editionId, label: "SEC31_TASK_SENTINEL_4b1e" } });
   writeFileSync(path.join(authDir, "../.security-delegation-person-id"), thomas.id);
+  // Actions composantes (26/09) : une action d'un projet où le contributeur n'est rien — ni pilote, ni équipe d'aucune année,
+  // ni responsable ou associé de l'action, projet hors de son pôle — et sans heures ni dépenses (seule sa garde la protège).
+  const lucas = await prisma.person.findUnique({ where: { email: SECURITY_ACTORS.contributor.email }, select: { id: true, poleId: true } });
+  if (!lucas) throw new Error("Fixture SEC-32 : contributeur introuvable.");
+  const outside = await prisma.action.findFirst({
+    where: {
+      startDate: { not: null }, endDate: { not: null }, ownerId: { not: lucas.id }, people: { none: { personId: lucas.id } },
+      timeEntries: { none: {} }, expenses: { none: {} },
+      project: {
+        pilotId: { not: lucas.id }, editions: { none: { team: { some: { personId: lucas.id } } } },
+        ...(lucas.poleId ? { poleId: { not: lucas.poleId }, secondaryPoles: { none: { poleId: lucas.poleId } } } : {}),
+      },
+    },
+    orderBy: { id: "asc" },
+    select: { id: true },
+  });
+  if (!outside) throw new Error("Fixture SEC-32 : aucune action hors du périmètre du contributeur.");
+  writeFileSync(path.join(authDir, "../.security-outside-action-id"), outside.id);
   await prisma.person.update({ where: { email: SECURITY_ACTORS.disabled.email }, data: { active: false } });
   await prisma.$disconnect();
 }

@@ -23,7 +23,7 @@ const walk = (dir: string, out: string[] = []): string[] => {
 // sont des exceptions historiques déjà gardées dans saveField (à sortir un jour, BLK-14).
 const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
   edition: "status decisionDate conditionalStart stakes axis sressMeasure snessLink otherTexts yearPriorities expectedOutcome plannedFunders directExpenseEnvelope fte imposedIndicators sponsorId operationalObjectives quantitativeObjectives content audience calendar deliveryDate partners method governance ownIndicators timeNeed budgetNeed codirDecision codirDate boardValidated boardDate venues equipment evidenceToKeep evaluation report budgetEnvelope spent",
-  action: "name ownerId milestoneDate timeTarget state fundingLineId isPublic description venue participants",
+  action: "name ownerId timeTarget state description recurrence audience entrusted latitude",
   fundingLine: "funderId conventionId scheme status amountRequested amountGranted submittedAt answeredAt contractedAt analyticCode allocationKeyRef multiYear notes contactId",
   deliverable: "label dueDate done",
   payment: "label amount expectedAt receivedAt reference note",
@@ -100,13 +100,12 @@ test("aucun artefact de suite de tests suivi par git", () => {
 // Actions composantes (26/09) — les actions d'une année se lisent par attachYearActions (période qui chevauche l'année) et
 // les dates par leurs jalons (Milestone), plus par la relation d'origine `edition.actions` ni par l'ancien jalon unique, ni
 // par les champs de l'action passés au jalon (lieu, participants, public, point de contrôle) — lus sur une variable d'action
-// (`a.`, `action.`) ; `m.isCheckpoint` d'un jalon est permis. Exceptions : lib/actions-db.ts (le chargeur) ; lib/fields.ts
-// liste encore milestoneDate pour saveField jusqu'à la tâche 6 (FIELDS.action refait, voir la liste figée plus haut).
+// (`a.`, `action.`) ; `m.isCheckpoint` d'un jalon est permis. Exception : lib/actions-db.ts (le chargeur).
 // prisma/ et les seeds ne sont pas parcourus. `actions: true` n'est pas interdit : renewEdition recopie encore toutes les
 // actions de l'année source jusqu'à la tâche 12, et la garde de détachement d'une ligne lit l'ancien lien fundingLineId
 // (`fundingLine.actions`) jusqu'au contract.
 const sourceFiles = (dirs: string[]) => dirs.flatMap((d) => walk(path.join(ROOT, d))).filter((p) => /\.(ts|tsx)$/.test(p)).map((p) => path.relative(ROOT, p));
-const ACTIONS_EXCEPTIONS = new Set(["lib/actions-db.ts", "lib/fields.ts"]);
+const ACTIONS_EXCEPTIONS = new Set(["lib/actions-db.ts"]);
 
 test("les actions d'une année se lisent par attachYearActions, jamais par l'ancienne relation ni l'ancien jalon", () => {
   const offenders = sourceFiles(["app", "lib", "components"]).filter((f) => !ACTIONS_EXCEPTIONS.has(f)).filter((f) => {

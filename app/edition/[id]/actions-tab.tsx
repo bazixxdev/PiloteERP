@@ -55,9 +55,9 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                       <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
                       <td className="min-w-[220px] py-1 pr-2">
                         <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`${V.action.one}-name-${i}`} inputClassName="font-medium" label={`Nom ${du(V.action)} ${i + 1}`} />
-                        {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
+                        {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire). */}
                         {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
-                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || null, a.milestones.some((m) => m.isPublic) ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
+                        <ActionPanel name={a.name} index={i} hints={[[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || null, a.milestones.some((m) => m.isPublic) ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
                           <div className="grid gap-2 sm:grid-cols-3">
                             <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
                             {/* Lieu, participants et « public » sont portés par les jalons, le financement par les liens de l'action (26/09) :

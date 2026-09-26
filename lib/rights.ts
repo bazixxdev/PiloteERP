@@ -52,6 +52,12 @@ export function canEditActions(me: Actor, isPilotOfEdition: boolean, isTeamMembe
   return canWriteLayer(me, "year", isPilotOfEdition, isTeamMember, samePole);
 }
 
+// Une action vit sur plusieurs années (spec actions § 2) : l'équipe de n'importe quelle année qu'elle couvre agit comme
+// sur les actions d'une année ; son responsable et ses personnes associées aussi.
+export function canEditAction(me: Actor, c: { isPilot: boolean; isTeamOfCoveredYear: boolean; samePole: boolean; isOwnerOrAssociate: boolean }): boolean {
+  return c.isOwnerOrAssociate || canEditActions(me, c.isPilot, c.isTeamOfCoveredYear, c.samePole);
+}
+
 // Intervenir sur une édition comme son pilote (propositions, remarques, réalisations, confirmations…).
 export function canActAsPilot(me: Actor, isPilotOfEdition: boolean, isTeamMember = false): boolean {
   return has(me, "edition.edit_all") || isPilotOfEdition || isTeamMember;

@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { acknowledgeDelegations, consignBoardPresentation, createDelegations, deleteDelegation, setActionCheckpoint, updateDelegation } from "@/app/actions/delegation";
-import { addAction } from "@/app/actions/edition";
+import { acknowledgeDelegations, addObjective, consignBoardPresentation, createDelegations, deleteDelegation, setActionCheckpoint, updateDelegation } from "@/app/actions/delegation";
 
 type R = { ok: true } | { ok: false; error: string };
 
@@ -98,7 +97,7 @@ export function AddObjectiveForm({ editionId, ownerId }: { editionId: string; ow
   const { pending, run } = useRun();
   if (!open) return <Button type="button" size="xs" variant="ghost" onClick={() => setOpen(true)} data-testid={`delegation-add-objective-${editionId}`}><Plus />Ajouter un objectif</Button>;
   return (
-    <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addAction(editionId, name, { ownerId, milestone: date ? { date, checkpoint } : undefined }), () => { setOpen(false); setName(""); setDate(""); setCheckpoint(false); }); }}>
+    <form className="flex flex-wrap items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => addObjective(editionId, { name, ownerId, date: date || undefined, isCheckpoint: checkpoint }), () => { setOpen(false); setName(""); setDate(""); setCheckpoint(false); }); }}>
       <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Objectif ou résultat attendu" className="h-7 w-64 text-xs" data-testid={`delegation-objective-name-${editionId}`} />
       <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-7 w-36 text-xs" data-testid={`delegation-objective-date-${editionId}`} />
       <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={checkpoint} onChange={(e) => setCheckpoint(e.target.checked)} />point de contrôle</label>

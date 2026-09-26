@@ -49,7 +49,7 @@ test("un chargé de mission propose un projet ; la fiche naît en statut propos�
   await expect(page.getByTestId("field-operationalObjectives")).toContainText("catalogue commun");
 });
 
-test("les réalisations se consignent au fil de l'année et sortent dans le bilan ; une action se duplique avec sa petite fiche", async ({ page }) => {
+test("les réalisations se consignent au fil de l'année et sortent dans le bilan ; une occurrence porte sa petite fiche", async ({ page }) => {
   await page.goto("/portefeuille");
   await iAm(page, "Inès Cabral");
   await openEditionByName(page, "Observatoire régional (ORESS)");
@@ -64,15 +64,12 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   await expect(page.getByTestId("achievement-totals")).toContainText("82 personnes");
   const md = await page.request.get(page.url().replace(/\?.*$/, "") + "/export?format=md");
   expect(await md.text()).toContain("Inscrits au petit-déjeuner d'octobre");
-  // Occurrences : le petit-déjeuner de mars a sa fiche ; « dupliquer » crée l'occurrence suivante.
+  // Occurrences : le petit-déjeuner de mars a sa fiche (la duplication a disparu avec l'action composante, 26/09).
   await page.getByRole("tab", { name: new RegExp(cap(pl(W.action))) }).click();
   const idx = 2; // troisième action du jeu de démo : le petit-déjeuner de mars
   await expect(page.getByTestId(`action-name-${idx}`)).toHaveValue("Petit-déjeuner ORESS · mars · emploi");
   await page.getByTestId(`action-details-${idx}`).click();
   await expect(page.getByTestId(`action-extras-${idx}`)).toContainText("Chiffres de l'emploi ESS 2025");
-  await page.getByTestId(`action-duplicate-${idx}`).click();
-  await expect(page.getByText(`${cap(W.action)} dupliquée`)).toBeVisible();
-  await expect(page.locator("[data-testid^=action-name-]").last()).toHaveValue("Petit-déjeuner ORESS · mars · emploi (copie)");
 });
 
 test("le plan opérationnel s'assemble en un Word ; le plan de charge se fige et trace les modifications ; une remarque porte son motif", async ({ page }) => {

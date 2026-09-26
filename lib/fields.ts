@@ -47,9 +47,12 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     budgetEnvelope: { type: "number", layer: "budget", label: "Enveloppe validée (€)" },
     spent: { type: "number", layer: "budget", label: "Réalisé hors devis (€)" },
   },
+  // Période, jalons, personnes associées et financements de l'action ont leurs commandes (app/actions/actions.ts) : ils
+  // portent un invariant (période valide, liste remplacée d'un coup, garde sur toutes les années couvertes).
   action: {
-    name: { type: "text" }, ownerId: { type: "select" }, milestoneDate: { type: "date" }, timeTarget: { type: "number" }, state: { type: "select" }, fundingLineId: { type: "select" }, isPublic: { type: "bool" },
-    description: { type: "textarea", label: "Contenu" }, venue: { type: "text", label: "Lieu" }, participants: { type: "textarea", label: "Participants, invités" },
+    name: { type: "text" }, ownerId: { type: "select" }, timeTarget: { type: "number" }, state: { type: "select" },
+    description: { type: "textarea", label: "Contenu" }, recurrence: { type: "text", label: "Récurrence" }, audience: { type: "textarea", label: "Public, bénéficiaires" },
+    entrusted: { type: "textarea", label: "Ce qui est confié" }, latitude: { type: "textarea", label: "Marge de décision" },
   },
   fundingLine: {
     funderId: { type: "select" }, conventionId: { type: "select" }, scheme: { type: "text" }, status: { type: "select" }, amountRequested: { type: "number" }, amountGranted: { type: "number" },

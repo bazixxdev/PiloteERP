@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/common/reveal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { addAction, addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
+import { addDeliverable, addDocLink, addFundingLine, addIndicator, addComment, addExpense, addFundingLineFromConvention } from "@/app/actions/edition";
+import { createAction } from "@/app/actions/actions";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
 import { V, cap, du } from "@/lib/vocab";
 
@@ -32,7 +33,7 @@ export function AddActionForm({ editionId }: { editionId: string }) {
   const { pending, run } = useRun();
   return (
     <Reveal label={cap(V.action)} testId="add-action-open">
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => addAction(editionId, name), () => setName("")); }}>
+      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; run(() => createAction(editionId, { name }), () => setName("")); }}>
         <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={`Nom ${du(V.action)} (Entrée pour ajouter)`} className="h-7 w-72" data-testid="add-action-input" />
         <Button type="submit" size="sm" variant="outline" disabled={pending || !name.trim()} data-testid="add-action-submit"><Plus />Ajouter</Button>
       </form>

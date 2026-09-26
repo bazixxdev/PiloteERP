@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 export type SecurityActor = {
@@ -71,4 +73,23 @@ export async function postServerAction(baseURL: string, actionId: string, args: 
     },
     body: JSON.stringify(args),
   });
+}
+
+// Identifiant d'une Server Action dans le build servi (manifeste des références serveur) : le serveur de sécurité est construit
+// par `npm run build`, qui écrit dans .next-build. Toutes les commandes d'un fichier « use server » y figurent dès qu'un
+// composant client en importe une.
+export function serverActionId(filename: string, exportedName: string): string {
+  // `npm run build` impose NEXT_DIST_DIR=.next-build, quel que soit celui que passe la configuration de sécurité.
+  const file = path.join(process.cwd(), ".next-build", "server", "server-reference-manifest.json");
+  if (!existsSync(file)) throw new Error("Manifeste des Server Actions introuvable : le build de sécurité n'a pas tourné.");
+  const manifest = JSON.parse(readFileSync(file, "utf8")) as { node: Record<string, { filename?: string; exportedName?: string }> };
+  const id = Object.entries(manifest.node).find(([, v]) => v.filename === filename && v.exportedName === exportedName)?.[0];
+  if (!id) throw new Error(`Server Action ${filename}#${exportedName} absente du build.`);
+  return id;
+}
+
+// En-tête Cookie d'un acteur, tiré de son storageState (écrit par global-setup).
+export function cookieOf(actor: SecurityActor): string {
+  const state = JSON.parse(readFileSync(path.join(process.cwd(), "tests", ".security-auth", `${actor.key}.json`), "utf8")) as { cookies: { name: string; value: string }[] };
+  return state.cookies.map((c) => `${c.name}=${c.value}`).join("; ");
 }

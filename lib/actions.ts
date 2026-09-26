@@ -21,6 +21,14 @@ export function validPeriod(start: Date, end: Date): string | null {
   return end < start ? "La fin précède le début." : null;
 }
 
+// Un jour saisi « AAAA-MM-JJ » (champ date) → minuit UTC, comme saveField (lib/fields.ts, coerce) ; null si le texte n'est
+// pas un jour du calendrier (« 2026-02-30 » compris). Période et jalons passent tous par ici.
+export function parseDay(s: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(s);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? d : null;
+}
+
 export function yearsOf(p: Period): number[] {
   const out: number[] = [];
   for (let y = yearOf(p.startDate); y <= yearOf(p.endDate); y++) out.push(y);

@@ -4,15 +4,16 @@ import { revalidatePath } from "next/cache";
 import { findOrCreateOrganisation } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
-import { canConsignDecision, canDecideValidation, canEditActions, canEditFunding, canWriteLayer, isCodir, requiredLevelFor, validationLevelOf } from "@/lib/rights";
+import { canConsignDecision, canDecideValidation, canEditFunding, canWriteLayer, isCodir, requiredLevelFor, validationLevelOf } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
-import { defaultPeriod, shiftYear } from "@/lib/actions";
+import { defaultPeriod, parseDay, shiftYear } from "@/lib/actions";
+import { actionCtx } from "@/lib/actions-rights-db";
 import { actionRunsInEdition } from "@/lib/actions-db";
-import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
+import { V, cap, le, un, du, de, au, ce, seul } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -26,47 +27,25 @@ async function ctx(editionId: string) {
 
 const path = (id: string) => `/edition/${id}`;
 
-// `opts` (25/09) : un objectif créé depuis la vue Délégation porte son responsable et peut avoir une échéance — un jalon
-// (26/09), point de contrôle ou non. Même garde, même création : pas de second moteur d'actions. Sans `opts`, inchangé.
-export async function addAction(editionId: string, name: string, opts?: { ownerId?: string; milestone?: { date: string; checkpoint?: boolean } }): Promise<Result<{ id: string }>> {
-  const c = await ctx(editionId);
-  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: `Vous ne pouvez pas ajouter d'${V.action.one} ici.` };
-  if (opts?.ownerId && !(await prisma.person.findFirst({ where: { id: opts.ownerId, active: true }, select: { id: true } }))) return { ok: false, error: "Responsable introuvable." };
-  const due = opts?.milestone?.date ? new Date(opts.milestone.date) : null;
-  if (due && Number.isNaN(due.getTime())) return { ok: false, error: "Échéance invalide." };
-  const count = await prisma.action.count({ where: { editionId } });
-  // Période : l'année, prolongée jusqu'au jalon s'il tombe après le 31/12 (comme la migration) ; sans elle, l'action
-  // n'apparaîtrait dans aucune année.
-  const period = defaultPeriod(c.e.year);
-  const endDate = due && due > period.endDate ? due : period.endDate;
-  const label = name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`;
-  // Une seule écriture : l'action et son jalon (libellé = nom de l'action, comme ceux repris par la migration).
-  const a = await prisma.action.create({ data: {
-    editionId, projectId: c.e.projectId, startDate: period.startDate, endDate, name: label, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), order: count,
-    ...(due ? { milestones: { create: [{ date: due, label, isCheckpoint: Boolean(opts?.milestone?.checkpoint) }] } } : {}),
-  } });
-  revalidatePath(path(editionId));
-  return { ok: true, data: { id: a.id } };
-}
-
 // Onglet Actions (en attendant la page de l'action) : la date du prochain jalon non fait se modifie dans le tableau ; sans
 // jalon, on en crée un (libellé = nom de l'action). Une date vide ne supprime JAMAIS un jalon (un champ date à moitié effacé
-// envoie "") : la suppression est une commande à part (tâche 6). La période s'étend jusqu'au jalon s'il en sort. Même garde que la modification d'une action par saveField (équipe, pilote, pôle, ou responsable).
+// envoie "") : la suppression est une commande à part (deleteMilestone). La période s'étend jusqu'au jalon s'il en sort. Même
+// garde que toutes les commandes de l'action (actionCtx : pilote, équipe d'une année couverte, pôle, responsable, associés).
 export async function setNextMilestoneDate(actionId: string, date: string): Promise<Result> {
-  const a = await prisma.action.findUnique({ where: { id: actionId }, include: { milestones: { where: { done: false }, orderBy: [{ date: "asc" }, { order: "asc" }], take: 1 } } });
+  const me = await getCurrentPerson();
+  const { a, can } = await actionCtx(actionId, me);
   if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
-  const c = await ctx(a.editionId);
-  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas modifier ${ce(V.action)}.` };
-  const next = a.milestones[0] ?? null;
+  if (!can) return { ok: false, error: `Vous ne pouvez pas modifier ${ce(V.action)}.` };
   if (!date) return { ok: false, error: "Indiquez une date : le jalon est conservé." };
-  const when = new Date(date);
-  if (Number.isNaN(when.getTime())) return { ok: false, error: "Date invalide." };
+  const when = parseDay(date);
+  if (!when) return { ok: false, error: "Date invalide." };
+  const next = await prisma.milestone.findFirst({ where: { actionId, done: false }, orderBy: [{ date: "asc" }, { order: "asc" }] });
   // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
   await prisma.$transaction(async (tx) => {
     if (next) await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
     else await tx.milestone.create({ data: { actionId, date: when, label: a.name } });
-    if (a.startDate && when < a.startDate) await tx.action.update({ where: { id: actionId }, data: { startDate: when } });
-    if (a.endDate && when > a.endDate) await tx.action.update({ where: { id: actionId }, data: { endDate: when } });
+    if (when < a.startDate) await tx.action.update({ where: { id: actionId }, data: { startDate: when } });
+    if (when > a.endDate) await tx.action.update({ where: { id: actionId }, data: { endDate: when } });
   });
   revalidatePath(path(a.editionId));
   return { ok: true };
@@ -388,20 +367,6 @@ export async function addFundingLineFromConvention(editionId: string, convention
   }
   revalidatePath(path(editionId));
   return { ok: true };
-}
-
-// Dupliquer une action (occurrences : petits-déjeuners, forums SPRO) : même contenu, période, objectif et financements ; jalons (lieu,
-// participants, public) vidés, état « à faire ».
-export async function duplicateAction(actionId: string): Promise<Result<{ id: string }>> {
-  const a = await prisma.action.findUnique({ where: { id: actionId }, include: { fundings: { select: { fundingLineId: true } } } });
-  if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
-  const c = await ctx(a.editionId);
-  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas dupliquer ${ce(V.action)}.` };
-  const count = await prisma.action.count({ where: { editionId: a.editionId } });
-  // Lieu, participants et « public » vivent sur les jalons (vidés à la copie) ; le financement suit par les liens de l'action.
-  const d = await prisma.action.create({ data: { editionId: a.editionId, projectId: a.projectId, startDate: a.startDate, endDate: a.endDate, name: `${a.name} (copie)`, ownerId: a.ownerId, timeTarget: a.timeTarget, description: a.description, order: count, fundings: { create: a.fundings.map((f) => ({ fundingLineId: f.fundingLineId })) } } });
-  revalidatePath(path(a.editionId));
-  return { ok: true, data: { id: d.id } };
 }
 
 // Proposition de projet par tout chargé de mission (retour du 14/09 ; S12 : « fais-moi une fiche projet »). Un projet « en devenir » :
