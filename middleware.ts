@@ -14,11 +14,17 @@ export function middleware(request: NextRequest) {
   if (!getSessionCookie(request, { cookiePrefix: "pilote" })) {
     // Les adresses lues par un programme (exports, pièces, API) répondent 401 plutôt qu'une page de connexion.
     if (pathname.startsWith("/api/") || pathname.endsWith("/export")) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
-    // Redirection **relative** (26/09) : Next écoute en loopback (--hostname 127.0.0.1, SEC-22) et `nextUrl` porte alors
-    // l'hôte interne (https://localhost:3002) ; une adresse absolue envoyait le navigateur sur localhost. Relative, elle ne
-    // dépend d'aucun en-tête Host (rien à falsifier) et garde le sous-chemin de l'instance.
-    const suite = pathname !== "/" ? `?suite=${encodeURIComponent(pathname + (request.nextUrl.search || ""))}` : "";
-    return new NextResponse(null, { status: 307, headers: { Location: `${request.nextUrl.basePath}/connexion${suite}` } });
+    // Hôte public (26/09) : Next écoute en loopback (--hostname 127.0.0.1, SEC-22) et `nextUrl` porte alors l'hôte interne
+    // (https://localhost:3002) ; le navigateur partait sur localhost. Next exige une adresse absolue : on la construit sur
+    // l'hôte que Nginx transmet (il ne relaie que ses server_name) et sur le protocole d'origine.
+    const login = request.nextUrl.clone();
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    const proto = request.headers.get("x-forwarded-proto");
+    if (host) { const [hostname, port] = host.split(":"); login.hostname = hostname; login.port = port ?? ""; }
+    if (proto === "https" || proto === "http") login.protocol = `${proto}:`;
+    login.pathname = "/connexion";
+    login.search = pathname !== "/" ? `?suite=${encodeURIComponent(pathname + (request.nextUrl.search || ""))}` : "";
+    return NextResponse.redirect(login);
   }
   return NextResponse.next();
 }
