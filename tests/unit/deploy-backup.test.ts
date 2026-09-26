@@ -64,3 +64,10 @@ test("la release possède un manifeste non sensible et traçable", () => {
   assert.doesNotMatch(script, /DATABASE_URL.*\.release\.json/);
   assert.doesNotMatch(script, /BETTER_AUTH_SECRET.*\.release\.json/);
 });
+
+test("le déploiement vérifie l'adresse de l'API d'auth et que la connexion répond", () => {
+  assert.match(script, /grep -qx "BETTER_AUTH_URL=\\"\$PUBLIC_URL\/api\/auth\\""/);
+  assert.match(script, /api\/auth\/sign-in\/email/);
+  assert.match(script, /401 attendu/);
+});
+

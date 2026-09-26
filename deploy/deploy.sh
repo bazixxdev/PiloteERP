@@ -115,6 +115,12 @@ if ! grep -Eq '^BETTER_AUTH_URL=\"https://' "$DIR/.env"; then
   echo "✖ BETTER_AUTH_URL doit être HTTPS ($INSTANCE)" >&2
   exit 1
 fi
+# L'API d'auth vit sous le sous-chemin de l'instance : sans lui, la connexion répond 404 (constaté le 26/09 après une
+# réécriture manuelle du .env). La valeur attendue est exactement l'adresse publique + /api/auth.
+if ! grep -qx "BETTER_AUTH_URL=\"$PUBLIC_URL/api/auth\"" "$DIR/.env"; then
+  echo "✖ BETTER_AUTH_URL doit valoir \"$PUBLIC_URL/api/auth\" ($INSTANCE) : sinon la connexion répond 404" >&2
+  exit 1
+fi
 if grep -q '^AUTH_RATE_LIMIT=' "$DIR/.env"; then
   RATE_LIMIT=$(sed -n 's/^AUTH_RATE_LIMIT=//p' "$DIR/.env" | head -1)
   [ "$RATE_LIMIT" != "0" ] || { echo "✖ AUTH_RATE_LIMIT=0 est interdit en production ($INSTANCE)" >&2; exit 1; }
@@ -211,8 +217,12 @@ chown -R "$RUNTIME_USER:$RUNTIME_USER" "$DATA" "$MEDIAS"
 find "$DATA" "$MEDIAS" -type d -exec chmod 750 {} +
 find "$DATA" "$MEDIAS" -type f -exec chmod 640 {} +
 systemctl start "$SERVICE"
+ORIGIN=$(echo "$PUBLIC_URL" | sed -E 's#^(https?://[^/]+).*#\1#')
 for i in $(seq 1 30); do
   if curl -fsS -o /dev/null "$HEALTH"; then
+    # La page répond ; la route de connexion doit répondre aussi (identifiant bidon : 401 attendu, jamais 404).
+    AUTH_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H "Origin: $ORIGIN" --data '{"email":"sonde-deploiement@invalid.test","password":"x"}' "http://127.0.0.1:$PORT$BASE_PATH/api/auth/sign-in/email")
+    case "$AUTH_CODE" in 400|401|403|429) ;; *) echo "✖ la connexion répond $AUTH_CODE (401 attendu)" >&2; break ;; esac
     rm -f "$MAINTENANCE_FLAG"
     # Premier démarrage réussi sous le nouveau nom : l'ancienne unité ne doit plus redémarrer au boot.
     [ "$LEGACY_SERVICE" != "none" ] && systemctl disable "$LEGACY_SERVICE" >/dev/null 2>&1 || true
