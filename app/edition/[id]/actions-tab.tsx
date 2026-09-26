@@ -14,6 +14,7 @@ import { Achievements } from "./achievements";
 import { TimeCell } from "./time-cell";
 import { milestoneTitle, spanLabel } from "@/lib/actions";
 import { V, cap, le, ce, aucun, pl } from "@/lib/vocab";
+import { Timeline } from "./timeline";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   const writable = canEditActions(me, isPilot, isTeam, inMyPole(me, e.project));
@@ -91,8 +92,8 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
         )}
       </Section>
 
-      <Section title="Frise chronologique" description={`Jalons datés de l'année ${e.year}, sans dépendances.`}>
-        <Timeline year={e.year} actions={e.actions} refs={refs} />
+      <Section title="Frise chronologique" description={`Une barre par ${V.action.one} de l'année, ses jalons et les livrables.`}>
+        <Timeline year={e.year} actions={e.actions} deliverables={e.fundingLines.flatMap((fl) => fl.deliverables)} refs={refs} />
       </Section>
 
       {/* Objets vivants (revue du 15/09) : les réalisations se consignent au fil de l'eau ici, près des actions ; les indicateurs
@@ -125,39 +126,3 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   );
 }
 
-const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-
-// Frise provisoire (la frise par action vient avec la tâche 8) : un point par jalon de l'année, au nom de l'action.
-function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"]["actions"]; refs: TabCtx["refs"] }) {
-  const start = dayjs(`${year}-01-01`);
-  const total = dayjs(`${year + 1}-01-01`).diff(start, "day");
-  const today = dayjs();
-  const todayPct = today.year() === year ? (today.diff(start, "day") / total) * 100 : null;
-  const dated = actions.flatMap((a) => a.milestones.filter((m) => dayjs(m.date).year() === year).map((m) => ({ id: m.id, name: milestoneTitle(a.name, m.label), date: m.date, state: m.done ? "done" : a.state, late: !m.done && a.state !== "done" && a.state !== "abandoned" && dayjs(m.date).isBefore(dayjs(), "day") })))
-    .sort((x, y) => x.date.getTime() - y.date.getTime());
-  if (dated.length === 0) return <p className="text-sm text-muted-foreground">Aucun jalon daté pour l'instant.</p>;
-  const colorOf = (state: string) => ({ done: "bg-mint/50", doing: "bg-primary", todo: "bg-muted-foreground/40" }[state] ?? "bg-muted-foreground/40");
-  return (
-    <div className="relative" data-testid="timeline">
-      <div className="mb-1 grid grid-cols-12 text-center text-[10px] font-semibold text-muted-foreground">
-        {MONTHS.map((m, i) => <div key={i} className="border-l first:border-l-0">{m}</div>)}
-      </div>
-      <div className="relative mt-4">
-        {todayPct !== null && <div className="absolute top-0 bottom-0 z-10 w-px bg-coral" style={{ left: `${todayPct}%` }} title="Aujourd'hui"><span className="absolute -top-4 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-coral">aujourd'hui</span></div>}
-        {dated.map((m) => {
-          const pct = Math.min(100, Math.max(0, (dayjs(m.date).diff(start, "day") / total) * 100));
-          return (
-            <div key={m.id} className="relative h-7 border-t border-dashed border-border/70">
-              <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(${pct}% - 6px)` }}>
-                <div className={cn("size-3 rounded-full ring-2 ring-card", m.late ? "bg-danger" : colorOf(m.state))} />
-              </div>
-              <div className={cn("absolute top-1/2 -translate-y-1/2 truncate text-xs", m.state === "done" && "text-muted-foreground")} style={{ left: pct > 70 ? undefined : `calc(${pct}% + 10px)`, right: pct > 70 ? `calc(${100 - pct}% + 10px)` : undefined, maxWidth: "40%" }}>
-                {m.name} <span className="text-muted-foreground">· {dayjs(m.date).format("D MMM")} · {refLabel(refs, "action_state", m.state)}</span>{m.late && <span className="ml-1 rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}

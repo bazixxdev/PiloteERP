@@ -6,7 +6,8 @@ const yearOf = (d: Date) => d.getFullYear();
 // un jalon ou une fin datés d'aujourd'hui ne sont pas en retard, seulement ce qui est strictement avant.
 // Convention du calendrier local, comme yearOf ci-dessus : correcte sur un hôte Europe/Paris ou UTC (pas testé au-delà).
 const dayOf = (d: Date) => d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
-const beforeDay = (a: Date, b: Date) => dayOf(a) < dayOf(b);
+// Exportée (26/09, frise) : seule implémentation du « en retard » à la journée près, réutilisée hors de ce module.
+export const beforeDay = (a: Date, b: Date) => dayOf(a) < dayOf(b);
 
 export function runsIn(p: Period, year: number): boolean {
   return yearOf(p.startDate) <= year && year <= yearOf(p.endDate);
