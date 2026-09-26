@@ -44,6 +44,7 @@ export function FicheValidationSection(p: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const next = p.steps.find((s) => s.isNext) ?? null;
+  const last = p.steps.at(-1) ?? null;
   const decide = (decision: FicheDecision) => start(async () => {
     const r = await decideFiche(p.editionId, decision, comment);
     if (!r.ok) { toast.error(r.error); return; }
@@ -101,6 +102,8 @@ export function FicheValidationSection(p: Props) {
         </ol>
       )}
 
+      {/* Fiche validée : comment elle se rouvre, dit à tous (le bouton, lui, n'est qu'à qui tient le droit du dernier niveau). */}
+      {p.complete && last && <p className="mt-2 text-xs text-muted-foreground lg:ml-9" data-testid="fiche-reopen-hint">{`Fiche validée : elle se rouvre par « À retravailler » au dernier niveau (« ${last.label} »), par qui en tient le droit ; le circuit repart alors du premier niveau.`}</p>}
       {p.deadEnd && <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning-foreground lg:ml-9" data-testid="fiche-level-dead-end">{p.deadEnd}</p>}
       {p.blocked && !anyAction && <p className="mt-2 text-xs text-muted-foreground lg:ml-9" data-testid="fiche-decide-blocked">{p.blocked}</p>}
 

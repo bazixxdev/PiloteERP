@@ -68,6 +68,8 @@ test("la direction valide le niveau 1, le CA le niveau 2 : la fiche se verrouill
   await expect(page.getByTestId("fiche-locked")).toContainText("CA");
   await expect(layer).toContainText("Circuit terminé");
   await expect(layer.getByTestId("fiche-level-2")).toContainText("« Vu au CA »");
+  // Comment la rouvrir est dit près des boutons : « À retravailler » au dernier niveau, par qui en tient le droit.
+  await expect(layer.getByTestId("fiche-reopen-hint")).toContainText("« À retravailler » au dernier niveau (« CA »)");
   await expect(page.getByTestId("edition-status")).toContainText("Validée");
   await layer.getByTestId("fiche-reopen").locator("summary").click();
   await layer.screenshot({ path: "test-results/task13-couche4-apres.png" });
@@ -92,6 +94,7 @@ test("le pilote ne décide pas sa propre fiche : pas de bouton, et l'impasse est
   await page.goto(fiche);
   const layer = page.getByTestId("layer-validation");
   await expect(layer.getByTestId("fiche-level-1")).toContainText("à décider");
+  await expect(layer.getByTestId("fiche-reopen-hint")).toHaveCount(0);
   await expect(page.getByTestId("fiche-decide")).toHaveCount(0);
   await expect(layer.getByTestId("fiche-decide-blocked")).toContainText("On ne décide pas sa propre fiche");
   await expect(layer.getByTestId("fiche-level-dead-end")).toContainText(`Seul·e Claire Vasseur, ${W.pilote.one} ${du(W.projet)}`);
@@ -127,4 +130,28 @@ test("Admin › Paramètres : le circuit se lit et se règle (libellé, droit, o
   await expect(section.getByTestId("fiche-level-label-2")).toHaveValue("CA");
   // Le niveau 2 a des décisions (jeu de démo) : il ne se retire pas, il se désactive.
   await expect(section.getByTestId("fiche-level-row-2").getByRole("button", { name: "Retirer" })).toBeDisabled();
+});
+
+test("« Préparer » relit la dernière décision consignée, plus l'ancienne décision de la fiche", async ({ page }) => {
+  // « Réseau Femmes et ESS » 2026 : l'ancienne codirDecision « adjust » est devenue la Decision « Ajusté pour 2027 » (seed
+  // aligné sur la migration 20260927100000) ; sa fiche 2026 reste validée (niveau 1 approuvé, CA approuvé).
+  const source = await prisma.edition.findFirstOrThrow({ where: { year: 2026, project: { name: "Réseau Femmes et ESS" } }, select: { id: true, codirDecision: true, projectId: true } });
+  expect(source.codirDecision).toBe("adjust");
+  await page.goto("/seminaire?annee=2027");
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/seminaire?annee=2027");
+  const row = page.getByTestId(`seminar-row-${source.projectId}`);
+  await expect(row).toContainText("décidé : ajuster");
+  // Une décision plus récente l'emporte, alors que codirDecision vaut toujours « adjust ».
+  const director = await prisma.person.findFirstOrThrow({ where: { name: "Claire Vasseur" }, select: { id: true } });
+  const later = await prisma.decision.create({ data: { editionId: source.id, instance: "codir", body: "Reconduit pour 2027", authorId: director.id, decidedAt: new Date() } });
+  try {
+    await page.reload();
+    await expect(row).toContainText("décidé : reconduire");
+  } finally {
+    await prisma.decision.delete({ where: { id: later.id } });
+  }
+  await page.goto(`/edition/${source.id}?onglet=fiche`);
+  await expect(page.getByTestId("fiche-locked")).toBeVisible();
+  await expect(page.getByTestId("instance-decisions")).toContainText("Ajusté pour 2027");
 });

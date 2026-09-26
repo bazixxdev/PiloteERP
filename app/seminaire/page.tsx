@@ -30,8 +30,9 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
   const rows = projects.map((p) => {
     const next = p.editions.find((e) => e.year === target);
     const source = p.editions.find((e) => e.year === target - 1) ?? p.editions.find((e) => e.year < target);
-    // La décision consignée pour l'année visée ; à défaut, l'ancienne décision écrite dans la fiche (avant le 26/09).
-    const decision = source ? prepareChoiceOf(source.decisions.map((d) => d.body), target) ?? source.codirDecision ?? null : null;
+    // La dernière décision « Préparer » consignée pour l'année visée (Decision de l'année source, la plus récente d'abord).
+    // L'ancienne codirDecision n'est plus lue : la migration 20260927100000 l'a copiée en Decision.
+    const decision = source ? prepareChoiceOf(source.decisions.map((d) => d.body), target) : null;
     return { project: p, next, source, decision };
   });
   const stopped = rows.filter((r) => !r.next && r.decision === "stop").length;
