@@ -21,7 +21,7 @@ export default async function AidePage() {
         <div className="grid min-w-0 content-start gap-5">
           <section className="rounded-2xl border bg-card p-5" aria-labelledby="aide-schema">
             <h2 id="aide-schema" className="text-[15px] font-bold">{`L'essentiel : ${V.projet.one}, ${V.edition.one}, ${V.action.one}`}</h2>
-            <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{`Un ${V.projet.one} dure plusieurs années et a une page par an, ${le(V.edition)} : c'est là qu'on travaille. On y découpe l'année en ${pl(V.action)}, et ${pl(V.action)} en tâches.`}</p>
+            <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{`Un ${V.projet.one} dure plusieurs années et a une page par an, ${le(V.edition)} : c'est là qu'on travaille. On y découpe l'année en ${pl(V.action)}, puis chaque ${V.action.one} en tâches.`}</p>
 
             <div className="mt-4 grid gap-3 rounded-xl border-2 border-primary/60 p-3" data-testid="aide-schema">
               <div className="flex flex-wrap items-baseline gap-2"><b className="text-xs font-bold uppercase tracking-wide text-primary">{V.projet.one}</b><span className="text-xs text-muted-foreground">ce qui dure · nom, code analytique, {V.pole.one}, {V.pilote.one}, garant, raison d&apos;être</span></div>
