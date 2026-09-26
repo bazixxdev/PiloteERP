@@ -37,7 +37,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
     include: {
       project: { include: { pole: true, secondaryPoles: { select: { poleId: true } }, editions: { orderBy: { year: "asc" }, select: { id: true, year: true, team: { select: { personId: true } } } } } },
       owner: { select: { id: true, name: true } },
-      people: { select: { personId: true, person: { select: { name: true } } } },
+      people: { select: { personId: true, person: { select: { id: true, name: true, active: true } } } },
       milestones: { orderBy: [{ date: "asc" }, { order: "asc" }] },
       tasks: { where: { done: false }, include: { person: { select: { id: true, name: true } }, list: { select: { visibility: true, person: { select: { id: true, poleId: true } } } } }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] },
       achievements: { include: { edition: { select: { year: true } } }, orderBy: { date: "asc" } },
@@ -110,7 +110,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
               {a.recurrence && <><span aria-hidden>·</span><span>{a.recurrence}</span></>}
               <span aria-hidden>·</span>
               <span>Responsable <b className="font-semibold text-foreground">{a.owner?.name ?? "—"}</b></span>
-              {a.people.length > 0 && <><span aria-hidden>·</span><span data-testid="action-associates" title="Personnes associées">avec <b className="font-semibold text-foreground">{a.people.map((x) => x.person.name).join(", ")}</b></span></>}
+              {a.people.length > 0 && <><span aria-hidden>·</span><span data-testid="action-associates" title="Personnes associées">avec <b className="font-semibold text-foreground">{a.people.map((x) => (x.person.active ? x.person.name : `${x.person.name} (inactive)`)).join(", ")}</b></span></>}
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
                 <PeriodForm actionId={a.id} start={fmtDateInput(a.startDate)} end={fmtDateInput(a.endDate)} readOnly={!can} />
               </div>
               <div data-testid="action-people">
-                <PeopleSection actionId={a.id} people={people.filter((p) => p.id !== a.ownerId).map((p) => ({ id: p.id, name: p.name }))} selected={a.people.map((p) => p.personId)} canEdit={canManagePeople} />
+                <PeopleSection actionId={a.id} people={people.filter((p) => p.id !== a.ownerId).map((p) => ({ id: p.id, name: p.name }))} associates={a.people.map((x) => x.person)} canEdit={canManagePeople} />
               </div>
             </div>
           </Section>

@@ -8,11 +8,18 @@ import { toast } from "sonner";
 import { setActionPeople } from "@/app/actions/actions";
 import { cn } from "@/lib/utils";
 
+type Person = { id: string; name: string; active: boolean };
+const shown = (p: Person) => (p.active ? p.name : `${p.name} (inactive)`);
+
 // Personnes associées : elles se lisent (quelques noms, pas toutes les puces) ; le sélecteur n'apparaît que sur « Modifier »,
-// comme l'équipe d'une année (team-section.tsx).
-export function PeopleSection({ actionId, people, selected, canEdit }: { actionId: string; people: { id: string; name: string }[]; selected: string[]; canEdit: boolean }) {
+// comme l'équipe d'une année (team-section.tsx). `associates` vient de l'action (une personne partie y reste, signalée) ;
+// `people` = les personnes actives proposables.
+export function PeopleSection({ actionId, people, associates, canEdit }: { actionId: string; people: { id: string; name: string }[]; associates: Person[]; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
-  const members = people.filter((p) => selected.includes(p.id));
+  const members = associates;
+  const selected = associates.map((p) => p.id);
+  // Le sélecteur propose les personnes actives, plus les associées parties (pour pouvoir les retirer).
+  const choices: Person[] = [...people.map((p) => ({ ...p, active: true })), ...associates.filter((a) => !a.active)];
   return (
     <div className="grid gap-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -24,12 +31,12 @@ export function PeopleSection({ actionId, people, selected, canEdit }: { actionI
       {editing && canEdit ? (
         <>
           <p className="text-[11px] text-muted-foreground">Elles modifient le contenu, la période et les jalons, comme la personne responsable.</p>
-          <PeoplePicker actionId={actionId} people={people} selected={selected} readOnly={false} />
+          <PeoplePicker actionId={actionId} people={choices} selected={selected} readOnly={false} />
         </>
       ) : members.length === 0 ? (
         <p className="text-sm italic text-muted-foreground" data-testid="action-people-list">Aucune.</p>
       ) : (
-        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm" data-testid="action-people-list">{members.map((m) => <li key={m.id}>{m.name}</li>)}</ul>
+        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm" data-testid="action-people-list">{members.map((m) => <li key={m.id} className={cn(!m.active && "text-muted-foreground")}>{shown(m)}</li>)}</ul>
       )}
     </div>
   );
@@ -37,7 +44,7 @@ export function PeopleSection({ actionId, people, selected, canEdit }: { actionI
 
 // Le sélecteur : toutes les personnes actives, y compris celles qui ne suivent pas leur temps ; les personnes déjà associées
 // d'abord. Un clic ajoute ou retire ; la liste entière part d'un coup.
-function PeoplePicker({ actionId, people, selected, readOnly }: { actionId: string; people: { id: string; name: string }[]; selected: string[]; readOnly: boolean }) {
+function PeoplePicker({ actionId, people, selected, readOnly }: { actionId: string; people: Person[]; selected: string[]; readOnly: boolean }) {
   const [sel, setSel] = useState(new Set(selected));
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -72,7 +79,7 @@ function PeoplePicker({ actionId, people, selected, readOnly }: { actionId: stri
             readOnly && !sel.has(p.id) && "hidden",
           )}
         >
-          {p.name}
+          {shown(p)}
         </button>
       ))}
       {readOnly && sel.size === 0 && <span className="text-sm text-muted-foreground">Aucune personne associée.</span>}

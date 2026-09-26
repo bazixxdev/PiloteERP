@@ -124,8 +124,11 @@ export async function setActionPeople(actionId: string, personIds: string[]): Pr
   const g = await guard(me, actionId, "people");
   if (!g.ok) return g;
   const ids = [...new Set(personIds.filter(Boolean))];
-  const found = ids.length === 0 ? 0 : await prisma.person.count({ where: { id: { in: ids }, active: true } });
-  if (found !== ids.length) return { ok: false, error: "Personne introuvable." };
+  // Seules les personnes AJOUTÉES doivent être actives : une associée partie peut rester (ou être retirée) sans bloquer la liste.
+  const current = new Set((await prisma.actionPerson.findMany({ where: { actionId }, select: { personId: true } })).map((p) => p.personId));
+  const added = ids.filter((id) => !current.has(id));
+  const found = added.length === 0 ? 0 : await prisma.person.count({ where: { id: { in: added }, active: true } });
+  if (found !== added.length) return { ok: false, error: "Personne introuvable ou inactive." };
   // Frontière de transaction : remplacer la liste d'un coup, jamais à moitié.
   await prisma.$transaction([
     prisma.actionPerson.deleteMany({ where: { actionId } }),
