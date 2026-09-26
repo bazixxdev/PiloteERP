@@ -20,7 +20,7 @@ const GOS: Go[] = [
 export function Shortcuts({ role }: { role: string }) {
   const gos = GOS.filter((g) => !g.roles || g.roles.includes(role));
   const GO: Record<string, string> = Object.fromEntries(gos.map((g) => [g.key, g.href]));
-  const LIST: [string, string][] = [["⌘K", `Trouver ${un(V.edition)}`], ...gos.map((g): [string, string] => [`g puis ${g.key}`, g.label]), ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"]];
+  const LIST: [string, string][] = [["⌘K", `Trouver ${un(V.projet)}`], ...gos.map((g): [string, string] => [`g puis ${g.key}`, g.label]), ["Tab / flèches / Entrée", "Circuler dans les grilles"], ["?", "Cette aide"]];
   const router = useRouter();
   const [open, setOpen] = useState(false);
   useEffect(() => {

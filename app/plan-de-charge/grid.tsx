@@ -131,7 +131,7 @@ function AddLoad({ editions, pending, onAdd }: { editions: EditionOpt[]; pending
   if (editions.length === 0) return null;
   return (
     <form className="mt-2 flex items-center gap-1 border-t pt-2" onSubmit={(e) => { e.preventDefault(); const d = Number(days.replace(",", ".")); if (!id || !Number.isFinite(d) || d <= 0) return; onAdd(id, d); setId(""); setDays(""); }}>
-      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder={`+ Ajouter ${un(V.edition)}…`} className="h-7 min-w-0 flex-1 rounded px-1 text-xs" aria-label={`Ajouter ${un(V.edition)}`} data-testid="load-add-edition" />
+      <SearchableSelect options={editions.map((e) => ({ value: e.id, label: e.label }))} value={id} onChange={setId} placeholder={`+ Ajouter ${un(V.projet)}…`} className="h-7 min-w-0 flex-1 rounded px-1 text-xs" aria-label={`Ajouter ${un(V.projet)}`} data-testid="load-add-edition" />
       <Input value={days} onChange={(e) => setDays(e.target.value)} placeholder="j" inputMode="decimal" aria-label="Jours" className="h-7 w-14 px-1 text-right text-xs" data-testid="load-add-days" />
       <Button type="submit" size="xs" variant="outline" disabled={pending || !id || !days} data-testid="load-add-submit"><Plus /></Button>
     </form>

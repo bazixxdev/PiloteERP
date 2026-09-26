@@ -37,7 +37,7 @@ export function ApiCard({ apiToken }: { apiToken: string | null }) {
       </div>
       <div>
         <div className="mb-1 flex items-center gap-2 font-medium"><Globe className="size-4 text-primary" />Agenda public pour le site internet</div>
-        <p className="mb-2 text-sm text-muted-foreground">Les {pl(V.action)} cochées « Public » dans les {pl(V.edition)} en cours, en flux iCal sans jeton : n'importe quel module agenda WordPress l'affiche.</p>
+        <p className="mb-2 text-sm text-muted-foreground">Les {pl(V.action)} cochées « Public » dans les {pl(V.projet)} en cours, en flux iCal sans jeton : n'importe quel module agenda WordPress l'affiche.</p>
         <ul>{row("Événements publics (.ics)", "/api/agenda/public.ics", "api-url-public")}</ul>
       </div>
     </div>

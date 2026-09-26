@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { explainRequiredLevel, requestValidation } from "@/app/actions/edition";
 import { uploadAttachment } from "@/app/actions/attachments";
 import { SearchableSelect, Select } from "@/components/common/searchable-select";
-import { V, cap, le, du, de } from "@/lib/vocab";
+import { V, cap, le, du, de, ppe } from "@/lib/vocab";
 
 const LEVELS = [`1 · ${V.pilote.one}`, `2 · responsable ${de(V.pole)}`, `3 · ${V.direction.one}`];
 
@@ -74,8 +74,8 @@ export function RequestValidationDialog({ editionId: fixedEditionId, actions: fi
         <div className="grid gap-3">
           {editions && (
             <div className="grid gap-1">
-              <Label htmlFor="rv-edition">{`${cap(V.edition)} concernée `}<span className="font-normal text-muted-foreground">(le montant s'engage sur son budget)</span></Label>
-              <SearchableSelect id="rv-edition" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={chosenEditionId} onChange={(v) => { setChosenEditionId(v); setActionId(""); }} placeholder={`— choisir ${le(V.edition)} —`} data-testid="rv-edition" className="w-full" />
+              <Label htmlFor="rv-edition">{`${cap(ppe(V.projet, "concerné"))} `}<span className="font-normal text-muted-foreground">(le montant s'engage sur son budget)</span></Label>
+              <SearchableSelect id="rv-edition" options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={chosenEditionId} onChange={(v) => { setChosenEditionId(v); setActionId(""); }} placeholder={`— choisir ${le(V.projet)} —`} data-testid="rv-edition" className="w-full" />
             </div>
           )}
           <div className="grid gap-1">

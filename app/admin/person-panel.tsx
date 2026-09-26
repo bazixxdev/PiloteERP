@@ -62,8 +62,8 @@ export async function PersonPanelBody({ id, refs, rw, poles, rhythms }: { id: st
           <li>Projets pilotés : <b className="font-medium">{r.piloted.length}</b>{r.piloted.length > 0 && <span className="text-muted-foreground"> · {r.piloted.map((x) => x.name).join(", ")}</span>}</li>
           <li>Garant de projet : <b className="font-medium">{r.guaranteed.length}</b>{r.guaranteed.length > 0 && <span className="text-muted-foreground"> · {r.guaranteed.map((x) => x.name).join(", ")}</span>}</li>
           {r.ledPoles.length > 0 && <li>{`Responsable ${de(V.pole)} : `}<span className="text-muted-foreground">{r.ledPoles.map((x) => x.name).join(", ")}</span></li>}
-          {r.sponsored.length > 0 && <li>{`Sponsor d'${pl(V.edition)} : `}<b className="font-medium">{r.sponsored.length}</b></li>}
-          <li>{`${cap(pl(V.action))} à faire : `}<b className="font-medium">{r.actions.length}</b> · demandes ouvertes : <b className="font-medium">{r.requests.length}</b> · tâches : <b className="font-medium">{r.tasks}</b>{` · équipes d'${pl(V.edition)} en cours : `}<b className="font-medium">{r.teams.length}</b></li>
+          {r.sponsored.length > 0 && <li>{`Sponsor de ${pl(V.projet)} : `}<b className="font-medium">{r.sponsored.length}</b></li>}
+          <li>{`${cap(pl(V.action))} à faire : `}<b className="font-medium">{r.actions.length}</b> · demandes ouvertes : <b className="font-medium">{r.requests.length}</b> · tâches : <b className="font-medium">{r.tasks}</b>{` · équipes de ${pl(V.projet)} en cours : `}<b className="font-medium">{r.teams.length}</b></li>
         </ul>
         {rw && p.active && (
           <div className="pt-1">

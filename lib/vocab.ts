@@ -1,4 +1,4 @@
-// Les mots de l'outil, une fois pour toutes (lot I) : « édition » à la CRESS, « action » chez TLST… Le code métier n'écrit
+// Les mots de l'outil, une fois pour toutes (lot I) : « pôle » à la CRESS, « équipe » chez TLST… Le code métier n'écrit
 // jamais ces mots en dur dans ce qui s'affiche : il passe par V et ces helpers (scripts/check-vocab.mjs y veille). Les
 // commentaires de code gardent les mots CRESS. Les clés techniques (routes, data-testid, colonnes) ne bougent pas.
 import { client } from "@/config/clients";

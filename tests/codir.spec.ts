@@ -14,7 +14,7 @@ test("le CODIR voit les points à traiter, consigne une décision, qui apparaît
   await first.getByTestId("decision-open").click();
   await page.getByTestId("decision-body").fill("Jalon reporté au 15 octobre, le pilote informe le financeur.");
   await page.getByTestId("decision-submit").click();
-  await expect(page.getByText("Décision consignée sur l'édition")).toBeVisible();
+  await expect(page.getByText("Décision consignée sur l'année")).toBeVisible();
   await expect(page.getByTestId("recent-decisions")).toContainText("Jalon reporté au 15 octobre");
 
   await page.getByTestId("recent-decisions").getByRole("link", { name: new RegExp(project.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();

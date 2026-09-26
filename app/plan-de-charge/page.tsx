@@ -76,7 +76,7 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label="Plan de charge par projet">
           <table className="w-full text-[12px]" style={{ minWidth: 200 + months.length * 64 }} data-testid="load-by-project">
             <thead className="sticky top-0 z-[2] bg-[#f1f5f6] text-[10px] font-semibold text-muted-foreground">
-              <tr><th className="sticky left-0 z-[3] bg-[#f1f5f6] px-3 py-2.5 text-left">{cap(V.edition)}</th>{months.map((m) => <th key={m} className={cn("px-1 py-2.5 text-center whitespace-nowrap", m === today && "bg-[#f5f1e4] text-foreground")}>{dayjs(m + "-01").format("MMM YY")}</th>)}<th className="px-2 py-2.5 text-right">Total</th></tr>
+              <tr><th className="sticky left-0 z-[3] bg-[#f1f5f6] px-3 py-2.5 text-left">{cap(V.projet)}</th>{months.map((m) => <th key={m} className={cn("px-1 py-2.5 text-center whitespace-nowrap", m === today && "bg-[#f5f1e4] text-foreground")}>{dayjs(m + "-01").format("MMM YY")}</th>)}<th className="px-2 py-2.5 text-right">Total</th></tr>
             </thead>
             <tbody>
               {editions.map(([id, e]) => {
@@ -96,7 +96,7 @@ export default async function PlanDeChargePage({ searchParams }: { searchParams:
         <LoadGrid rows={rows} months={months} today={today} groupByPole={!sp.pole} editions={editionOpts} changedPeople={[...changedPeople]} />
       )}
 
-      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne{settings.operatingDaysPerMonth ? `, moins ${settings.operatingDaysPerMonth} j de fonctionnement par mois (réunions transverses, café, entretiens)` : ""}{`. Cliquez une cellule pour modifier les jours de chaque ${V.edition.one} ou en ajouter une (droit : ${V.pilote.one} ${du(V.edition)}, ${V.raf.one}, ${V.direction.one}, responsable ${de(V.pole)}). « lissé » : total annuel non ventilé, étalé sur 12 mois — modifier un mois pose la ventilation, aussi possible depuis l'onglet Temps ${du(V.edition)}. Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ `}{settings.hoursPerDay || 7}.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">Capacité d'un mois = jours disponibles de l'année (admin, congés déduits) répartis selon le rythme de la personne{settings.operatingDaysPerMonth ? `, moins ${settings.operatingDaysPerMonth} j de fonctionnement par mois (réunions transverses, café, entretiens)` : ""}{`. Cliquez une cellule pour modifier les jours de chaque ${V.projet.one} ou en ajouter un (droit : ${V.pilote.one} ${du(V.edition)}, ${V.raf.one}, ${V.direction.one}, responsable ${de(V.pole)}). « lissé » : total annuel non ventilé, étalé sur 12 mois — modifier un mois pose la ventilation, aussi possible depuis l'onglet Temps ${du(V.edition)}. Ocre à partir de 85 % de la capacité, terre au-delà de 100 %. Sur les mois passés, « réel » = heures saisies ÷ `}{settings.hoursPerDay || 7}.</p>
     </div>
   );
 }

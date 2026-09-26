@@ -20,7 +20,7 @@ test("titre, logo, favicon, thème, police", async ({ page }) => {
 
 test("les mots de TLST", async ({ page }) => {
   await page.goto("/portefeuille");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Portefeuille des actions");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Portefeuille des projets");
   // La vue large des demandes (direction) porte le nom court du client avec son genre : « Tout le TLST », pas « Toute la ».
   await page.goto("/demandes?vue=toutes");
   await expect(page.getByText("Tout le TLST · en cours")).toBeVisible();
@@ -28,12 +28,12 @@ test("les mots de TLST", async ({ page }) => {
   await page.getByRole("link", { name: /Jardin partagé/ }).first().click();
   await expect(page).toHaveURL(/\/edition\//);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Jardin partagé");
-  await expect(page.getByRole("tab", { name: /^Étapes/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Actions/ })).toBeVisible();
   await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
   const lexique = page.getByTestId("lexique");
+  await expect(lexique).toContainText("Année");
   await expect(lexique).toContainText("Action");
-  await expect(lexique).toContainText("Étape");
   await expect(lexique).not.toContainText("dition");
   await expect(lexique).toContainText("le TLST");
 });

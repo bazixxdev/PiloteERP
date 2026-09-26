@@ -16,11 +16,11 @@ test("chaque client a un nom, ses quatre images et ses huit mots", () => {
   }
 });
 
-test("la CRESS garde ses mots d'aujourd'hui", () => {
+test("la CRESS parle de projets, d'années et d'actions (26/09)", () => {
   assert.equal(cress.shortName, "CRESS");
   assert.equal(cress.longName, "CRESS Centre-Val de Loire");
   assert.equal(cress.orgGender, "f");
-  assert.equal(cress.vocab.edition.one, "édition");
+  assert.equal(cress.vocab.edition.one, "année");
   assert.equal(cress.vocab.pole.one, "pôle");
   assert.equal(cress.vocab.codir.one, "CODIR");
   assert.equal(cress.settings.serverPathTemplate, "\\\\cress\\Partage\\Action\\{code}\\{annee}");
@@ -28,11 +28,11 @@ test("la CRESS garde ses mots d'aujourd'hui", () => {
   assert.equal(cress.modules, "veille,adherents,tresorerie,materiel");
 });
 
-test("TLST parle d'actions, d'étapes et d'équipe", () => {
+test("TLST parle de projets, d'années, d'actions et d'équipes (26/09)", () => {
   assert.equal(tlst.shortName, "TLST");
   assert.equal(tlst.orgGender, "m");
-  assert.equal(tlst.vocab.edition.one, "action");
-  assert.equal(tlst.vocab.action.one, "étape");
+  assert.equal(tlst.vocab.edition.one, "année");
+  assert.equal(tlst.vocab.action.one, "action");
   assert.equal(tlst.vocab.pole.one, "équipe");
   assert.equal(tlst.vocab.pole.gender, "f");
 });

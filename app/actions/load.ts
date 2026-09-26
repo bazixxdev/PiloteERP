@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canEditFunding, canPlanLoad } from "@/lib/rights";
 import { dayjs } from "@/lib/format";
-import { V, cap, le, du, de } from "@/lib/vocab";
+import { V, cap, le, de } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -53,7 +53,7 @@ export async function setPlannedLoadMonth(editionId: string, personId: string, m
   if (!e) return { ok: false, error: `${cap(V.edition)} introuvable.` };
   const allowed = canPlanLoad(me, e.project.pilotId === me.id);
   if (!allowed) return { ok: false, error: `${e.project.name} : seuls son ${V.pilote.one}, ${le(V.raf)}, ${le(V.direction)} ou un responsable ${de(V.pole)} modifient la charge.` };
-  if (month.slice(0, 4) !== String(e.year)) return { ok: false, error: `${e.project.name} · ${e.year} : ce mois n'est pas dans l'année ${du(V.edition)}.` };
+  if (month.slice(0, 4) !== String(e.year)) return { ok: false, error: `${e.project.name} · ${e.year} : ce mois n'est pas en ${e.year}.` };
   const value = Math.round(days * 10) / 10;
   const existing = new Map(e.plannedLoads.map((l) => [l.month, l.days]));
   const beforeMonth = existing.get(month) ?? (existing.size === 0 && e.personDays[0]?.plannedDays ? Math.round((e.personDays[0].plannedDays / 12) * 100) / 100 : 0);

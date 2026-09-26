@@ -240,8 +240,8 @@ export default async function MaSemainePage() {
         </div>
       </div>
 
-      <Section title={`Mes ${pl(V.edition)}`} description={`Les ${pl(V.edition)} où je pilote ou contribue, avec leurs alertes.`} className="mt-5">{/* vocab-ok : verbe */}
-        {myEditions.length === 0 ? <Note>{`${cap(aucun(V.edition))} en cours pour moi.`}</Note> : (
+      <Section title={`Mes ${pl(V.projet)}`} description={`Les ${pl(V.projet)} de l'année où je pilote ou contribue, avec leurs alertes.`} className="mt-5">{/* vocab-ok : verbe */}
+        {myEditions.length === 0 ? <Note>{`${cap(aucun(V.projet))} en cours pour moi.`}</Note> : (
           <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {myEditions.map((e) => (
               <li key={e.id} className="rounded-md border p-3 text-xs">

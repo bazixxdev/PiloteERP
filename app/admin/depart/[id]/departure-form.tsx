@@ -60,13 +60,13 @@ export function DepartureForm({ person, others, blocks }: { person: { id: string
       <Block title="Projets pilotés" items={blocks.piloted} value={pilotTo} onChange={setPilotTo} others={sorted} testId="piloted" hint={`Le repreneur devient ${V.pilote.one} de toutes les ${pl(V.edition)}, passées comprises (${un(V.edition)} close garde son historique).`} />
       <Block title="Garant de projet" items={blocks.guaranteed} value={guarantorTo} onChange={setGuarantorTo} others={sorted.filter((o) => o.role === "pole_lead" || o.role === "director")} testId="guaranteed" />
       <Block title={`Responsable ${de(V.pole)}`} items={blocks.ledPoles} value={poleLeadTo} onChange={setPoleLeadTo} others={sorted} testId="poles" />
-      <Block title={`Sponsor d'${pl(V.edition)}`} items={blocks.sponsored} value={sponsorTo} onChange={setSponsorTo} others={sorted} testId="sponsored" />
+      <Block title={`Sponsor de ${pl(V.projet)}`} items={blocks.sponsored} value={sponsorTo} onChange={setSponsorTo} others={sorted} testId="sponsored" />
       <Block title={`${cap(pl(V.action))} à faire`} items={blocks.actions} value={actionsTo} onChange={setActionsTo} others={sorted} testId="actions" />
       <Block title="Demandes ouvertes qui lui sont confiées" items={blocks.requests} value={requestsTo} onChange={setRequestsTo} others={sorted} testId="requests" />
       {blocks.teams.length > 0 && (
         <label className="flex items-start gap-2 rounded-md border bg-card px-3 py-2.5 text-sm">
           <input type="checkbox" checked={leaveTeams} onChange={(e) => setLeaveTeams(e.target.checked)} className="mt-0.5 size-4 accent-primary" data-testid="departure-teams" />
-          <span>{`Retirer des équipes des ${pl(V.edition)} en cours `}<span className="text-xs text-muted-foreground">· {blocks.teams.length} : {blocks.teams.slice(0, 5).join(", ")}{blocks.teams.length > 5 ? "…" : ""}</span></span>
+          <span>{`Retirer des équipes des ${pl(V.projet)} en cours `}<span className="text-xs text-muted-foreground">· {blocks.teams.length} : {blocks.teams.slice(0, 5).join(", ")}{blocks.teams.length > 5 ? "…" : ""}</span></span>
         </label>
       )}
       {blocks.tasks > 0 && <p className="text-xs text-muted-foreground">{blocks.tasks} tâche{blocks.tasks > 1 ? "s" : ""} personnelle{blocks.tasks > 1 ? "s" : ""} à faire : elles restent à son nom (une tâche est personnelle).</p>}

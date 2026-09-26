@@ -6,7 +6,7 @@ import { V, un, au } from "@/lib/vocab";
 export const ORGANISATION_KINDS = [
   { key: "funder", label: "Financeur", plural: "Financeurs", hint: "Subventionne : lignes de financement, conventions, appels à projets." },
   { key: "supplier", label: "Fournisseur", plural: "Fournisseurs", hint: "Devis, factures, bons pour accord." },
-  { key: "partner", label: "Partenaire", plural: "Partenaires", hint: `Co-porte ou contribue à ${un(V.edition)}.` },
+  { key: "partner", label: "Partenaire", plural: "Partenaires", hint: `Co-porte ou contribue à ${un(V.projet)}.` },
   { key: "network", label: "Réseau", plural: "Réseaux", hint: "Tête de réseau, fédération, membre ou adhérent." },
   { key: "authority", label: "Collectivité", plural: "Collectivités", hint: "Commune, intercommunalité, département, région, État — quand elle ne finance pas." },
   { key: "member", label: "Adhérent", plural: "Adhérents", hint: `Adhère ${au(V.org)} : au moins une adhésion enregistrée (module Adhérents).` },

@@ -10,7 +10,7 @@ import { MembershipList } from "@/components/members/membership-list";
 import { getCurrentPerson, getSettings } from "@/lib/session";
 import { instanceHas } from "@/lib/modules";
 import { canManageMembers } from "@/lib/rights";
-import { V, le } from "@/lib/vocab";
+import { V, le, pl } from "@/lib/vocab";
 
 // Fiche d'une organisation (lot E2), en panneau sur l'annuaire : identité, genres, contacts, et tout ce qui la cite dans l'outil.
 export async function OrganisationPanelBody({ id, rw }: { id: string; rw: boolean }) {
@@ -70,7 +70,7 @@ export async function OrganisationPanelBody({ id, rw }: { id: string; rw: boolea
           {kinds.includes("funder") && <li>Financeur : <b className="font-medium">{o.conventions.length}</b> convention{o.conventions.length > 1 ? "s" : ""}, <b className="font-medium">{o.lines.length}</b> ligne{o.lines.length > 1 ? "s" : ""} de financement en cours{o.calls.length > 0 && <>, {o.calls.length} appel{o.calls.length > 1 ? "s" : ""} à projets</>} — <Link href={`/financeurs/${o.id}`} className="text-primary underline-offset-2 hover:underline">fiche financeur</Link></li>}
           {o.lines.slice(0, 6).map((l) => <li key={l.id} className="text-muted-foreground">· <Link href={`/edition/${l.edition.id}?onglet=financements`} className="hover:underline">{l.edition.project.name} · {l.edition.year}</Link> — {l.amountGranted != null ? fmtEuro(l.amountGranted) : l.amountRequested != null ? `${fmtEuro(l.amountRequested)} demandés` : "à déposer"}</li>)}
           {kinds.includes("supplier") && <li>Fournisseur : <b className="font-medium">{o.validations.length}</b> devis / facture{o.validations.length > 1 ? "s" : ""}{o.validations.slice(0, 4).map((v) => <span key={v.id} className="text-muted-foreground"> · <Link href={`/edition/${v.edition.id}?onglet=budget`} className="hover:underline">{v.label}</Link>{v.amount ? ` (${fmtEuro(v.amount)})` : ""}</span>)}</li>}
-          <li>Partenaire de <b className="font-medium">{o.editions.length}</b>{` ${V.edition.one}`}{o.editions.length > 1 ? "s" : ""}{o.editions.map((p) => <span key={p.editionId} className="text-muted-foreground"> · <Link href={`/edition/${p.editionId}?onglet=fiche`} className="hover:underline">{p.edition.project.name} {p.edition.year}</Link>{p.role ? ` (${p.role})` : ""}</span>)}</li>
+          <li>Partenaire de <b className="font-medium">{o.editions.length}</b>{` ${o.editions.length > 1 ? pl(V.projet) : V.projet.one}`}{o.editions.map((p) => <span key={p.editionId} className="text-muted-foreground"> · <Link href={`/edition/${p.editionId}?onglet=fiche`} className="hover:underline">{p.edition.project.name} {p.edition.year}</Link>{p.role ? ` (${p.role})` : ""}</span>)}</li>
         </ul>
       </section>
     </div>

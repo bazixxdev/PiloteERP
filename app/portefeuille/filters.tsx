@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Select } from "@/components/common/searchable-select";
-import { V, cap, pl } from "@/lib/vocab";
+import { V, cap, pl, tous } from "@/lib/vocab";
 
 type Opt = { value: string; label: string };
 
@@ -39,7 +39,7 @@ export function PortfolioFilters({ poles, statuses, current, thisQuarter, year, 
         </Filter>
         <Filter label="Afficher">
           <Select className={sel} value={current.alerte} onChange={(e) => set("alerte", e.target.value)} aria-label="Filtrer le portefeuille par alerte">
-            <option value="">{`Toutes les ${pl(V.edition)}`}</option>
+            <option value="">{cap(tous(V.projet))}</option>
             <option value="oui">Avec une alerte</option>
             <option value="danger">Avec une alerte forte</option>
             <option value="calme">Sans alerte</option>

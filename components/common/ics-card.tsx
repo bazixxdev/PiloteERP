@@ -21,7 +21,7 @@ export function IcsCard({ kind, canRegenerate = true, personId }: { kind: "me" |
     <div className="rounded-2xl border bg-card p-5" data-testid={`ics-${kind}`}>
       <div className="mb-1 flex items-center gap-2 text-base font-semibold"><CalendarPlus className="size-4 text-primary" />{kind === "me" ? "Mes échéances dans mon agenda" : "Les échéances de l'équipe dans un agenda"}</div>
       <p className="mb-3 text-sm text-muted-foreground">
-        {kind === "me" ? "Mes jalons, les livrables financeurs de mes projets et mes validations à traiter, " : `Tous les jalons et livrables financeurs des ${pl(V.edition)} en cours, `}
+        {kind === "me" ? "Mes jalons, les livrables financeurs de mes projets et mes validations à traiter, " : `Tous les jalons et livrables financeurs des ${pl(V.projet)} en cours, `}
         en calendrier superposé dans Outlook : <em>Ajouter un calendrier → S'abonner depuis le web</em>, puis coller l'adresse. Mise à jour toutes les heures ; l'outil n'écrit rien dans votre agenda.
       </p>
       {url ? (

@@ -1,4 +1,4 @@
-import { BookUser, HandCoins, CalendarDays, CalendarClock, Clock, LayoutGrid, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox, Settings, UserCircle, Lightbulb, type LucideIcon } from "lucide-react";
+import { BookUser, HandCoins, CalendarDays, CalendarClock, Clock, LayoutGrid, Coffee, Bell, Presentation, Gavel, FileSignature, BarChart3, ListTodo, NotebookPen, Inbox, Settings, UserCircle, Lightbulb, CircleHelp, type LucideIcon } from "lucide-react";
 
 // Une seule iconographie pour un même écran : barre latérale, navigation basse, titre de page (retour du 15/09).
 // L'ordre compte : le premier motif qui correspond gagne.
@@ -21,6 +21,7 @@ const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/seminaire/, Presentation],
   [/^\/admin/, Settings],
   [/^\/compte/, UserCircle],
+  [/^\/aide/, CircleHelp],
 ];
 
 export function iconFor(pathname: string): LucideIcon | null {

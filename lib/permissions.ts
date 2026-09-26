@@ -24,18 +24,18 @@ export const PERMISSION_MODULES: Record<PermissionModule, string> = {
 
 export const PERMISSIONS = [
   { key: "scope.all", module: "perimetre", label: `Voit ${tout(V.org)}`, help: `Sans ce droit, le périmètre par défaut est ${le(V.pole)} de la personne (les autres ${pl(V.pole)} restent consultables).` },
-  { key: "pole.manage", module: "perimetre", label: `Responsable de ${son(V.pole)}`, help: `Agit sur les ${pl(V.edition)}, les demandes et la charge de ${son(V.pole)} ; voit les temps de ${son(V.pole)} ; valide au niveau 2 sur ${son(V.pole)}.` },
+  { key: "pole.manage", module: "perimetre", label: `Responsable de ${son(V.pole)}`, help: `Agit sur les ${pl(V.projet)}, les demandes et la charge de ${son(V.pole)} ; voit les temps de ${son(V.pole)} ; valide au niveau 2 sur ${son(V.pole)}.` },
 
-  { key: "edition.contribute", module: "editions", label: `Contribue aux ${pl(V.edition)} de son équipe`, help: `Fil de l'année et ${pl(V.action)} sur les ${pl(V.edition)} où la personne est dans l'équipe (${le(V.pilote)} a toujours la main sur les siennes).` },
-  { key: "edition.edit_all", module: "editions", label: `Intervient sur ${adj(V.edition, "tout", "toute")}`, help: `Comme ${le(V.pilote)}, sur n'importe ${adj(V.edition, "quel", "quelle")} : proposition, fil de l'année, ${pl(V.action)}, réalisations, propositions et remarques des autres.` },
+  { key: "edition.contribute", module: "editions", label: `Contribue aux ${pl(V.projet)} de son équipe`, help: `Fil de l'année et ${pl(V.action)} sur les ${pl(V.projet)} où la personne est dans l'équipe (${le(V.pilote)} a toujours la main sur les siens).` },
+  { key: "edition.edit_all", module: "editions", label: `Intervient sur ${adj(V.projet, "tout", "toute")}`, help: `Comme ${le(V.pilote)}, sur n'importe ${adj(V.projet, "quel", "quelle")} : proposition, fil de l'année, ${pl(V.action)}, réalisations, propositions et remarques des autres.` },
   { key: "edition.status", module: "editions", label: `Change le statut d'${un(V.edition)}`, help: "Proposée, validée, en cours, bilan fait." },
   { key: "fiche.strategic", module: "editions", label: "Remplit le cadre stratégique", help: `Couche « à remplir par ${le(V.direction)} » de la fiche.` },
   { key: "fiche.means", module: "editions", label: "Remplit les moyens", help: `Enveloppe, jours, ressources : couche « ${V.raf.one} et ${V.direction.one} ».` },
   { key: "fiche.validation", module: "editions", label: `Renseigne la décision ${du(V.codir)} sur la fiche`, help: `Couche « renseigné par ${le(V.codir)} ».` },
   { key: "fiche.budget", module: "editions", label: "Tient le budget", help: `Dépenses réalisées, engagements, couche « renseigné par ${le(V.raf)} ».` },
-  { key: "budget.plan", module: "editions", label: "Prépare le budget prévisionnel", help: `Sur ses ${pl(V.edition)} (${le(V.pilote)}, équipe), celles de ${son(V.pole)} pour qui le gère, ou partout avec « ${tout(V.org)} ».` },
+  { key: "budget.plan", module: "editions", label: "Prépare le budget prévisionnel", help: `Sur ses ${pl(V.projet)} (${le(V.pilote)}, équipe), ceux de ${son(V.pole)} pour qui le gère, ou partout avec « ${tout(V.org)} ».` },
   { key: "budget.validate", module: "editions", label: "Valide le budget prévisionnel", help: "Valide le prévu, saisit à la main un réalisé (avec motif), voit le détail du personnel par personne." },
-  { key: "delegation.write", module: "delegation", label: "Rédige les délégations", help: `Écrit les attendus, limites et contrôles d'une personne sur ses ${pl(V.edition)}, sur ${son(V.pole)} ou partout avec « ${tout(V.org)} » ; consigne la présentation.` },
+  { key: "delegation.write", module: "delegation", label: "Rédige les délégations", help: `Écrit les attendus, limites et contrôles d'une personne sur ses ${pl(V.projet)}, sur ${son(V.pole)} ou partout avec « ${tout(V.org)} » ; consigne la présentation.` },
   { key: "delegation.view_all", module: "delegation", label: "Lit toutes les délégations", help: "Chacun lit toujours les siennes ; ce droit ouvre celles des autres (sans leurs tâches, qui restent personnelles)." },
 
   { key: "funding.edit", module: "financements", label: "Gère les financements", help: "Lignes de financement, conventions, versements, financeurs, livrables financeurs." },
@@ -48,12 +48,12 @@ export const PERMISSIONS = [
   { key: "time.declare", module: "temps", label: "Saisit son temps", help: "Attendu·e en clôture mensuelle ; sans ce droit, la personne n'apparaît pas dans les retardataires." },
   { key: "time.view_all", module: "temps", label: "Voit les temps de tous", help: "Selon la visibilité réglée dans les paramètres (« Visibilité du temps »)." },
   { key: "time.lock", module: "temps", label: "Clôture les mois", help: "Verrouille un mois de saisie, relance les retardataires." },
-  { key: "load.plan_all", module: "temps", label: "Planifie la charge de toute l'équipe", help: `Jours prévus et conventionnés sur ${adj(V.edition, "tout", "toute")}, plan de charge complet.` },
+  { key: "load.plan_all", module: "temps", label: "Planifie la charge de toute l'équipe", help: `Jours prévus et conventionnés sur ${adj(V.projet, "tout", "toute")}, plan de charge complet.` },
 
   { key: "requests.treat_all", module: "demandes", label: "Traite toute demande", help: `Devis, factures, achats, congés… de ${tout(V.org)}, pas seulement celles qui lui sont adressées.` },
   { key: "expenses.track", module: "demandes", label: "Suit les factures et les dépenses", help: "Réception des factures, montants réalisés, rapprochement." },
 
-  { key: "decisions.consign_all", module: "validations", label: "Consigne les décisions d'instance", help: `${V.codir.one}, ${V.pole.one}, revue trimestrielle, CA, sur ${adj(V.edition, "tout", "toute")}.` },
+  { key: "decisions.consign_all", module: "validations", label: "Consigne les décisions d'instance", help: `${V.codir.one}, ${V.pole.one}, revue trimestrielle, CA, sur ${adj(V.projet, "tout", "toute")}.` },
 
   { key: "codir.access", module: "direction", label: `Siège ${au(V.codir)}`, help: `Page ${V.codir.one}, séminaire, montants dans la matrice et le portefeuille, écran café, décisions.` },
 
@@ -77,11 +77,11 @@ export const DEFAULT_ROLES: RoleDef[] = [
     permissions: ["delegation.write", "delegation.view_all", "budget.plan", "budget.validate", "scope.all", ...ALL_EDITIONS, "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
   { code: "raf", label: cap(V.raf), description: `Financements, budget, clôture des temps, suivi des factures ; siège ${au(V.codir)}, administre l'outil ; informé${e(V.raf)} des validations, pas valideu${V.raf.gender === "f" ? "se" : "r"}.`, validationLevel: 0,
     permissions: ["budget.plan", "budget.validate", "scope.all", "edition.contribute", "edition.status", "fiche.means", "fiche.budget", "funding.edit", "calls.edit", "members.manage", "treasury.view", "treasury.manage", "equipment.manage", "time.declare", "time.view_all", "time.lock", "load.plan_all", "requests.treat_all", "expenses.track", "decisions.consign_all", "codir.access", "admin.manage", "roles.manage"] },
-  { code: "pole_lead", label: `Responsable ${de(V.pole)}`, description: `Agit sur les ${pl(V.edition)} et les demandes de ${son(V.pole)}, valide au niveau 2, siège ${au(V.codir)}.`, validationLevel: 2,
+  { code: "pole_lead", label: `Responsable ${de(V.pole)}`, description: `Agit sur les ${pl(V.projet)} et les demandes de ${son(V.pole)}, valide au niveau 2, siège ${au(V.codir)}.`, validationLevel: 2,
     permissions: ["budget.plan", "pole.manage", "edition.contribute", "calls.edit", "treasury.view", "time.declare", "load.plan_all", "codir.access"] },
-  { code: "pilot", label: `Chargé·e de mission (${V.pilote.one})`, description: `Pilote ses ${pl(V.edition)} : proposition, fil de l'année, ${pl(V.action)}, validations de niveau 1 sur ses ${pl(V.edition)}.`, validationLevel: 1,
+  { code: "pilot", label: `Chargé·e de mission (${V.pilote.one})`, description: `Pilote ses ${pl(V.projet)} : proposition, fil de l'année, ${pl(V.action)}, validations de niveau 1 sur ses ${pl(V.projet)}.`, validationLevel: 1,
     permissions: ["budget.plan", "edition.contribute", "time.declare"] },
-  { code: "contributor", label: "Contributeur·rice", description: `Contribue aux ${pl(V.edition)} où il ou elle est dans l'équipe, saisit son temps.`, validationLevel: 0,
+  { code: "contributor", label: "Contributeur·rice", description: `Contribue aux ${pl(V.projet)} où il ou elle est dans l'équipe, saisit son temps.`, validationLevel: 0,
     permissions: ["edition.contribute", "time.declare"] },
   { code: "assistant", label: "Assistant·e", description: `Voit ${tout(V.org)}, suit les factures et les dépenses ; pas de saisie de temps attendue.`, validationLevel: 0,
     permissions: ["scope.all", "expenses.track", "equipment.manage"] },

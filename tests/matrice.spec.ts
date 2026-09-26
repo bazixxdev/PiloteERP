@@ -66,7 +66,7 @@ test("la RAF lit la matrice 2026 avec montants, couverture, zones d'attention et
   await page.goto("/portefeuille");
   await page.getByTestId("help-open").click();
   await page.getByTestId("lexique-open").click();
-  await expect(page.getByTestId("lexique")).toContainText("Édition");
+  await expect(page.getByTestId("lexique")).toContainText("Année");
 });
 
 test("un contributeur voit la matrice en pastilles, sans montants ni export", async ({ page, playwright }) => {

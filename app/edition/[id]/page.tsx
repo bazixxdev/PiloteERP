@@ -134,7 +134,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
 
       {!isTransversal(me) && !inMyScope(me, e.project, e.team.map((t) => t.personId)) && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-2 text-sm" data-testid="outside-scope">
-          <Eye className="size-4 text-muted-foreground" />{`${cap(V.edition)} ${du(V.pole)} `}<strong>{e.project.pole.name}</strong>{`, hors de votre ${V.pole.one} : vous la consultez, vous n'y intervenez pas.`}</div>
+          <Eye className="size-4 text-muted-foreground" />{`${cap(V.projet)} ${du(V.pole)} `}<strong>{e.project.pole.name}</strong>{`, hors de votre ${V.pole.one} : vous le consultez, vous n'y intervenez pas.`}</div>
       )}
       <TabsNav editionId={e.id} current={tab} counts={counts} />
 

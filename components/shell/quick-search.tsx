@@ -35,7 +35,7 @@ export function QuickSearch({ editions }: { editions: { id: string; label: strin
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={(e) => { if (e.key === "Enter" && results[0]) { router.push(`/edition/${results[0].id}`); setQ(""); setOpen(false); } }}
-        placeholder={`Rechercher ${un(V.edition)}…`}
+        placeholder={`Rechercher ${un(V.projet)}…`}
         className="h-9 rounded-md bg-card pl-9 pr-12 text-[13px]"
         aria-label="Recherche"
       />

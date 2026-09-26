@@ -39,8 +39,8 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   await iAm(page, "Claire Vasseur");
   await page.goto("/seminaire?annee=2027");
   await page.getByTestId("batch-create").click();
-  await expect(page.getByText(/édition\(s\) 2027 créée\(s\)/)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(/^(\d+) sur \1 projets ont déjà leur édition 2027/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/année\(s\) 2027 créée\(s\)/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/^(\d+) sur \1 projets ont déjà leur année 2027/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("load-table").locator("tr[data-testid^=load-row-]").first()).toBeVisible();
   await expect(page.getByTestId("batch-create")).toHaveCount(0);
 });

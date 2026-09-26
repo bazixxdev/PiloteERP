@@ -91,7 +91,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
       <div className="mb-1 text-[11px] font-bold tracking-[1.8px] text-primary uppercase">{`Réunion de ${V.direction.one} · `}{fmtDate(new Date(), "D MMMM YYYY")}</div>
       <PageHeader
         title="Les sujets à décider."
-        subtitle={<span>{inAlert}{` ${V.edition.one}`}{inAlert > 1 ? "s" : ""} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length}{` ${pl(V.edition)} · séance `}<SessionTimer minutes={20} /></span>}
+        subtitle={<span>{inAlert}{` ${inAlert > 1 ? pl(V.projet) : V.projet.one}`} en alerte · {pending.length} validation{pending.length > 1 ? "s" : ""} en attente · {total} point{total > 1 ? "s" : ""} à traiter sur {editions.length}{` ${pl(V.projet)} · séance `}<SessionTimer minutes={20} /></span>}
         actions={
           <>
             <Button asChild variant="outline"><Link href="/portefeuille">{`Quitter le mode ${V.codir.one} `}<span className="text-muted-foreground">· Échap</span></Link></Button>
@@ -110,7 +110,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
       {/* Ordre du jour : 3 à 5 sujets à arbitrer en 20 minutes ; le reste des alertes reste accessible plus bas. */}
       <section className="mb-4 rounded-md border bg-card p-5" data-testid="codir-agenda">
         <h2 className={cn("mb-1 font-bold", big ? "text-2xl" : "text-[15px]")}>Ordre du jour · {agenda.length} sujet{agenda.length > 1 ? "s" : ""} à arbitrer</h2>
-        <p className={cn("mb-3 text-muted-foreground", big ? "text-base" : "text-xs")}>{topics.size}{` ${V.edition.one}`}{topics.size > 1 ? "s" : ""} appellent une décision ; les {agenda.length}{` plus lourdes d'abord, alertes regroupées par ${V.edition.one}. Environ `}{agenda.length ? Math.round(20 / agenda.length) : 0} minutes par sujet.</p>
+        <p className={cn("mb-3 text-muted-foreground", big ? "text-base" : "text-xs")}>{topics.size}{` ${topics.size > 1 ? pl(V.projet) : V.projet.one}`} appellent une décision ; les {agenda.length}{` plus lourdes d'abord, alertes regroupées par ${V.projet.one}. Environ `}{agenda.length ? Math.round(20 / agenda.length) : 0} minutes par sujet.</p>
         {agenda.length === 0 ? <p className="text-sm text-muted-foreground">Rien à arbitrer : la réunion peut être courte.</p> : (
           <ol className="grid gap-3">
             {agenda.map((t, i) => (

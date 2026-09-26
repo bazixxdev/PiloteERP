@@ -25,7 +25,7 @@ function useRun() {
 
 const LEVELS = [
   { value: "0", label: "0 · n'approuve rien" },
-  { value: "1", label: `1 · ses ${pl(V.edition)}` },
+  { value: "1", label: `1 · ses ${pl(V.projet)}` },
   { value: "2", label: `2 · ${son(V.pole)}` },
   { value: "3", label: "3 · partout" },
 ];

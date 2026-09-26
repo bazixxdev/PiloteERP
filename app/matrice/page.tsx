@@ -71,17 +71,17 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
     <div className="p-4 md:p-6">
       <DossiersHeader
         current="matrice"
-        summary=<>{year} · {m.rows.length}{` ${V.edition.one}`}{m.rows.length > 1 ? "s" : ""} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre sa ligne de financement en panneau, sans quitter le tableau ; le chiffre cliqué y est surligné.</>
-        tools={<><YearPicker years={[...new Set([...years.map((y) => y.year), currentYear])].sort()} current={year} hrefFor={(y) => qs({ annee: y })} />{!isTransversal(me) && <PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => qs({ perimetre: p })} />}<HelpTip title="Lire la matrice" testId="matrix-help"><p>{`Une ligne par ${V.edition.one} de l'année, une colonne par financeur présent. `}<b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i>{` = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l'obtenu à l'enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, ${le(V.edition)} est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l'année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s'affichent.`}</p></HelpTip></>}
+        summary=<>{year} · {m.rows.length}{` ${m.rows.length > 1 ? pl(V.projet) : V.projet.one}`} · {m.columns.length} financeur{m.columns.length > 1 ? "s" : ""}{money && <> · <b className="text-foreground">{fmtEuro(m.totals.granted)} obtenus</b> pour {fmtEuro(m.totals.envelope)} d&apos;enveloppes{m.totals.envelope > 0 && ` (${Math.round((m.totals.granted / m.totals.envelope) * 100) } %)`} · {fmtEuro(m.totals.requested)} demandés</>}. Chaque cellule ouvre sa ligne de financement en panneau, sans quitter le tableau ; le chiffre cliqué y est surligné.</>
+        tools={<><YearPicker years={[...new Set([...years.map((y) => y.year), currentYear])].sort()} current={year} hrefFor={(y) => qs({ annee: y })} />{!isTransversal(me) && <PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => qs({ perimetre: p })} />}<HelpTip title="Lire la matrice" testId="matrix-help"><p>{`Une ligne par ${V.projet.one} de l'année, une colonne par financeur présent. `}<b className="text-mint">Vert</b> = obtenu ; <i className="text-warning-foreground">ocre en italique</i>{` = demandé, dossier parti mais pas encore tranché ; « à déposer » = ligne créée, dossier pas encore envoyé (le montant est celui prévu). La couverture compare l'obtenu à l'enveloppe de dépenses directes — plus de 100 % est normal, la subvention finance aussi les jours vendus ; en ocre, ${le(V.edition)} est sous-financée ; le pied de colonne donne ce que chaque financeur apporte sur l'année. Sans droit sur les montants, seules les pastilles ● obtenu ◐ demandé ○ à déposer s'affichent.`}</p></HelpTip></>}
         actions={<div className="flex flex-wrap items-center gap-2">{money && <Button asChild variant="outline" size="sm"><a href={withBase(`/matrice/export?annee=${year}${perimeter === "pole" ? "&perimetre=pole" : ""}`)} data-testid="matrix-export"><Download />CSV</a></Button>}</div>}
       />
 
-      {m.rows.length === 0 ? <EmptyState title={`${cap(aucun(V.edition))} en ${year}`} hint="Changez d'année ou de périmètre." /> : (
-        <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Matrice ${year} : ${m.rows.length} ${pl(V.edition)} × ${m.columns.length} financeurs`}>
+      {m.rows.length === 0 ? <EmptyState title={`${cap(aucun(V.projet))} en ${year}`} hint="Changez d'année ou de périmètre." /> : (
+        <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Matrice ${year} : ${m.rows.length} ${pl(V.projet)} × ${m.columns.length} financeurs`}>
           <table className="w-full text-[13px]" data-testid="matrix" data-money={money ? "1" : "0"}>
             <thead className="sticky top-0 z-[2] bg-[#f1f5f6] text-left text-[10px] font-semibold text-muted-foreground">
               <tr>
-                <th className="sticky left-0 z-[3] bg-[#f1f5f6] px-3 py-2.5">{cap(V.edition)}</th>
+                <th className="sticky left-0 z-[3] bg-[#f1f5f6] px-3 py-2.5">{cap(V.projet)}</th>
                 {money && <th className="px-2 py-2.5 text-right">Enveloppe</th>}
                 <th className="px-2 py-2.5 text-right">{money ? "Obtenu" : "Financeurs"}</th>
                 {money && <th className="border-r px-2 py-2.5 text-right">Couverture</th>}
@@ -119,16 +119,16 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
       )}
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-testid="matrix-attention">
-        <Zone title="Sans financement" hint={`${cap(pl(V.edition))} de l'année sans aucune ligne de financement.`} count={m.attention.orphans.length}>
+        <Zone title="Sans financement" hint={`${cap(pl(V.projet))} de l'année sans aucune ligne de financement.`} count={m.attention.orphans.length}>
           {m.attention.orphans.map((e) => <li key={e.id}><Link href={`/edition/${e.id}?onglet=budget#recettes`} className="text-primary hover:underline">{e.project.name}</Link> <span className="text-muted-foreground">· {e.project.pole.name}</span></li>)}
         </Zone>
-        <Zone title="Dossiers à déposer ou en attente" hint={`${cap(pl(V.edition))} en cours dont un financeur n'a pas encore tranché.`} count={m.attention.pending.length}>
+        <Zone title="Dossiers à déposer ou en attente" hint={`${cap(pl(V.projet))} en cours dont un financeur n'a pas encore tranché.`} count={m.attention.pending.length}>
           {m.attention.pending.map(({ edition, funders: fs }) => <li key={edition.id}><Link href={`/edition/${edition.id}?onglet=budget#recettes`} className="text-primary hover:underline">{edition.project.name}</Link> <span className="text-muted-foreground">· {fs.join(", ")}</span></li>)}
         </Zone>
         <Zone title="Conventions sous-affectées" hint={`Notifié non encore affecté à ${un(V.edition)} (reste à répartir).`} count={m.attention.underAllocated.length}>
           {m.attention.underAllocated.map(({ convention, remaining }) => <li key={convention.id}><Link href={`/conventions/${convention.id}`} className="text-primary hover:underline">{convention.reference}</Link>{money && <span className="text-muted-foreground"> · reste {fmtEuro(remaining)}</span>}</li>)}
         </Zone>
-        <Zone title="Livrables en retard" hint={`Par financeur, sur les ${pl(V.edition)} de l'année.`} count={m.attention.lateByFunder.length}>
+        <Zone title="Livrables en retard" hint={`Par financeur, sur les ${pl(V.projet)} de l'année.`} count={m.attention.lateByFunder.length}>
           {m.attention.lateByFunder.map(({ funder, count }) => <li key={funder.id}><Link href={`/financeurs/${funder.id}`} className="text-primary hover:underline">{funder.name}</Link> <span className="text-danger">· {count}</span></li>)}
         </Zone>
       </div>
@@ -137,7 +137,7 @@ export default async function MatricePage({ searchParams }: { searchParams: Prom
           <FundingLinePanelBody e={panel.e} f={panel.f} i={panel.i} rw={canEditFunding(me)} isPilot={panel.isPilot} refs={refs} funders={funders} conventions={conventions} highlight={sp.champ ?? null} />
         </UrlPanel>
       )}
-      <p className="mt-2.5 text-[10px] text-muted-foreground">{`Une ligne par ${V.edition.one}, une colonne par financeur présent sur l'année · `}{money ? "vert : obtenu · ocre italique : demandé, non tranché · à déposer : dossier pas encore envoyé" : "● obtenu ◐ demandé ○ à déposer"} · « ! » : livrable en retard chez ce financeur.</p>
+      <p className="mt-2.5 text-[10px] text-muted-foreground">{`Une ligne par ${V.projet.one}, une colonne par financeur présent sur l'année · `}{money ? "vert : obtenu · ocre italique : demandé, non tranché · à déposer : dossier pas encore envoyé" : "● obtenu ◐ demandé ○ à déposer"} · « ! » : livrable en retard chez ce financeur.</p>
     </div>
   );
 }

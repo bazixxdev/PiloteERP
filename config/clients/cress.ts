@@ -36,7 +36,7 @@ export const cress: Client = {
   },
   vocab: {
     projet: { one: "projet", many: "projets", gender: "m" },
-    edition: { one: "édition", many: "éditions", gender: "f" },
+    edition: { one: "année", many: "années", gender: "f" },
     action: { one: "action", many: "actions", gender: "f" },
     pole: { one: "pôle", many: "pôles", gender: "m" },
     codir: { one: "CODIR", many: "CODIR", gender: "m" },

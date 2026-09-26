@@ -38,8 +38,8 @@ export const tlst: Client = {
   },
   vocab: {
     projet: { one: "projet", many: "projets", gender: "m" },
-    edition: { one: "action", many: "actions", gender: "f" },
-    action: { one: "étape", many: "étapes", gender: "f" },
+    edition: { one: "année", many: "années", gender: "f" },
+    action: { one: "action", many: "actions", gender: "f" },
     pole: { one: "équipe", many: "équipes", gender: "f" },
     codir: { one: "bureau", many: "bureaux", gender: "m" },
     raf: { one: "trésorier", many: "trésoriers", gender: "m" }, // « trésorier·e » + article ne se lit pas : masculin générique, à revoir avec TLST

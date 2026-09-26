@@ -38,7 +38,7 @@ export async function setOrganisationKind(id: string, kind: OrganisationKind, on
   if (!on) {
     if (kind === "funder" && (o._count.lines || o._count.conventions || o._count.calls)) return { ok: false, error: "Cette organisation finance encore des lignes, conventions ou appels : le genre financeur reste." };
     if (kind === "supplier" && o._count.validations) return { ok: false, error: "Des devis citent encore ce fournisseur : le genre reste." };
-    if (kind === "partner" && o._count.editions) return { ok: false, error: `Des ${pl(V.edition)} la citent encore comme partenaire : le genre reste.` };
+    if (kind === "partner" && o._count.editions) return { ok: false, error: `Des ${pl(V.projet)} la citent encore comme partenaire : le genre reste.` };
     if (current.length <= 1) return { ok: false, error: "Une organisation garde au moins un genre." };
   }
   const next = on ? [...current, kind] : current.filter((k) => k !== kind);

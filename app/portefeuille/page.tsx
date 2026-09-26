@@ -16,7 +16,7 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PortfolioFilters } from "./filters";
-import { V, cap, aucun, pl, nb } from "@/lib/vocab";
+import { V, cap, aucun, pl, nb, tous, e as accord } from "@/lib/vocab";
 
 type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string };
 
@@ -64,11 +64,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title={codir ? `Mode ${V.codir.one}` : `Portefeuille des ${pl(V.edition)}`}
+        title={codir ? `Mode ${V.codir.one}` : `Portefeuille des ${pl(V.projet)}`}
         subtitle={
           codir
-            ? `${rows.length} ${V.edition.one}${rows.length > 1 ? "s" : ""} en alerte ou avec des validations en attente · ${totalPending} validation${totalPending > 1 ? "s" : ""} à traiter`
-            : `${year} · ${nb(all.length, V.edition)} en cours · ${nb(poles.length, V.pole)}`
+            ? `${rows.length} ${rows.length > 1 ? pl(V.projet) : V.projet.one} en alerte ou avec des validations en attente · ${totalPending} validation${totalPending > 1 ? "s" : ""} à traiter`
+            : `${year} · ${nb(all.length, V.projet)} en cours · ${nb(poles.length, V.pole)}`
         }
         actions={
           codir ? (
@@ -83,10 +83,10 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 
       {!codir && (
         <div className="mb-5 grid grid-cols-2 rounded-md border bg-card md:grid-cols-4" data-testid="portfolio-summary">
-          <div className="border-b border-r p-4 md:border-b-0"><div className="text-[26px] font-semibold leading-tight tracking-[-1px] tabular">{all.length}</div><span className="mt-1 block text-[11px] text-muted-foreground">{`${pl(V.edition)} en cours`}</span></div>
-          <div className={cn("border-b p-4 md:border-b-0 md:border-r", inAlert > 0 && "bg-[#fcf4e3]")}><div className={cn("text-[26px] font-semibold leading-tight tracking-[-1px] tabular", inAlert > 0 && "text-warning-foreground")}>{inAlert}</div><span className="mt-1 block text-[11px] text-muted-foreground">{`${pl(V.edition)} en alerte`}</span></div>
+          <div className="border-b border-r p-4 md:border-b-0"><div className="text-[26px] font-semibold leading-tight tracking-[-1px] tabular">{all.length}</div><span className="mt-1 block text-[11px] text-muted-foreground">{`${pl(V.projet)} en cours`}</span></div>
+          <div className={cn("border-b p-4 md:border-b-0 md:border-r", inAlert > 0 && "bg-[#fcf4e3]")}><div className={cn("text-[26px] font-semibold leading-tight tracking-[-1px] tabular", inAlert > 0 && "text-warning-foreground")}>{inAlert}</div><span className="mt-1 block text-[11px] text-muted-foreground">{`${pl(V.projet)} en alerte`}</span></div>
           <Link href="/validations" className={cn("border-r p-4 hover:bg-muted/40", totalPending > 0 && "bg-[#fbefe9]")}><div className={cn("text-[26px] font-semibold leading-tight tracking-[-1px] tabular", totalPending > 0 && "text-danger")}>{totalPending}</div><span className="mt-1 block text-[11px] text-muted-foreground">validations en attente</span></Link>
-          <div className="p-4"><div className="pt-1 text-base font-semibold text-mint">✓ Tout va bien</div><span className="mt-1 block text-[11px] text-muted-foreground">pour {calm === all.length ? "toutes les" : `les ${calm} autres`}{` ${pl(V.edition)}`}</span></div>
+          <div className="p-4"><div className="pt-1 text-base font-semibold text-mint">✓ Tout va bien</div><span className="mt-1 block text-[11px] text-muted-foreground">pour {calm === all.length ? tous(V.projet) : `les ${calm} autres ${pl(V.projet)}`}</span></div>
         </div>
       )}
 
@@ -105,9 +105,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
       )}
 
       {rows.length === 0 ? (
-        <EmptyState icon="○" title={codir ? "Rien à signaler" : `${cap(aucun(V.edition))} pour ces filtres`} hint={codir ? `Aucune alerte ni validation en attente : la revue ${V.codir.one} peut être courte.` : "Changez le filtre pour retrouver les projets."} />
+        <EmptyState icon="○" title={codir ? "Rien à signaler" : `${cap(aucun(V.projet))} pour ces filtres`} hint={codir ? `Aucune alerte ni validation en attente : la revue ${V.codir.one} peut être courte.` : "Changez le filtre pour retrouver les projets."} />
       ) : (
-        <div className="scroll-shadow-x overflow-auto rounded-md border" tabIndex={0} aria-label={`Tableau des ${rows.length} ${pl(V.edition)}, défilement horizontal et vertical`}>
+        <div className="scroll-shadow-x overflow-auto rounded-md border" tabIndex={0} aria-label={`Tableau des ${rows.length} ${pl(V.projet)}, défilement horizontal et vertical`}>
           {/* Les alertes se lisent sous le nom du projet, sans défilement horizontal ; le corps est en 13 px.
               Sous 1280 px (portable à 125 %), la colonne Livrable financeur — déjà tronquée — s'efface pour que Temps et
               Validations restent à l'écran ; le prochain livrable reste lisible sur la fiche. */}
@@ -182,8 +182,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </div>
       )}
       <div className="mt-2.5 flex flex-wrap justify-between gap-4 text-[10px] text-muted-foreground">
-        <span data-testid="portfolio-count">{rows.length}{` ${V.edition.one}`}{rows.length > 1 ? "s" : ""} affichée{rows.length > 1 ? "s" : ""} sur {all.length} · les alertes apparaissent en premier</span>
-        <span>{`Toutes les ${pl(V.edition)} listées sont en cours, sauf mention · seuils : enveloppe à `}{settings.envelopeAlertPercent} % · livrable à J−{settings.deliverableAlertDays}</span>
+        <span data-testid="portfolio-count">{rows.length}{` ${rows.length > 1 ? pl(V.projet) : V.projet.one} affiché${accord(V.projet)}`}{rows.length > 1 ? "s" : ""} sur {all.length} · les alertes apparaissent en premier</span>
+        <span>{`${cap(tous(V.projet))} listé${accord(V.projet)}s sont en cours, sauf mention · seuils : enveloppe à `}{settings.envelopeAlertPercent} % · livrable à J−{settings.deliverableAlertDays}</span>
       </div>
       {lastTime._max.date && <p className="py-3 text-xs text-muted-foreground">✓ Temps consolidés jusqu'au {fmtDate(lastTime._max.date, "D MMMM")}.</p>}
     </div>

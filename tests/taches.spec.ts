@@ -82,7 +82,7 @@ test("une tâche personnelle se crée, se date, se planifie en créneau et sort 
   await expect(relire).toContainText("· Communication");
   await relire.locator("[data-testid^=task-detach-]").click();
   await expect(relire).not.toContainText("Mois de l'ESS");
-  await expect(relire.locator("[data-testid^=task-edition-]")).toHaveAttribute("aria-label", "Rattacher une édition");
+  await expect(relire.locator("[data-testid^=task-edition-]")).toHaveAttribute("aria-label", "Rattacher un projet");
 
   // Une autre personne ne voit pas ces tâches.
   await iAm(page, "Lucas Perrin");

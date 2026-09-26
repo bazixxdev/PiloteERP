@@ -22,7 +22,7 @@ import type { EditionOpt } from "@/components/tasks/task-list";
 import { cn } from "@/lib/utils";
 import { ContactForm } from "./controls";
 import { BulkBar, FilterCell, SortTh, useContactsTable, type BulkContext, type Column } from "./table-tools";
-import { V, cap } from "@/lib/vocab";
+import { V, cap, ppe } from "@/lib/vocab";
 
 type Run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (r: { data?: unknown }) => void) => void;
 function useRun(): [boolean, Run] {
@@ -176,7 +176,7 @@ function ListSettings({ list, editions, pending, run }: { list: ContactListFull;
         <div className="grid gap-3 text-xs">
           <label className="grid gap-1"><span className="font-semibold">Nom</span><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { if (name.trim() && name !== list.name) run(() => updateContactList(list.id, { name })); }} className="h-8" disabled={pending} data-testid={`contact-list-name-${list.id}`} /></label>
           <label className="grid gap-1"><span className="font-semibold">À quoi elle sert</span><Input value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => { if (description !== (list.description ?? "")) run(() => updateContactList(list.id, { description })); }} className="h-8" disabled={pending} /></label>
-          <div className="grid gap-1"><span className="font-semibold">Projet</span><SearchableSelect aria-label={`${cap(V.edition)} rattachée`} options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateContactList(list.id, { editionId: v || null }))} emptyOption="Sans projet" className="w-full text-xs" /></div>
+          <div className="grid gap-1"><span className="font-semibold">Projet</span><SearchableSelect aria-label={`${cap(ppe(V.projet, "rattaché"))}`} options={editions.map((e) => ({ value: e.id, label: e.name, hint: String(e.year) }))} value={list.edition?.id ?? ""} disabled={pending} onChange={(v) => run(() => updateContactList(list.id, { editionId: v || null }))} emptyOption="Sans projet" className="w-full text-xs" /></div>
           <div className="grid gap-1"><span className="font-semibold">Couleur</span><div className="flex items-center gap-1.5">{NOTE_COLORS.map((k) => <button key={k.value} type="button" title={k.label} aria-label={k.label} aria-pressed={list.color === k.value} disabled={pending} onClick={() => run(() => updateContactList(list.id, { color: list.color === k.value ? null : k.value }))} className={cn("size-6 rounded-full border-2", list.color === k.value ? "border-foreground" : "border-transparent hover:border-border")} style={{ background: k.hex }} />)}</div></div>
           <fieldset className="grid gap-1"><legend className="mb-1 font-semibold">Qui la lit</legend>
             {VISIBILITIES.map((v) => <label key={v.value} className="flex items-start gap-2"><input type="radio" name={`clvis-${list.id}`} value={v.value} checked={list.visibility === v.value} disabled={pending} onChange={() => run(() => updateContactList(list.id, { visibility: v.value }), () => toast.success(v.value === "private" ? "Liste privée" : "Liste partagée"))} className="mt-0.5 accent-primary" data-testid={`contact-list-vis-${list.id}-${v.value}`} /><span><b className="font-medium">{v.label}</b> <span className="text-muted-foreground">· {v.hint}</span></span></label>)}

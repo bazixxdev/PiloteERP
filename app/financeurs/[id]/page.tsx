@@ -15,7 +15,7 @@ import { allocationOf } from "@/lib/conventions";
 import { fmtEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { FunderContacts } from "@/components/funders/contacts";
-import { V, cap, le, pl } from "@/lib/vocab";
+import { V, cap, le, pl, e as accord } from "@/lib/vocab";
 
 // Page d'un financeur : « tout ce qu'on a avec la Région » — contacts, conventions, éditions financées, obligations à venir.
 export default async function FinanceurPage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,7 +58,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         {card("Contact principal", main ? [main.firstName, main.lastName].filter(Boolean).join(" ") : "—", main ? [main.role, main.email].filter(Boolean).join(" · ") : "désignez-le avec l'étoile")}
         {card("Notifié · conventions actives", fmtEuro(active.reduce((s, c) => s + (c.amountNotified ?? 0), 0)), `${active.length} convention${active.length > 1 ? "s" : ""} couvrant ${year}`)}
-        {card(`Obtenu sur les ${pl(V.edition)} ${year}`, fmtEuro(granted), "montants obtenus des lignes de financement")}
+        {card(`Obtenu en ${year}`, fmtEuro(granted), "montants obtenus des lignes de financement")}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -87,10 +87,10 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
             )}
           </Section>
 
-          <Section title={`${cap(pl(V.edition))} financées`} description={`Lignes de financement des ${pl(V.edition)} non clôturées.`}>
+          <Section title={`${cap(pl(V.projet))} financé${accord(V.projet)}s`} description={`Lignes de financement des ${pl(V.edition)} non clôturées.`}>
             {f.lines.length === 0 ? <p className="text-sm text-muted-foreground">Aucune ligne de financement.</p> : (
               <table className="w-full text-sm">
-                <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">{cap(V.edition)}</th><th className="py-1.5 pr-2">{cap(V.pilote)}</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5">Convention</th></tr></thead>
+                <thead className="text-left text-[10px] font-semibold text-muted-foreground"><tr><th className="py-1.5 pr-2">{cap(V.projet)}</th><th className="py-1.5 pr-2">{cap(V.pilote)}</th><th className="py-1.5 pr-2">Statut</th><th className="py-1.5 pr-2 text-right">Demandé</th><th className="py-1.5 pr-2 text-right">Obtenu</th><th className="py-1.5">Convention</th></tr></thead>
                 <tbody className="divide-y">
                   {f.lines.map((l) => (
                     <tr key={l.id}>
