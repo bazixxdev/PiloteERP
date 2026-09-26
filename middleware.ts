@@ -14,10 +14,11 @@ export function middleware(request: NextRequest) {
   if (!getSessionCookie(request, { cookiePrefix: "pilote" })) {
     // Les adresses lues par un programme (exports, pièces, API) répondent 401 plutôt qu'une page de connexion.
     if (pathname.startsWith("/api/") || pathname.endsWith("/export")) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
-    const login = request.nextUrl.clone();
-    login.pathname = "/connexion";
-    login.search = pathname !== "/" ? `?suite=${encodeURIComponent(pathname + (request.nextUrl.search || ""))}` : "";
-    return NextResponse.redirect(login);
+    // Redirection **relative** (26/09) : Next écoute en loopback (--hostname 127.0.0.1, SEC-22) et `nextUrl` porte alors
+    // l'hôte interne (https://localhost:3002) ; une adresse absolue envoyait le navigateur sur localhost. Relative, elle ne
+    // dépend d'aucun en-tête Host (rien à falsifier) et garde le sous-chemin de l'instance.
+    const suite = pathname !== "/" ? `?suite=${encodeURIComponent(pathname + (request.nextUrl.search || ""))}` : "";
+    return new NextResponse(null, { status: 307, headers: { Location: `${request.nextUrl.basePath}/connexion${suite}` } });
   }
   return NextResponse.next();
 }
