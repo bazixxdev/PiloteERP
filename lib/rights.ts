@@ -58,6 +58,18 @@ export function canEditAction(me: Actor, c: { isPilot: boolean; isTeamOfCoveredY
   return c.isOwnerOrAssociate || canEditActions(me, c.isPilot, c.isTeamOfCoveredYear, c.samePole);
 }
 
+// Moindre privilège : responsable et associés modifient le contenu, la période et les jalons ; la liste des associés se gère
+// par le responsable ou par ceux qui ont le droit sur l'année (pilote, équipe d'une année couverte, pôle, direction) ; la
+// suppression est réservée à ces derniers.
+export function actionRights(me: Actor, c: { isPilot: boolean; isTeamOfCoveredYear: boolean; samePole: boolean; isOwner: boolean; isAssociate: boolean }) {
+  const year = canEditActions(me, c.isPilot, c.isTeamOfCoveredYear, c.samePole);
+  return {
+    edit: canEditAction(me, { isPilot: c.isPilot, isTeamOfCoveredYear: c.isTeamOfCoveredYear, samePole: c.samePole, isOwnerOrAssociate: c.isOwner || c.isAssociate }),
+    managePeople: year || c.isOwner,
+    delete: year,
+  };
+}
+
 // Intervenir sur une édition comme son pilote (propositions, remarques, réalisations, confirmations…).
 export function canActAsPilot(me: Actor, isPilotOfEdition: boolean, isTeamMember = false): boolean {
   return has(me, "edition.edit_all") || isPilotOfEdition || isTeamMember;

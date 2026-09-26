@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
-import { canEditActions } from "@/lib/rights";
-import { inMyPole, projectPoleIds } from "@/lib/scope";
+import { projectPoleIds } from "@/lib/scope";
 import { canWriteDelegation } from "@/lib/delegation";
 import { fmtDate } from "@/lib/format";
 import { reportInternalError } from "@/lib/errors";
-import { parseDay } from "@/lib/actions";
-import { addMilestone, createAction, setActionPeriod } from "./actions";
+import { parseDay, periodIncluding } from "@/lib/actions";
+import { actionCtx, editionActionCtx } from "@/lib/actions-rights-db";
+import { addMilestoneTx, createActionTx, newActionData } from "@/lib/actions-write-db";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -107,33 +107,35 @@ export async function deleteDelegation(id: string): Promise<Result> {
 }
 
 // Objectif d'une délégation (25/09) : une action de l'année avec son responsable ; une échéance devient un jalon (26/09),
-// point de contrôle ou non. Pas de règle propre : createAction (droit d'ajouter une action à l'année), puis addMilestone
-// et setActionPeriod (droit sur l'action) — le moteur de l'onglet Actions. La date est vérifiée avant toute écriture.
+// point de contrôle ou non, et la période couvre l'échéance dès la création (comme la migration). Pas de règle propre : le
+// droit d'ajouter une action à l'année (editionActionCtx, celui de createAction), puis action et jalon dans UNE transaction.
 export async function addObjective(editionId: string, input: { name: string; ownerId: string; date?: string; isCheckpoint?: boolean }): Promise<Result<{ id: string }>> {
+  const me = await getCurrentPerson();
+  const { ed, can } = await editionActionCtx(editionId, me);
+  if (!ed) return { ok: false, error: "Introuvable." };
+  if (!can) return { ok: false, error: "Vous ne pouvez pas ajouter d'objectif ici." };
   const due = input.date ? parseDay(input.date) : null;
   if (input.date && !due) return { ok: false, error: "Échéance invalide." };
-  const created = await createAction(editionId, { name: input.name, ownerId: input.ownerId });
-  if (!created.ok || !due || !input.date) return created;
-  const id = created.data!.id;
-  const m = await addMilestone(id, { date: input.date, label: input.name, isCheckpoint: input.isCheckpoint });
-  if (!m.ok) return m;
-  // Une échéance après la fin de l'année prolonge la période (comme la migration) : l'action ne finit pas avant son jalon.
-  const a = await prisma.action.findUnique({ where: { id }, select: { startDate: true, endDate: true } });
-  if (a?.startDate && a.endDate && due > a.endDate) {
-    const p = await setActionPeriod(id, a.startDate.toISOString().slice(0, 10), input.date);
-    if (!p.ok) return p;
-  }
-  return { ok: true, data: { id } };
+  const prepared = await newActionData(ed, me, { name: input.name, ownerId: input.ownerId });
+  if (!prepared.ok) return prepared;
+  const data = due ? { ...prepared.data, ...periodIncluding(prepared.data, due) } : prepared.data;
+  // Frontière de transaction : l'objectif et son échéance naissent ensemble, ou pas du tout.
+  const a = await prisma.$transaction(async (tx) => {
+    const created = await createActionTx(tx, data);
+    if (due) await addMilestoneTx(tx, { id: created.id, startDate: data.startDate, endDate: data.endDate }, { date: due, label: data.name, isCheckpoint: input.isCheckpoint });
+    return created;
+  });
+  revalidatePath("/", "layout");
+  return { ok: true, data: { id: a.id } };
 }
 
-// Point de contrôle (26/09 : une propriété du jalon) : marque ou démarque les jalons de l'action. Même droit que la
-// modification des actions de l'édition.
+// Point de contrôle (26/09 : une propriété du jalon) : marque ou démarque les jalons de l'action. Même droit que toutes les
+// commandes de l'action (actionCtx).
 export async function setActionCheckpoint(actionId: string, value: boolean): Promise<Result> {
   const me = await getCurrentPerson();
-  const a = await prisma.action.findUnique({ where: { id: actionId }, select: { editionId: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } }, team: { select: { personId: true } } } } } });
+  const { a, can } = await actionCtx(actionId, me);
   if (!a) return { ok: false, error: "Introuvable." };
-  const p = a.edition.project;
-  if (!canEditActions(me, p.pilotId === me.id, a.edition.team.some((t) => t.personId === me.id), inMyPole(me, p))) return { ok: false, error: "Vous ne modifiez pas les étapes de ce projet." };
+  if (!can) return { ok: false, error: "Vous ne modifiez pas les étapes de ce projet." };
   const r = await prisma.milestone.updateMany({ where: { actionId }, data: { isCheckpoint: value } });
   if (r.count === 0) return { ok: false, error: "Donnez d'abord une échéance : un point de contrôle est un jalon daté." };
   revalidatePath("/delegation");

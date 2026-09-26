@@ -7,6 +7,7 @@ import { FIELDS, coerce, type Model } from "@/lib/fields";
 import { canAdmin, canEditCalls, canEditFunding, canManageEquipment, canManageMembers, canPlanLoad, canSetEditionStatus, canWriteLayer, type Actor } from "@/lib/rights";
 import { projectPoleIds } from "@/lib/scope";
 import { actionCtx } from "@/lib/actions-rights-db";
+import { activePerson } from "@/lib/actions-write-db";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
@@ -86,6 +87,8 @@ export async function saveField(model: Model, id: string, field: string, raw: un
     const denied = await allowed(model, id, field, me.id, me, me.poleId);
     if (denied) return { ok: false, error: denied };
     const value = coerce(def.type, raw);
+    // Même invariant qu'à la création (createAction) : le responsable d'une action est une personne active.
+    if (model === "action" && field === "ownerId" && value && !(await activePerson(String(value)))) return { ok: false, error: "Responsable introuvable." };
 
     if (model === "edition") {
       const before = await prisma.edition.findUnique({ where: { id } });

@@ -6,7 +6,8 @@ import { cookieOf, postServerAction, serverActionId, SECURITY_ACTORS } from "./f
 // Actions composantes (26/09) : une personne hors du projet — ni pilote, ni équipe d'une année couverte, ni responsable ou
 // associée, sans droit de pôle — ne modifie l'action par aucune commande (période, jalon, personnes associées, suppression)
 // ni par saveField. Les commandes sont appelées en direct, comme le ferait un client falsifié : l'interface n'est pas une garde.
-const actionId = readFileSync("tests/.security-outside-action-id", "utf8").trim();
+const fixture = (name: string) => readFileSync(`tests/.security-${name}-action-id`, "utf8").trim();
+const actionId = fixture("outside");
 const FILE = "app/actions/actions.ts";
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.SECURITY_DATABASE_URL } } });
 
@@ -41,6 +42,37 @@ test.describe("SEC-32 — commandes de l'action", () => {
     expect(after.endDate?.toISOString()).toBe(before.endDate?.toISOString());
     expect(after.people.map((p) => p.personId).sort()).toEqual(before.people.map((p) => p.personId).sort());
     expect(after.milestones.length).toBe(before.milestones.length);
+  });
+
+  test("une personne associée modifie l'action, mais ne gère pas la liste des associés et ne la supprime pas", async ({ baseURL }) => {
+    const url = String(baseURL);
+    const id = fixture("associate");
+    const before = await prisma.action.findUniqueOrThrow({ where: { id }, include: { people: true } });
+    const edit = await call(url, "app/actions/fields.ts", "saveField", ["action", id, "description", "SEC32_ASSOCIATE_EDIT"]);
+    expect(edit).toContain('"ok":true');
+    for (const [name, args] of [["setActionPeople", [id, []]], ["deleteAction", [id]]] as const) {
+      const body = await call(url, FILE, name, [...args]);
+      expect(body, name).toContain('"ok":false');
+      expect(body, name).toMatch(/Vous ne pouvez pas/);
+    }
+    const after = await prisma.action.findUniqueOrThrow({ where: { id }, include: { people: true } });
+    expect(after.description).toBe("SEC32_ASSOCIATE_EDIT");
+    expect(after.people.map((p) => p.personId).sort()).toEqual(before.people.map((p) => p.personId).sort());
+  });
+
+  test("l'équipe d'une AUTRE année que la période couvre modifie l'action (runsIn), pas seulement celle de sa création", async ({ baseURL }) => {
+    const id = fixture("multiyear");
+    const body = await call(String(baseURL), FILE, "addMilestone", [id, { date: "2027-06-15", label: "SEC32_MULTIYEAR_MILESTONE" }]);
+    expect(body).toContain('"ok":true');
+    expect(await prisma.milestone.count({ where: { actionId: id, label: "SEC32_MULTIYEAR_MILESTONE" } })).toBe(1);
+  });
+
+  test("une action qui porte des heures ne se supprime pas, même par la direction", async ({ baseURL }) => {
+    const id = fixture("hours");
+    const body = await call(String(baseURL), FILE, "deleteAction", [id], SECURITY_ACTORS.director);
+    expect(body).toContain('"ok":false');
+    expect(body).toContain("Des heures ou des dépenses");
+    expect(await prisma.action.count({ where: { id } })).toBe(1);
   });
 
   test("témoin : la direction passe la même garde (la commande est bien servie et l'action trouvée)", async ({ baseURL }) => {

@@ -12,6 +12,7 @@ import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
 import { defaultPeriod, parseDay, shiftYear } from "@/lib/actions";
 import { actionCtx } from "@/lib/actions-rights-db";
+import { addMilestoneTx, extendPeriodTx } from "@/lib/actions-write-db";
 import { actionRunsInEdition } from "@/lib/actions-db";
 import { V, cap, le, un, du, de, au, ce, seul } from "@/lib/vocab";
 
@@ -42,10 +43,10 @@ export async function setNextMilestoneDate(actionId: string, date: string): Prom
   const next = await prisma.milestone.findFirst({ where: { actionId, done: false }, orderBy: [{ date: "asc" }, { order: "asc" }] });
   // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
   await prisma.$transaction(async (tx) => {
-    if (next) await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
-    else await tx.milestone.create({ data: { actionId, date: when, label: a.name } });
-    if (when < a.startDate) await tx.action.update({ where: { id: actionId }, data: { startDate: when } });
-    if (when > a.endDate) await tx.action.update({ where: { id: actionId }, data: { endDate: when } });
+    if (next) {
+      await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
+      await extendPeriodTx(tx, a, when);
+    } else await addMilestoneTx(tx, a, { date: when, label: a.name });
   });
   revalidatePath(path(a.editionId));
   return { ok: true };

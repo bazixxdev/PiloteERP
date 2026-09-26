@@ -54,24 +54,43 @@ export default async function globalSetup(config: FullConfig) {
   if (!thomas || !deleg) throw new Error("Fixture délégation introuvable.");
   await prisma.task.create({ data: { personId: thomas.id, editionId: deleg.editionId, label: "SEC31_TASK_SENTINEL_4b1e" } });
   writeFileSync(path.join(authDir, "../.security-delegation-person-id"), thomas.id);
-  // Actions composantes (26/09) : une action d'un projet où le contributeur n'est rien — ni pilote, ni équipe d'aucune année,
-  // ni responsable ou associé de l'action, projet hors de son pôle — et sans heures ni dépenses (seule sa garde la protège).
+  // Actions composantes (26/09), SEC-32. Le contributeur (Lucas Perrin) :
+  // 1. entre dans l'équipe 2027 d'un projet (pas 2026) ; une action de ce projet créée en 2026 court sur 2026–2027 : il la
+  //    modifie par l'année 2027 qu'elle couvre (runsIn) ;
   const lucas = await prisma.person.findUnique({ where: { email: SECURITY_ACTORS.contributor.email }, select: { id: true, poleId: true } });
   if (!lucas) throw new Error("Fixture SEC-32 : contributeur introuvable.");
-  const outside = await prisma.action.findFirst({
-    where: {
-      startDate: { not: null }, endDate: { not: null }, ownerId: { not: lucas.id }, people: { none: { personId: lucas.id } },
-      timeEntries: { none: {} }, expenses: { none: {} },
-      project: {
-        pilotId: { not: lucas.id }, editions: { none: { team: { some: { personId: lucas.id } } } },
-        ...(lucas.poleId ? { poleId: { not: lucas.poleId }, secondaryPoles: { none: { poleId: lucas.poleId } } } : {}),
-      },
-    },
+  const later = await prisma.edition.findFirst({
+    where: { year: 2027, team: { none: { personId: lucas.id } }, project: { analyticCode: { not: "OBS-01" }, pilotId: { not: lucas.id }, editions: { some: { year: 2026, team: { none: { personId: lucas.id } } } } } },
     orderBy: { id: "asc" },
-    select: { id: true },
+    select: { id: true, projectId: true, project: { select: { pilotId: true, editions: { where: { year: 2026 }, select: { id: true } } } } },
   });
-  if (!outside) throw new Error("Fixture SEC-32 : aucune action hors du périmètre du contributeur.");
-  writeFileSync(path.join(authDir, "../.security-outside-action-id"), outside.id);
+  if (!later) throw new Error("Fixture SEC-32 : aucun projet avec une année 2026 et une année 2027.");
+  await prisma.editionTeam.createMany({ data: [{ editionId: later.id, personId: lucas.id }], skipDuplicates: true });
+  const multi = await prisma.action.create({ data: {
+    editionId: later.project.editions[0].id, projectId: later.projectId, name: "SEC32 action sur deux années", ownerId: later.project.pilotId,
+    startDate: new Date(Date.UTC(2026, 0, 1)), endDate: new Date(Date.UTC(2027, 11, 31)),
+  } });
+  writeFileSync(path.join(authDir, "../.security-multiyear-action-id"), multi.id);
+  // 2. n'est rien sur une autre action — ni pilote, ni équipe d'aucune année, ni responsable ou associé, projet hors de son
+  //    pôle — et sans heures ni dépenses (seule sa garde la protège) ;
+  const outsideWhere = {
+    startDate: { not: null }, endDate: { not: null }, ownerId: { not: lucas.id }, people: { none: { personId: lucas.id } },
+    timeEntries: { none: {} }, expenses: { none: {} },
+    project: {
+      pilotId: { not: lucas.id }, editions: { none: { team: { some: { personId: lucas.id } } } },
+      ...(lucas.poleId ? { poleId: { not: lucas.poleId }, secondaryPoles: { none: { poleId: lucas.poleId } } } : {}),
+    },
+  };
+  const outside = await prisma.action.findMany({ where: outsideWhere, orderBy: { id: "asc" }, take: 2, select: { id: true } });
+  if (outside.length < 2) throw new Error("Fixture SEC-32 : pas assez d'actions hors du périmètre du contributeur.");
+  writeFileSync(path.join(authDir, "../.security-outside-action-id"), outside[0].id);
+  // 3. est seulement personne associée d'une troisième : il la modifie, mais ne gère pas la liste et ne la supprime pas ;
+  await prisma.actionPerson.createMany({ data: [{ actionId: outside[1].id, personId: lucas.id }], skipDuplicates: true });
+  writeFileSync(path.join(authDir, "../.security-associate-action-id"), outside[1].id);
+  // 4. une action avec des heures saisies : même la direction ne la supprime pas (« abandonnée » plutôt).
+  const withHours = await prisma.action.findFirst({ where: { timeEntries: { some: {} }, startDate: { not: null }, endDate: { not: null }, projectId: { not: null } }, orderBy: { id: "asc" }, select: { id: true } });
+  if (!withHours) throw new Error("Fixture SEC-32 : aucune action avec des heures.");
+  writeFileSync(path.join(authDir, "../.security-hours-action-id"), withHours.id);
   await prisma.person.update({ where: { email: SECURITY_ACTORS.disabled.email }, data: { active: false } });
   await prisma.$disconnect();
 }
