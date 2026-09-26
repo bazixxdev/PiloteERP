@@ -11,6 +11,7 @@ import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
 import { defaultPeriod, shiftYear } from "@/lib/actions";
+import { actionRunsInEdition } from "@/lib/actions-db";
 import { V, cap, le, un, du, de, au, ce, seul, adj } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -25,22 +26,50 @@ async function ctx(editionId: string) {
 
 const path = (id: string) => `/edition/${id}`;
 
-// `opts` (25/09) : un objectif créé depuis la vue Délégation porte son responsable, son échéance, et peut être un point de
-// contrôle. Même garde, même création : pas de second moteur d'actions. Sans `opts`, comportement inchangé.
-export async function addAction(editionId: string, name: string, opts?: { ownerId?: string; milestoneDate?: string; isCheckpoint?: boolean }): Promise<Result<{ id: string }>> {
+// `opts` (25/09) : un objectif créé depuis la vue Délégation porte son responsable et peut avoir une échéance — un jalon
+// (26/09), point de contrôle ou non. Même garde, même création : pas de second moteur d'actions. Sans `opts`, inchangé.
+export async function addAction(editionId: string, name: string, opts?: { ownerId?: string; milestone?: { date: string; checkpoint?: boolean } }): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
   if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole)) return { ok: false, error: `Vous ne pouvez pas ajouter d'${V.action.one} ici.` };
   if (opts?.ownerId && !(await prisma.person.findFirst({ where: { id: opts.ownerId, active: true }, select: { id: true } }))) return { ok: false, error: "Responsable introuvable." };
-  const milestone = opts?.milestoneDate ? new Date(opts.milestoneDate) : null;
-  if (milestone && Number.isNaN(milestone.getTime())) return { ok: false, error: "Échéance invalide." };
+  const due = opts?.milestone?.date ? new Date(opts.milestone.date) : null;
+  if (due && Number.isNaN(due.getTime())) return { ok: false, error: "Échéance invalide." };
   const count = await prisma.action.count({ where: { editionId } });
   // Période : l'année, prolongée jusqu'au jalon s'il tombe après le 31/12 (comme la migration) ; sans elle, l'action
   // n'apparaîtrait dans aucune année.
   const period = defaultPeriod(c.e.year);
-  const endDate = milestone && milestone > period.endDate ? milestone : period.endDate;
-  const a = await prisma.action.create({ data: { editionId, projectId: c.e.projectId, startDate: period.startDate, endDate, name: name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), milestoneDate: milestone, isCheckpoint: Boolean(opts?.isCheckpoint), order: count } });
+  const endDate = due && due > period.endDate ? due : period.endDate;
+  const label = name.trim() || `${cap(adj(V.action, "nouveau", "nouvelle"))}`;
+  // Une seule écriture : l'action et son jalon (libellé = nom de l'action, comme ceux repris par la migration).
+  const a = await prisma.action.create({ data: {
+    editionId, projectId: c.e.projectId, startDate: period.startDate, endDate, name: label, ownerId: opts?.ownerId ?? (c.isPilot ? c.me.id : c.e.project.pilotId), order: count,
+    ...(due ? { milestones: { create: [{ date: due, label, isCheckpoint: Boolean(opts?.milestone?.checkpoint) }] } } : {}),
+  } });
   revalidatePath(path(editionId));
   return { ok: true, data: { id: a.id } };
+}
+
+// Onglet Actions (en attendant la page de l'action) : la date du prochain jalon non fait se modifie dans le tableau ; sans
+// jalon, on en crée un (libellé = nom de l'action) ; vider la date retire ce jalon. La période s'étend jusqu'au jalon s'il en
+// sort. Même garde que la modification d'une action par saveField (équipe, pilote, pôle, ou responsable).
+export async function setNextMilestoneDate(actionId: string, date: string): Promise<Result> {
+  const a = await prisma.action.findUnique({ where: { id: actionId }, include: { milestones: { where: { done: false }, orderBy: [{ date: "asc" }, { order: "asc" }], take: 1 } } });
+  if (!a) return { ok: false, error: `${cap(V.action)} introuvable.` };
+  const c = await ctx(a.editionId);
+  if (!canEditActions(c.me, c.isPilot, c.isTeam, c.samePole) && a.ownerId !== c.me.id) return { ok: false, error: `Vous ne pouvez pas modifier ${ce(V.action)}.` };
+  const next = a.milestones[0] ?? null;
+  const when = date ? new Date(date) : null;
+  if (when && Number.isNaN(when.getTime())) return { ok: false, error: "Date invalide." };
+  // Frontière de transaction : le jalon et l'extension de la période vont ensemble.
+  await prisma.$transaction(async (tx) => {
+    if (!when) { if (next) await tx.milestone.delete({ where: { id: next.id } }); return; }
+    if (next) await tx.milestone.update({ where: { id: next.id }, data: { date: when } });
+    else await tx.milestone.create({ data: { actionId, date: when, label: a.name } });
+    if (a.startDate && when < a.startDate) await tx.action.update({ where: { id: actionId }, data: { startDate: when } });
+    if (a.endDate && when > a.endDate) await tx.action.update({ where: { id: actionId }, data: { endDate: when } });
+  });
+  revalidatePath(path(a.editionId));
+  return { ok: true };
 }
 
 export async function addFundingLine(editionId: string, funderId: string): Promise<Result> {
@@ -102,6 +131,7 @@ export async function setTeam(editionId: string, personIds: string[]): Promise<R
 // peut afficher une suggestion, mais ne peut pas diminuer le circuit calculé.
 export async function requestValidation(input: { editionId: string; actionId?: string | null; kind: string; label: string; amount?: number | null; attachmentUrl?: string | null; requiredLevel?: number | null; targetDelayDays?: number; supplier?: string | null; supplierEmail?: string | null; supplierId?: string | null; saveSupplier?: boolean }): Promise<Result<{ id: string; requiredLevel: number }>> {
   const c = await ctx(input.editionId);
+  if (input.actionId && !(await actionRunsInEdition(input.actionId, input.editionId))) return { ok: false, error: `${cap(V.action)} introuvable sur ${ce(V.edition)}.` };
   const settings = await getSettings();
   const remaining = budgetOf(c.e).available;
   const computed = requiredLevelFor(input.amount, settings, remaining);
@@ -202,6 +232,11 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
   if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: `Seuls ${le(V.pilote)}, le responsable ${de(V.pole)}, ${le(V.raf)} et ${le(V.direction)} reconduisent ${un(V.edition)}.` };
   const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
   if (!src) return { ok: false, error: `${cap(V.edition)} introuvable` };
+  // Les jalons suivent leur action, décalés d'un an et à refaire (en attendant la reconduction sans doublons, tâche 12).
+  const milestonesOf = new Map<string, { date: Date; label: string; venue: string | null; participants: string | null; isPublic: boolean; isCheckpoint: boolean; order: number }[]>();
+  for (const { actionId, ...m } of await prisma.milestone.findMany({ where: { actionId: { in: src.actions.map((a) => a.id) } }, select: { actionId: true, date: true, label: true, venue: true, participants: true, isPublic: true, isCheckpoint: true, order: true }, orderBy: [{ date: "asc" }, { order: "asc" }] })) {
+    milestonesOf.set(actionId, [...(milestonesOf.get(actionId) ?? []), { ...m, date: dayjs(m.date).add(1, "year").toDate() }]);
+  }
   const year = src.year + 1;
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
   if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
@@ -223,7 +258,7 @@ export async function renewEdition(editionId: string): Promise<Result<{ id: stri
         // Projet et période décalés d'un an : sans eux, la copie n'apparaîtrait dans aucune année.
         create: src.actions.map((a) => ({
           name: a.name, ownerId: a.ownerId, timeTarget: a.timeTarget, order: a.order, state: "todo",
-          milestoneDate: a.milestoneDate ? dayjs(a.milestoneDate).add(1, "year").toDate() : null,
+          milestones: { create: milestonesOf.get(a.id) ?? [] },
           projectId: src.projectId,
           ...(a.startDate && a.endDate ? shiftYear({ startDate: a.startDate, endDate: a.endDate }) : defaultPeriod(year)),
         })),

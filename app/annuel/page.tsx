@@ -12,6 +12,7 @@ import { loadPortfolio } from "@/lib/queries";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { milestoneTitle } from "@/lib/actions";
 import { AnnuelFilters } from "./filters";
 import { V, cap, du, de, aucun, pl, le } from "@/lib/vocab";
 
@@ -28,10 +29,18 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
   const [refs, settings, poles] = await Promise.all([getRefs(), getSettings(), prisma.pole.findMany({ orderBy: { name: "asc" } })]);
   const people = await prisma.person.findMany({
     where: { active: true, ...(sp.pole ? { poleId: sp.pole } : {}) },
-    include: { pole: true, teams: { include: { edition: { include: { project: true } } } }, personDays: { include: { edition: true } }, actions: { include: { edition: { include: { project: true } } } } },
+    include: { pole: true, teams: { include: { edition: { include: { project: true } } } }, personDays: { include: { edition: true } } },
     orderBy: [{ pole: { name: "asc" } }, { order: "asc" }],
   });
-  const editions = await loadPortfolio(settings, { year, statuses: ["in_progress", "validated", "proposed", "rechallenged"] });
+  const [editions, milestones] = await Promise.all([
+    loadPortfolio(settings, { year, statuses: ["in_progress", "validated", "proposed", "rechallenged"] }),
+    // Les jalons de l'année des actions dont chaque personne est responsable (un jalon une fois, même si l'action est pluriannuelle).
+    prisma.milestone.findMany({
+      where: { date: { gte: new Date(year, 0, 1), lt: new Date(year + 1, 0, 1) }, action: { ownerId: { in: people.map((p) => p.id) } } },
+      include: { action: { select: { name: true, state: true, ownerId: true, project: { select: { id: true, name: true, editions: { where: { year }, select: { id: true } } } } } } },
+      orderBy: { date: "asc" },
+    }),
+  ]);
   // Moi d'abord, puis mon pôle, puis les autres.
   people.sort((a, b) => Number(b.id === me.id) - Number(a.id === me.id) || (me.poleId ? Number(b.poleId === me.poleId) - Number(a.poleId === me.poleId) : 0) || (a.pole?.name ?? "").localeCompare(b.pole?.name ?? "") || a.order - b.order);
   const poleEditions = sp.pole ? editions.filter((e) => e.project.poleId === sp.pole) : [];
@@ -77,7 +86,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
               const myEditions = p.teams.map((t) => t.edition).filter((e) => e.year === year);
               const sold = p.personDays.filter((d) => d.edition.year === year && d.edition.status !== "closed").reduce((s, d) => s + d.plannedDays, 0);
               const over = sold > p.availableDays;
-              const actions = p.actions.filter((a) => a.milestoneDate && dayjs(a.milestoneDate).year() === year);
+              const mine = milestones.filter((m) => m.action.ownerId === p.id);
               return (
                 <tr key={p.id} className="align-top hover:bg-muted/30">
                   <td className="sticky left-0 z-10 bg-card px-3 py-2">
@@ -89,14 +98,14 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                     </div>
                   </td>
                   {MONTHS.map((_, mi) => {
-                    const cell = actions.filter((a) => dayjs(a.milestoneDate).month() === mi);
+                    const cell = mine.filter((m) => dayjs(m.date).month() === mi);
                     return (
                       <td key={mi} className="overflow-hidden px-1 py-1.5">
                         <div className="flex min-w-0 flex-col gap-0.5">
-                          {cell.slice(0, 3).map((a) => (
-                            <Link key={a.id} href={`/edition/${a.editionId}?onglet=actions`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${a.name} · ${a.edition.project.name} · ${dayjs(a.milestoneDate).format("D MMM")}`}>
-                              <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[a.state])} />
-                              <span className="line-clamp-2 min-w-0 break-words leading-tight">{a.name}</span>
+                          {cell.slice(0, 3).map((m) => (
+                            <Link key={m.id} href={m.action.project?.editions[0] ? `/edition/${m.action.project.editions[0].id}?onglet=actions` : `/projets/${m.action.project?.id ?? ""}`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${milestoneTitle(m.action.name, m.label)} · ${m.action.project?.name ?? ""} · ${dayjs(m.date).format("D MMM")}`}>
+                              <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", m.done ? STATE_DOT.done : !["done", "abandoned"].includes(m.action.state) && dayjs(m.date).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[m.action.state])} />
+                              <span className="line-clamp-2 min-w-0 break-words leading-tight">{milestoneTitle(m.action.name, m.label)}</span>
                             </Link>
                           ))}
                           {cell.length > 3 && <span className="px-1 text-[10px] text-muted-foreground">+{cell.length - 3}</span>}

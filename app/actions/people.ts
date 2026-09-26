@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
+import { liveOwnedActions } from "@/lib/people";
 import { V, cap, de, pl } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
@@ -44,7 +45,8 @@ export async function prepareDeparture(input: DepartureInput): Promise<Result<{ 
     if (input.guarantorTo) moved += (await tx.project.updateMany({ where: { guarantorId: p.id }, data: { guarantorId: input.guarantorTo } })).count;
     if (input.poleLeadTo) moved += (await tx.pole.updateMany({ where: { leadId: p.id }, data: { leadId: input.poleLeadTo } })).count;
     if (input.sponsorTo) moved += (await tx.edition.updateMany({ where: { sponsorId: p.id, status: { in: LIVE } }, data: { sponsorId: input.sponsorTo } })).count;
-    if (input.actionsTo) moved += (await tx.action.updateMany({ where: { ownerId: p.id, state: { not: "done" }, edition: { status: { in: LIVE } } }, data: { ownerId: input.actionsTo } })).count;
+    // Même liste que la page de départ : les actions non faites qui courent dans une année vivante (lib/people.ts).
+    if (input.actionsTo) moved += (await tx.action.updateMany({ where: { id: { in: (await liveOwnedActions(p.id, tx)).map((a) => a.id) }, ownerId: p.id }, data: { ownerId: input.actionsTo } })).count;
     if (input.requestsTo) moved += (await tx.request.updateMany({ where: { assigneeId: p.id, status: { in: ["open", "doing"] } }, data: { assigneeId: input.requestsTo } })).count;
     if (input.leaveTeams) moved += (await tx.editionTeam.deleteMany({ where: { personId: p.id, edition: { status: { in: LIVE } } } })).count;
     await tx.person.update({ where: { id: p.id }, data: { ...(leftAt ? { leftAt } : {}), ...(input.deactivate ? { active: false } : {}) } });

@@ -22,7 +22,7 @@ export default async function CafePage({ searchParams }: { searchParams: Promise
   const days: string[] = [];
   for (let i = 0; i <= 14; i++) days.push(dayjs().add(i, "day").format("YYYY-MM-DD"));
   const byDay = (d: string) => ({
-    milestones: soon.filter((a) => dayjs(a.milestoneDate).format("YYYY-MM-DD") === d),
+    milestones: soon.filter((a) => dayjs(a.date).format("YYYY-MM-DD") === d),
     deliverables: agenda.deliverables.filter((x) => dayjs(x.dueDate).format("YYYY-MM-DD") === d),
   });
   const big = plein === "1";

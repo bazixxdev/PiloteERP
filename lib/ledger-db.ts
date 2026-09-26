@@ -8,7 +8,7 @@ export async function loadResolveContext(): Promise<ResolveContext> {
     prisma.project.findMany({ select: { id: true, analyticCode: true } }),
     prisma.edition.findMany({ select: { id: true, projectId: true, year: true } }),
     prisma.fundingLine.findMany({ select: { id: true, editionId: true, analyticCode: true } }),
-    prisma.action.findMany({ select: { id: true, editionId: true } }),
+    prisma.action.findMany({ select: { id: true, editionId: true, projectId: true, startDate: true, endDate: true } }),
   ]);
   return { tags, projects, editions, fundingLines, actions };
 }

@@ -1,16 +1,25 @@
 import { daysFromNow, dayjs, fmtEuro } from "./format";
 import { budgetOf, type ExpenseLike } from "./budget";
+import { actionAlerts, editionForMilestone, milestoneTitle } from "./actions";
 
-export type AlertKind = "milestone_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending" | "budget_over";
+export type AlertKind = "milestone_overdue" | "action_overdue" | "deliverable_soon" | "deliverable_overdue" | "payment_late" | "envelope" | "time_over" | "validation_pending" | "budget_over";
 
 export type Alert = { kind: AlertKind; level: "warning" | "danger"; label: string; when?: Date };
+
+type MilestoneForAlerts = { id: string; date: Date; done: boolean; label: string };
+type ActionForAlerts = { id: string; name: string; state: string; endDate: Date; timeTarget: number | null; hoursYear?: number; milestones: MilestoneForAlerts[] };
+// Qui prévenir d'un jalon : le responsable de l'action et les personnes associées (mode léger d'attachYearActions).
+type ActionForReminders = ActionForAlerts & { projectId: string; startDate: Date; owner: { id: string; name: string } | null; people: { person: { id: string; name: string } }[] };
+
+// Une action terminée ou abandonnée n'a plus de jalon à tenir (même si la case « fait » du jalon n'a pas été cochée).
+const openMilestones = (a: ActionForAlerts) => (a.state === "done" || a.state === "abandoned" ? [] : a.milestones.filter((m) => !m.done));
 
 type EditionForAlerts = {
   budgetEnvelope: number | null;
   spent: number;
   expenses: ExpenseLike[];
-  // Les actions de l'année (attachYearActions) ; `milestoneDate`, l'ancien jalon, reste lu jusqu'au passage aux jalons.
-  actions: { name: string; state: string; endDate: Date | null; timeTarget: number | null; hoursYear: number; milestones: { date: Date; done: boolean; label: string }[]; milestoneDate: Date | null }[];
+  // Les actions de l'année (attachYearActions) et leurs jalons.
+  actions: ActionForAlerts[];
   fundingLines: { funder: { name: string }; deliverables: { label: string; dueDate: Date; done: boolean }[]; payments?: { label: string; amount: number; expectedAt: Date; receivedAt: Date | null }[] }[];
   validations: { status: string }[];
 };
@@ -20,15 +29,8 @@ type SettingsForAlerts = { envelopeAlertPercent: number; deliverableAlertDays: n
 export function computeAlerts(e: EditionForAlerts, s: SettingsForAlerts): Alert[] {
   const alerts: Alert[] = [];
 
-  for (const a of e.actions) {
-    if (a.milestoneDate && a.state !== "done" && daysFromNow(a.milestoneDate) < 0) {
-      alerts.push({ kind: "milestone_overdue", level: "danger", label: `Jalon dépassé : ${a.name}`, when: a.milestoneDate });
-    }
-    const consumed = a.hoursYear;
-    if (a.timeTarget && consumed > a.timeTarget) {
-      alerts.push({ kind: "time_over", level: "warning", label: `Temps dépassé : ${a.name} (${Math.round(consumed)} h / ${a.timeTarget} h)` });
-    }
-  }
+  // Jalon dépassé, fin dépassée, temps de l'année au-delà de l'objectif : une seule règle (lib/actions.ts).
+  for (const a of e.actions) alerts.push(...actionAlerts({ ...a, hours: a.hoursYear ?? 0 }, new Date()));
 
   for (const f of e.fundingLines) {
     for (const d of f.deliverables) {
@@ -71,11 +73,13 @@ export function nextDeliverable(e: EditionForAlerts): { label: string; dueDate: 
   return best;
 }
 
+// Le prochain jalon non fait, toutes actions de l'année confondues.
 export function nextMilestone(e: EditionForAlerts): { name: string; date: Date } | null {
   let best: { name: string; date: Date } | null = null;
   for (const a of e.actions) {
-    if (!a.milestoneDate || a.state === "done") continue;
-    if (!best || dayjs(a.milestoneDate).isBefore(best.date)) best = { name: a.name, date: a.milestoneDate };
+    for (const m of openMilestones(a)) {
+      if (!best || dayjs(m.date).isBefore(best.date)) best = { name: milestoneTitle(a.name, m.label), date: m.date };
+    }
   }
   return best;
 }
@@ -92,7 +96,7 @@ function stageOf(daysLeft: number, reminderDays: number[]): ReminderStage | null
 }
 
 export function computeReminders(
-  editions: (EditionForAlerts & { id: string; project: { name: string; pilot: { id: string; name: string } } })[],
+  editions: (Omit<EditionForAlerts, "actions"> & { id: string; projectId: string; year: number; actions: ActionForReminders[]; project: { name: string; pilot: { id: string; name: string } } })[],
   raf: { id: string; name: string } | null,
   reminderDays: number[],
   horizonDays: number,
@@ -122,12 +126,23 @@ export function computeReminders(
         }
       }
     }
+  }
+  // Jalons : un rappel par jalon, pas par année — une action qui court sur deux années vivantes n'en envoie qu'un, depuis
+  // l'année de la date du jalon (sinon la première). Au responsable, aux personnes associées, et au pilote.
+  const seen = new Set<string>();
+  for (const e of editions) {
     for (const a of e.actions) {
-      if (!a.milestoneDate || a.state === "done") continue;
-      const n = daysFromNow(a.milestoneDate);
-      const stage = stageOf(n, reminderDays);
-      if (n <= horizonDays && stage !== null) {
-        out.push({ editionId: e.id, project: e.project.name, label: a.name, dueDate: a.milestoneDate, daysLeft: n, stage, kind: "milestone", who: [e.project.pilot.name], whoIds: [e.project.pilot.id] });
+      for (const m of openMilestones(a)) {
+        if (seen.has(m.id)) continue;
+        const home = editionForMilestone(m, a, editions);
+        if (home && home.id !== e.id) continue;
+        seen.add(m.id);
+        const n = daysFromNow(m.date);
+        const stage = stageOf(n, reminderDays);
+        if (n > horizonDays || stage === null) continue;
+        const people = new Map<string, string>();
+        for (const p of [a.owner, ...a.people.map((x) => x.person), e.project.pilot]) if (p) people.set(p.id, p.name);
+        out.push({ editionId: e.id, project: e.project.name, label: milestoneTitle(a.name, m.label), dueDate: m.date, daysLeft: n, stage, kind: "milestone", who: [...people.values()], whoIds: [...people.keys()] });
       }
     }
   }

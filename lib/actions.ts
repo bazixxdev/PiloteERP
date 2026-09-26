@@ -27,6 +27,12 @@ export function yearsOf(p: Period): number[] {
   return out;
 }
 
+// « 2026 » ou « 2025–2027 » : les années d'une période, pour nommer une action hors d'une année donnée.
+export function yearsLabel(p: Period): string {
+  const [a, b] = [yearOf(p.startDate), yearOf(p.endDate)];
+  return a === b ? String(a) : `${a}–${b}`;
+}
+
 export function spanLabel(p: Period, year: number): string | null {
   const from = yearOf(p.startDate) < year ? `depuis ${yearOf(p.startDate)}` : null;
   const to = yearOf(p.endDate) > year ? `jusqu'en ${yearOf(p.endDate)}` : null;
@@ -59,11 +65,36 @@ export function fundingOverflow(line: { amountGranted: number | null; amountRequ
   return sum > ceiling + 0.001 ? sum - ceiling : null;
 }
 
+// Titre d'un jalon hors de sa page : « action · libellé », ou le nom seul quand le libellé le répète (jalons repris de
+// l'ancien champ unique, ou posés sans libellé propre : la migration leur donne le nom de l'action).
+export function milestoneTitle(actionName: string, label: string): string {
+  return label.trim() === "" || label.trim() === actionName.trim() ? actionName : `${actionName} · ${label}`;
+}
+
+// Les actions d'une année (même projet, période qui chevauche l'année) ; une action sans projet ni période n'est nulle part.
+export function actionsOfYear<A extends { projectId: string | null; startDate: Date | null; endDate: Date | null }>(actions: A[], e: { projectId: string; year: number }): (A & Period & { projectId: string })[] {
+  return actions.filter((a): a is A & Period & { projectId: string } => a.projectId === e.projectId && a.startDate !== null && a.endDate !== null && runsIn({ startDate: a.startDate, endDate: a.endDate }, e.year));
+}
+
+// Partie pure d'attachYearActions : chaque année reçoit ses actions, avec les heures saisies dans CETTE année et le total.
+export function withYearActions<E extends { projectId: string; year: number }, A extends { id: string; projectId: string | null; startDate: Date | null; endDate: Date | null }>(
+  editions: E[], actions: A[], hoursByYear: Map<number, Map<string | null, number>>, hoursTotal: Map<string | null, number>,
+) {
+  return editions.map((e) => ({ ...e, actions: actionsOfYear(actions, e).map((a) => ({ ...a, hoursYear: hoursByYear.get(e.year)?.get(a.id) ?? 0, hoursTotal: hoursTotal.get(a.id) ?? 0 })) }));
+}
+
+// Une action qui court sur plusieurs années apparaît dans chacune : un jalon ne doit pourtant sortir qu'une fois (relance,
+// agenda). Il se rattache à l'année de sa date si l'action y court et qu'elle est parmi `editions`, sinon à la première.
+export function editionForMilestone<E extends { projectId: string; year: number }>(m: { date: Date }, action: { projectId: string | null; startDate: Date | null; endDate: Date | null }, editions: E[]): E | null {
+  const mine = editions.filter((e) => actionsOfYear([action], e).length > 0).sort((a, b) => a.year - b.year);
+  return mine.find((e) => e.year === yearOf(m.date)) ?? mine[0] ?? null;
+}
+
 export function actionAlerts(a: { name: string; state: string; endDate: Date; timeTarget: number | null; hours: number; milestones: { date: Date; done: boolean; label: string }[] }, today: Date) {
   const out: { kind: "milestone_overdue" | "action_overdue" | "time_over"; level: "danger" | "warning"; label: string; when?: Date }[] = [];
   if (a.state === "done" || a.state === "abandoned") return out;
   // Comparaison à la journée (pas à l'horodatage) : un jalon ou une fin datés d'aujourd'hui ne sont pas en retard.
-  for (const m of a.milestones) if (!m.done && beforeDay(m.date, today)) out.push({ kind: "milestone_overdue", level: "danger", label: `Jalon dépassé : ${a.name} · ${m.label}`, when: m.date });
+  for (const m of a.milestones) if (!m.done && beforeDay(m.date, today)) out.push({ kind: "milestone_overdue", level: "danger", label: `Jalon dépassé : ${milestoneTitle(a.name, m.label)}`, when: m.date });
   if (beforeDay(a.endDate, today)) out.push({ kind: "action_overdue", level: "danger", label: `Fin dépassée : ${a.name}`, when: a.endDate });
   if (a.timeTarget && a.hours > a.timeTarget) out.push({ kind: "time_over", level: "warning", label: `Temps dépassé : ${a.name} (${Math.round(a.hours)} h / ${a.timeTarget} h)` });
   return out;

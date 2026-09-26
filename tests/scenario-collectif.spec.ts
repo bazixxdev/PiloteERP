@@ -87,7 +87,9 @@ test("une édition vit une semaine entre la direction, la RAF, le pilote, un con
   await page.goto("/ma-semaine");
   // Le jalon est à J+5 : selon le jour, il tombe dans « Cette semaine » ou dans « Plus tard » (replié par défaut).
   await page.getByTestId("later").locator("summary").click();
-  await expect(page.getByRole("link", { name: "Cartographie des élus" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cartographie des élus", exact: true })).toBeVisible();
+  // Responsable de l'action, il reçoit aussi la relance du jalon (pas seulement le pilote).
+  await expect(page.getByRole("link", { name: "Jalon à J-7 : Cartographie des élus" })).toBeVisible();
   await page.goto(`/temps?semaine=${thisWeek}`);
   const myRow = page.locator('[data-testid^="time-row-"]', { hasText: "Cartographie des élus" });
   await expect(myRow).toBeVisible();

@@ -1,5 +1,8 @@
 import { HeadingLevel, Paragraph, TextRun } from "docx";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
+import { attachYearActions } from "./actions-db";
+import { spanLabel } from "./actions";
 import { fmtDate } from "./format";
 import { refLabel, type RefMap } from "./refs";
 import { V, du, de } from "@/lib/vocab";
@@ -8,12 +11,26 @@ import { V, du, de } from "@/lib/vocab";
 // ouvertes et les réalisations. Partagé entre l'export d'une fiche et le plan opérationnel assemblé (toutes les fiches d'une année).
 export const ficheInclude = {
   project: { include: { pilot: true, pole: true, guarantor: true, mission: true } }, sponsor: true, team: { include: { person: true } },
-  indicators: { orderBy: { order: "asc" as const } }, fundingLines: { include: { funder: true, convention: true } }, actions: { orderBy: { order: "asc" as const } },
+  indicators: { orderBy: { order: "asc" as const } }, fundingLines: { include: { funder: true, convention: true } },
   remarks: { where: { resolvedAt: null }, include: { author: true } }, achievements: { orderBy: { date: "asc" as const }, include: { action: true } },
 };
 
-export type FicheEdition = NonNullable<Awaited<ReturnType<typeof loadFiche>>>;
-export async function loadFiche(id: string) { return prisma.edition.findUnique({ where: { id }, include: ficheInclude }); }
+// Les actions de l'année viennent d'attachYearActions (mode léger : champs, jalons, responsables), jamais d'`edition.actions`.
+export async function loadFiches(where: Prisma.EditionWhereInput, orderBy?: Prisma.EditionOrderByWithRelationInput[]) {
+  return attachYearActions(await prisma.edition.findMany({ where, include: ficheInclude, orderBy }), { lean: true });
+}
+export type FicheEdition = Awaited<ReturnType<typeof loadFiches>>[number];
+export async function loadFiche(id: string): Promise<FicheEdition | null> { return (await loadFiches({ id }))[0] ?? null; }
+
+// Une action de l'année dans un export : nom, état et débordement de sa période (spanLabel), puis ses jalons de CETTE année.
+type ExportAction = { name: string; state: string; startDate: Date; endDate: Date; milestones: { date: Date; label: string; venue: string | null }[] };
+export function actionExport(a: ExportAction, year: number, state: (code: string) => string): { head: string; milestones: string[] } {
+  const span = spanLabel(a, year);
+  return {
+    head: `${a.name} — ${state(a.state)}${span ? ` (${span})` : ""}`,
+    milestones: a.milestones.filter((m) => m.date.getFullYear() === year).map((m) => `${fmtDate(m.date)} ${m.label}${m.venue ? ` — ${m.venue}` : ""}`),
+  };
+}
 
 const KINDS: Record<string, string> = { participants: "Participants / inscrits", audience: "Public touché", deliverable: "Livrable", press: "Retombée", partner: "Partenaire", other: "Autre" };
 
@@ -50,7 +67,7 @@ export function ficheParagraphs(e: FicheEdition, refs: RefMap, opts?: { nested?:
     H("Matériel · outils, mobilier, services"), ...txt(e.equipment), ...rq("equipment"),
     H("Temporel — calendrier, phases, échéances"), ...txt(e.calendar), ...rq("calendar"),
     P(`Date de rendu : ${fmtDate(e.deliveryDate)}`), ...rq("deliveryDate"),
-    sub("Dates jalons"), ...(e.actions.length ? e.actions.map((a) => P(`• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}${a.venue ? ` — ${a.venue}` : ""}`)) : [P("—")]),
+    sub("Dates jalons"), ...(e.actions.length ? e.actions.flatMap((a) => { const x = actionExport(a, e.year, state); return [P(`• ${x.head}`), ...x.milestones.map((m) => P(`    – ${m}`))]; }) : [P("—")]),
     H("Financier"),
     P(`Budget prévisionnel (dépenses directes) : ${fmtEuroPlain(e.directExpenseEnvelope)} · enveloppe validée : ${fmtEuroPlain(e.budgetEnvelope)}`), ...rq("directExpenseEnvelope"),
     P(`Besoin en temps : ${e.timeNeed ?? "—"} · besoin en budget : ${e.budgetNeed ?? "—"} · ETP fléchés : ${e.fte ?? "—"}`),

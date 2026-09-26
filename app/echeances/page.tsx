@@ -22,7 +22,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
   const [settings, me] = await Promise.all([getSettings(), getCurrentPerson()]);
   const perimeter = perimeterFrom(me, perimetre);
   const [editions, raf, director] = await Promise.all([
-    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true } }).then(attachYearActions),
+    prisma.edition.findMany({ where: { status: { in: ["in_progress", "validated"] } }, include: { project: { include: { pilot: true, secondaryPoles: true } }, team: true, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true } }).then((eds) => attachYearActions(eds, { lean: true })),
     prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
     prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);
@@ -43,7 +43,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Pr
     .sort((a, b) => (isTransversal(me) ? 0 : a.tier - b.tier) || a.daysLeft - b.daysLeft);
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Échéances" subtitle={<span className="inline-flex flex-wrap items-center gap-1">{reminders.length} échéance{reminders.length > 1 ? "s" : ""} dans les {settings.horizonDays} jours · {reminders.filter((r) => r.daysLeft < 0).length} en retard · rappels à J-{days.join(", J-")} puis en retard<HelpTip title="Qui est prévenu, et quand">{`Livrables financeurs, jalons internes, versements attendus et dépôts d'appels à projets. ${cap(le(V.pilote))} (et ${le(V.raf)} pour les livrables) reçoit un rappel à J-`}{days.join(", J-")}{` puis en cas de retard ; ${le(V.raf)} et ${le(V.direction)} quand un versement attendu est dépassé. Ici dans la cloche ; par mail dans la version complète.`}</HelpTip></span>} />
+      <PageHeader title="Échéances" subtitle={<span className="inline-flex flex-wrap items-center gap-1">{reminders.length} échéance{reminders.length > 1 ? "s" : ""} dans les {settings.horizonDays} jours · {reminders.filter((r) => r.daysLeft < 0).length} en retard · rappels à J-{days.join(", J-")} puis en retard<HelpTip title="Qui est prévenu, et quand">{`Livrables financeurs, jalons internes, versements attendus et dépôts d'appels à projets. ${cap(le(V.pilote))} (et ${le(V.raf)} pour les livrables ; le responsable et les personnes associées pour les jalons) reçoit un rappel à J-`}{days.join(", J-")}{` puis en cas de retard ; ${le(V.raf)} et ${le(V.direction)} quand un versement attendu est dépassé. Ici dans la cloche ; par mail dans la version complète.`}</HelpTip></span>} />
       {!isTransversal(me) && <div className="mb-3"><PerimeterChips current={perimeter} poleName={me.pole?.name ?? null} hrefFor={(p) => `/echeances?perimetre=${p}`} /></div>}
       {reminders.length === 0 ? <EmptyState title="Aucune échéance" hint="Rien n'arrive à échéance dans l'horizon." icon={<CalendarClock className="size-5" />} /> : (
         <div className="overflow-hidden rounded-2xl border bg-card">

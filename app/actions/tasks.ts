@@ -7,6 +7,7 @@ import { NOTE_COLORS } from "@/lib/notes";
 import { dayjs } from "@/lib/format";
 import { V, cap, au, ce } from "@/lib/vocab";
 import { canTreatRequest } from "@/lib/requests";
+import { actionRunsInEdition } from "@/lib/actions-db";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -32,6 +33,7 @@ export async function addTask(input: { label: string; dueDate?: string | null; e
     if (!editionId && l.editionId) editionId = l.editionId;
   }
   if (input.conventionId && !(await prisma.convention.findUnique({ where: { id: input.conventionId } }))) return { ok: false, error: "Dossier introuvable." };
+  if (input.actionId && !(await actionRunsInEdition(input.actionId, editionId))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
   const t = await prisma.task.create({ data: { personId: me.id, label, dueDate: day(input.dueDate), editionId, actionId: input.actionId || null, listId: input.listId || null, conventionId: input.conventionId || null } });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: t.id } };
@@ -50,9 +52,8 @@ export async function updateTask(id: string, patch: { label?: string; descriptio
     if (!e) return { ok: false, error: `${cap(V.edition)} introuvable.` };
   }
   if (patch.actionId) {
-    const a = await prisma.action.findUnique({ where: { id: patch.actionId } });
     const editionId = patch.editionId !== undefined ? patch.editionId : t.editionId;
-    if (!a || a.editionId !== editionId) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
+    if (!(await actionRunsInEdition(patch.actionId, editionId))) return { ok: false, error: `${cap(ce(V.action))} n'appartient pas ${au(V.edition)} choisie.` };
   }
   // Tâche née d'une demande : la cocher fait la demande (le demandeur est prévenu), la décocher la rouvre.
   if (patch.done !== undefined && t.requestId) {

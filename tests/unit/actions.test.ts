@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, toRenew, shiftYear, propagationTargets, fundingOverflow, actionAlerts, balance } from "../../lib/actions";
+import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
+import { computeReminders, nextMilestone } from "../../lib/alerts";
+import { dayjs } from "../../lib/format";
 
 const P = (a: string, b: string) => ({ startDate: new Date(a), endDate: new Date(b) });
 
@@ -68,4 +70,61 @@ test("équilibre d'une action : l'engagé ne double pas le réalisé rattaché (
   assert.deepEqual(balance({ fundings: [12_000, null, 3_000], expenses: [{ committed: 1_000, spent: 4_000 }], hours: 100, hourlyCost: 30 }), { income: 15_000, spending: 4_000, timeCost: 3_000, gap: 8_000 });
   assert.equal(balance({ fundings: [10_000], expenses: [{ committed: 6_000, spent: 2_000 }], hours: 0, hourlyCost: null }).spending, 6_000);
   assert.equal(balance({ fundings: [], expenses: [], hours: 10, hourlyCost: null }).timeCost, null);
+});
+
+test("les actions d'une année : même projet, période qui chevauche l'année, heures de CETTE année", () => {
+  const eds = [{ id: "e25", projectId: "p", year: 2025 }, { id: "e26", projectId: "p", year: 2026 }, { id: "x26", projectId: "autre", year: 2026 }];
+  const acts = [
+    { id: "long", projectId: "p", ...P("2025-09-01", "2026-06-30") },
+    { id: "court", projectId: "p", ...P("2026-02-01", "2026-03-31") },
+    { id: "orpheline", projectId: null, startDate: null, endDate: null },
+  ];
+  const byYear = new Map([[2025, new Map<string | null, number>([["long", 12]])], [2026, new Map<string | null, number>([["long", 30], ["court", 4]])]]);
+  const total = new Map<string | null, number>([["long", 42], ["court", 4]]);
+  const out = withYearActions(eds, acts, byYear, total);
+  const view = (e: (typeof out)[number]) => e.actions.map((a) => [a.id, a.hoursYear, a.hoursTotal]);
+  assert.deepEqual(view(out[0]), [["long", 12, 42]]);
+  assert.deepEqual(view(out[1]), [["long", 30, 42], ["court", 4, 4]]);
+  assert.deepEqual(view(out[2]), []);
+});
+
+test("un jalon se rattache à l'année de sa date, sinon à la première année couverte ; titres et années", () => {
+  const a = { projectId: "p", ...P("2025-09-01", "2026-06-30") };
+  const eds = [{ id: "e26", projectId: "p", year: 2026 }, { id: "e25", projectId: "p", year: 2025 }];
+  assert.equal(editionForMilestone({ date: new Date("2026-03-15") }, a, eds)?.id, "e26");
+  assert.equal(editionForMilestone({ date: new Date("2025-10-15") }, a, eds)?.id, "e25");
+  assert.equal(editionForMilestone({ date: new Date("2027-01-15") }, a, eds)?.id, "e25");
+  assert.equal(editionForMilestone({ date: new Date("2026-03-15") }, a, [{ id: "q", projectId: "autre", year: 2026 }]), null);
+  assert.equal(milestoneTitle("Forum", "Forum"), "Forum");
+  assert.equal(milestoneTitle("Forum", "Bilan"), "Forum · Bilan");
+  assert.equal(yearsLabel(P("2025-09-01", "2026-06-30")), "2025–2026");
+  assert.equal(yearsLabel(P("2026-01-01", "2026-12-31")), "2026");
+});
+
+// Relances : un rappel par jalon non fait, au responsable, aux associés et au pilote ; jamais deux pour une action pluriannuelle.
+const day = (n: number) => dayjs().add(n, "day").startOf("day").toDate();
+const edition = (id: string, year: number, actions: Parameters<typeof computeReminders>[0][number]["actions"]) => ({
+  id, projectId: "p", year, budgetEnvelope: null, spent: 0, expenses: [], fundingLines: [], validations: [],
+  project: { name: "Projet", pilot: { id: "pil", name: "Pilote Un" } }, actions,
+});
+const act = (milestones: { id: string; date: Date; done: boolean; label: string }[], over: Partial<Parameters<typeof computeReminders>[0][number]["actions"][number]> = {}) => ({
+  id: "a", name: "Forum", state: "doing", projectId: "p", startDate: new Date(`${dayjs().year() - 1}-09-01`), endDate: new Date(`${dayjs().year() + 1}-06-30`), timeTarget: null,
+  owner: { id: "own", name: "Resp Un" }, people: [{ person: { id: "ass", name: "Asso Un" } }], milestones, ...over,
+});
+
+test("relances : un jalon fait ne relance pas ; un jalon à venir relance le responsable, les associés et le pilote", () => {
+  const eds = [edition("e", dayjs().year(), [act([{ id: "m1", date: day(5), done: true, label: "Lancement" }, { id: "m2", date: day(6), done: false, label: "Bilan" }])])];
+  const r = computeReminders(eds, null, [30, 7], 60);
+  assert.deepEqual(r.map((x) => [x.label, x.kind, x.whoIds]), [["Forum · Bilan", "milestone", ["own", "ass", "pil"]]]);
+  assert.deepEqual(computeReminders([edition("e", dayjs().year(), [act([{ id: "m1", date: day(5), done: true, label: "x" }])])], null, [30, 7], 60), []);
+  // Action terminée : ses jalons non cochés ne relancent plus.
+  assert.deepEqual(computeReminders([edition("e", dayjs().year(), [act([{ id: "m1", date: day(5), done: false, label: "x" }], { state: "done" })])], null, [30, 7], 60), []);
+  assert.deepEqual(nextMilestone(eds[0]), { name: "Forum · Bilan", date: day(6) });
+});
+
+test("relances : une action qui court sur deux années vivantes ne relance qu'une fois par jalon", () => {
+  const a = act([{ id: "m", date: day(3), done: false, label: "Bilan" }]);
+  const y = dayjs(day(3)).year();
+  const r = computeReminders([edition("prev", y - 1, [a]), edition("cur", y, [a])], null, [30, 7], 60);
+  assert.deepEqual(r.map((x) => [x.editionId, x.label]), [["cur", "Forum · Bilan"]]);
 });

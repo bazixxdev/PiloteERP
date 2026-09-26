@@ -26,7 +26,8 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
   const timeTotal = e.yearEntries.reduce((s, t) => s + t.hours, 0);
   const timeTarget = e.actions.reduce((s, a) => s + (a.timeTarget ?? 0), 0);
   const noAction = e.yearEntries.filter((t) => !t.actionId).reduce((s, t) => s + t.hours, 0);
-  const milestones = e.actions.filter((a) => a.state !== "done").map((a) => ({ ...a, n: a.milestoneDate ? daysFromNow(a.milestoneDate) : null })).sort((x, y) => (x.n ?? 9999) - (y.n ?? 9999));
+  // Par action à mener : son prochain jalon non fait.
+  const milestones = e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").map((a) => { const next = a.milestones.find((m) => !m.done)?.date ?? null; return { ...a, next, n: next ? daysFromNow(next) : null }; }).sort((x, y) => (x.n ?? 9999) - (y.n ?? 9999));
   const pending = e.validations.filter((v) => v.status === "pending");
   const decided = e.validations.filter((v) => v.status !== "pending");
   const lastDecision = e.decisions[0];
@@ -79,7 +80,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
                     <span className={cn("size-2.5 shrink-0 rounded-full", late ? "bg-danger" : a.state === "doing" ? "bg-primary" : "bg-muted-foreground/40")} aria-hidden />
                     <span className="min-w-0 flex-1 truncate">{a.name}</span>
                     <span className="hidden truncate text-xs text-muted-foreground sm:inline">{a.owner?.name ?? "—"}</span>
-                    <span className={cn("w-40 shrink-0 text-right text-xs tabular whitespace-nowrap", late ? "font-semibold text-danger" : "text-muted-foreground")}>{a.milestoneDate ? (late ? `${fmtDate(a.milestoneDate)} · ${-a.n!} j` : a.n === 0 ? "aujourd'hui" : `${fmtDate(a.milestoneDate)} · J-${a.n}`) : "sans jalon"}</span>
+                    <span className={cn("w-40 shrink-0 text-right text-xs tabular whitespace-nowrap", late ? "font-semibold text-danger" : "text-muted-foreground")}>{a.next ? (late ? `${fmtDate(a.next)} · ${-a.n!} j` : a.n === 0 ? "aujourd'hui" : `${fmtDate(a.next)} · J-${a.n}`) : "sans jalon"}</span>
                   </li>
                 );
               })}

@@ -1,3 +1,4 @@
+import { actionsOfYear } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -23,13 +24,15 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
   const rw = canAdmin(me);
   const p = await prisma.project.findUnique({ where: { id }, include: {
     pole: true, pilot: true, guarantor: true, mission: true, secondaryPoles: { include: { pole: true } },
-    editions: { orderBy: { year: "desc" }, include: { team: { include: { person: true } }, fundingLines: { include: { funder: { select: { id: true, name: true } } } }, _count: { select: { actions: true } } } },
+    editions: { orderBy: { year: "desc" }, include: { team: { include: { person: true } }, fundingLines: { include: { funder: { select: { id: true, name: true } } } } } },
   } });
   if (!p) notFound();
-  const [people, poles, missions] = await Promise.all([
+  const [people, poles, missions, actions] = await Promise.all([
     prisma.person.findMany({ where: { active: true }, orderBy: { order: "asc" } }),
     prisma.pole.findMany({ orderBy: { name: "asc" } }),
     prisma.mission.findMany({ orderBy: { order: "asc" } }),
+    // Nombre d'actions par année : celles dont la période chevauche l'année (même règle qu'attachYearActions).
+    prisma.action.findMany({ where: { projectId: id }, select: { projectId: true, startDate: true, endDate: true } }),
   ]);
   const opt = (arr: { id: string; name: string }[]) => arr.map((x) => ({ value: x.id, label: x.name }));
   const state = projectState(p);
@@ -67,7 +70,7 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
                       <td className="py-1.5"><Link href={`/edition/${e.id}`} className="font-medium text-primary hover:underline">{e.year}</Link></td>
                       <td className="py-1.5"><StatusBadge label={refLabel(refs, "edition_status", e.status)} color={refColor(refs, "edition_status", e.status)} /></td>
                       <td className="py-1.5 pr-3 text-right tabular text-xs">{e.directExpenseEnvelope != null ? fmtEuro(e.directExpenseEnvelope) : <span className="text-muted-foreground">—</span>}</td>
-                      <td className="py-1.5 pr-3 text-right text-xs">{e._count.actions}</td>
+                      <td className="py-1.5 pr-3 text-right text-xs">{actionsOfYear(actions, e).length}</td>
                       <td className="py-1.5 text-xs text-muted-foreground">{e.team.map((t) => t.person.name).join(", ") || "—"}</td>
                     </tr>
                   ))}

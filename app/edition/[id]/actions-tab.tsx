@@ -12,6 +12,8 @@ import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
 import { ActionPanel } from "./action-extras";
 import { TimeCell } from "./time-cell";
+import { NextMilestoneCell } from "./next-milestone-cell";
+import { milestoneTitle } from "@/lib/actions";
 import { V, cap, le, du, ce, aucun, pl } from "@/lib/vocab";
 
 export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
@@ -36,7 +38,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   <th className="w-8 py-1.5 pr-2">#</th>
                   <th className="py-1.5 pr-2">{cap(V.action)}</th>
                   <th className="py-1.5 pr-2">Responsable</th>
-                  <th className="py-1.5 pr-2">Jalon</th>
+                  <th className="py-1.5 pr-2">Prochain jalon</th>
                   <th className="py-1.5 pr-2">État</th>
                   <th className="min-w-[180px] py-1.5 pr-2" title={`Heures saisies sur ${le(V.action)}, face à l'objectif fixé`}>Temps</th>
                 </tr>
@@ -47,7 +49,8 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   const own = a.ownerId === me.id;
                   const rw = writable || own;
                   const over = a.timeTarget != null && c > a.timeTarget;
-                  const lateMilestone = a.milestoneDate && a.state !== "done" && dayjs(a.milestoneDate).isBefore(dayjs(), "day");
+                  const next = a.milestones.find((m) => !m.done) ?? null;
+                  const lateMilestone = Boolean(next && a.state !== "done" && a.state !== "abandoned" && dayjs(next.date).isBefore(dayjs(), "day"));
                   return (
                     <tr key={a.id} className="group" data-testid={`${V.action.one}-row-${i}`}>
                       <td className="py-1 pr-2 text-xs text-muted-foreground">{i + 1}</td>
@@ -55,7 +58,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                         <AutoField model="action" id={a.id} field="name" type="text" value={a.name} readOnly={!rw} testId={`${V.action.one}-name-${i}`} inputClassName="font-medium" label={`Nom ${du(V.action)} ${i + 1}`} />
                         {/* Occurrence : contenu, lieu, participants (retour du 14/09, petits-déjeuners de l'Observatoire) ; « dupliquer » pour la suivante. */}
                         {/* Le détail de l'action s'ouvre en panneau latéral (revue du 15/09) ; le tableau reste lisible. */}
-                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[e.fundingLines.find((f) => f.id === a.fundingLineId)?.funder.name ?? null, a.isPublic ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
+                        <ActionPanel actionId={a.id} name={a.name} index={i} canDuplicate={rw} hints={[[...new Set(a.fundings.map((f) => f.fundingLine.funder.name))].join(", ") || null, a.milestones.some((m) => m.isPublic) ? "public" : null, a.tasks.length ? `${a.tasks.length} tâche${a.tasks.length > 1 ? "s" : ""}` : null].filter(Boolean) as string[]}>
                           <div className="grid gap-2 sm:grid-cols-3">
                             <div className="grid gap-0.5 sm:col-span-3"><span className="text-[10px] text-muted-foreground">Contenu</span><AutoField model="action" id={a.id} field="description" type="textarea" rows={2} value={a.description} readOnly={!rw} placeholder="Thème, déroulé…" testId={`${V.action.one}-description-${i}`} label={`Contenu, ${a.name}`} /></div>
                             <div className="grid gap-0.5"><span className="text-[10px] text-muted-foreground">Lieu</span><AutoField model="action" id={a.id} field="venue" type="text" value={a.venue} readOnly={!rw} placeholder="—" label={`Lieu, ${a.name}`} /></div>
@@ -80,7 +83,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                         </ActionPanel>
                       </td>
                       <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="ownerId" type="select" value={a.ownerId} options={ownerOpts} readOnly={!rw} placeholder="—" label={`Responsable, ${a.name}`} /></td>
-                      <td className="min-w-[150px] py-1 pr-2"><AutoField model="action" id={a.id} field="milestoneDate" type="date" value={a.milestoneDate} readOnly={!rw} inputClassName={cn(lateMilestone && "text-danger font-medium")} label={`Jalon, ${a.name}`} placeholder="—" /></td>
+                      <td className="min-w-[150px] py-1 pr-2"><NextMilestoneCell actionId={a.id} actionName={a.name} date={next?.date ?? null} label={next?.label ?? null} lastDone={a.milestones.filter((m) => m.done).at(-1)?.date ?? null} late={lateMilestone} readOnly={!rw} /></td>
                       <td className="min-w-[130px] py-1 pr-2">
                         {lateMilestone && <span className="mb-0.5 inline-block rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger" data-testid={`${V.action.one}-late-${i}`}>en retard</span>}
                         {rw ? (
@@ -143,12 +146,14 @@ function byPerson(entries: { hours: number; personId: string }[]): [string, numb
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+// Frise provisoire (la frise par action vient avec la tâche 8) : un point par jalon de l'année, au nom de l'action.
 function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"]["actions"]; refs: TabCtx["refs"] }) {
   const start = dayjs(`${year}-01-01`);
   const total = dayjs(`${year + 1}-01-01`).diff(start, "day");
   const today = dayjs();
   const todayPct = today.year() === year ? (today.diff(start, "day") / total) * 100 : null;
-  const dated = actions.filter((a) => a.milestoneDate);
+  const dated = actions.flatMap((a) => a.milestones.filter((m) => dayjs(m.date).year() === year).map((m) => ({ id: m.id, name: milestoneTitle(a.name, m.label), date: m.date, state: m.done ? "done" : a.state, late: !m.done && a.state !== "done" && a.state !== "abandoned" && dayjs(m.date).isBefore(dayjs(), "day") })))
+    .sort((x, y) => x.date.getTime() - y.date.getTime());
   if (dated.length === 0) return <p className="text-sm text-muted-foreground">Aucun jalon daté pour l'instant.</p>;
   const colorOf = (state: string) => ({ done: "bg-mint/50", doing: "bg-primary", todo: "bg-muted-foreground/40" }[state] ?? "bg-muted-foreground/40");
   return (
@@ -158,15 +163,15 @@ function Timeline({ year, actions, refs }: { year: number; actions: TabCtx["e"][
       </div>
       <div className="relative mt-4">
         {todayPct !== null && <div className="absolute top-0 bottom-0 z-10 w-px bg-coral" style={{ left: `${todayPct}%` }} title="Aujourd'hui"><span className="absolute -top-4 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-coral">aujourd'hui</span></div>}
-        {dated.map((a) => {
-          const pct = Math.min(100, Math.max(0, (dayjs(a.milestoneDate!).diff(start, "day") / total) * 100));
+        {dated.map((m) => {
+          const pct = Math.min(100, Math.max(0, (dayjs(m.date).diff(start, "day") / total) * 100));
           return (
-            <div key={a.id} className="relative h-7 border-t border-dashed border-border/70">
+            <div key={m.id} className="relative h-7 border-t border-dashed border-border/70">
               <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(${pct}% - 6px)` }}>
-                <div className={cn("size-3 rounded-full ring-2 ring-card", a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") ? "bg-danger" : colorOf(a.state))} />
+                <div className={cn("size-3 rounded-full ring-2 ring-card", m.late ? "bg-danger" : colorOf(m.state))} />
               </div>
-              <div className={cn("absolute top-1/2 -translate-y-1/2 truncate text-xs", a.state === "done" && "text-muted-foreground")} style={{ left: pct > 70 ? undefined : `calc(${pct}% + 10px)`, right: pct > 70 ? `calc(${100 - pct}% + 10px)` : undefined, maxWidth: "40%" }}>
-                {a.name} <span className="text-muted-foreground">· {dayjs(a.milestoneDate!).format("D MMM")} · {refLabel(refs, "action_state", a.state)}</span>{a.state !== "done" && dayjs(a.milestoneDate!).isBefore(dayjs(), "day") && <span className="ml-1 rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
+              <div className={cn("absolute top-1/2 -translate-y-1/2 truncate text-xs", m.state === "done" && "text-muted-foreground")} style={{ left: pct > 70 ? undefined : `calc(${pct}% + 10px)`, right: pct > 70 ? `calc(${100 - pct}% + 10px)` : undefined, maxWidth: "40%" }}>
+                {m.name} <span className="text-muted-foreground">· {dayjs(m.date).format("D MMM")} · {refLabel(refs, "action_state", m.state)}</span>{m.late && <span className="ml-1 rounded-sm bg-danger-soft px-1.5 text-[10px] font-medium text-danger">en retard</span>}
               </div>
             </div>
           );

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { exportDenial } from "@/lib/export-auth";
 import { budgetOf } from "@/lib/budget";
 import { csvRow } from "@/lib/csv";
+import { dayjs } from "@/lib/format";
 
 // Export CSV par table, ou JSON complet (ENF-5).
 function csv(rows: Record<string, unknown>[]): string {
@@ -22,7 +23,8 @@ export async function GET(req: Request) {
     personnes: async () => (await prisma.person.findMany({ include: { pole: true } })).map((p) => ({ nom: p.name, pole: p.pole?.name ?? "", role: p.role, rythme: p.workRhythm, jours: p.availableDays, actif: p.active })),
     projets: async () => (await prisma.project.findMany({ include: { pole: true, pilot: true, mission: true } })).map((p) => ({ nom: p.name, code: p.analyticCode, pole: p.pole.name, pilote: p.pilot.name, mission: p.mission.name, recurrent: p.recurring })),
     editions: async () => (await prisma.edition.findMany({ include: { project: true, expenses: true } })).map((e) => ({ projet: e.project.name, annee: e.year, statut: e.status, decision: e.decisionDate, enveloppe: e.budgetEnvelope, realise: budgetOf(e).realized, engagements_restants: budgetOf(e).remainingCommitments, disponible: budgetOf(e).available, enjeux: e.stakes, objectifs: e.operationalObjectives, bilan: e.report })),
-    actions: async () => (await prisma.action.findMany({ include: { edition: { include: { project: true } }, owner: true } })).map((a) => ({ projet: a.edition.project.name, annee: a.edition.year, action: a.name, responsable: a.owner?.name ?? "", jalon: a.milestoneDate, objectif_h: a.timeTarget, etat: a.state })),
+    // Une ligne par action (sa période, pas une année) ; ses jalons concaténés « date libellé ».
+    actions: async () => (await prisma.action.findMany({ include: { project: true, owner: true, milestones: { orderBy: { date: "asc" } } }, orderBy: [{ startDate: "asc" }, { order: "asc" }] })).map((a) => ({ projet: a.project?.name ?? "", action: a.name, début: a.startDate, fin: a.endDate, état: a.state, responsable: a.owner?.name ?? "", jalons: a.milestones.map((m) => `${dayjs(m.date).format("YYYY-MM-DD")} ${m.label}`).join(" ; "), objectif_h: a.timeTarget })),
     financements: async () => (await prisma.fundingLine.findMany({ include: { edition: { include: { project: true } }, funder: true } })).map((f) => ({ projet: f.edition.project.name, annee: f.edition.year, financeur: f.funder.name, dispositif: f.scheme, statut: f.status, demande: f.amountRequested, obtenu: f.amountGranted, depot: f.submittedAt, reponse: f.answeredAt, convention: f.contractedAt, code: f.analyticCode, cle: f.allocationKeyRef, pluriannuel: f.multiYear })),
     livrables: async () => (await prisma.deliverable.findMany({ include: { fundingLine: { include: { funder: true, edition: { include: { project: true } } } } } })).map((d) => ({ projet: d.fundingLine.edition.project.name, annee: d.fundingLine.edition.year, financeur: d.fundingLine.funder.name, livrable: d.label, echeance: d.dueDate, remis: d.done })),
     temps: async () => (await prisma.timeEntry.findMany({ include: { person: true, project: true, action: true, timeCode: true } })).map((t) => ({ personne: t.person.name, date: t.date, projet: t.project?.name ?? "", action: t.action?.name ?? "", code: t.timeCode?.code ?? "", heures: t.hours, commentaire: t.comment, verrouille: t.locked })),

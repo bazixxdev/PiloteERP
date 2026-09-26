@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { Document, HeadingLevel, Packer, Paragraph } from "docx";
-import { prisma } from "@/lib/db";
 import { getRefs } from "@/lib/session";
-import { ficheInclude, ficheParagraphs } from "@/lib/fiche-docx";
+import { ficheParagraphs, loadFiches } from "@/lib/fiche-docx";
 import { fmtDate } from "@/lib/format";
 import { V } from "@/lib/vocab";
 import { sessionExportAllowed } from "@/lib/export-auth";
@@ -15,11 +14,10 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
   const poleId = url.searchParams.get("pole") || null;
-  const editions = await prisma.edition.findMany({
-    where: { year, status: { not: "closed" }, ...(poleId ? { project: { poleId } } : {}) },
-    include: ficheInclude,
-    orderBy: [{ project: { pole: { name: "asc" } } }, { project: { mission: { order: "asc" } } }, { project: { name: "asc" } }],
-  });
+  const editions = await loadFiches(
+    { year, status: { not: "closed" }, ...(poleId ? { project: { poleId } } : {}) },
+    [{ project: { pole: { name: "asc" } } }, { project: { mission: { order: "asc" } } }, { project: { name: "asc" } }],
+  );
   const refs = await getRefs();
   const byPole = new Map<string, typeof editions>();
   for (const e of editions) byPole.set(e.project.pole.name, [...(byPole.get(e.project.pole.name) ?? []), e]);

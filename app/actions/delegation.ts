@@ -104,14 +104,16 @@ export async function deleteDelegation(id: string): Promise<Result> {
   return { ok: true };
 }
 
-// Point de contrôle : même droit que la modification des actions de l'édition.
+// Point de contrôle (26/09 : une propriété du jalon) : marque ou démarque les jalons de l'action. Même droit que la
+// modification des actions de l'édition.
 export async function setActionCheckpoint(actionId: string, value: boolean): Promise<Result> {
   const me = await getCurrentPerson();
   const a = await prisma.action.findUnique({ where: { id: actionId }, select: { editionId: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } }, team: { select: { personId: true } } } } } });
   if (!a) return { ok: false, error: "Introuvable." };
   const p = a.edition.project;
   if (!canEditActions(me, p.pilotId === me.id, a.edition.team.some((t) => t.personId === me.id), inMyPole(me, p))) return { ok: false, error: "Vous ne modifiez pas les étapes de ce projet." };
-  await prisma.action.update({ where: { id: actionId }, data: { isCheckpoint: value } });
+  const r = await prisma.milestone.updateMany({ where: { actionId }, data: { isCheckpoint: value } });
+  if (r.count === 0) return { ok: false, error: "Donnez d'abord une échéance : un point de contrôle est un jalon daté." };
   revalidatePath("/delegation");
   revalidatePath(`/edition/${a.editionId}`);
   return { ok: true };

@@ -1,3 +1,4 @@
+import { attachYearActions } from "@/lib/actions-db";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -46,11 +47,12 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const splitMode = sp.mode === "parts" && !readOnly && hasModule(me, "split");
   const inFocus = sp.focus === "1" && !readOnly;
   const [editions, entries, locks, personCodes, prevWeekCount, traces] = await Promise.all([
+    // Les actions de l'année par attachYearActions (période qui chevauche l'année), avec le temps saisi sur toute leur période.
     prisma.edition.findMany({
       where: { year, status: { in: ["in_progress", "validated"] }, team: { some: { personId: person.id } } },
-      include: { project: true, actions: { orderBy: { order: "asc" }, include: { timeEntries: { select: { hours: true } } } } },
+      include: { project: true },
       orderBy: { project: { name: "asc" } },
-    }),
+    }).then((eds) => attachYearActions(eds)),
     prisma.timeEntry.findMany({ where: { personId: person.id, date: { gte: start.toDate(), lt: end.toDate() } }, include: { project: true, action: true, timeCode: true } }),
     prisma.monthLock.findMany({ where: { personId: person.id } }),
     prisma.personTimeCode.findMany({ where: { personId: person.id }, include: { timeCode: true }, orderBy: { timeCode: { order: "asc" } } }),
@@ -67,10 +69,10 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   for (const e of editions) {
     push({ label: e.project.name, sub: `${e.project.analyticCode} · ${e.year}`, projectId: e.projectId, actionId: null, timeCodeId: null, kind: "project" });
     // Mes actions, plus celles du projet où j'ai déjà saisi cette semaine.
-    const actions = e.actions.filter((a) => (a.ownerId === person.id && a.state !== "done") || weekEntryActionIds.has(a.id));
+    const actions = e.actions.filter((a) => ((a.ownerId === person.id || a.people.some((p) => p.personId === person.id)) && a.state !== "done" && a.state !== "abandoned") || weekEntryActionIds.has(a.id));
     for (const a of actions) {
-      const consumed = a.timeEntries.reduce((s, t) => s + t.hours, 0);
-      push({ label: a.name, sub: a.timeTarget ? `objectif ${a.timeTarget} h · consommé ${fmtNumber(consumed, 0)} h` : "sans objectif de temps", projectId: e.projectId, actionId: a.id, timeCodeId: null, kind: "action" });
+      // Objectif et consommé sur toute la période de l'action (pas seulement l'année affichée).
+      push({ label: a.name, sub: a.timeTarget ? `objectif ${a.timeTarget} h · consommé ${fmtNumber(a.hoursTotal, 0)} h` : "sans objectif de temps", projectId: e.projectId, actionId: a.id, timeCodeId: null, kind: "action" });
     }
   }
   for (const c of personCodes) push({ label: c.timeCode.label, sub: c.timeCode.code, projectId: null, actionId: null, timeCodeId: c.timeCodeId, kind: "code" });

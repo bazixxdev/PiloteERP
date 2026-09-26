@@ -22,6 +22,7 @@ import { instanceHas, modulesOf } from "@/lib/modules";
 import { loadCategories } from "@/lib/budget-plan-db";
 import { BudgetCategoriesForm } from "./budget-categories";
 import { LedgerImportForm, PennylaneSyncButton, ClearLedgerButton, TagForm, DeleteTagButton } from "./ledger-forms";
+import { yearsLabel } from "@/lib/actions";
 import { loadUnknownCodes } from "@/lib/ledger-db";
 import { pennylaneConfig } from "@/lib/pennylane";
 import { brevoConfig } from "@/lib/brevo";
@@ -83,14 +84,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       loadUnknownCodes(),
       prisma.analyticTag.findMany({ orderBy: { code: "asc" } }),
       prisma.edition.findMany({ include: { project: { select: { name: true } } }, orderBy: [{ year: "desc" }, { project: { name: "asc" } }] }),
-      prisma.action.findMany({ include: { edition: { include: { project: { select: { name: true } } } } }, orderBy: { name: "asc" } }),
+      prisma.action.findMany({ include: { project: { select: { name: true } } }, orderBy: { name: "asc" } }),
       prisma.project.findMany({ orderBy: { name: "asc" } }),
       prisma.fundingLine.findMany({ include: { funder: true, edition: { include: { project: { select: { name: true } } } } } }),
     ]);
     const people = new Map((await prisma.person.findMany({ select: { id: true, name: true } })).map((p) => [p.id, p.name]));
     return { imports, snapshots, unknown, tags, people,
       editionOpts: editions.map((e) => ({ value: e.id, label: `${e.project.name} · ${e.year}` })),
-      actionOpts: actions.map((a) => ({ value: a.id, label: `${a.edition.project.name} ${a.edition.year} · ${a.name}` })),
+      // Une action court sur sa période : on la présente par son projet et ses années, pas par son année de création.
+      actionOpts: actions.map((a) => ({ value: a.id, label: `${a.project?.name ?? "—"} ${a.startDate && a.endDate ? yearsLabel({ startDate: a.startDate, endDate: a.endDate }) : ""} · ${a.name}` })),
       projectOpts: projects.map((p) => ({ value: p.id, label: `${p.name} (${p.analyticCode})` })),
       lineOpts: lines.map((l) => ({ value: l.id, label: `${l.edition.project.name} ${l.edition.year} · ${l.funder.name}` })),
       targetLabel: (kind: string, id: string | null) => kind === "ignore" ? "ignoré (fonctionnement)" : (kind === "edition" ? editions.find((e) => e.id === id) && `${editions.find((e) => e.id === id)!.project.name} · ${editions.find((e) => e.id === id)!.year}` : kind === "action" ? actions.find((a) => a.id === id)?.name : kind === "project" ? projects.find((p) => p.id === id)?.name : lines.find((l) => l.id === id) && `${lines.find((l) => l.id === id)!.edition.project.name} · ${lines.find((l) => l.id === id)!.funder.name}`) ?? "cible introuvable",

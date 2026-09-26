@@ -3,6 +3,8 @@
 // snapshot sans clé étrangère, puis on rapproche par le code : ligne de financement, projet (donc l'édition de l'année), ou une
 // correspondance posée à la main (édition, action, code à ignorer). Patron LigneRealise d'erp-tlst.
 
+import { actionsOfYear } from "./actions";
+
 export type RawEntry = { analyticCode: string; accountNumber: string; accountLabel?: string; date?: string; piece?: string; thirdParty?: string; label?: string; debit: number; credit: number };
 export type Aggregated = { analyticCode: string; accountNumber: string; accountLabel: string | null; year: number; debit: number; credit: number; detail: RawEntry[] };
 
@@ -114,7 +116,7 @@ export type ResolveContext = {
   projects: { id: string; analyticCode: string }[];
   editions: { id: string; projectId: string; year: number }[];
   fundingLines: { id: string; editionId: string; analyticCode: string | null }[];
-  actions: { id: string; editionId: string }[];
+  actions: { id: string; editionId: string; projectId: string | null; startDate: Date | null; endDate: Date | null }[];
 };
 
 // Ordre : correspondance posée à la main, puis ligne de financement, puis projet (édition de l'exercice). Sinon inconnu.
@@ -123,7 +125,8 @@ export function resolveCode(code: string, year: number, ctx: ResolveContext): Ta
   if (tag) {
     if (tag.targetKind === "ignore") return { kind: "ignore", editionId: null, id: null };
     if (tag.targetKind === "edition") return { kind: "edition", editionId: tag.targetId, id: tag.targetId };
-    if (tag.targetKind === "action") { const a = ctx.actions.find((x) => x.id === tag.targetId); return a ? { kind: "action", editionId: a.editionId, id: a.id } : null; }
+    // Une action court sur sa période : l'écriture va à l'année de son projet de l'exercice, si l'action y court (sinon à aucune).
+    if (tag.targetKind === "action") { const a = ctx.actions.find((x) => x.id === tag.targetId); return a ? { kind: "action", editionId: ctx.editions.find((x) => actionsOfYear([a], x).length > 0 && x.year === year)?.id ?? null, id: a.id } : null; }
     if (tag.targetKind === "fundingLine") { const l = ctx.fundingLines.find((x) => x.id === tag.targetId); return l ? { kind: "fundingLine", editionId: l.editionId, id: l.id } : null; }
     if (tag.targetKind === "project") { const e = ctx.editions.find((x) => x.projectId === tag.targetId && x.year === year); return { kind: "project", editionId: e?.id ?? null, id: tag.targetId }; }
   }

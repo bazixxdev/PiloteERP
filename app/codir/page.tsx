@@ -10,6 +10,7 @@ import { loadPortfolio } from "@/lib/queries";
 import { canDecideValidation, has, isCodir } from "@/lib/rights";
 import { attachmentInclude } from "@/lib/attachments";
 import { daysFromNow, dayjs, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
+import { editionForMilestone, milestoneTitle } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { Presentation } from "@/app/cafe/presentation";
 import { DecisionForm } from "./decision-form";
@@ -39,7 +40,10 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   const inPole = (p: { poleId: string; secondaryPoles?: { poleId: string }[] }) => !sp.pole || [p.poleId, ...(p.secondaryPoles ?? []).map((x) => x.poleId)].includes(sp.pole);
   const editions = rows.filter((r) => inPole(r.project));
   const pending = validations.filter((v) => inPole(v.edition.project));
-  const lateMilestones = editions.flatMap((e) => e.actions.filter((a) => a.milestoneDate && a.state !== "done" && daysFromNow(a.milestoneDate) < 0).map((a) => ({ e, a, days: -daysFromNow(a.milestoneDate!) }))).sort((x, y) => y.days - x.days);
+  // Un jalon non fait et dépassé d'une action en cours ; une fois, sous l'année de sa date, même si l'action court sur deux ans.
+  const lateMilestones = editions.flatMap((e) => e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").flatMap((a) => a.milestones
+    .filter((m) => !m.done && daysFromNow(m.date) < 0 && editionForMilestone(m, a, editions)?.id === e.id)
+    .map((m) => ({ e, a: { id: m.id, name: milestoneTitle(a.name, m.label), owner: a.owner, date: m.date }, days: -daysFromNow(m.date) })))).sort((x, y) => y.days - x.days);
   const deliverables = editions.flatMap((e) => e.fundingLines.flatMap((f) => f.deliverables.filter((d) => !d.done && daysFromNow(d.dueDate) <= settings.deliverableAlertDays).map((d) => ({ e, f, d, days: daysFromNow(d.dueDate) })))).sort((x, y) => x.days - y.days);
   const envelopes = editions.filter((e) => e.budgetEnvelope && (e.used / e.budgetEnvelope) * 100 >= settings.envelopeAlertPercent).sort((x, y) => y.used / y.budgetEnvelope! - x.used / x.budgetEnvelope!);
   const timeOver = editions.flatMap((e) => e.actions.filter((a) => a.timeTarget && a.hoursYear > a.timeTarget).map((a) => ({ e, a, consumed: a.hoursYear })));
@@ -78,7 +82,7 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   const topic = (e: (typeof editions)[number]) => { let t = topics.get(e.id); if (!t) { t = { e, score: 0, problems: [], decisions: [], due: null, overdueDays: 0 }; topics.set(e.id, t); } return t; };
   const nearer = (t: Topic, d: Date) => { if (!t.due || dayjs(d).isBefore(t.due)) t.due = d; };
   for (const v of pending) { const t = topic(editions.find((e) => e.id === v.editionId)!); t.score += 2 + (v.amount ? 1 : 0); t.problems.push(`Demande « ${v.label} »${v.amount ? ` · ${fmtEuro(v.amount)}` : ""} en attente depuis ${dayjs().diff(dayjs(v.createdAt), "day")} j`); t.decisions.push("Approuver ou refuser la demande"); }
-  for (const { e, a, days } of lateMilestones) { const t = topic(e); t.score += 3 + Math.min(3, Math.floor(days / 30)); t.problems.push(`Jalon « ${a.name} » dépassé de ${days} j`); t.decisions.push("Replanifier le jalon, ou l'abandonner"); t.overdueDays = Math.max(t.overdueDays, days); nearer(t, a.milestoneDate!); }
+  for (const { e, a, days } of lateMilestones) { const t = topic(e); t.score += 3 + Math.min(3, Math.floor(days / 30)); t.problems.push(`Jalon « ${a.name} » dépassé de ${days} j`); t.decisions.push("Replanifier le jalon, ou l'abandonner"); t.overdueDays = Math.max(t.overdueDays, days); nearer(t, a.date); }
   for (const { e, f, d, days } of deliverables) { const t = topic(e); t.score += days < 0 ? 3 : 2; t.problems.push(`Livrable « ${d.label} » pour ${f.funder.name} ${days < 0 ? `en retard de ${-days} j` : `dû dans ${days} j`}`); t.decisions.push(days < 0 ? "Fixer la date de remise et prévenir le financeur" : "Confirmer que la remise est tenue"); nearer(t, d.dueDate); }
   for (const e of envelopes) { const t = topic(e); const over = e.used - e.budgetEnvelope!; t.score += over > 0 ? 3 : 1; t.problems.push(over > 0 ? `Enveloppe dépassée de ${fmtEuro(over)} (${Math.round((e.used / e.budgetEnvelope!) * 100)} %)` : `Enveloppe consommée à ${Math.round((e.used / e.budgetEnvelope!) * 100) } %`); t.decisions.push(over > 0 ? "Couvrir le dépassement ou réduire les engagements" : "Geler ou autoriser les dépenses restantes"); }
   for (const { e, a, consumed } of timeOver) { const t = topic(e); t.score += 1; t.problems.push(`Temps « ${a.name} » : ${fmtNumber(consumed, 0)} h sur ${a.timeTarget} h`); t.decisions.push(`Revoir l'objectif de temps ou le périmètre ${du(V.action)}`); }

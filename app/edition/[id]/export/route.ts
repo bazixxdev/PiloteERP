@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
 import { getRefs } from "@/lib/session";
 import { refLabel } from "@/lib/refs";
-import { ficheParagraphs, loadFiche } from "@/lib/fiche-docx";
+import { actionExport, ficheParagraphs, loadFiche } from "@/lib/fiche-docx";
+import { attachYearActions } from "@/lib/actions-db";
 import { V, cap, pl } from "@/lib/vocab";
 import { sessionExportAllowed } from "@/lib/export-auth";
 
@@ -13,9 +14,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!(await sessionExportAllowed(req))) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
   const { id } = await params;
   const format = new URL(req.url).searchParams.get("format") ?? "md";
-  const e = await prisma.edition.findUnique({ where: { id }, include: { project: { include: { pilot: true, pole: true, guarantor: true } }, sponsor: true, team: { include: { person: true } }, indicators: { orderBy: { order: "asc" } }, fundingLines: { include: { funder: true, convention: true } }, actions: { orderBy: { order: "asc" } }, remarks: { where: { resolvedAt: null }, include: { author: true } }, achievements: { orderBy: { date: "asc" }, include: { action: true } } } });
+  const e = await prisma.edition.findUnique({ where: { id }, include: { project: { include: { pilot: true, pole: true, guarantor: true } }, sponsor: true, team: { include: { person: true } }, indicators: { orderBy: { order: "asc" } }, fundingLines: { include: { funder: true, convention: true } }, remarks: { where: { resolvedAt: null }, include: { author: true } }, achievements: { orderBy: { date: "asc" }, include: { action: true } } } });
   if (!e) return new NextResponse("Introuvable", { status: 404 });
-  const refs = await getRefs();
+  const [refs, [{ actions }]] = await Promise.all([getRefs(), attachYearActions([e], { lean: true })]);
   const state = (code: string) => refLabel(refs, "action_state", code);
   const KINDS: Record<string, string> = { participants: "Participants / inscrits", audience: "Public touché", deliverable: "Livrable", press: "Retombée", partner: "Partenaire", other: "Autre" };
   const achLine = (a: (typeof e.achievements)[number]) => `${fmtDate(a.date)} — ${a.value != null ? `${new Intl.NumberFormat("fr-FR").format(a.value)}${a.unit ? ` ${a.unit}` : ""} · ` : ""}${a.label} (${KINDS[a.kind] ?? a.kind}${a.action ? `, ${a.action.name}` : ""})`;
@@ -53,7 +54,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           new Paragraph({ text: "Réalisations consignées", heading: HeadingLevel.HEADING_1 }),
           ...(e.achievements.length ? e.achievements.map((a) => new Paragraph({ text: `• ${achLine(a)}` })) : [new Paragraph({ text: "—" })]),
           new Paragraph({ text: `${cap(pl(V.action))}`, heading: HeadingLevel.HEADING_1 }),
-          ...e.actions.map((a) => new Paragraph({ text: `• ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}` })),
+          ...actions.flatMap((a) => { const x = actionExport(a, e.year, state); return [new Paragraph({ text: `• ${x.head}` }), ...x.milestones.map((m) => new Paragraph({ text: `    – ${m}` }))]; }),
           new Paragraph({ text: `Exporté le ${fmtDate(new Date())} depuis Pilote (prototype).` }),
         ],
       }],
@@ -69,7 +70,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     "## Indicateurs", "", "| Indicateur | Cible | Réalisé | Imposé |", "|---|---|---|---|",
     ...e.indicators.map((i) => `| ${i.label} | ${i.target ?? ""} | ${i.actual ?? ""} | ${i.imposed ? "oui" : ""} |`), "",
     "## Réalisations consignées", "", ...(e.achievements.length ? e.achievements.map((a) => `- ${achLine(a)}`) : ["—"]), "",
-    `## ${cap(pl(V.action))}`, "", ...e.actions.map((a) => `- ${a.name} — ${fmtDate(a.milestoneDate)} — ${state(a.state)}`), "",
+    `## ${cap(pl(V.action))}`, "", ...actions.flatMap((a) => { const x = actionExport(a, e.year, state); return [`- ${x.head}`, ...x.milestones.map((m) => `  - ${m}`)]; }), "",
     `_Exporté le ${fmtDate(new Date())} depuis Pilote (prototype)._`, "",
   ].join("\n");
   return new NextResponse(md, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}.md"` } });

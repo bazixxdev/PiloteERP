@@ -115,9 +115,9 @@ export default async function DelegationPage({ searchParams }: { searchParams: P
                             <ul className="grid gap-1 text-sm">
                               {c.objectives.map((a) => (
                                 <li key={a.id} className="flex items-center gap-1.5">
-                                  {c.canAddObjective && <CheckpointToggle actionId={a.id} value={a.isCheckpoint} />}
+                                  {c.canAddObjective && <CheckpointToggle actionId={a.id} value={false} />}
                                   <span className={cn(a.state === "done" && "text-muted-foreground line-through")}>{a.name}</span>
-                                  <span className={cn("text-[11px] text-muted-foreground", a.state !== "done" && a.milestoneDate && daysFromNow(a.milestoneDate) < 0 && "text-danger")}>{a.milestoneDate ? fmtDate(a.milestoneDate) : "sans échéance"} · {STATE[a.state] ?? a.state}</span>
+                                  <span className={cn("text-[11px] text-muted-foreground", a.state !== "done" && a.due && daysFromNow(a.due) < 0 && "text-danger")}>{a.due ? fmtDate(a.due) : "sans échéance"} · {STATE[a.state] ?? a.state}</span>
                                 </li>
                               ))}
                             </ul>
@@ -128,7 +128,7 @@ export default async function DelegationPage({ searchParams }: { searchParams: P
                           <h3 className="mb-1 text-xs font-semibold text-muted-foreground">Points de contrôle et livrables dus</h3>
                           {c.checkpoints.length + c.deliverables.length === 0 ? <p className="text-sm text-muted-foreground">Rien sur la période.</p> : (
                             <ul className="grid gap-1 text-sm">
-                              {c.checkpoints.map((a) => <li key={a.id} className="flex items-center gap-1.5"><Flag className="size-3.5 text-primary" />{a.name} <span className="text-[11px] text-muted-foreground">{fmtDate(a.milestoneDate!)}{a.owner ? ` · ${a.owner.name}` : ""}</span></li>)}
+                              {c.checkpoints.map((a) => <li key={a.id} className="flex items-center gap-1.5"><Flag className="size-3.5 text-primary" />{a.name} <span className="text-[11px] text-muted-foreground">{fmtDate(a.date)}{a.owner ? ` · ${a.owner.name}` : ""}</span></li>)}
                               {c.deliverables.map((d) => <li key={d.id} className={cn(d.done && "text-muted-foreground line-through")}>{d.label} <span className="text-[11px] text-muted-foreground">{fmtDate(d.dueDate)} · {d.funder}</span></li>)}
                             </ul>
                           )}

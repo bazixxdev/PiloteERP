@@ -36,7 +36,7 @@ export async function syncDeadlineNotifications(): Promise<{ reminders: Reminder
     prisma.edition.findMany({
       where: { status: { in: ["in_progress", "validated"] } },
       include: { project: { include: { pilot: true } }, fundingLines: { include: { funder: true, deliverables: true, payments: true } }, validations: true, expenses: true },
-    }).then(attachYearActions),
+    }).then((eds) => attachYearActions(eds, { lean: true })),
     prisma.person.findFirst({ where: { role: "raf", active: true }, orderBy: { order: "asc" } }),
     prisma.person.findFirst({ where: { role: "director", active: true }, orderBy: { order: "asc" } }),
   ]);

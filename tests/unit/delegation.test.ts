@@ -26,13 +26,13 @@ test("la période par défaut est celle qui contient aujourd'hui, sinon l'année
 
 test("un objectif tombe dans une période par son échéance ; sans échéance, tant qu'il n'est pas terminé ; en cours, s'il déborde", () => {
   const p = periodsOf("09-12", 2026)[0];
-  assert.equal(objectiveInPeriod({ milestoneDate: d("2026-10-15"), state: "todo" }, p), true);
-  assert.equal(objectiveInPeriod({ milestoneDate: d("2026-03-15"), state: "done" }, p), false);
-  assert.equal(objectiveInPeriod({ milestoneDate: d("2026-03-15"), state: "late" }, p), true); // en retard : toujours à l'ordre du jour
-  assert.equal(objectiveInPeriod({ milestoneDate: null, state: "todo" }, p), true);
-  assert.equal(objectiveInPeriod({ milestoneDate: null, state: "done" }, p), false);
-  assert.equal(objectiveInPeriod({ milestoneDate: d("2027-02-01"), state: "doing" }, p), true);
-  assert.equal(objectiveInPeriod({ milestoneDate: d("2027-02-01"), state: "todo" }, p), false);
+  assert.equal(objectiveInPeriod({ due: d("2026-10-15"), state: "todo" }, p), true);
+  assert.equal(objectiveInPeriod({ due: d("2026-03-15"), state: "done" }, p), false);
+  assert.equal(objectiveInPeriod({ due: d("2026-03-15"), state: "late" }, p), true); // en retard : toujours à l'ordre du jour
+  assert.equal(objectiveInPeriod({ due: null, state: "todo" }, p), true);
+  assert.equal(objectiveInPeriod({ due: null, state: "done" }, p), false);
+  assert.equal(objectiveInPeriod({ due: d("2027-02-01"), state: "doing" }, p), true);
+  assert.equal(objectiveInPeriod({ due: d("2027-02-01"), state: "todo" }, p), false);
   assert.equal(dueInPeriod(d("2026-12-31"), p), true);
   assert.equal(dueInPeriod(d("2027-01-01"), p), false);
 });

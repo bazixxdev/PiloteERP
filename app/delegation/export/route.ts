@@ -28,10 +28,10 @@ export async function GET(req: Request) {
       children.push(new Paragraph({ text: c.edition.name, heading: HeadingLevel.HEADING_2 }));
       children.push(label("Attendus", c.delegation.expectations), label("Limites", c.delegation.limits), label("Contrôles", c.delegation.controls));
       children.push(p(c.delegation.acknowledgedAt ? `Pris connaissance le ${fmtDate(c.delegation.acknowledgedAt)}.` : "Pas encore pris connaissance."));
-      if (c.objectives.length) { children.push(new Paragraph({ text: "Objectifs", heading: HeadingLevel.HEADING_3 })); for (const a of c.objectives) children.push(new Paragraph({ text: `${a.name}${a.milestoneDate ? ` — ${fmtDate(a.milestoneDate)}` : ""}`, bullet: { level: 0 } })); }
+      if (c.objectives.length) { children.push(new Paragraph({ text: "Objectifs", heading: HeadingLevel.HEADING_3 })); for (const a of c.objectives) children.push(new Paragraph({ text: `${a.name}${a.due ? ` — ${fmtDate(a.due)}` : ""}`, bullet: { level: 0 } })); }
       if (c.checkpoints.length || c.deliverables.length) {
         children.push(new Paragraph({ text: "Points de contrôle et livrables dus", heading: HeadingLevel.HEADING_3 }));
-        for (const a of c.checkpoints) children.push(new Paragraph({ text: `${a.name} — ${fmtDate(a.milestoneDate!)}`, bullet: { level: 0 } }));
+        for (const a of c.checkpoints) children.push(new Paragraph({ text: `${a.name} — ${fmtDate(a.date)}`, bullet: { level: 0 } }));
         for (const d of c.deliverables) children.push(new Paragraph({ text: `${d.label} — ${fmtDate(d.dueDate)} (${d.funder})`, bullet: { level: 0 } }));
       }
       if (c.indicators.length) { children.push(new Paragraph({ text: "Indicateurs", heading: HeadingLevel.HEADING_3 })); for (const i of c.indicators) children.push(new Paragraph({ text: `${i.label} — cible ${i.target ?? "—"}, réalisé ${i.actual ?? "—"}`, bullet: { level: 0 } })); }

@@ -29,12 +29,13 @@ export function periodFor(key: string | undefined, periods: Period[], today: Dat
 export const dueInPeriod = (d: Date, p: Period) => d >= p.from && d <= p.to;
 
 // Un objectif est à l'ordre du jour d'une période : échéance dedans ; sans échéance tant qu'il n'est pas terminé ;
-// en retard (jamais terminé) ; en cours avec une échéance plus tardive (il déborde sur la période).
-export function objectiveInPeriod(a: { milestoneDate: Date | null; state: string }, p: Period): boolean {
-  if (!a.milestoneDate) return a.state !== "done";
-  if (dueInPeriod(a.milestoneDate, p)) return true;
+// en retard (jamais terminé) ; en cours avec une échéance plus tardive (il déborde sur la période). L'échéance est celle de
+// son prochain jalon (lib/delegation-db.ts).
+export function objectiveInPeriod(a: { due: Date | null; state: string }, p: Period): boolean {
+  if (!a.due) return a.state !== "done";
+  if (dueInPeriod(a.due, p)) return true;
   if (a.state === "late") return true;
-  return a.state === "doing" && a.milestoneDate > p.to;
+  return a.state === "doing" && a.due > p.to;
 }
 
 // Rédiger : le droit, et l'édition est dans son périmètre (tout avec scope.all, sinon son pôle).

@@ -1,15 +1,14 @@
 import { prisma } from "./db";
 import { dayjs, daysFromNow } from "./format";
+import { milestonesInEditions } from "./actions-db";
+import { milestoneTitle } from "./actions";
 
 // Données communes à « Ma semaine » (EF-G2) et à l'écran café (EF-H1).
 export async function loadAgenda(horizonDays: number) {
   const limit = dayjs().add(horizonDays, "day").endOf("day").toDate();
-  const [actions, deliverables, validations, people, entries] = await Promise.all([
-    prisma.action.findMany({
-      where: { state: { not: "done" }, milestoneDate: { lte: limit }, edition: { status: { in: ["in_progress", "validated"] } } },
-      include: { owner: true, edition: { include: { project: { include: { pilot: true, pole: true } } } } },
-      orderBy: { milestoneDate: "asc" },
-    }),
+  const [milestones, deliverables, validations, people, entries] = await Promise.all([
+    // Jalons non faits des actions en cours, dans les années en cours ou validées (un jalon une seule fois, même pluriannuel).
+    milestonesInEditions({ done: false, date: { lte: limit }, action: { state: { notIn: ["done", "abandoned"] } } }, ["in_progress", "validated"]),
     prisma.deliverable.findMany({
       where: { done: false, dueDate: { lte: limit }, fundingLine: { edition: { status: { in: ["in_progress", "validated"] } } } },
       include: { fundingLine: { include: { funder: true, edition: { include: { project: { include: { pilot: true } } } } } } },
@@ -36,7 +35,8 @@ export async function loadAgenda(horizonDays: number) {
   const missingTime = people.map((p) => ({ person: p, missing: workDays.filter((d) => !done.get(p.id)?.has(d)) })).filter((x) => x.missing.length > 0);
 
   return {
-    milestones: actions.map((a) => ({ ...a, daysLeft: daysFromNow(a.milestoneDate!) })),
+    // Une ligne par jalon, au nom de l'action (« action · libellé ») ; `ownerId`, `peopleIds` et `state` sont ceux de l'action.
+    milestones: milestones.map((m) => ({ id: m.id, actionId: m.actionId, name: milestoneTitle(m.action.name, m.label), date: m.date, state: m.action.state, ownerId: m.action.ownerId, owner: m.action.owner, peopleIds: m.action.people.map((p) => p.personId), edition: m.edition, editionId: m.edition.id, daysLeft: daysFromNow(m.date) })),
     deliverables: deliverables.map((d) => ({ ...d, daysLeft: daysFromNow(d.dueDate) })),
     validations: validations.map((v) => ({ ...v, age: dayjs().diff(dayjs(v.createdAt), "day") })),
     missingTime,

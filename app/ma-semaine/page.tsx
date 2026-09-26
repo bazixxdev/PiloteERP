@@ -45,8 +45,10 @@ export default async function MaSemainePage() {
     tasksOn ? loadMyLists(me.id) : Promise.resolve([]),
   ]);
 
-  const myActions = agenda.milestones.filter((a) => a.ownerId === me.id);
-  const myPilotMilestones = agenda.milestones.filter((a) => a.ownerId !== me.id && a.edition.project.pilotId === me.id);
+  // Jalons des actions dont je suis responsable ou associé ; ceux des autres sur les projets que je pilote, à part.
+  const mine = (a: (typeof agenda.milestones)[number]) => a.ownerId === me.id || a.peopleIds.includes(me.id);
+  const myActions = agenda.milestones.filter(mine);
+  const myPilotMilestones = agenda.milestones.filter((a) => !mine(a) && a.edition.project.pilotId === me.id);
   const myDeliverables = agenda.deliverables.filter((d) => d.fundingLine.edition.project.pilotId === me.id || canEditFunding(me));
   const toDecide = agenda.validations.filter((v) => canDecideValidation(me, v));
   const myRequests = agenda.validations.filter((v) => v.requesterId === me.id);
@@ -60,9 +62,9 @@ export default async function MaSemainePage() {
 
   // Une seule liste d'échéances, découpée en trois horizons.
   const items: Item[] = [
-    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · ${cap(V.edition)} ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft })),
+    ...myActions.map((a): Item => ({ id: `a-${a.id}`, kind: "action", title: a.name, sub: `${a.edition.project.name} · ${cap(V.edition)} ${a.edition.year} · ${refLabel(refs, "action_state", a.state)}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.date, daysLeft: a.daysLeft })),
     ...myDeliverables.map((d): Item => ({ id: `d-${d.id}`, kind: "deliverable", title: d.label, sub: `${d.fundingLine.edition.project.name} · Livrable pour ${d.fundingLine.funder.name}`, href: `/edition/${d.fundingLine.editionId}?onglet=budget#recettes`, date: d.dueDate, daysLeft: d.daysLeft })),
-    ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.milestoneDate!, daysLeft: a.daysLeft, owner: a.owner?.name })),
+    ...myPilotMilestones.map((a): Item => ({ id: `m-${a.id}`, kind: "milestone", title: a.name, sub: `${a.edition.project.name} · Jalon suivi par ${a.owner?.name ?? "personne"}`, href: `/edition/${a.editionId}?onglet=actions`, date: a.date, daysLeft: a.daysLeft, owner: a.owner?.name })),
     // Les tâches datées en retard rejoignent le retard ; les autres vivent dans « Mes tâches » (pas de doublon).
     ...tasks.filter((t) => !t.done && t.dueDate && dayjs(t.dueDate).isBefore(dayjs(), "day")).map((t): Item => ({ id: `t-${t.id}`, kind: "task", title: t.label, sub: t.edition ? `${t.edition.name} · ${t.edition.year}` : "tâche personnelle", href: "#mes-taches", date: dayjs(t.dueDate!).toDate(), daysLeft: dayjs(t.dueDate!).startOf("day").diff(dayjs().startOf("day"), "day") })),
   ].sort((a, b) => a.daysLeft - b.daysLeft);

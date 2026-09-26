@@ -2,13 +2,14 @@ import { prisma } from "./db";
 import { canEditActions, has } from "./rights";
 import { inMyPole, projectPoleIds, type Viewer } from "./scope";
 import { canReadDelegation, canWriteDelegation, dueInPeriod, objectiveInPeriod, periodFor, periodsOf } from "./delegation";
+import { attachYearActions } from "./actions-db";
+import { milestoneTitle } from "./actions";
 
 const include = {
   edition: { select: {
-    id: true, year: true,
+    id: true, year: true, projectId: true,
     project: { select: { name: true, pilotId: true, poleId: true, pole: { select: { name: true } }, secondaryPoles: { select: { poleId: true } } } },
     team: { select: { personId: true } },
-    actions: { select: { id: true, name: true, ownerId: true, owner: { select: { name: true } }, milestoneDate: true, state: true, isCheckpoint: true }, orderBy: [{ milestoneDate: "asc" as const }, { order: "asc" as const }] },
     indicators: { select: { id: true, label: true, target: true, actual: true, imposed: true }, orderBy: { order: "asc" as const } },
     fundingLines: { select: { funder: { select: { name: true } }, deliverables: { select: { id: true, label: true, dueDate: true, done: true } } } },
   } },
@@ -33,16 +34,28 @@ export async function loadSheet(me: Viewer, personId: string, year: number, peri
   const tasks = isSelf
     ? await prisma.task.findMany({ where: { personId, editionId: { in: readable.map((r) => r.editionId) } }, select: { id: true, label: true, dueDate: true, done: true, editionId: true }, orderBy: [{ done: "asc" }, { dueDate: "asc" }] })
     : null;
+  // Les actions de l'année (période qui chevauche l'année) ; objectifs et points de contrôle se lisent sur leurs jalons.
+  const years = await attachYearActions(readable.map((r) => r.edition), { lean: true });
+  const actionsOf = new Map(years.map((e) => [e.id, e.actions]));
+  const ids = years.flatMap((e) => e.actions.map((a) => a.id));
+  const checkpointIds = new Set(ids.length === 0 ? [] : (await prisma.milestone.findMany({ where: { actionId: { in: ids }, isCheckpoint: true }, select: { id: true } })).map((m) => m.id));
   const cards = readable.map((r) => {
     const e = r.edition;
-    const checkpoints = e.actions.filter((a) => a.isCheckpoint && a.milestoneDate && dueInPeriod(a.milestoneDate, period));
+    const actions = (actionsOf.get(e.id) ?? []).map((a) => {
+      const own = a.milestones.filter((m) => !checkpointIds.has(m.id));
+      // L'échéance d'un objectif : son prochain jalon non fait (hors points de contrôle), sinon le dernier tenu.
+      return { ...a, due: own.find((m) => !m.done)?.date ?? own[own.length - 1]?.date ?? null, onlyCheckpoints: a.milestones.length > 0 && own.length === 0 };
+    }).sort((x, y) => (x.due?.getTime() ?? Infinity) - (y.due?.getTime() ?? Infinity) || x.order - y.order);
+    const checkpoints = actions.flatMap((a) => a.milestones.filter((m) => checkpointIds.has(m.id) && dueInPeriod(m.date, period)).map((m) => ({ id: m.id, name: milestoneTitle(a.name, m.label), date: m.date, owner: a.owner })))
+      .sort((x, y) => x.date.getTime() - y.date.getTime());
     return {
       pole: e.project.pole.name,
       canWrite: canWriteDelegation(me, projectPoleIds(e.project)),
       canAddObjective: canEditActions(me, e.project.pilotId === me.id, e.team.some((t) => t.personId === me.id), inMyPole(me, e.project)),
       delegation: { id: r.id, expectations: r.expectations, limits: r.limits, controls: r.controls, acknowledgedAt: r.acknowledgedAt, boardPresentedAt: r.boardPresentedAt, revisions: r.revisions },
       edition: { id: e.id, name: e.project.name, year: e.year },
-      objectives: e.actions.filter((a) => a.ownerId === personId && !a.isCheckpoint && objectiveInPeriod(a, period)),
+      // Un objectif n'est pas une action faite seulement de points de contrôle (l'ancien « point de contrôle » d'action).
+      objectives: actions.filter((a) => a.ownerId === personId && !a.onlyCheckpoints && objectiveInPeriod(a, period)).map((a) => ({ id: a.id, name: a.name, state: a.state, due: a.due })),
       checkpoints,
       indicators: e.indicators,
       deliverables: e.fundingLines.flatMap((l) => l.deliverables.filter((d) => dueInPeriod(d.dueDate, period)).map((d) => ({ ...d, funder: l.funder.name }))).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()),

@@ -33,7 +33,7 @@ export default async function DeparturePage({ params }: { params: Promise<{ id: 
             guaranteed: r.guaranteed.map((x) => x.name),
             ledPoles: r.ledPoles.map((x) => x.name),
             sponsored: r.sponsored.map((x) => `${x.project.name} · ${x.year}`),
-            actions: r.actions.map((x) => `${x.name} — ${x.edition.project.name} ${x.edition.year}${x.milestoneDate ? ` · ${fmtDate(x.milestoneDate)}` : ""}`),
+            actions: r.actions.map((x) => `${x.name} — ${x.project} ${x.years}${x.nextMilestone ? ` · ${fmtDate(x.nextMilestone)}` : ""}`),
             requests: r.requests.map((x) => `${x.title}${x.dueDate ? ` · pour le ${fmtDate(x.dueDate)}` : ""}`),
             teams: r.teams.map((x) => `${x.edition.project.name} · ${x.edition.year}`),
             tasks: r.tasks,

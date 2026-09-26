@@ -41,7 +41,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     const start = dayjs(`${y}-${String((q - 1) * 3 + 1).padStart(2, "0")}-01`);
     const end = start.add(3, "month");
     rows = rows.filter((r) =>
-      r.actions.some((a) => a.milestoneDate && dayjs(a.milestoneDate).isAfter(start) && dayjs(a.milestoneDate).isBefore(end)) ||
+      r.actions.some((a) => a.milestones.some((m) => dayjs(m.date).isAfter(start) && dayjs(m.date).isBefore(end))) ||
       r.fundingLines.some((f) => f.deliverables.some((d) => dayjs(d.dueDate).isAfter(start) && dayjs(d.dueDate).isBefore(end))),
     );
   }
