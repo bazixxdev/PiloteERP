@@ -88,6 +88,28 @@ export function shiftYear(p: Period): Period {
   return { startDate: shiftDate(p.startDate), endDate: shiftDate(p.endDate) };
 }
 
+// Période d'une copie reconduite dans `newYear` : un an plus tard, mais jamais avant le 1er janvier de `newYear` — une action
+// 2025–2026 reconduite depuis 2026 donne 2027-01-01 → 2027-06-30, pas 2026–2027 (la copie apparaîtrait dans l'année source,
+// à côté de l'originale). La fin, dans l'année source (toRenew), tombe toujours dans `newYear`.
+export function renewedPeriod(p: Period, newYear: number): Period {
+  const s = shiftYear(p);
+  return { startDate: yearOf(s.startDate) < newYear ? defaultPeriod(newYear).startDate : s.startDate, endDate: s.endDate };
+}
+
+// Date d'un jalon de la copie : un an plus tard ; un jalon qui tomberait avant `newYear` (avant la période de la copie) est
+// abandonné (null), pas ramené au 1er janvier — il appartenait à la partie de l'action déjà faite.
+export function renewedMilestoneDate(d: Date, newYear: number): Date | null {
+  const s = shiftDate(d);
+  return yearOf(s) < newYear ? null : s;
+}
+
+// Action d'un indicateur recopié dans la nouvelle année : la copie si l'action a été recopiée, la même action si elle court
+// encore l'année suivante (`continuing`), sinon aucune.
+export function renewedIndicatorAction(actionId: string | null, copies: Map<string, string>, continuing: Set<string>): string | null {
+  if (!actionId) return null;
+  return copies.get(actionId) ?? (continuing.has(actionId) ? actionId : null);
+}
+
 // Ce que montre le dialogue de reconduction de l'année `year` : les actions à recopier (toRenew) et celles qui continuent
 // l'année suivante, déjà là (hors abandonnées : on ne les annonce pas comme « déjà là »).
 export function renewPlan<A extends Period & { state: string }>(actions: A[], year: number): { renew: A[]; continuing: A[] } {

@@ -6,8 +6,9 @@ import { cookieOf, postServerAction, serverActionId, SECURITY_ACTORS } from "./f
 // appelées en direct comme le ferait un client : une contributrice est refusée (rien n'est créé, rien n'est consigné) ; la
 // direction reconduit, et la base prouve la règle de la spec actions § 2 — l'action qui continue n'est pas recopiée (même si le
 // client l'envoie dans la liste), celle qui finit l'est (période et jalons +1 an, à faire, associés), ses liens suivent les
-// lignes recréées du même financeur, l'indicateur suit sa copie. « Préparer » consigne une Decision sur l'année source et ne
-// range le projet que sur confirmation. Données propres au test, sur des années libres (2031–2032), supprimées après.
+// lignes recréées du même financeur, l'indicateur suit sa copie ou reste sur l'action qui continue, la copie d'une action
+// pluriannuelle ne déborde pas sur l'année source. « Préparer » consigne une Decision sur l'année source et ne range le
+// projet que sur confirmation. Données propres au test, sur des années libres (2031–2032), supprimées après.
 const FILE = "app/actions/edition.ts";
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.SECURITY_DATABASE_URL } } });
 const Y = 2031;
@@ -19,7 +20,7 @@ async function call(baseURL: string, name: string, args: unknown[], actor = SECU
   return res.text();
 }
 
-const ids = { p: "", e1: "", conv: "", f1: "", f2: "", line1: "", line2: "", cont: "", fin: "", aband: "", unchecked: "", indFin: "", indCont: "", q: "", qe: "", r: "", re: "", rCont: "", rFin: "" };
+const ids = { p: "", e1: "", conv: "", f1: "", f2: "", line1: "", line2: "", cont: "", fin: "", multi: "", aband: "", unchecked: "", indFin: "", indCont: "", q: "", qe: "", r: "", re: "", rCont: "", rFin: "" };
 
 test.afterAll(async () => {
   const projects = [ids.p, ids.q, ids.r].filter(Boolean);
@@ -59,6 +60,13 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
       },
     });
     await prisma.actionFunding.create({ data: { actionId: cont.id, fundingLineId: line1.id, amount: 1_000 } });
+    // Pluriannuelle qui finit en Y : sa copie commence au 1er janvier Y+1 (jamais dans Y), son jalon de Y-1 est abandonné.
+    const multi = await prisma.action.create({
+      data: {
+        editionId: e1.id, projectId: p.id, name: "SEC36 pluriannuelle", ownerId: base.pilotId, startDate: day(`${Y - 1}-03-01`), endDate: day(`${Y}-06-30`), state: "doing",
+        milestones: { create: [{ date: day(`${Y - 1}-04-15`), label: "Ancien jalon", order: 0 }, { date: day(`${Y}-05-20`), label: "Restitution", order: 1 }] },
+      },
+    });
     const aband = await mk("SEC36 abandonnée", `${Y}-01-01`, `${Y}-06-30`, "abandoned");
     const unchecked = await mk("SEC36 décochée", `${Y}-01-01`, `${Y}-12-31`);
     const indFin = await prisma.indicator.create({ data: { editionId: e1.id, label: "SEC36 ateliers tenus", target: "4", actual: "4", order: 0, actionId: fin.id } });
@@ -71,7 +79,7 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     const re = await prisma.edition.create({ data: { projectId: r.id, year: Y, status: "in_progress" } });
     const rCont = await prisma.action.create({ data: { editionId: re.id, projectId: r.id, name: "SEC36 R continue", startDate: day(`${Y}-01-01`), endDate: day(`${Y + 1}-12-31`) } });
     const rFin = await prisma.action.create({ data: { editionId: re.id, projectId: r.id, name: "SEC36 R finie", startDate: day(`${Y}-01-01`), endDate: day(`${Y}-12-31`) } });
-    Object.assign(ids, { p: p.id, e1: e1.id, conv: conv.id, f1, f2, line1: line1.id, line2: line2.id, cont: cont.id, fin: fin.id, aband: aband.id, unchecked: unchecked.id, indFin: indFin.id, indCont: indCont.id, q: q.id, qe: qe.id, r: r.id, re: re.id, rCont: rCont.id, rFin: rFin.id });
+    Object.assign(ids, { p: p.id, e1: e1.id, conv: conv.id, f1, f2, line1: line1.id, line2: line2.id, cont: cont.id, fin: fin.id, multi: multi.id, aband: aband.id, unchecked: unchecked.id, indFin: indFin.id, indCont: indCont.id, q: q.id, qe: qe.id, r: r.id, re: re.id, rCont: rCont.id, rFin: rFin.id });
   });
 
   test("une contributrice ne reconduit pas et ne prépare pas l'année suivante : rien n'est créé ni consigné", async ({ baseURL }) => {
@@ -87,7 +95,7 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
 
   test("reconduire : l'action qui continue n'est pas recopiée, celle qui finit l'est, liens et indicateur suivent", async ({ baseURL }) => {
     // Le client envoie aussi l'action qui continue et l'abandonnée : ignorées. La décochée n'est pas envoyée.
-    const body = await call(String(baseURL), "renewEdition", [ids.e1, { actionIds: [ids.fin, ids.cont, ids.aband] }]);
+    const body = await call(String(baseURL), "renewEdition", [ids.e1, { actionIds: [ids.fin, ids.multi, ids.cont, ids.aband] }]);
     expect(body).toContain('"ok":true');
     const e2 = await prisma.edition.findUniqueOrThrow({ where: { projectId_year: { projectId: ids.p, year: Y + 1 } }, include: { fundingLines: true, indicators: { orderBy: { order: "asc" } } } });
     const count = (name: string) => prisma.action.count({ where: { projectId: ids.p, name } });
@@ -112,6 +120,11 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     expect(copy.people).toHaveLength(1);
     expect([copy.tasks.length, copy.timeEntries.length, copy.achievements.length]).toEqual([0, 0, 0]);
 
+    // La copie de la pluriannuelle ne chevauche pas l'année source : 1er janvier Y+1 → fin décalée ; jalon de Y-1 abandonné.
+    const multiCopy = await prisma.action.findFirstOrThrow({ where: { projectId: ids.p, name: "SEC36 pluriannuelle", id: { not: ids.multi } }, include: { milestones: true } });
+    expect([multiCopy.startDate?.toISOString().slice(0, 10), multiCopy.endDate?.toISOString().slice(0, 10)]).toEqual([`${Y + 1}-01-01`, `${Y + 1}-06-30`]);
+    expect(multiCopy.milestones.map((m) => [m.date.toISOString().slice(0, 10), m.label])).toEqual([[`${Y + 1}-05-20`, "Restitution"]]);
+
     // Liens : la ligne recréée du même financeur (le dossier couvre Y+1 : la ligne F1 y reste rattachée), sans montant.
     const newF1 = e2.fundingLines.find((l) => l.funderId === ids.f1)!;
     const newF2 = e2.fundingLines.find((l) => l.funderId === ids.f2)!;
@@ -123,10 +136,11 @@ test.describe.serial("SEC-36 — reconduction sans doublons, « Préparer »", (
     expect((await prisma.actionFunding.findUnique({ where: { actionId_fundingLineId: { actionId: ids.cont, fundingLineId: newF1.id } } }))?.amount).toBeNull();
     expect((await prisma.actionFunding.findUnique({ where: { actionId_fundingLineId: { actionId: ids.cont, fundingLineId: ids.line1 } } }))?.amount).toBe(1_000);
 
-    // Indicateurs : cibles recopiées, réalisé vidé ; celui de l'action recopiée suit sa copie, l'autre n'est rattaché à rien.
+    // Indicateurs : cibles recopiées, réalisé vidé ; celui de l'action recopiée suit sa copie, celui de l'action qui continue
+    // reste sur elle.
     expect(e2.indicators.map((i) => [i.label, i.target, i.actual, i.actionId])).toEqual([
       ["SEC36 ateliers tenus", "4", null, copy.id],
-      ["SEC36 suivi continu", "10", null, null],
+      ["SEC36 suivi continu", "10", null, ids.cont],
     ]);
     // Rien ne bouge dans l'année source.
     expect((await prisma.indicator.findUniqueOrThrow({ where: { id: ids.indFin } })).actionId).toBe(ids.fin);

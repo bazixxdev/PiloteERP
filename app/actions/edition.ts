@@ -10,7 +10,7 @@ import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
-import { actionsOfYear, renewedLineIds, renewSelection, shiftDate, shiftYear } from "@/lib/actions";
+import { actionsOfYear, renewedIndicatorAction, renewedLineIds, renewedMilestoneDate, renewedPeriod, renewSelection, runsIn } from "@/lib/actions";
 import { isPrepareChoice, prepareDecisionBody, prepareInstance, type PrepareChoice } from "@/lib/preparer";
 import { reportInternalError } from "@/lib/errors";
 import { actionRunsInEdition } from "@/lib/actions-db";
@@ -248,15 +248,22 @@ async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: No
     orderBy: [{ startDate: "asc" }, { order: "asc" }],
   });
   const copies = new Map<string, string>();
-  for (const a of renewSelection(actionsOfYear(all, src), src.year, opts.actionIds)) {
-    // Copie : période et jalons un an plus tard (shiftDate, pour que les jalons restent dans la période), état « à faire »,
-    // jalons non faits ; ni tâches, ni heures, ni réalisations.
+  const nextYear = src.year + 1;
+  const sourceActions = actionsOfYear(all, src);
+  for (const a of renewSelection(sourceActions, src.year, opts.actionIds)) {
+    // Copie : période et jalons un an plus tard, jamais avant le 1er janvier de l'année suivante (renewedPeriod : la copie
+    // n'apparaît pas dans l'année source) ; un jalon qui tomberait avant est abandonné (renewedMilestoneDate). État « à
+    // faire », jalons non faits ; ni tâches, ni heures, ni réalisations.
+    const milestones = a.milestones.flatMap((m) => {
+      const date = renewedMilestoneDate(m.date, nextYear);
+      return date ? [{ date, label: m.label, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, order: m.order }] : [];
+    });
     const copy = await tx.action.create({
       data: {
-        editionId: ed.id, projectId: src.projectId, ...shiftYear(a), state: "todo", order: a.order,
+        editionId: ed.id, projectId: src.projectId, ...renewedPeriod(a, nextYear), state: "todo", order: a.order,
         name: a.name, ownerId: a.ownerId, description: a.description, audience: a.audience, recurrence: a.recurrence,
         entrusted: a.entrusted, latitude: a.latitude, timeTarget: a.timeTarget,
-        milestones: { create: a.milestones.map((m) => ({ date: shiftDate(m.date), label: m.label, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, order: m.order })) },
+        milestones: { create: milestones },
         people: { create: a.people.map((p) => ({ personId: p.personId })) },
       },
     });
@@ -264,9 +271,11 @@ async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: No
     const lineIds = renewedLineIds(a.fundings.map((f) => f.fundingLine), ed.fundingLines);
     if (lineIds.length > 0) await tx.actionFunding.createMany({ data: lineIds.map((fundingLineId) => ({ actionId: copy.id, fundingLineId })) });
   }
-  // Indicateurs : cibles recopiées ; celui d'une action recopiée suit sa copie, les autres ne sont rattachés à aucune action.
+  // Indicateurs : cibles recopiées ; celui d'une action recopiée suit sa copie, celui d'une action qui court encore l'année
+  // suivante reste sur elle, les autres ne sont rattachés à aucune action (renewedIndicatorAction).
   if (src.indicators.length > 0) {
-    await tx.indicator.createMany({ data: src.indicators.map((i) => ({ editionId: ed.id, label: i.label, target: i.target, imposed: i.imposed, order: i.order, actionId: (i.actionId && copies.get(i.actionId)) || null })) });
+    const continuing = new Set(sourceActions.filter((a) => runsIn(a, nextYear)).map((a) => a.id));
+    await tx.indicator.createMany({ data: src.indicators.map((i) => ({ editionId: ed.id, label: i.label, target: i.target, imposed: i.imposed, order: i.order, actionId: renewedIndicatorAction(i.actionId, copies, continuing) })) });
   }
   for (const line of ed.fundingLines) await linkNewLineToRunningActions(tx, line);
   return ed;

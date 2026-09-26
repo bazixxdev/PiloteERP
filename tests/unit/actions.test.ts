@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, shiftDate, renewPlan, renewSelection, renewedLineIds, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
+import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, shiftDate, renewPlan, renewSelection, renewedLineIds, renewedPeriod, renewedMilestoneDate, renewedIndicatorAction, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
 import { computeReminders, nextMilestone } from "../../lib/alerts";
 import { deadlineKey } from "../../lib/deadline-notifications";
 import { dayjs } from "../../lib/format";
@@ -66,6 +66,26 @@ test("reconduction : période et jalons décalés par la même règle, le jalon 
   assert.deepEqual(shiftDate(m), new Date("2027-12-31"));
   assert.ok(shiftDate(m) >= shifted.startDate && shiftDate(m) <= shifted.endDate);
   assert.deepEqual(shiftDate(new Date("2026-05-12")), new Date("2027-05-12"));
+});
+
+test("reconduction : la copie ne chevauche jamais l'année source, les jalons qui tomberaient avant sont abandonnés", () => {
+  // Pluriannuelle 2025-03 → 2026-06 reconduite depuis 2026 : 2027-01-01 → 2027-06-30 (pas 2026–2027).
+  assert.deepEqual(renewedPeriod(P("2025-03-01", "2026-06-30"), 2027), P("2027-01-01", "2027-06-30"));
+  // D'une seule année : simplement décalée.
+  assert.deepEqual(renewedPeriod(P("2026-02-01", "2026-06-30"), 2027), P("2027-02-01", "2027-06-30"));
+  assert.equal(renewedPeriod(P("2025-03-01", "2026-06-30"), 2027).startDate.getFullYear(), 2027);
+  // Jalon de 2025 (→ 2026) abandonné ; jalon de 2026 (→ 2027) gardé.
+  assert.equal(renewedMilestoneDate(new Date("2025-04-15"), 2027), null);
+  assert.deepEqual(renewedMilestoneDate(new Date("2026-05-20"), 2027), new Date("2027-05-20"));
+});
+
+test("reconduction : l'indicateur suit la copie, reste sur l'action qui continue, sinon n'est rattaché à rien", () => {
+  const copies = new Map([["finie", "copie"]]);
+  const continuing = new Set(["continue"]);
+  assert.equal(renewedIndicatorAction("finie", copies, continuing), "copie");
+  assert.equal(renewedIndicatorAction("continue", copies, continuing), "continue");
+  assert.equal(renewedIndicatorAction("decochee", copies, continuing), null);
+  assert.equal(renewedIndicatorAction(null, copies, continuing), null);
 });
 
 test("reconduction : chaque lien suit la ligne recréée du même financeur, celle du même dossier s'il y en a plusieurs", () => {
