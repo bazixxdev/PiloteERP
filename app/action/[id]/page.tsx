@@ -12,6 +12,7 @@ import { actionCtx } from "@/lib/actions-rights-db";
 import { balance, fundingOverflow, runsIn, spanLabel, yearsLabel, yearsOf } from "@/lib/actions";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { canSeeTimeOf } from "@/lib/rights";
+import { hiddenPeopleLabel } from "@/lib/funded-actions";
 import { canReadShared, instanceHas } from "@/lib/modules";
 import { canSeePersonnelDetail } from "@/lib/budget-plan";
 import { actionTimeCost } from "@/lib/budget-plan-db";
@@ -231,7 +232,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
             {visible.length === 0 && hidden === 0 ? <p className="text-sm text-muted-foreground">Aucune heure saisie.</p> : (
               <ul className="divide-y text-sm">
                 {visible.map((h) => <li key={h.person.id} className="flex items-center justify-between gap-2 py-1"><span>{h.person.name}</span><b className="tabular">{fmtNumber(h.hours, 1)} h</b></li>)}
-                {hidden > 0 && <li className="py-1 text-xs text-muted-foreground">{hidden} {hidden > 1 ? "autres personnes" : "autre personne"} : détail non visible.</li>}
+                {hidden > 0 && <li className="py-1 text-xs text-muted-foreground">{hiddenPeopleLabel(hidden)}.</li>}
               </ul>
             )}
           </Section>

@@ -10,6 +10,7 @@ import { allocationOf, conventionCovers } from "@/lib/conventions";
 import { AttachmentList } from "@/components/attachments/attachment-list";
 import { UploadForm } from "@/components/attachments/upload-form";
 import { PaymentsList } from "@/components/funding/payments-list";
+import { FundedActions } from "@/components/funding/funded-actions";
 import { paymentSummary } from "@/lib/payments";
 import type { EditionFull } from "@/lib/queries";
 import type { TabCtx } from "@/app/edition/[id]/types";
@@ -77,6 +78,7 @@ export function FundingLinePanelBody({ e, f, i, rw, isPilot, refs, funders, conv
           : null}
         <PaymentsList payments={f.payments} reference={f.amountGranted} rw={rw} target={{ fundingLineId: f.id }} compact testId={`payments-line-${i}`} />
       </div>
+      <FundedActions lines={[f.id]} year={e.year} exportHref={`/financements/export?ligne=${f.id}`} />
       <div className="rounded-lg bg-muted/50 p-2">
         <div className="mb-1 flex items-center justify-between">
           <span className="text-[10px] font-semibold text-muted-foreground">Pièces (convention, notification, bilan remis)</span>

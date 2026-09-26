@@ -41,6 +41,29 @@ test("lier une ligne d'un dossier pluriannuel, montant, équilibre, alerte de d�
   await page.goto(`${actionUrl}?annee=2027`);
   await expect(page.getByTestId("action-fundings").getByTestId("balance-income")).toHaveText(/^0\s€$/);
 
+  // Vu depuis le financement : le panneau de la ligne 2026 liste l'action, son montant et ses heures de l'année ; la page du
+  // dossier la montre sous 2026 (3 000 €) et sous 2027 (montant non précisé).
+  const actionName = "Financement recette pluriannuel";
+  await page.goto(`${actionUrl}?annee=2026`);
+  await page.getByTestId("action-back").click();
+  await page.getByRole("tab", { name: "Budget" }).click();
+  const regionRow = page.locator("[data-testid^=funding-line-][data-funder=Région]").first();
+  const row = (await regionRow.getAttribute("data-testid"))!.replace("funding-line-", "");
+  await page.waitForLoadState("networkidle");
+  await page.getByTestId(`funding-panel-${row}-open`).click();
+  const funded = page.getByTestId(`funding-panel-${row}`).getByTestId("funded-actions");
+  await expect(funded).toHaveAttribute("data-year", "2026");
+  const mine = funded.locator("li[data-action]").filter({ hasText: actionName });
+  await expect(mine).toHaveCount(1);
+  await expect(mine.locator("[data-testid^=funded-amount-]")).toHaveText(/3\s000/);
+  await expect(mine.locator("[data-testid^=funded-hours-]")).toHaveText("0 h");
+  await page.keyboard.press("Escape");
+  await regionRow.getByRole("link", { name: "CPO-REGION-2025-2027" }).click();
+  await expect(page.getByTestId("funded-actions")).toBeVisible();
+  await expect(page.getByTestId("funded-actions-2026").locator("li[data-action]").filter({ hasText: actionName }).locator("[data-testid^=funded-amount-]")).toHaveText(/3\s000/);
+  await expect(page.getByTestId("funded-actions-2027").locator("li[data-action]").filter({ hasText: actionName }).locator("[data-testid^=funded-amount-]")).toHaveText("montant non précisé");
+  await expect(page.getByTestId("funded-actions-2025").filter({ hasText: actionName })).toHaveCount(0);
+
   // Au-delà de l'obtenu de la ligne (4 600 € dans le seed) : la ligne le dit, l'année 2026 porte l'alerte.
   await page.goto(`${actionUrl}?annee=2026`);
   await section.getByTestId("funding-amount-0").fill("5000");

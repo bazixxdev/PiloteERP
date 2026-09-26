@@ -17,11 +17,12 @@ import { cn } from "@/lib/utils";
 import { AttachEditionForm, DetachButton } from "./allocations";
 import { ContactLine } from "@/components/funders/contacts";
 import { PaymentsList } from "@/components/funding/payments-list";
+import { FundedActions } from "@/components/funding/funded-actions";
 import { paymentSummary } from "@/lib/payments";
 import { AMOUNT_KINDS, amounts, durationOf, isWon } from "@/lib/dossiers";
 import { attachmentInclude } from "@/lib/attachments";
 import { HelpersPicker, DossierWorkspace, LifecycleButtons, Stepper } from "./lifecycle";
-import { V, cap, le, un, aucun, pl } from "@/lib/vocab";
+import { V, cap, le, un, aucun, pl, e } from "@/lib/vocab";
 import { loadNotes } from "@/lib/notes";
 
 // Page d'une convention : en-tête, quatre montants, informations (modifiables par la RAF), affectations aux éditions, obligations à venir.
@@ -163,6 +164,14 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
                 </table>
               </div>
             )}
+          </Section>}
+
+          {c.lines.length > 0 && <Section title={`${cap(pl(V.action))} financé${e(V.action)}s`} description={`Par année : ${pl(V.action)} lié${e(V.action)}s aux lignes du dossier, montant affecté, heures, jalons faits et réalisations de l'année.`} testId="funded-actions">
+            <div className="grid gap-3">
+              {[...new Set(c.lines.map((l) => l.edition.year))].sort((x, y) => x - y).map((y) => (
+                <FundedActions key={y} lines={c.lines.filter((l) => l.edition.year === y).map((l) => l.id)} year={y} title={String(y)} showProject exportHref={`/financements/export?dossier=${c.id}&annee=${y}`} testId={`funded-actions-${y}`} />
+              ))}
+            </div>
           </Section>}
 
           {won && budgetOn && <ConventionBudget me={me} editions={[...new Map(c.lines.map((l) => [l.edition.id, { id: l.edition.id, year: l.edition.year, projectId: l.edition.projectId }])).values()]} />}
