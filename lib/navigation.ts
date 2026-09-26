@@ -141,7 +141,8 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
       label: cap(V.direction),
       items: [
         { label: `Écran ${V.codir.one}`, href: "/codir", path: "/codir" },
-        { label: "Séminaire", href: "/seminaire", path: "/seminaire" },
+        // Ex-« Séminaire » (spec vocabulaire-gouvernance § 3) : l'année qu'on prépare, la suivante ; l'adresse ne change pas.
+        { label: `Préparer ${new Date().getFullYear() + 1}`, href: "/seminaire", path: "/seminaire" },
         { label: "Écran café", href: "/cafe", path: "/cafe" },
       ],
     });

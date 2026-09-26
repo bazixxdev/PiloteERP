@@ -37,7 +37,7 @@ import { inMyScope, isTransversal } from "@/lib/scope";
 import { Eye } from "lucide-react";
 import { FocusMode } from "@/components/common/focus-mode";
 import { V, cap, du, ppe } from "@/lib/vocab";
-import { attachable, openForWork } from "@/lib/actions";
+import { attachable, openForWork, renewPlan, yearsLabel, type Period } from "@/lib/actions";
 
 export default async function EditionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string; relecture?: string; focus?: string; validation?: string; fil?: string; ligne?: string; champ?: string }> }) {
   const { id } = await params;
@@ -128,7 +128,7 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
             // Niveau 1 : le pilote, sauf s'il demande lui-même (jamais sa propre demande) ; alors son responsable de pôle.
             recipients={(() => { const lead = owners.guarantor?.name ?? people.find((p) => p.role === "pole_lead" && p.poleId === e.project.poleId)?.name ?? null; const dir = people.find((p) => p.role === "director")?.name ?? null; return { 1: isPilot ? (lead ?? dir) : owners.pilot.name, 2: lead ?? dir, 3: dir }; })()}
           />
-          <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, actions: e.actions.length, fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me)} feedback={relecture === "1"} />
+          <EditionMenu edition={{ id: e.id, year: e.year, projectName: e.project.name, ...renewLists(e.actions, e.year), fundingLines: e.fundingLines.length, team: e.team.length, conditionalStart: e.conditionalStart }} nextYearExists={nextYearExists} canStatus={canStatus} canRemark={isCodir(me)} feedback={relecture === "1"} />
         </div>
       </div>
       <AlertBar editionId={e.id} alerts={alerts} acks={acks} />
@@ -156,4 +156,10 @@ export default async function EditionPage({ params, searchParams }: { params: Pr
       {tab === "documents" && <DocumentsTab {...ctx} />}
     </div>
   );
+}
+
+// Le dialogue de reconduction : les actions qui finissent dans l'année (à recopier, cochées) et celles qui continuent.
+function renewLists(actions: (Period & { id: string; name: string; state: string })[], year: number) {
+  const { renew, continuing } = renewPlan(actions, year);
+  return { renewable: renew.map((a) => ({ id: a.id, name: a.name, years: yearsLabel(a) })), continuing: continuing.map((a) => a.name) };
 }

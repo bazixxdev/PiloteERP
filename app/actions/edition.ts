@@ -1,16 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { findOrCreateOrganisation } from "@/lib/organisations";
 import { prisma } from "@/lib/db";
-import { getCurrentPerson, getSettings } from "@/lib/session";
+import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { canConsignDecision, canDecideValidation, canEditFunding, canWriteLayer, isCodir, requiredLevelFor, validationLevelOf } from "@/lib/rights";
-import { dayjs } from "@/lib/format";
 import { budgetOf } from "@/lib/budget";
 import { inMyPole } from "@/lib/scope";
 import { attachLedgerSpent } from "@/lib/ledger-db";
 import { allocationCheck, conventionCovers, detachedLineIsEmpty, reusableLine } from "@/lib/conventions";
-import { defaultPeriod, shiftYear } from "@/lib/actions";
+import { actionsOfYear, renewedLineIds, renewSelection, shiftDate, shiftYear } from "@/lib/actions";
+import { isPrepareChoice, prepareDecisionBody, prepareInstance, type PrepareChoice } from "@/lib/preparer";
+import { reportInternalError } from "@/lib/errors";
 import { actionRunsInEdition } from "@/lib/actions-db";
 import { linkNewLineToRunningActions } from "@/lib/actions-funding-db";
 import { V, cap, le, un, du, de, au, ce, seul } from "@/lib/vocab";
@@ -183,66 +185,91 @@ export async function decideValidation(id: string, decision: "approved" | "refus
   return { ok: true };
 }
 
-// Reconduction N → N+1 (EF-A2) : couches 1 à 3, actions, financements, équipe ; couche 4, budget, temps et bilan vidés.
-export async function renewEdition(editionId: string): Promise<Result<{ id: string }>> {
+// Reconduction N → N+1 (EF-A2) : couches 1 à 3, financements, équipe ; couche 4, budget, temps et bilan vidés. Les actions
+// qui continuent l'année suivante y sont déjà (leur période la couvre) : seules celles qui finissent dans l'année source
+// (toRenew), cochées dans le dialogue, sont recopiées (spec actions § 2). Qui : le pilote ou un membre du CODIR.
+export async function renewEdition(editionId: string, opts?: { actionIds?: string[] }): Promise<Result<{ id: string }>> {
   const c = await ctx(editionId);
   if (!isCodir(c.me) && !c.isPilot) return { ok: false, error: `Seuls ${le(V.pilote)}, le responsable ${de(V.pole)}, ${le(V.raf)} et ${le(V.direction)} reconduisent ${un(V.edition)}.` };
-  const src = await prisma.edition.findUnique({ where: { id: editionId }, include: { actions: true, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
+  const src = await renewSource(editionId);
   if (!src) return { ok: false, error: `${cap(V.edition)} introuvable` };
-  // Les jalons suivent leur action, décalés d'un an et à refaire (en attendant la reconduction sans doublons, tâche 12).
-  const milestonesOf = new Map<string, { date: Date; label: string; venue: string | null; participants: string | null; isPublic: boolean; isCheckpoint: boolean; order: number }[]>();
-  for (const { actionId, ...m } of await prisma.milestone.findMany({ where: { actionId: { in: src.actions.map((a) => a.id) } }, select: { actionId: true, date: true, label: true, venue: true, participants: true, isPublic: true, isCheckpoint: true, order: true }, orderBy: [{ date: "asc" }, { order: "asc" }] })) {
-    milestonesOf.set(actionId, [...(milestonesOf.get(actionId) ?? []), { ...m, date: dayjs(m.date).add(1, "year").toDate() }]);
-  }
   const year = src.year + 1;
   const exists = await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } } });
   if (exists) return { ok: false, error: `${cap(le(V.edition))} ${year} existe déjà.` };
-
-  // Frontière de transaction : l'année, son historique de création et les liens des lignes gardées sur un dossier aux actions
-  // qui courent l'année suivante (linkNewLineToRunningActions) — la tâche 12 réécrit la reconduction sans doublons d'actions.
-  const created = await prisma.$transaction(async (tx) => {
-    const ed = await tx.edition.create({
-      include: { fundingLines: { select: { id: true, conventionId: true, editionId: true } } },
-      data: {
-        projectId: src.projectId,
-        year,
-        status: "proposed",
-        stakes: src.stakes, axis: src.axis, sressMeasure: src.sressMeasure, yearPriorities: src.yearPriorities, expectedOutcome: src.expectedOutcome,
-        plannedFunders: src.plannedFunders, directExpenseEnvelope: src.directExpenseEnvelope, fte: src.fte, imposedIndicators: src.imposedIndicators,
-        operationalObjectives: src.operationalObjectives, calendar: src.calendar, partners: src.partners, method: src.method, governance: src.governance,
-        ownIndicators: src.ownIndicators, timeNeed: src.timeNeed, budgetNeed: src.budgetNeed,
-        team: { create: src.team.map((t) => ({ personId: t.personId })) },
-        personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays, plannedDays: p.plannedDays })) },
-        indicators: { create: src.indicators.map((i) => ({ label: i.label, target: i.target, imposed: i.imposed, order: i.order })) },
-        docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
-        actions: {
-          // Projet et période décalés d'un an : sans eux, la copie n'apparaîtrait dans aucune année.
-          create: src.actions.map((a) => ({
-            name: a.name, ownerId: a.ownerId, timeTarget: a.timeTarget, order: a.order, state: "todo",
-            milestones: { create: milestonesOf.get(a.id) ?? [] },
-            projectId: src.projectId,
-            ...(a.startDate && a.endDate ? shiftYear({ startDate: a.startDate, endDate: a.endDate }) : defaultPeriod(year)),
-          })),
-        },
-        fundingLines: {
-          // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
-          create: src.fundingLines.map((f) => {
-            const keeps = f.convention && conventionCovers(f.convention, year);
-            return {
-              funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
-              conventionId: keeps ? f.conventionId : null,
-              status: keeps && ["notified", "contracted", "justified"].includes(f.convention!.status) ? "contracted" : "to_submit",
-            };
-          }),
-        },
-      },
-    });
-    await tx.changeLog.create({ data: { editionId: ed.id, field: "création", before: null, after: `Reconduite depuis ${src.year}`, authorId: c.me.id } });
-    for (const line of ed.fundingLines) await linkNewLineToRunningActions(tx, line);
-    return ed;
-  }, { timeout: 20_000 });
+  // Liste venue du client : des chaînes seulement ; renewSelection ne garde de toute façon que des actions à reconduire.
+  const actionIds = Array.isArray(opts?.actionIds) ? opts.actionIds.filter((x): x is string => typeof x === "string") : null;
+  const created = await prisma.$transaction((tx) => renewInTx(tx, c.me.id, src, { year, status: "proposed", actionIds }), { timeout: 20_000 });
   revalidatePath("/", "layout");
   return { ok: true, data: { id: created.id } };
+}
+
+function renewSource(editionId: string) {
+  return prisma.edition.findUnique({ where: { id: editionId }, include: { project: { select: { name: true } }, fundingLines: { include: { convention: true } }, team: true, personDays: true, indicators: true, docLinks: true } });
+}
+
+// Écriture de la reconduction, dans la transaction de l'appelant (renewEdition, ou une ligne de « Préparer ») — garde faite
+// avant. Frontière : l'année, son historique de création, les copies des actions retenues (jalons décalés, associés, liens
+// vers les lignes recréées du même financeur), les indicateurs (repointés sur les copies) et les liens des lignes gardées
+// sur un dossier aux actions qui courent l'année suivante (linkNewLineToRunningActions) — tout ou rien.
+async function renewInTx(tx: Prisma.TransactionClient, authorId: string, src: NonNullable<Awaited<ReturnType<typeof renewSource>>>, opts: { year: number; status: string; actionIds?: string[] | null }) {
+  const { year } = opts;
+  const ed = await tx.edition.create({
+    include: { fundingLines: { select: { id: true, conventionId: true, editionId: true, funderId: true } } },
+    data: {
+      projectId: src.projectId,
+      year,
+      status: opts.status,
+      stakes: src.stakes, axis: src.axis, sressMeasure: src.sressMeasure, yearPriorities: src.yearPriorities, expectedOutcome: src.expectedOutcome,
+      plannedFunders: src.plannedFunders, directExpenseEnvelope: src.directExpenseEnvelope, fte: src.fte, imposedIndicators: src.imposedIndicators,
+      operationalObjectives: src.operationalObjectives, calendar: src.calendar, partners: src.partners, method: src.method, governance: src.governance,
+      ownIndicators: src.ownIndicators, timeNeed: src.timeNeed, budgetNeed: src.budgetNeed,
+      team: { create: src.team.map((t) => ({ personId: t.personId })) },
+      personDays: { create: src.personDays.map((p) => ({ personId: p.personId, soldDays: p.soldDays, plannedDays: p.plannedDays })) },
+      docLinks: { create: src.docLinks.map((d) => ({ label: d.label, url: d.url, codirOnly: d.codirOnly })) },
+      fundingLines: {
+        // Une convention qui couvre l'année suivante reste rattachée (montants à affecter) ; un financement annuel repart « à déposer ».
+        create: src.fundingLines.map((f) => {
+          const keeps = f.convention && conventionCovers(f.convention, year);
+          return {
+            funderId: f.funderId, scheme: f.scheme, analyticCode: f.analyticCode, allocationKeyRef: f.allocationKeyRef, multiYear: f.multiYear, notes: f.notes,
+            conventionId: keeps ? f.conventionId : null,
+            status: keeps && ["notified", "contracted", "justified"].includes(f.convention!.status) ? "contracted" : "to_submit",
+          };
+        }),
+      },
+    },
+  });
+  await tx.changeLog.create({ data: { editionId: ed.id, field: "création", before: null, after: `Reconduite depuis ${src.year}`, authorId } });
+
+  // Les actions de l'année source (période qui chevauche l'année, comme attachYearActions), lues dans la transaction.
+  const all = await tx.action.findMany({
+    where: { projectId: src.projectId },
+    include: { milestones: { orderBy: [{ date: "asc" }, { order: "asc" }] }, people: true, fundings: { include: { fundingLine: { select: { funderId: true, conventionId: true } } } } },
+    orderBy: [{ startDate: "asc" }, { order: "asc" }],
+  });
+  const copies = new Map<string, string>();
+  for (const a of renewSelection(actionsOfYear(all, src), src.year, opts.actionIds)) {
+    // Copie : période et jalons un an plus tard (shiftDate, pour que les jalons restent dans la période), état « à faire »,
+    // jalons non faits ; ni tâches, ni heures, ni réalisations.
+    const copy = await tx.action.create({
+      data: {
+        editionId: ed.id, projectId: src.projectId, ...shiftYear(a), state: "todo", order: a.order,
+        name: a.name, ownerId: a.ownerId, description: a.description, audience: a.audience, recurrence: a.recurrence,
+        entrusted: a.entrusted, latitude: a.latitude, timeTarget: a.timeTarget,
+        milestones: { create: a.milestones.map((m) => ({ date: shiftDate(m.date), label: m.label, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, order: m.order })) },
+        people: { create: a.people.map((p) => ({ personId: p.personId })) },
+      },
+    });
+    copies.set(a.id, copy.id);
+    const lineIds = renewedLineIds(a.fundings.map((f) => f.fundingLine), ed.fundingLines);
+    if (lineIds.length > 0) await tx.actionFunding.createMany({ data: lineIds.map((fundingLineId) => ({ actionId: copy.id, fundingLineId })) });
+  }
+  // Indicateurs : cibles recopiées ; celui d'une action recopiée suit sa copie, les autres ne sont rattachés à aucune action.
+  if (src.indicators.length > 0) {
+    await tx.indicator.createMany({ data: src.indicators.map((i) => ({ editionId: ed.id, label: i.label, target: i.target, imposed: i.imposed, order: i.order, actionId: (i.actionId && copies.get(i.actionId)) || null })) });
+  }
+  for (const line of ed.fundingLines) await linkNewLineToRunningActions(tx, line);
+  return ed;
 }
 
 export async function markDeliverableDone(id: string, done: boolean): Promise<Result> {
@@ -255,26 +282,48 @@ export async function markDeliverableDone(id: string, done: boolean): Promise<Re
   return { ok: true };
 }
 
-// Séminaire (EF-A5, EF-H4) : création en série des éditions N+1 selon la décision prise sur chaque projet.
-export async function batchCreateEditions(year: number, decisions: { editionId: string; decision: "renew" | "adjust" | "stop" }[]): Promise<Result<{ created: number; stopped: number; skipped: string[] }>> {
+// « Préparer {année} » (ex-séminaire, EF-A5, EF-H4 ; spec vocabulaire-gouvernance § 3) : pour chaque projet, la décision
+// (reconduire, ajuster, arrêter) est consignée comme une Decision datée sur l'année source — plus dans codirDecision —, puis
+// l'année suivante est créée par la même reconduction que renewEdition. « Arrêté » ne range le projet (archivé) que si la
+// case de confirmation est cochée (`archive`). Qui : le CODIR seulement.
+export async function batchCreateEditions(year: number, decisions: { editionId: string; decision: PrepareChoice; archive?: boolean }[], chosenInstance?: string | null): Promise<Result<{ created: number; stopped: number; skipped: string[] }>> {
   const me = await getCurrentPerson();
   if (!isCodir(me)) return { ok: false, error: `La création en série est réservée ${au(V.codir)}.` };
+  if (!Number.isInteger(year) || !Array.isArray(decisions)) return { ok: false, error: "Demande invalide." };
+  const instance = prepareInstance(Object.keys((await getRefs()).decision_instance ?? {}), typeof chosenInstance === "string" ? chosenInstance : null);
+  if (!instance) return { ok: false, error: "Aucune instance de décision : ajoutez-en une dans Admin › Référentiels." };
   let created = 0, stopped = 0;
   const skipped: string[] = [];
   for (const d of decisions) {
-    const src = await prisma.edition.findUnique({ where: { id: d.editionId }, include: { project: true } });
+    if (!d || typeof d.editionId !== "string" || !isPrepareChoice(d.decision)) continue;
+    const src = await renewSource(d.editionId);
     if (!src) continue;
-    await prisma.edition.update({ where: { id: src.id }, data: { codirDecision: d.decision, codirDate: new Date() } });
-    if (d.decision === "stop") { stopped++; continue; }
-    const res = await renewEdition(src.id);
-    if (!res.ok) { skipped.push(`${src.project.name} : ${res.error}`); continue; }
-    await prisma.edition.update({ where: { id: res.data!.id }, data: { year, status: d.decision === "adjust" ? "rechallenged" : "proposed" } });
-    created++;
+    if (d.decision !== "stop" && (await prisma.edition.findUnique({ where: { projectId_year: { projectId: src.projectId, year } }, select: { id: true } }))) {
+      skipped.push(`${src.project.name} : ${le(V.edition)} ${year} existe déjà.`);
+      continue;
+    }
+    const body = prepareDecisionBody(d.decision, year);
+    try {
+      // Frontière de transaction, par projet : la décision consignée (et son historique), puis la reconduction ou le rangement.
+      await prisma.$transaction(async (tx) => {
+        await tx.decision.create({ data: { editionId: src.id, instance, body, authorId: me.id } });
+        await tx.changeLog.create({ data: { editionId: src.id, field: "décision", before: null, after: `${instance} : ${body}`, authorId: me.id } });
+        if (d.decision === "stop") {
+          if (d.archive === true) await tx.project.update({ where: { id: src.projectId }, data: { archived: true } });
+          return;
+        }
+        await renewInTx(tx, me.id, src, { year, status: d.decision === "adjust" ? "rechallenged" : "proposed" });
+      }, { timeout: 20_000 });
+    } catch (e) {
+      skipped.push(`${src.project.name} : ${reportInternalError("batchCreateEditions", e).error}`);
+      continue;
+    }
+    if (d.decision === "stop") stopped++;
+    else created++;
   }
   revalidatePath("/", "layout");
   return { ok: true, data: { created, stopped, skipped } };
 }
-
 
 // Dépense sans devis lié (RAF) : référence obligatoire, pour ne pas confondre avec un montant global importé. Action
 // facultative (26/09) : du projet, et qui court l'année — même règle que saveField (expense.actionId).

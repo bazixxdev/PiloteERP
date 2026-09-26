@@ -35,7 +35,9 @@ export function Breadcrumb({ tree, editions }: { tree: NavSection[]; editions: {
   } else if (/^\/projets\/proposer/.test(pathname)) {
     parts.push(`${cap(pl(V.projet))} et ${pl(V.edition)}`, `Proposer ${un(V.projet)}`);
   } else {
-    if (leaf && leaf.label !== section?.label) parts.push(leaf.label);
+    // « Préparer {année} » : l'année demandée dans l'adresse (?annee=), sinon celle du menu.
+    if (pathname.startsWith("/seminaire") && /^\d{4}$/.test(sp.get("annee") ?? "")) parts.push(`Préparer ${sp.get("annee")}`);
+    else if (leaf && leaf.label !== section?.label) parts.push(leaf.label);
     else if (!leaf && outside) parts.push(outside);
     if (/^\/materiel\/pret\/./.test(pathname)) parts.push("Fiche de prêt");
     else if (/^\/projets\/[^/]+$/.test(pathname) && !pathname.startsWith("/projets/proposer")) parts.push("Fiche projet");

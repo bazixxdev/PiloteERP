@@ -76,10 +76,43 @@ export function toRenew<A extends Period & { state: string }>(actions: A[], year
   return actions.filter((a) => a.state !== "abandoned" && runsIn(a, year) && yearOf(a.endDate) === year);
 }
 
+// Une date un an plus tard : même règle pour la période et pour les jalons d'une action reconduite, pour que chaque jalon
+// décalé reste dans la période décalée.
+export function shiftDate(d: Date): Date {
+  const s = new Date(d);
+  s.setFullYear(s.getFullYear() + 1);
+  return s;
+}
+
 export function shiftYear(p: Period): Period {
-  const s = new Date(p.startDate), e = new Date(p.endDate);
-  s.setFullYear(s.getFullYear() + 1); e.setFullYear(e.getFullYear() + 1);
-  return { startDate: s, endDate: e };
+  return { startDate: shiftDate(p.startDate), endDate: shiftDate(p.endDate) };
+}
+
+// Ce que montre le dialogue de reconduction de l'année `year` : les actions à recopier (toRenew) et celles qui continuent
+// l'année suivante, déjà là (hors abandonnées : on ne les annonce pas comme « déjà là »).
+export function renewPlan<A extends Period & { state: string }>(actions: A[], year: number): { renew: A[]; continuing: A[] } {
+  return { renew: toRenew(actions, year), continuing: actions.filter((a) => a.state !== "abandoned" && runsIn(a, year + 1)) };
+}
+
+// Ce que la reconduction recopie : parmi les actions à reconduire (toRenew), celles cochées (`chosen`, défaut : toutes). Un
+// identifiant hors de toRenew (action qui continue, abandonnée, d'un autre projet) est ignoré : jamais de doublon.
+export function renewSelection<A extends Period & { id: string; state: string }>(actions: A[], year: number, chosen?: string[] | null): A[] {
+  const eligible = toRenew(actions, year);
+  return chosen ? eligible.filter((a) => chosen.includes(a.id)) : eligible;
+}
+
+// Les liens de financement d'une copie reconduite : chaque ligne d'origine (un financeur, un dossier éventuel) donne la ligne
+// recréée du même financeur dans la nouvelle année — celle du même dossier s'il y en a plusieurs ; aucune si le financeur n'y
+// est plus. Sans doublon (deux lignes d'origine du même financeur donnent une seule cible).
+type LineRef = { funderId: string; conventionId: string | null };
+export function renewedLineIds(sources: LineRef[], lines: (LineRef & { id: string })[]): string[] {
+  const out = new Set<string>();
+  for (const src of sources) {
+    const same = lines.filter((l) => l.funderId === src.funderId);
+    const target = (src.conventionId ? same.find((l) => l.conventionId === src.conventionId) : undefined) ?? same[0];
+    if (target) out.add(target.id);
+  }
+  return [...out];
 }
 
 // Lier une action à une ligne d'un dossier : les lignes du même dossier, du même projet, sur les années que l'action couvre.

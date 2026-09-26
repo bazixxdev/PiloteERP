@@ -11,16 +11,18 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BatchForm } from "./batch-form";
+import { prepareChoiceOf } from "@/lib/preparer";
 import { V, cap, le, de, aucun, pl, tous } from "@/lib/vocab";
 
-// Séminaire : création en série des éditions N+1 puis contrôle de charge (EF-A5, EF-B3b, EF-H4).
+// « Préparer {année} » (ex-séminaire, même adresse) : décision par projet consignée comme une Decision datée sur l'année
+// source, création en série des années N+1, puis contrôle de charge (EF-A5, EF-B3b, EF-H4).
 export default async function SeminairePage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
   const sp = await searchParams;
   const target = Number(sp.annee) || dayjs().year() + 1;
   const [me, refs] = await Promise.all([getCurrentPerson(), getRefs()]);
   const codir = isCodir(me);
   const projects = await prisma.project.findMany({
-    include: { pole: true, pilot: true, editions: { orderBy: { year: "desc" } } },
+    include: { pole: true, pilot: true, editions: { orderBy: { year: "desc" }, include: { decisions: { select: { body: true }, orderBy: { decidedAt: "desc" } } } } },
     orderBy: [{ pole: { name: "asc" } }, { name: "asc" }],
   });
   const rows = projects.map((p) => {
@@ -40,17 +42,19 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={`Séminaire · préparer ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur ${V.edition.one} ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
+      <PageHeader title={`Préparer ${target}`} subtitle={`${rows.filter((r) => r.next).length} sur ${rows.length} projets ont déjà leur ${V.edition.one} ${target}. Décidez pour chaque projet, créez en lot, puis vérifiez la charge par personne.`} />
 
-      <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, ${pl(V.action)}, financements, équipe). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien.`} className="mb-4">
+      <Section title="1 · Décisions par projet" description={`Reconduire copie ${le(V.edition)} précédente (couches 1 à 3, financements, équipe, et les ${pl(V.action)} qui y finissent ; les autres courent déjà sur ${le(V.edition)} suivante). Ajuster fait pareil et marque ${le(V.edition)} « re-challengée ». Arrêter ne crée rien, et ne range ${le(V.projet)} que si vous le confirmez. Chaque décision est consignée, datée, sur ${le(V.edition)} précédente.`} className="mb-4">
         <BatchForm
           year={target}
           canRun={codir}
+          instances={Object.values(refs.decision_instance ?? {}).map((i) => ({ value: i.code, label: i.label }))}
           rows={rows.map((r) => ({
             projectId: r.project.id, name: r.project.name, pole: r.project.pole.name, pilot: r.project.pilot.name,
             sourceId: r.source?.id ?? null, sourceYear: r.source?.year ?? null, sourceStatus: r.source ? refLabel(refs, "edition_status", r.source.status) : null,
             nextId: r.next?.id ?? null, nextStatus: r.next ? refLabel(refs, "edition_status", r.next.status) : null, nextColor: r.next ? refColor(refs, "edition_status", r.next.status) : null,
-            decision: r.source?.codirDecision ?? null,
+            // La décision consignée pour l'année visée ; à défaut, l'ancienne décision écrite dans la fiche (avant le 26/09).
+            decision: r.source ? prepareChoiceOf(r.source.decisions.map((d) => d.body), target) ?? r.source.codirDecision ?? null : null,
           }))}
         />
       </Section>

@@ -102,16 +102,18 @@ test("aucun artefact de suite de tests suivi par git", () => {
 // les dates par leurs jalons (Milestone), plus par la relation d'origine `edition.actions` ni par l'ancien jalon unique, ni
 // par les champs de l'action passés au jalon (lieu, participants, public, point de contrôle) — lus sur une variable d'action
 // (`a.`, `action.`) ; `m.isCheckpoint` d'un jalon est permis. Exception : lib/actions-db.ts (le chargeur).
-// prisma/ et les seeds ne sont pas parcourus. `actions: true` n'est pas interdit : renewEdition recopie encore toutes les
-// actions de l'année source jusqu'à la tâche 12, et la garde de détachement d'une ligne lit l'ancien lien fundingLineId
-// (`fundingLine.actions`) jusqu'au contract.
+// prisma/ et les seeds ne sont pas parcourus. `actions: true` est interdit sur une requête d'année (`edition.find…({ … })`,
+// `edition: { include: { … } }`) depuis la reconduction sans doublons (tâche 12) ; il reste permis ailleurs : la garde de
+// détachement d'une ligne lit l'ancien lien fundingLineId (`fundingLine.actions`) jusqu'au contract.
 const sourceFiles = (dirs: string[]) => dirs.flatMap((d) => walk(path.join(ROOT, d))).filter((p) => /\.(ts|tsx)$/.test(p)).map((p) => path.relative(ROOT, p));
 const ACTIONS_EXCEPTIONS = new Set(["lib/actions-db.ts"]);
 
 test("les actions d'une année se lisent par attachYearActions, jamais par l'ancienne relation ni l'ancien jalon", () => {
   const offenders = sourceFiles(["app", "lib", "components"]).filter((f) => !ACTIONS_EXCEPTIONS.has(f)).filter((f) => {
     const s = readFileSync(path.join(ROOT, f), "utf8");
-    return /\bmilestoneDate\b|\b(a|action)\.(isCheckpoint|isPublic|venue|participants)\b|\bactions:\s*\{\s*(include|where|orderBy|select)/.test(s);
+    return /\bmilestoneDate\b|\b(a|action)\.(isCheckpoint|isPublic|venue|participants)\b|\bactions:\s*\{\s*(include|where|orderBy|select)/.test(s)
+      || /\bedition\.(find\w*|create|update|upsert)\(\{[^;]*\bactions:\s*true/.test(s)
+      || /\bedition:\s*\{\s*include:\s*\{[^}]*\bactions:\s*true/.test(s);
   });
   assert.deepEqual(offenders, []);
 });

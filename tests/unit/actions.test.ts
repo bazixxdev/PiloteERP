@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
+import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, shiftDate, renewPlan, renewSelection, renewedLineIds, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
 import { computeReminders, nextMilestone } from "../../lib/alerts";
 import { deadlineKey } from "../../lib/deadline-notifications";
 import { dayjs } from "../../lib/format";
@@ -33,6 +33,54 @@ test("reconduction : on propose les actions qui finissent dans l'année, pas cel
 test("reconduction : une action terminée dont la période court déjà sur l'année suivante n'est pas proposée (déjà là)", () => {
   const a = [{ id: "termine-mais-continue", ...P("2026-01-01", "2027-06-30"), state: "done" }];
   assert.deepEqual(toRenew(a, 2026).map((x) => x.id), []);
+});
+
+test("reconduction : le dialogue propose les actions qui finissent, annonce celles qui continuent (hors abandonnées)", () => {
+  const a = [
+    { id: "finit", ...P("2026-01-01", "2026-06-30"), state: "doing" },
+    { id: "continue", ...P("2026-01-01", "2027-06-30"), state: "doing" },
+    { id: "continue-abandonnee", ...P("2026-01-01", "2027-06-30"), state: "abandoned" },
+    { id: "abandonnee", ...P("2026-01-01", "2026-06-30"), state: "abandoned" },
+  ];
+  const plan = renewPlan(a, 2026);
+  assert.deepEqual(plan.renew.map((x) => x.id), ["finit"]);
+  assert.deepEqual(plan.continuing.map((x) => x.id), ["continue"]);
+});
+
+test("reconduction : seules les actions cochées parmi celles à reconduire sont recopiées, jamais une action qui continue", () => {
+  const a = [
+    { id: "a", ...P("2026-01-01", "2026-03-31"), state: "done" },
+    { id: "b", ...P("2026-04-01", "2026-12-31"), state: "todo" },
+    { id: "continue", ...P("2026-01-01", "2027-06-30"), state: "doing" },
+  ];
+  assert.deepEqual(renewSelection(a, 2026).map((x) => x.id), ["a", "b"]);
+  assert.deepEqual(renewSelection(a, 2026, null).map((x) => x.id), ["a", "b"]);
+  assert.deepEqual(renewSelection(a, 2026, ["b", "continue", "inconnue"]).map((x) => x.id), ["b"]);
+  assert.deepEqual(renewSelection(a, 2026, []).map((x) => x.id), []);
+});
+
+test("reconduction : période et jalons décalés par la même règle, le jalon reste dans la période", () => {
+  const p = P("2026-01-01", "2026-12-31");
+  const m = new Date("2026-12-31");
+  const shifted = shiftYear(p);
+  assert.deepEqual(shiftDate(m), new Date("2027-12-31"));
+  assert.ok(shiftDate(m) >= shifted.startDate && shiftDate(m) <= shifted.endDate);
+  assert.deepEqual(shiftDate(new Date("2026-05-12")), new Date("2027-05-12"));
+});
+
+test("reconduction : chaque lien suit la ligne recréée du même financeur, celle du même dossier s'il y en a plusieurs", () => {
+  const lines = [
+    { id: "n-region-annuel", funderId: "region", conventionId: null },
+    { id: "n-region-dossier", funderId: "region", conventionId: "dossier-r" },
+    { id: "n-etat", funderId: "etat", conventionId: null },
+  ];
+  // Dossier : la ligne du même dossier ; annuel : la première du financeur ; deux liens vers le même financeur : une cible.
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "dossier-r" }], lines), ["n-region-dossier"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: null }], lines), ["n-region-annuel"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "region", conventionId: "autre-dossier" }], lines), ["n-region-annuel"]);
+  assert.deepEqual(renewedLineIds([{ funderId: "etat", conventionId: null }, { funderId: "etat", conventionId: "vieux" }], lines), ["n-etat"]);
+  // Financeur absent de la nouvelle année : pas de lien.
+  assert.deepEqual(renewedLineIds([{ funderId: "europe", conventionId: null }], lines), []);
 });
 
 test("un lien vers un dossier pluriannuel s'étend aux années couvertes du même projet", () => {

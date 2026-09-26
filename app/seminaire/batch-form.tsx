@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
 import { batchCreateEditions } from "@/app/actions/edition";
 import { cn } from "@/lib/utils";
-import { V, cap, au, pl } from "@/lib/vocab";
+import type { PrepareChoice } from "@/lib/preparer";
+import { V, cap, au, pl, le } from "@/lib/vocab";
 
 type Row = { projectId: string; name: string; pole: string; pilot: string; sourceId: string | null; sourceYear: number | null; sourceStatus: string | null; nextId: string | null; nextStatus: string | null; nextColor: string | null; decision: string | null };
-type Decision = "renew" | "adjust" | "stop";
+type Decision = PrepareChoice;
 
 const OPTS: { value: Decision; label: string; cls: string }[] = [
   { value: "renew", label: "Reconduire", cls: "data-[on=true]:bg-mint data-[on=true]:text-white" },
@@ -20,8 +21,12 @@ const OPTS: { value: Decision; label: string; cls: string }[] = [
   { value: "stop", label: "Arrêter", cls: "data-[on=true]:bg-danger data-[on=true]:text-white" },
 ];
 
-export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; canRun: boolean }) {
+// Une décision par projet, consignée (instance choisie, première de la liste par défaut) ; « Arrêter » ne range le projet
+// qu'avec la case de confirmation de sa ligne.
+export function BatchForm({ year, rows, canRun, instances }: { year: number; rows: Row[]; canRun: boolean; instances: { value: string; label: string }[] }) {
   const [dec, setDec] = useState<Record<string, Decision>>(() => Object.fromEntries(rows.map((r) => [r.projectId, "renew" as Decision])));
+  const [archive, setArchive] = useState<Record<string, boolean>>({});
+  const [instance, setInstance] = useState(instances[0]?.value ?? "");
   const [pending, start] = useTransition();
   const router = useRouter();
   const todo = rows.filter((r) => !r.nextId && r.sourceId);
@@ -48,10 +53,18 @@ export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; c
                   ) : r.decision === "stop" ? (
                     <span className="text-xs text-danger">arrêté</span>
                   ) : r.sourceId && canRun ? (
-                    <div className="inline-flex overflow-hidden rounded-full border" role="radiogroup">
-                      {OPTS.map((o) => (
-                        <button key={o.value} type="button" role="radio" aria-checked={dec[r.projectId] === o.value} data-on={dec[r.projectId] === o.value} className={cn("px-2.5 py-0.5 text-xs transition-colors hover:bg-muted", o.cls)} onClick={() => setDec({ ...dec, [r.projectId]: o.value })}>{o.label}</button>
-                      ))}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex overflow-hidden rounded-full border" role="radiogroup">
+                        {OPTS.map((o) => (
+                          <button key={o.value} type="button" role="radio" aria-checked={dec[r.projectId] === o.value} data-on={dec[r.projectId] === o.value} className={cn("px-2.5 py-0.5 text-xs transition-colors hover:bg-muted", o.cls)} onClick={() => setDec({ ...dec, [r.projectId]: o.value })}>{o.label}</button>
+                        ))}
+                      </div>
+                      {dec[r.projectId] === "stop" && (
+                        <label className="flex items-center gap-1.5 text-xs text-danger">
+                          <input type="checkbox" checked={Boolean(archive[r.projectId])} onChange={(ev) => setArchive({ ...archive, [r.projectId]: ev.target.checked })} className="size-3.5 accent-primary" data-testid={`seminar-archive-${r.projectId}`} />
+                          {`ranger ${le(V.projet)}`}
+                        </label>
+                      )}
                     </div>
                   ) : <span className="text-xs text-muted-foreground">—</span>}
                 </td>
@@ -66,12 +79,20 @@ export function BatchForm({ year, rows, canRun }: { year: number; rows: Row[]; c
       {todo.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-muted/50 p-3">
           <span className="text-sm">{counts.renew} à reconduire · {counts.adjust} à ajuster · {counts.stop} à arrêter</span>
+          {instances.length > 0 && (
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              Décisions consignées par
+              <select value={instance} onChange={(ev) => setInstance(ev.target.value)} disabled={!canRun || pending} className="h-7 rounded-md border bg-background px-1.5 text-xs text-foreground" data-testid="seminar-instance" aria-label="Instance de décision">
+                {instances.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+              </select>
+            </label>
+          )}
           <Button
             data-testid="batch-create"
             disabled={!canRun || pending}
             onClick={() =>
               start(async () => {
-                const res = await batchCreateEditions(year, todo.map((r) => ({ editionId: r.sourceId!, decision: dec[r.projectId] })));
+                const res = await batchCreateEditions(year, todo.map((r) => ({ editionId: r.sourceId!, decision: dec[r.projectId], archive: dec[r.projectId] === "stop" && Boolean(archive[r.projectId]) })), instance || null);
                 if (!res.ok) { toast.error(res.error); return; }
                 toast.success(`${res.data!.created} ${V.edition.one}(s) ${year} créée(s), ${res.data!.stopped} projet(s) arrêté(s)${res.data!.skipped.length ? ` · ${res.data!.skipped.length} ignorée(s)` : ""}`);
                 router.refresh();

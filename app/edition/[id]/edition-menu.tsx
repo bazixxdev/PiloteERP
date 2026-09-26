@@ -13,7 +13,7 @@ import { RenewDialog } from "./renew-dialog";
 import { V, cap, le } from "@/lib/vocab";
 
 type Props = {
-  edition: { id: string; year: number; projectName: string; actions: number; fundingLines: number; team: number; conditionalStart: boolean };
+  edition: { id: string; year: number; projectName: string; renewable: { id: string; name: string; years: string }[]; continuing: string[]; fundingLines: number; team: number; conditionalStart: boolean };
   nextYearExists: boolean;
   canStatus: boolean;
   canRemark: boolean;
