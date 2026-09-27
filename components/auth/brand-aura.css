@@ -15,7 +15,10 @@
   --aura-speed: 1; /* 2 = deux fois plus lent */
   --primary: var(--brand-ink);
   --primary-foreground: #ffffff;
-  --ring: var(--brand-accent);
+  /* --ring en --brand-ink, pas --brand-accent : l'ink a un contraste garanti (≥ 7:1 sur blanc par le calcul de la
+     palette) ; l'accent est borné en clarté (0,60–0,78) sans garantie de contraste et tombe à 2,05:1 chez TLST — anneau
+     de focus à peine visible au clavier (revue finale du 27/09, écart assumé à la maquette). */
+  --ring: var(--brand-ink);
 }
 
 /* ============================================================

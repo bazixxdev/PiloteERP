@@ -5,7 +5,7 @@
 ## 1. Ce que Gaël a demandé
 
 1. Refaire la **structure** de la page de connexion comme la maquette : deux colonnes, **panneau lumineux animé à gauche**, logo + formulaire à droite ; bandeau en haut sur mobile. **Pas de nouveau style** pour les champs, la typographie, les boutons : on garde les composants et la police du projet (`Input`, `Label`, `Button`, polices de `config/clients`).
-2. Le panneau prend **automatiquement les couleurs du logo** (principe ci-dessous) ; seuls les éléments que la maquette colore à la couleur foncée du logo la prennent : le texte du panneau, le bouton « Se connecter », les liens de la page et l'anneau de focus (couleur d'accent).
+2. Le panneau prend **automatiquement les couleurs du logo** (principe ci-dessous) ; seuls les éléments que la maquette colore à la couleur foncée du logo la prennent : le texte du panneau, le bouton « Se connecter », les liens de la page et l'anneau de focus : **`--brand-ink` (contraste garanti), écart à la maquette décidé le 27/09** — la couleur d'accent de la maquette n'a aucune garantie de contraste (revue finale du 27/09 : 2,05:1 chez TLST, anneau à peine visible au clavier).
 3. **Nouvelle accroche** du panneau, adaptée à l'outil : pastille = nom long de l'organisation ; titre = « Piloter vos {projets} d'économie sociale et solidaire, de l'idée au bilan. » ({projets} = `pl(V.projet)`).
 4. Le **logo est téléversé par un compte admin** dans Admin › Paramètres. **Deux images** : un **grand logo** (page de connexion et barre latérale dépliée) et un **petit logo** (barre latérale repliée, bandeau mobile, **favicon**). Sans image téléversée, l'outil garde les images du fichier client (`config/clients/<client>.ts`, `public/clients/<client>/`).
 
