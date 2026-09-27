@@ -114,9 +114,10 @@ test("« suit son temps » décochée : sort du plan de charge et de la clôture
   await page.goto("/plan-de-charge?horizon=6");
   await expect(page.getByTestId("load-grid")).not.toContainText("Lucas Perrin");
 
-  // Clôture : Lucas a disparu (contributeur, il y figurait comme retardataire).
+  // Clôture : Lucas a disparu (contributeur, il y figurait comme retardataire) — deux tableaux, anomalies et en ordre.
   await page.goto("/cloture?mois=2026-08");
-  await expect(page.getByTestId("cloture-table")).not.toContainText("Lucas Perrin");
+  await expect(page.getByTestId("cloture-issues")).not.toContainText("Lucas Perrin");
+  await expect(page.getByTestId("cloture-ok")).not.toContainText("Lucas Perrin");
 
   // Reste choisissable comme membre d'équipe (donc comme responsable d'action).
   await openEditionByName(page, "PTCE et ESSOR");
