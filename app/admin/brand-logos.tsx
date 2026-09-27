@@ -36,6 +36,7 @@ export function BrandLogos({ logo, logoSmall }: { logo: Big; logoSmall: Small })
               <span className="brand-aura__blob brand-aura__blob--3" aria-hidden="true" />
               <span className="brand-aura__blob brand-aura__blob--4" aria-hidden="true" />
             </div>
+            <p className="text-xs text-muted-foreground">Aperçu du panneau de connexion</p>
             <p className="text-xs text-muted-foreground">Un logo prévu pour fond sombre (texte blanc) disparaît sur le fond blanc de la page de connexion : préférez la version pour fond clair.</p>
           </div>
         )}

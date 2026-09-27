@@ -51,6 +51,12 @@ test.describe("la page de connexion", () => {
     await page.goto("/connexion");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+    // Fix round 1 : le bandeau a sa propre hauteur (clamp), la grille ne doit pas étirer la colonne du dessous sur le
+    // reste de l'écran (sinon le logo se retrouve centré loin sous le bandeau, avec un grand vide entre les deux).
+    const band = await page.getByTestId("brand-aura").boundingBox();
+    const logo = await page.getByTestId("auth-page").locator("img.auth-logo").boundingBox();
+    expect(band && logo).toBeTruthy();
+    expect(logo!.y - (band!.y + band!.height)).toBeLessThan(120);
   });
 
   test("réduire les animations fige le panneau", async ({ page }) => {
