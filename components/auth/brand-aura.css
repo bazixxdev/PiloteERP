@@ -1,0 +1,150 @@
+/* Panneau lumineux de la page de connexion (spec connexion du 27/09), annexe B de la notice reprise telle quelle, avec
+   trois changements : (1) la palette par défaut et --aura-speed sont posés sur .auth-page, pas sur :root — on ne touche
+   pas aux variables du reste de l'outil ; (2) .auth-page pose aussi --primary/--primary-foreground/--ring depuis les
+   couleurs du logo, pour que Button, les liens text-primary et l'anneau de focus des champs en héritent sans changer leur
+   style ; (3) la grille de la page (deux colonnes, une sur mobile) est ajoutée en bas de fichier. */
+
+.auth-page {
+  --brand-base: #f1f4f6;
+  --brand-glow-1: #b3bfcc;
+  --brand-glow-2: #bcbccc;
+  --brand-glow-3: #d6d7df;
+  --brand-glow-4: #d6e0e2;
+  --brand-ink: #212a33;
+  --brand-accent: #77818c;
+  --aura-speed: 1; /* 2 = deux fois plus lent */
+  --primary: var(--brand-ink);
+  --primary-foreground: #ffffff;
+  --ring: var(--brand-accent);
+}
+
+/* ============================================================
+   Panneau lumineux (gauche)
+   ============================================================ */
+.brand-aura {
+  box-sizing: border-box;
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  height: calc(100dvh - 24px);
+  margin: 12px 0 12px 12px;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--brand-base);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(28px, 4vw, 56px);
+}
+
+.brand-aura__blob {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  z-index: -2;
+  pointer-events: none;
+  will-change: transform;
+  background: radial-gradient(closest-side, var(--c), color-mix(in srgb, var(--c) 62%, transparent) 45%, transparent);
+  animation: var(--path) calc(var(--dur) * var(--aura-speed)) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+.brand-aura__blob--1 { --c: var(--brand-glow-1); width: 115%; left: -8%;  top: 38%;  --path: aura-1; --dur: 19s; --delay: 0s; }
+.brand-aura__blob--2 { --c: var(--brand-glow-2); width: 90%;  left: -38%; top: 2%;   --path: aura-2; --dur: 25s; --delay: -6s; }
+.brand-aura__blob--3 { --c: var(--brand-glow-3); width: 90%;  right: -40%; top: -22%; --path: aura-3; --dur: 29s; --delay: -12s; }
+.brand-aura__blob--4 { --c: var(--brand-glow-4); width: 85%;  right: -42%; bottom: -30%; --path: aura-4; --dur: 22s; --delay: -3s; }
+
+@keyframes aura-1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(12%, -10%) scale(1.1); }
+  100% { transform: translate(-10%, 5%) scale(.95); }
+}
+@keyframes aura-2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(20%, 16%) scale(1.08); }
+  100% { transform: translate(8%, -8%) scale(.94); }
+}
+@keyframes aura-3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-18%, 14%) scale(1.12); }
+  100% { transform: translate(-6%, 24%) scale(1); }
+}
+@keyframes aura-4 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-16%, -12%) scale(.92); }
+  100% { transform: translate(-24%, 4%) scale(1.06); }
+}
+
+/* voile clair en haut + grain léger */
+.brand-aura::before,
+.brand-aura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.brand-aura::before {
+  background: linear-gradient(to bottom, rgba(255,255,255,.45), rgba(255,255,255,0) 45%);
+}
+.brand-aura::after {
+  opacity: .32;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-aura__blob { animation: none; }
+}
+
+.pitch { color: var(--brand-ink); max-width: 34rem; }
+.pitch__eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  margin-bottom: 20px;
+}
+.pitch__title {
+  margin: 0;
+  font-size: clamp(28px, 3.2vw, 44px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.02em;
+}
+
+/* Mobile : le panneau devient un bandeau en haut de page */
+@media (max-width: 900px) {
+  .brand-aura {
+    position: relative;
+    top: 0;
+    height: clamp(180px, 30vh, 260px);
+    margin: 10px 10px 0;
+    border-radius: 18px;
+    padding: 24px;
+  }
+  .pitch__eyebrow { margin-bottom: 12px; }
+  .pitch__title { font-size: clamp(22px, 5.6vw, 28px); }
+}
+
+/* ============================================================
+   Grille de la page (deux colonnes ; une sur mobile)
+   ============================================================ */
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(440px, 1fr);
+  min-height: 100dvh;
+  background: var(--background);
+}
+.auth-side { display: flex; flex-direction: column; min-height: 100dvh; padding: 24px clamp(24px, 5vw, 64px); }
+.auth-side__main { flex: 1; display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 380px; margin: 0 auto; }
+.auth-side__foot { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted-foreground); max-width: 380px; width: 100%; margin: 0 auto; }
+.auth-logo { height: 104px; width: auto; max-width: 260px; object-fit: contain; object-position: left; margin-bottom: 28px; }
+@media (max-width: 900px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-side { min-height: auto; }
+  .auth-logo { height: 84px; }
+}

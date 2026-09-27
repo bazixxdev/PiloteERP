@@ -11,7 +11,7 @@ export default async function ConnexionPage({ searchParams }: { searchParams: Pr
   if (await getCurrentPersonOrNull()) redirect("/portefeuille");
   const next = safeInternalRedirect(suite, BASE_PATH);
   return (
-    <AuthShell title="Connexion" subtitle="Votre adresse professionnelle et votre mot de passe.">
+    <AuthShell title="Se connecter" subtitle="Content de vous revoir. Connectez-vous pour accéder à votre espace.">
       <LoginForm next={next} />
     </AuthShell>
   );

@@ -7,13 +7,14 @@ import { brandStyle, type BrandPalette } from "@/lib/brand-palette";
 import { deleteBrandLogo, uploadBrandLogo } from "@/app/actions/brand";
 import { Button } from "@/components/ui/button";
 import type { BrandKind } from "@/lib/brand-images";
+import "@/components/auth/brand-aura.css";
 
 type Big = { url: string; palette: BrandPalette } | null;
 type Small = { url: string } | null;
 
 // Téléversement des logos (Admin › Paramètres, spec connexion § 3) : la page ne rend ce composant que si canAdmin(me)
-// (app/admin/page.tsx). L'aperçu du panneau reste minimal ici (fond + pastilles de couleurs) ; la classe brand-aura arrive
-// à la tâche 5, qui reprendra cet aperçu.
+// (app/admin/page.tsx). L'aperçu du panneau réutilise le vrai panneau de connexion (composants/auth/brand-aura.css, tâche
+// 5) : mêmes taches animées, réduites à ~240×120, aux couleurs du grand logo.
 export function BrandLogos({ logo, logoSmall }: { logo: Big; logoSmall: Small }) {
   return (
     <div className="grid gap-6">
@@ -26,11 +27,14 @@ export function BrandLogos({ logo, logoSmall }: { logo: Big; logoSmall: Small })
               ))}
             </div>
             <div
-              className="flex h-[120px] w-[240px] items-center justify-center rounded-xl border text-sm font-medium"
-              style={{ background: "var(--brand-base)", color: "var(--brand-ink)", ...brandStyle(logo.palette) } as CSSProperties}
+              className="brand-aura"
+              style={{ position: "relative", top: "auto", height: 120, width: 240, margin: 0, ...brandStyle(logo.palette) } as CSSProperties}
               data-testid="brand-preview"
             >
-              Aperçu du panneau
+              <span className="brand-aura__blob brand-aura__blob--1" aria-hidden="true" />
+              <span className="brand-aura__blob brand-aura__blob--2" aria-hidden="true" />
+              <span className="brand-aura__blob brand-aura__blob--3" aria-hidden="true" />
+              <span className="brand-aura__blob brand-aura__blob--4" aria-hidden="true" />
             </div>
             <p className="text-xs text-muted-foreground">Un logo prévu pour fond sombre (texte blanc) disparaît sur le fond blanc de la page de connexion : préférez la version pour fond clair.</p>
           </div>
