@@ -13,7 +13,7 @@
     "test:security": "SECURITY_DATABASE_URL=\"${SECURITY_DATABASE_URL:-postgresql://pilote:pilote@localhost:5432/pilote_security_local}\" playwright test --config=playwright.security.config.ts",
     "postinstall": "prisma generate",
     "screenshots": "tsx scripts/screenshots.ts",
-    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "test:unit": "TZ=Europe/Paris tsx --test tests/unit/*.test.ts",
     "check:vocab": "node scripts/check-vocab.mjs",
     "seed:tlst": "NEXT_PUBLIC_CLIENT=tlst prisma db seed",
     "check": "npm run check:vocab && npm run test:unit && npm run lint && tsc --noEmit",
