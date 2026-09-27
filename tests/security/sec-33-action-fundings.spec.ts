@@ -143,3 +143,46 @@ test.describe.serial("SEC-33 — lignes ajoutées ensuite au dossier", () => {
     expect(await link(ids.b, line3)).toBeNull();
   });
 });
+
+// I1 (revue finale) : rattacher une ligne à un dossier par saveField (sélecteur « convention » de components/funding/line-panel.tsx)
+// est un second chemin vers la même mutation qu'addFundingLineFromConvention ; il doit obéir au même invariant (spec actions § 2)
+// et lier la ligne rattachée aux actions du projet déjà financées par ce dossier qui courent l'année de cette ligne.
+test.describe.serial("SEC-33 — rattacher par saveField propage aussi aux actions (I1)", () => {
+  const Y = 2026;
+  const ids = { project: "", e1: "", e2: "", conv: "", line1: "", line2: "", a: "" };
+  const link = (actionId: string, fundingLineId: string) => prisma.actionFunding.findUnique({ where: { actionId_fundingLineId: { actionId, fundingLineId } } });
+
+  test.beforeAll(async () => {
+    const base = await prisma.project.findFirstOrThrow({ orderBy: { id: "asc" }, select: { poleId: true, pilotId: true, missionId: true } });
+    const funder = await prisma.fundingLine.findFirstOrThrow({ orderBy: { id: "asc" }, select: { funderId: true } });
+    const p = await prisma.project.create({ data: { ...base, name: "SEC33 projet rattachement saveField", analyticCode: "SEC33-SAVEFIELD" } });
+    const e1 = await prisma.edition.create({ data: { projectId: p.id, year: Y, status: "in_progress" } });
+    const e2 = await prisma.edition.create({ data: { projectId: p.id, year: Y + 1, status: "proposed" } });
+    const conv = await prisma.convention.create({ data: { funderId: funder.funderId, reference: "SEC33-SAVEFIELD-2026-2027", startYear: Y, endYear: Y + 1, status: "contracted", amountNotified: 20_000 } });
+    const line1 = await prisma.fundingLine.create({ data: { editionId: e1.id, funderId: funder.funderId, conventionId: conv.id, status: "contracted", amountGranted: 8_000 } });
+    // La ligne 2027, pas encore rattachée au dossier — celle que le sélecteur « convention » du line-panel rattache par saveField.
+    const line2 = await prisma.fundingLine.create({ data: { editionId: e2.id, funderId: funder.funderId, status: "notified" } });
+    const a = await prisma.action.create({ data: { editionId: e1.id, projectId: p.id, name: "SEC33 action sur deux années (saveField)", ownerId: base.pilotId, startDate: new Date(Date.UTC(Y, 0, 1)), endDate: new Date(Date.UTC(Y + 1, 11, 31)) } });
+    await prisma.actionFunding.create({ data: { actionId: a.id, fundingLineId: line1.id, amount: 4_000 } });
+    Object.assign(ids, { project: p.id, e1: e1.id, e2: e2.id, conv: conv.id, line1: line1.id, line2: line2.id, a: a.id });
+  });
+
+  test.afterAll(async () => {
+    await prisma.action.deleteMany({ where: { projectId: ids.project } });
+    await prisma.changeLog.deleteMany({ where: { edition: { projectId: ids.project } } });
+    await prisma.edition.deleteMany({ where: { projectId: ids.project } });
+    await prisma.convention.deleteMany({ where: { id: ids.conv } });
+    await prisma.project.deleteMany({ where: { id: ids.project } });
+  });
+
+  test("rattacher la ligne 2027 au dossier par saveField lie aussi l'action déjà financée par ce dossier qui court en 2027", async ({ baseURL }) => {
+    expect(await link(ids.a, ids.line2)).toBeNull();
+    const body = await call(String(baseURL), "saveField", ["fundingLine", ids.line2, "conventionId", ids.conv], SECURITY_ACTORS.director, "app/actions/fields.ts");
+    expect(body).toContain('"ok":true');
+    const l2 = await link(ids.a, ids.line2);
+    expect(l2).not.toBeNull();
+    expect(l2!.amount).toBeNull();
+    // La ligne d'origine garde son montant : le rattachement n'écrase rien.
+    expect((await prisma.fundingLine.findUniqueOrThrow({ where: { id: ids.line1 } })).amountGranted).toBe(8_000);
+  });
+});

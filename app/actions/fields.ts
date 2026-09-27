@@ -9,6 +9,7 @@ import { projectPoleIds } from "@/lib/scope";
 import { actionCtx } from "@/lib/actions-rights-db";
 import { activePerson } from "@/lib/actions-write-db";
 import { attachRefusal } from "@/lib/actions";
+import { linkNewLineToRunningActions } from "@/lib/actions-funding-db";
 import { allocationCheck } from "@/lib/conventions";
 import { callFieldInvariant } from "@/lib/calls";
 import { isLocked } from "@/lib/lock";
@@ -117,7 +118,13 @@ export async function saveField(model: Model, id: string, field: string, raw: un
         const check = allocationCheck(conv, id, granted);
         if (!check.ok) return check;
       }
-      await prisma.fundingLine.update({ where: { id }, data: { [field]: value } });
+      // Rattacher la ligne à un dossier (conventionId) la lie aussi aux actions du projet déjà financées par ce dossier et
+      // qui courent cette année-là (même règle qu'addFundingLineFromConvention, spec actions § 2) : même transaction, jamais
+      // une ligne rattachée à la main sans ses actions.
+      await prisma.$transaction(async (tx) => {
+        await tx.fundingLine.update({ where: { id }, data: { [field]: value } });
+        if (field === "conventionId" && value) await linkNewLineToRunningActions(tx, { id, conventionId: String(value), editionId: line.editionId });
+      });
     } else if (model === "deliverable" && field === "done") {
       await prisma.deliverable.update({ where: { id }, data: { done: value as boolean, doneAt: value ? new Date() : null } });
     } else if (model === "person" && field === "active" && value === false) {
