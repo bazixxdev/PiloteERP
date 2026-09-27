@@ -79,14 +79,15 @@ export async function postServerAction(baseURL: string, actionId: string, args: 
 
 // Identifiant d'une Server Action dans le build servi (manifeste des références serveur) : le serveur de sécurité est construit
 // par `npm run build`, qui écrit dans .next-build. Toutes les commandes d'un fichier « use server » y figurent dès qu'un
-// composant client en importe une.
-export function serverActionId(filename: string, exportedName: string): string {
+// composant client en importe une. `distDir` (26/09, tâche 20) : la recette normale (tests/actions.spec.ts) construit dans
+// .next-test plutôt que .next-build — même lecture de manifeste, un seul endroit qui la fait, un dossier différent.
+export function serverActionId(filename: string, exportedName: string, distDir = ".next-build"): string {
   // `npm run build` impose NEXT_DIST_DIR=.next-build, quel que soit celui que passe la configuration de sécurité.
-  const file = path.join(process.cwd(), ".next-build", "server", "server-reference-manifest.json");
-  if (!existsSync(file)) throw new Error("Manifeste des Server Actions introuvable : le build de sécurité n'a pas tourné.");
+  const file = path.join(process.cwd(), distDir, "server", "server-reference-manifest.json");
+  if (!existsSync(file)) throw new Error(`Manifeste des Server Actions introuvable dans ${distDir} : le build correspondant n'a pas tourné.`);
   const manifest = JSON.parse(readFileSync(file, "utf8")) as { node: Record<string, { filename?: string; exportedName?: string }> };
   const id = Object.entries(manifest.node).find(([, v]) => v.filename === filename && v.exportedName === exportedName)?.[0];
-  if (!id) throw new Error(`Server Action ${filename}#${exportedName} absente du build.`);
+  if (!id) throw new Error(`Server Action ${filename}#${exportedName} absente du build (${distDir}).`);
   return id;
 }
 

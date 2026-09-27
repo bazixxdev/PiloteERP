@@ -1,8 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { iAm, pick } from "./helpers";
+import { serverActionId } from "./security/fixtures";
 import { dayjs } from "../lib/format";
 import { W, cap, pl } from "./vocab";
 
@@ -12,18 +11,6 @@ import { W, cap, pl } from "./vocab";
 // vérificateur de vocabulaire lit aussi les fichiers de recette) ; rien du jeu de démo ne bouge.
 const prisma = new PrismaClient(); // DATABASE_URL = base de recette (playwright.config.ts)
 test.afterAll(async () => { await prisma.$disconnect(); });
-
-// Identifiant d'une Server Action dans le manifeste du serveur de recette (next build, NEXT_DIST_DIR=.next-test) : sert à
-// appeler une commande en direct, comme le ferait un client falsifié — même principe que tests/security/fixtures.ts, mais
-// sur le serveur de la recette normale plutôt que celui de la sécurité (dossier de build différent).
-function serverActionId(file: string, name: string): string {
-  const manifestPath = path.join(process.cwd(), ".next-test", "server", "server-reference-manifest.json");
-  if (!existsSync(manifestPath)) throw new Error("Manifeste des Server Actions introuvable : lancez la recette avec next build (pas PW_DEV).");
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { node: Record<string, { filename?: string; exportedName?: string }> };
-  const id = Object.entries(manifest.node).find(([, v]) => v.filename === file && v.exportedName === name)?.[0];
-  if (!id) throw new Error(`Server Action ${file}#${name} absente du manifeste.`);
-  return id;
-}
 
 test("une période sur trois années : chaque année couverte la montre, avec SES heures, pas le total", async ({ page }) => {
   const y = dayjs().year();
@@ -274,7 +261,7 @@ test("l'équipe d'une année couverte modifie l'action ; un tiers est refusé pa
   const before = await prisma.milestone.count({ where: { actionId } });
   const origin = String(baseURL);
   const res = await page.request.post(origin, {
-    headers: { "Next-Action": serverActionId("app/actions/actions.ts", "addMilestone"), "Content-Type": "text/plain;charset=UTF-8", Origin: origin },
+    headers: { "Next-Action": serverActionId("app/actions/actions.ts", "addMilestone", ".next-test"), "Content-Type": "text/plain;charset=UTF-8", Origin: origin },
     data: JSON.stringify([actionId, { date: `${y}-06-06`, label: "Intrusion refusée" }]),
   });
   expect(res.status()).toBe(200);
