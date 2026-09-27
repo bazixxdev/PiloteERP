@@ -115,7 +115,7 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
   ]) await prisma.cashRule.create({ data: { startMonth: ym, ...r, createdById: treso.id } });
 
   const eq = (name: string, category: string, quantity: number, location: string) => prisma.equipment.create({ data: { name, category, quantity, location } });
-  const [, , , barnum] = await Promise.all([eq("Broyeur de végétaux", "Jardin", 1, "Cabane du jardin"), eq("Motoculteur", "Jardin", 1, "Cabane du jardin"), eq("Sono portable", "Événementiel", 1, "Bureau"), eq("Barnum 3 × 3", "Événementiel", 2, "Grange"), eq("Vaisselle 50 couverts", "Cuisine", 1, "Cantine")]);
+  const [, , , barnum] = await Promise.all([eq("Broyeur de végétaux", "Jardin", 1, "Cabane du jardin"), eq("Motoculteur", "Jardin", 1, "Cabane du jardin"), eq("Sono portable", "Événementiel", 1, "Local technique"), eq("Barnum 3 × 3", "Événementiel", 2, "Grange"), eq("Vaisselle 50 couverts", "Cuisine", 1, "Cantine")]);
   await prisma.loan.create({ data: { equipmentId: barnum.id, quantity: 1, contactId: contacts[0].id, editionId: editions[0].id, outAt: d(-5), dueAt: d(3), createdById: emma.id } });
   console.log(`Démo TLST : ${projets.length} projets, ${orgs.length + contacts.length} adhérents.`);
 }

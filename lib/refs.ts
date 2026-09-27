@@ -79,7 +79,7 @@ export const REF_DEFAULTS: Record<RefFamily, RefDef[]> = {
     { code: "codir", label: V.codir.one },
     { code: "pole", label: `Réunion ${de(V.pole)}` },
     { code: "quarterly", label: "Revue trimestrielle" },
-    { code: "board", label: "Bureau / CA" },
+    { code: "board", label: V.board.one }, // « Bureau / CA » à la CRESS, « CA » chez TLST (V.board, config/clients/*)
   ],
   college: [
     { code: "associations", label: "Associations" },

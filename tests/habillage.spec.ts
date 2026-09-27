@@ -4,8 +4,9 @@ import { WTlst, cap, le, pl, tout } from "./vocab";
 
 // Lot I : l'instance TLST s'habille à ses couleurs et parle sa langue — aucun mot CRESS dans ce qui s'affiche.
 // Tourne dans le projet Playwright « tlst » (serveur NEXT_PUBLIC_CLIENT=tlst, base pilote_test_tlst, seed TLST).
-const PAGES = ["/portefeuille", "/projets", "/matrice", "/demandes", "/admin", "/organisations", "/contacts", "/tresorerie", "/adherents", "/materiel", "/notes", "/echeances", "/codir", "/ma-semaine", "/mes-actions", "/temps", "/annuel", "/validations", "/cloture", "/seminaire", "/appels", "/conventions", "/financeurs", "/compte"];
-const FORBIDDEN = [/CRESS/, /(?<!\p{L})[Éé]ditions?(?!\p{L})/u, /(?<!\p{L})[Pp]ôles?(?!\p{L})/u, /(?<!\p{L})CODIR(?!\p{L})/u, /(?<!\p{L})RAF(?!\p{L})/u];
+const PAGES = ["/portefeuille", "/projets", "/matrice", "/demandes", "/admin", "/organisations", "/contacts", "/tresorerie", "/adherents", "/materiel", "/notes", "/echeances", "/codir", "/ma-semaine", "/mes-actions", "/temps", "/annuel", "/validations", "/cloture", "/seminaire", "/appels", "/conventions", "/financeurs", "/compte", "/aide"];
+// « bureau » (T19, spec vocabulaire l.16) : le mot disparaît chez TLST, qui dit « CA » — la CRESS garde un vrai bureau.
+const FORBIDDEN = [/CRESS/, /(?<!\p{L})[Éé]ditions?(?!\p{L})/u, /(?<!\p{L})[Pp]ôles?(?!\p{L})/u, /(?<!\p{L})CODIR(?!\p{L})/u, /(?<!\p{L})RAF(?!\p{L})/u, /(?<!\p{L})[Bb]ureaux?(?!\p{L})/u];
 
 test("titre, logo, favicon, thème, police", async ({ page }) => {
   await page.goto("/portefeuille");

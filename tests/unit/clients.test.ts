@@ -4,9 +4,9 @@ import { cress } from "../../config/clients/cress";
 import { tlst } from "../../config/clients/tlst";
 import { CLIENT_KEYS, clientFor } from "../../config/clients/index";
 
-const VOCAB_KEYS = ["projet", "edition", "action", "pole", "codir", "raf", "direction", "pilote", "sponsor"] as const;
+const VOCAB_KEYS = ["projet", "edition", "action", "pole", "codir", "raf", "direction", "pilote", "sponsor", "board"] as const;
 
-test("chaque client a un nom, ses quatre images et ses neuf mots", () => {
+test("chaque client a un nom, ses quatre images et ses dix mots", () => {
   for (const c of [cress, tlst]) {
     assert.ok(c.shortName && c.longName, c.key);
     for (const k of ["color", "white", "mark"] as const) assert.match(c.logos[k].src, /^\/clients\/[a-z]+\/[a-z-]+\.png$/, `${c.key} ${k}`);

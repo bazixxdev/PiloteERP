@@ -34,7 +34,7 @@ export default async function AidePage() {
                   <div className="flex flex-wrap items-baseline gap-2"><b className="text-xs font-bold uppercase tracking-wide text-primary">{`${V.edition.one} 2026`}</b><span className="text-xs text-muted-foreground">en cours · on ouvre en cliquant sur l&apos;année</span></div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Box title="Fiche" text="objectifs, public, calendrier, bilan" />
-                    <Box title={cap(pl(V.action))} text={`datées, un responsable chacune → tâches`} />
+                    <Box title={cap(pl(V.action))} text={`période, jalons → tâches`} />
                     <Box title="Budget" text="enveloppe, devis, factures, reste" money />
                     <Box title="Financements" text="lignes : qui paie, combien, versements, livrables" money />
                     <Box title="Équipe et temps" text="jours prévus, heures saisies" />

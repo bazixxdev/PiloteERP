@@ -46,5 +46,6 @@ export const tlst: Client = {
     direction: { one: "coordination", many: "coordinations", gender: "f" },
     pilote: { one: "responsable", many: "responsables", gender: "m" },
     sponsor: { one: "référent CA", many: "référents CA", gender: "m" },
+    board: { one: "CA", many: "CA", gender: "m" }, // pas de « bureau » chez TLST (spec vocabulaire l.16)
   },
 };

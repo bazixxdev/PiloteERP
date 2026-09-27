@@ -12,6 +12,8 @@ export type Vocab = {
   direction: Word; // la personne qui tranche
   pilote: Word; // la personne responsable d'un projet
   sponsor: Word; // la personne de la gouvernance qui soutient le projet en instance
+  board: Word; // le libellé par défaut de l'instance qui valide en dernier niveau (decision_instance "board") — la CRESS a
+  // un vrai bureau, TLST dit seulement « CA » (spec vocabulaire l.16 : « bureau » disparaît chez TLST)
 };
 
 export type Img = { src: string; width: number; height: number };
