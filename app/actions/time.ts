@@ -148,11 +148,21 @@ export async function saveWeekSplit(weekStart: string, parts: { projectId: strin
   const refusal = await assertCanWriteTime(me, me.id);
   if (refusal) return refusal;
   const start = dayjs(weekStart).startOf("isoWeek");
-  // I3 (revue finale) : avant tout calcul de rythme ou écriture, chaque part rattachée à une action passe la même garde que
-  // les autres rattachements (attachRefusal) — sur la semaine entière, pas jour par jour (une semaine ne se répartit qu'en entier).
+  // I3 (revue finale, correctif re-revue) : avant tout calcul de rythme ou écriture, chaque part rattachée à une action passe
+  // la même garde que les autres rattachements (attachRefusal) — sur la semaine entière, pas jour par jour (une semaine ne se
+  // répartit qu'en entier). Une part à 0 % ne fait que supprimer des heures (jamais en écrire) : elle n'a rien à faire valider.
+  // Une part déjà saisie cette semaine sur cette clé (projet, action, code) se garde comme saveTime (`current`) : le dialogue
+  // envoie systématiquement toutes les lignes de la grille, y compris une action qui a des heures cette semaine mais ne
+  // qualifie plus (abandonnée, période raccourcie) — la remettre à 0 % (ou la resaisir telle quelle) ne doit pas être bloqué.
+  const weekEntries = await prisma.timeEntry.findMany({
+    where: { personId: me.id, date: { gte: start.toDate(), lt: start.add(1, "week").toDate() } },
+    select: { projectId: true, actionId: true, timeCodeId: true },
+  });
+  const alreadyRecorded = (p: { projectId: string | null; actionId: string | null; timeCodeId: string | null }) =>
+    weekEntries.some((e) => e.projectId === p.projectId && e.actionId === p.actionId && e.timeCodeId === p.timeCodeId);
   for (const p of parts) {
-    if (!p.actionId) continue;
-    const refusal = await actionAttachmentRefusal(p.actionId, p.projectId, start.toDate());
+    if (!p.actionId || (Number(p.percent) || 0) <= 0) continue;
+    const refusal = await actionAttachmentRefusal(p.actionId, p.projectId, start.toDate(), alreadyRecorded(p) ? p.actionId : null);
     if (refusal) return refusal;
   }
   const { loadRhythms, rhythmAt, expectedHoursOn, weekDays } = await import("@/lib/time");

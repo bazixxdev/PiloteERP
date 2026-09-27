@@ -87,3 +87,60 @@ test.describe("SEC-39 — la saisie du temps n'accepte pas n'importe quel action
     expect(await prisma.timeEntry.count({ where: { personId, actionId: action.id, projectId: otherProjectId } })).toBe(before);
   });
 });
+
+// Correctif re-revue (I3) : saveWeekSplit appelait la garde pour CHAQUE part reçue, y compris une part à 0 % (le dialogue
+// envoie systématiquement toutes les lignes de la grille, cf. app/temps/split.tsx) et sans tolérer une action déjà saisie
+// cette semaine mais qui ne qualifie plus (abandonnée, période raccourcie) — contrairement à saveTime (`current`). Une action
+// abandonnée avec des heures déjà posées cette semaine devenait donc impossible à mettre à 0 % : toute la répartition était
+// refusée. Scénario dédié (projet et action créés ici, jamais le seed) pour ne pas dépendre d'une action « abandonnée » du
+// jeu de démo.
+test.describe.serial("SEC-39 — saveWeekSplit tolère une part à 0 % déjà saisie sur une action qui ne qualifie plus", () => {
+  const ids = { project: "", action: "" };
+  let personId: string;
+  let thisMonday: ReturnType<typeof dayjs>;
+
+  test.beforeAll(async () => {
+    const p = await prisma.person.findUniqueOrThrow({ where: { email: actor.email }, select: { id: true } });
+    personId = p.id;
+    const base = await prisma.project.findFirstOrThrow({ orderBy: { id: "asc" }, select: { poleId: true, pilotId: true, missionId: true } });
+    const proj = await prisma.project.create({ data: { ...base, name: "SEC39 projet action abandonnée", analyticCode: "SEC39-ABANDON" } });
+    const year = dayjs().year();
+    const ed = await prisma.edition.create({ data: { projectId: proj.id, year, status: "in_progress" } });
+    const abandoned = await prisma.action.create({ data: {
+      editionId: ed.id, projectId: proj.id, name: "SEC39 action abandonnée", ownerId: base.pilotId, state: "abandoned",
+      startDate: new Date(Date.UTC(year, 0, 1)), endDate: new Date(Date.UTC(year, 11, 31)),
+    } });
+    Object.assign(ids, { project: proj.id, action: abandoned.id });
+    thisMonday = dayjs().startOf("isoWeek");
+    // Des heures déjà posées cette semaine, sur l'action qui vient d'être abandonnée entre-temps.
+    await prisma.timeEntry.create({ data: { personId, date: thisMonday.toDate(), projectId: proj.id, actionId: abandoned.id, hours: 3 } });
+  });
+
+  test.afterAll(async () => {
+    await prisma.timeEntry.deleteMany({ where: { personId, date: { gte: thisMonday.toDate(), lt: thisMonday.add(1, "week").toDate() } } });
+    await prisma.action.deleteMany({ where: { projectId: ids.project } });
+    await prisma.edition.deleteMany({ where: { projectId: ids.project } });
+    await prisma.project.deleteMany({ where: { id: ids.project } });
+    await prisma.$disconnect();
+  });
+
+  test("une part à 0 % sur l'action abandonnée qui a déjà des heures cette semaine s'enregistre (les heures sont supprimées, pas refusées)", async ({ baseURL }) => {
+    const before = await prisma.timeEntry.count({ where: { personId, actionId: ids.action } });
+    expect(before).toBe(1);
+    const body = await call(String(baseURL), "saveWeekSplit", [thisMonday.format("YYYY-MM-DD"), [
+      { projectId: ids.project, actionId: ids.action, timeCodeId: null, percent: 0 },
+      { projectId: null, actionId: null, timeCodeId: null, percent: 100 },
+    ]]);
+    expect(body).toContain('"ok":true');
+    expect(await prisma.timeEntry.count({ where: { personId, actionId: ids.action } })).toBe(0);
+  });
+
+  test("une part non nulle sur cette même action, une fois sans heures déjà posées cette semaine, reste refusée : rien n'est écrit", async ({ baseURL }) => {
+    const before = await prisma.timeEntry.findMany({ where: { personId, date: { gte: thisMonday.toDate(), lt: thisMonday.add(1, "week").toDate() } }, select: { id: true } });
+    const body = await call(String(baseURL), "saveWeekSplit", [thisMonday.format("YYYY-MM-DD"), [{ projectId: ids.project, actionId: ids.action, timeCodeId: null, percent: 100 }]]);
+    expect(body).toContain('"ok":false');
+    expect(body).toContain("abandonn");
+    const after = await prisma.timeEntry.findMany({ where: { personId, date: { gte: thisMonday.toDate(), lt: thisMonday.add(1, "week").toDate() } }, select: { id: true } });
+    expect(after.map((e) => e.id).sort()).toEqual(before.map((e) => e.id).sort());
+  });
+});
