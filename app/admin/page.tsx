@@ -203,7 +203,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
       {current === "referentiels" && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans l'Annuaire (Organisations, genre Financeur).">
+          <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans Réseau (Organisations, genre Financeur).">
             <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>{`. Les projets et leurs ${pl(V.edition)} sont aussi dans `}<Link href="/projets" className="text-primary hover:underline">{`Projets et ${pl(V.edition)}`}</Link>.</p>
           </Section>
           <Section title="Fournisseurs" description={<>Organisations de genre « fournisseur » (lot E2) : alimentées depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher), tenues dans l'<Link href="/organisations" className="text-primary hover:underline">annuaire des organisations</Link>.</>} actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">

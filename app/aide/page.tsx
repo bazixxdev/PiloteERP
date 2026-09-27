@@ -51,6 +51,13 @@ export default async function AidePage() {
             <p className="mt-2 text-[11px] text-muted-foreground">{`Encadré vert : ce qui appartient au ${V.projet.one}. En dessous : ce qui vit à part et s'y relie.`}</p>
           </section>
 
+          <section className="rounded-2xl border bg-card p-5" aria-labelledby="aide-menu" data-testid="aide-menu">
+            <h2 id="aide-menu" className="text-[15px] font-bold">Comment le menu est rangé</h2>
+            <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">
+              Six sections au plus : <b>Mon travail</b> rassemble le quotidien ; les suivantes sont rangées par objet — <b>Projets</b>, <b>Financements</b>, <b>Réseau</b>, <b>Ressources</b>, <b>Admin</b>. Une entrée de menu, c&apos;est un endroit où l&apos;on va ; une vue d&apos;une même liste (par exemple « Tous les {pl(V.projet)} » et « Portefeuille ») est un onglet dans la page, pas une entrée à part ; un document produit est un bouton ; un moment de l&apos;année (Préparer l&apos;année suivante) est une entrée affichée seulement en saison.
+            </p>
+          </section>
+
           {chapters.map((c) => (
             <section key={c.id} id={c.id} className="scroll-mt-20 rounded-2xl border bg-card p-5" data-testid={`aide-${c.id}`}>
               <h2 className="text-[15px] font-bold">{c.title}</h2>

@@ -46,7 +46,7 @@ export default async function FinanceurPage({ params }: { params: Promise<{ id: 
     <div className="p-4 md:p-6" data-testid={`funder-page-${f.name}`}>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/organisations?genre=funder" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Annuaire · financeurs</Link>
+          <Link href="/organisations?genre=funder" className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ArrowLeft className="size-3" />Réseau · financeurs</Link>
           <div className="flex flex-wrap items-center gap-2">
             <SectionIcon />
             {rw ? <AutoField model="funder" id={f.id} field="name" type="text" value={f.name} inputClassName="text-[25px] font-bold leading-tight tracking-[-0.7px]" className="min-w-[280px]" label="Nom du financeur" /> : <h1 className="text-[25px] font-bold leading-tight tracking-[-0.7px]">{f.name}</h1>}

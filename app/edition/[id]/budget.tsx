@@ -44,7 +44,7 @@ export function BudgetTab({ e, me, settings, isPilot, isTeam, budgetCategories }
     <div className="grid gap-4">
       {/* Une phrase au plus sous le titre ; la règle de calcul et l'exemple se lisent dans le « ? » (revue du 15/09). */}
       <Section title="Enveloppe de dépenses directes" description={<span className="inline-flex items-center gap-1.5">{`Tenue par ${le(V.raf)} · réalisé + engagements restants, sans double comptage `}<HelpTip title="Comment se calcule le reste" testId="budget-help">
-        <p className="mt-1">{`Réalisé = factures (y compris celles rattachées à un devis) + réalisé hors devis saisi par ${le(V.raf)}. Engagements restant à réaliser = devis approuvés non encore facturés. Reste = enveloppe − réalisé − engagements restants. Le même calcul sert au portefeuille, à l'en-tête ${du(V.edition)} et à l'écran Arbitrages.`}</p>
+        <p className="mt-1">{`Réalisé = factures (y compris celles rattachées à un devis) + réalisé hors devis saisi par ${le(V.raf)}. Engagements restant à réaliser = devis approuvés non encore facturés. Reste = enveloppe − réalisé − engagements restants. Le même calcul sert au portefeuille, à l'en-tête ${du(V.edition)} et à l'écran À décider.`}</p>
         <p className="mt-2">Exemple : enveloppe 8 000 €, devis validé 1 000 € → réalisé 0, engagement restant 1 000, reste 7 000. Facture partielle de 400 € → réalisé 400, engagement restant 600, reste toujours 7 000. Facture finale 900 € et reliquat soldé → réalisé 900, engagement restant 0, reste 7 100.</p>
         {lastUpdate && <p className="mt-2 text-muted-foreground">Dernière actualisation {fmtDate(lastUpdate)}.</p>}
       </HelpTip></span>}>

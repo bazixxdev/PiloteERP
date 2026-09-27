@@ -60,7 +60,7 @@ export const PERMISSIONS = [
 
   { key: "decisions.consign_all", module: "validations", label: "Consigne les décisions d'instance", help: `${V.codir.one}, ${V.pole.one}, revue trimestrielle, CA, sur ${adj(V.projet, "tout", "toute")}.` },
 
-  { key: "codir.access", module: "direction", label: `Siège ${au(V.codir)}`, help: "Page Arbitrages, Préparer l'année suivante, montants dans la matrice et le portefeuille, écran café, décisions." },
+  { key: "codir.access", module: "direction", label: `Siège ${au(V.codir)}`, help: "À décider, Préparer l'année suivante, montants dans la matrice et le portefeuille, café du lundi, décisions." },
 
   { key: "admin.manage", module: "admin", label: "Administre l'outil", help: "Personnes, comptes, référentiels, paramètres, import / export." },
   { key: "roles.manage", module: "admin", label: "Modifie les rôles et leurs droits", help: `Cet écran. Le rôle ${cap(V.direction)} garde toujours l'administration.` },

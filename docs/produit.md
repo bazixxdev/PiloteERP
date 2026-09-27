@@ -53,6 +53,10 @@ Rien d'autre : jamais de patch d'instance.
 - **Comptes et sessions** (17/09, lot F) : better-auth, `User` distinct de `Person` ; par instance, le fournisseur (mot de passe, demain Entra ID pour la CRESS, autre chose pour TLST) est un réglage, pas du code.
 - `Settings.modules` + admin › Paramètres › Modules de l'installation (lot 0) : premier module activable, la veille des appels à projets. Le mécanisme est générique (`INSTANCE_MODULES`, `instanceHas`) ; chaque nouveau module ajoute une entrée et garde sa page derrière `instanceHas`.
 
+## Le menu, rangé par usage (27/09/2026)
+
+Le menu est rangé par usage, pas par module ni par groupe de personnes (`.agents/rules/interface-navigation.md`, spec `docs/superpowers/specs/2026-09-27-menu-par-usage-design.md`) : six sections au plus — **Mon travail** (le quotidien), puis par objet, **Projets**, **Financements**, **Réseau**, **Ressources**, **Admin**. Une entrée de menu est un endroit où l'on va ; une vue d'une même liste (par exemple « Tous les {projets} » et « Portefeuille ») est un onglet dans la page, jamais une entrée séparée ; un document produit est un bouton ; un moment de l'année (Préparer l'année suivante) est une entrée affichée seulement en saison. Pas de section définie par un groupe de personnes : les droits masquent des entrées, ils ne créent pas de section. Un futur module d'instance range ses écrans dans la section de son objet ; il ne crée jamais « sa » section.
+
 ## Ce qui sera fait quand le produit sera lancé (pas avant)
 
 Entra ID (second fournisseur better-auth) → instance TLST en ligne et reprise des données d'erp-tlst → archivage d'`erp-tlst` → écran admin › Apparence (surcharge en base de `config/clients/`, Gaël vise plus de deux clients). Fait : auth, permissions, `Person` / contacts, modules par instance, `config/clients/`, `deploy.sh` par instance, portage des modules TLST.
