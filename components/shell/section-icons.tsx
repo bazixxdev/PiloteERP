@@ -7,6 +7,7 @@ const SECTION_ICONS: [RegExp, LucideIcon][] = [
   [/^\/(portefeuille|edition|projets)/, FileSignature],
   [/^\/action\//, FileSignature],
   [/^\/ma-semaine/, CalendarDays],
+  [/^\/mes-actions/, FileSignature],
   [/^\/taches/, ListTodo],
   [/^\/notes/, NotebookPen],
   [/^\/(temps|cloture)/, Clock],

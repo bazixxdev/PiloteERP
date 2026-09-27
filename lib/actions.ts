@@ -15,6 +15,13 @@ export function runsIn(p: Period, year: number): boolean {
   return yearOf(p.startDate) <= year && year <= yearOf(p.endDate);
 }
 
+// Même règle que runsIn, mais pour une plage de dates plutôt qu'une année entière (« Mes actions », 26/09) : la période
+// choisie (une période de délégation, `lib/delegation.ts`, periodsOf) n'est qu'un filtre sur les actions déjà de l'année
+// (runsIn) — chevauchement borne à borne, comme dueInPeriod pour un jalon.
+export function runsInRange(p: Period, from: Date, to: Date): boolean {
+  return p.startDate <= to && p.endDate >= from;
+}
+
 export function defaultPeriod(year: number): Period {
   return { startDate: new Date(`${year}-01-01`), endDate: new Date(`${year}-12-31`) };
 }

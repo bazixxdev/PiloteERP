@@ -48,12 +48,15 @@ export default async function globalSetup(config: FullConfig) {
   const budgetEdition = await prisma.edition.findFirst({ where: { year: 2026, project: { analyticCode: "OBS-01" } }, select: { id: true } });
   if (!budgetEdition) throw new Error("Fixture budget prévisionnel introuvable (OBS-01 2026).");
   writeFileSync(path.join(authDir, "../.security-budget-edition-id"), budgetEdition.id);
-  // Délégation (25/09) : la feuille de Thomas Guérin (acteur « pilot ») et une tâche personnelle témoin sur l'un de ses projets.
+  // Mes actions (26/09, SEC-31, remplace la délégation) : l'action de Thomas Guérin (acteur « pilot ») porte ce qui lui
+  // est confié, un jalon marqué point de contrôle (seed cress.ts, TES-02) et une tâche personnelle témoin.
   const thomas = await prisma.person.findUnique({ where: { email: SECURITY_ACTORS.pilot.email }, select: { id: true } });
-  const deleg = thomas ? await prisma.delegation.findFirst({ where: { personId: thomas.id }, select: { editionId: true } }) : null;
-  if (!thomas || !deleg) throw new Error("Fixture délégation introuvable.");
-  await prisma.task.create({ data: { personId: thomas.id, editionId: deleg.editionId, label: "SEC31_TASK_SENTINEL_4b1e" } });
-  writeFileSync(path.join(authDir, "../.security-delegation-person-id"), thomas.id);
+  if (!thomas) throw new Error("Fixture Mes actions introuvable : pilote.");
+  const thomasAction = await prisma.action.findFirst({ where: { ownerId: thomas.id, milestones: { some: { isCheckpoint: true } } }, orderBy: { id: "asc" }, select: { id: true, editionId: true } });
+  if (!thomasAction) throw new Error("Fixture Mes actions introuvable : aucune action à point de contrôle pour ce pilote.");
+  await prisma.action.update({ where: { id: thomasAction.id }, data: { entrusted: "SEC31_ENTRUSTED_SECRET_7c2b" } });
+  await prisma.task.create({ data: { personId: thomas.id, editionId: thomasAction.editionId, actionId: thomasAction.id, label: "SEC31_TASK_SENTINEL_4b1e" } });
+  writeFileSync(path.join(authDir, "../.security-mes-actions-person-id"), thomas.id);
   // Actions composantes (26/09), SEC-32. Le contributeur (Lucas Perrin) :
   // 1. entre dans l'équipe 2027 d'un projet (pas 2026) ; une action de ce projet créée en 2026 court sur 2026–2027 : il la
   //    modifie par l'année 2027 qu'elle couvre (runsIn) ;

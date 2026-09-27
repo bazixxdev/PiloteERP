@@ -2,7 +2,7 @@
 // active se déplie d'après l'adresse, une seule à la fois. Tout est calculé ici, côté serveur, à partir des droits et des
 // modules ; la barre latérale ne fait qu'afficher et reconnaître l'entrée active. Module pur : pas de base, pas de React.
 import { canAdmin, canLockMonths, canViewTreasury, isCodir, type Actor } from "./rights";
-import { V, cap } from "@/lib/vocab";
+import { V, cap, pl } from "@/lib/vocab";
 
 export type NavLeaf = {
   label: string;
@@ -31,7 +31,6 @@ export type NavContext = Actor & {
   adherents: boolean; // module d'instance « adhérents »
   tresorerie: boolean; // module d'instance « trésorerie »
   materiel: boolean; // module d'instance « matériel »
-  delegation?: boolean; // module d'instance « délégations »
   tracksTime: boolean; // suit son temps (sinon la section Temps disparaît, même la clôture)
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
@@ -49,7 +48,8 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         { label: "Ma semaine", href: "/ma-semaine", path: "/ma-semaine" },
         ...(ctx.modules.includes("tasks") ? [{ label: "Tâches", href: "/taches", path: "/taches" }] : []),
         ...(ctx.modules.includes("notes") ? [{ label: "Notes", href: "/notes", path: "/notes" }] : []),
-        ...(ctx.delegation ? [{ label: "Ma délégation", href: "/delegation", path: "/delegation" }] : []),
+        // Remplace « Ma délégation » (26/09, fin de la délégation comme objet à part) : pour tout le monde, plus de module.
+        { label: `Mes ${pl(V.action)}`, href: "/mes-actions", path: "/mes-actions" },
       ],
     },
     // Retour de Gaël (18/09) : « ce qu'on fait » (projets, éditions) d'un côté, « comment c'est payé » de l'autre, et l'annuaire

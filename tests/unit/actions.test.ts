@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runsIn, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, shiftDate, renewPlan, renewSelection, renewedLineIds, renewedPeriod, renewedMilestoneDate, renewedIndicatorAction, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
+import { runsIn, runsInRange, defaultPeriod, validPeriod, spanLabel, yearsOf, yearsLabel, toRenew, shiftYear, shiftDate, renewPlan, renewSelection, renewedLineIds, renewedPeriod, renewedMilestoneDate, renewedIndicatorAction, propagationTargets, fundingOverflow, actionAlerts, balance, milestoneTitle, withYearActions, editionForMilestone } from "../../lib/actions";
 import { computeReminders, nextMilestone } from "../../lib/alerts";
 import { deadlineKey } from "../../lib/deadline-notifications";
 import { dayjs } from "../../lib/format";
@@ -13,6 +13,16 @@ test("une action apparaît dans chaque année que sa période touche", () => {
   assert.equal(runsIn(P("2026-11-01", "2027-03-31"), 2027), true);
   assert.equal(runsIn(P("2026-12-31", "2026-12-31"), 2026), true);
   assert.deepEqual(yearsOf(o2r), [2025, 2026, 2027]);
+});
+
+test("une action court dans une plage de dates (« Mes actions », période choisie) si elle la chevauche", () => {
+  const from = new Date("2026-01-01"), to = new Date("2026-06-30");
+  assert.equal(runsInRange(P("2025-06-01", "2026-01-01"), from, to), true); // touche le tout début de la plage
+  assert.equal(runsInRange(P("2026-06-30", "2026-12-31"), from, to), true); // touche la toute fin de la plage
+  assert.equal(runsInRange(P("2026-02-01", "2026-05-01"), from, to), true); // entièrement dedans
+  assert.equal(runsInRange(P("2025-01-01", "2027-01-01"), from, to), true); // englobe toute la plage
+  assert.equal(runsInRange(P("2025-01-01", "2025-12-31"), from, to), false); // avant
+  assert.equal(runsInRange(P("2026-07-01", "2026-12-31"), from, to), false); // après
 });
 
 test("période par défaut, validation, libellé de débordement", () => {
