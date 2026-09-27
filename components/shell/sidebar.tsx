@@ -7,6 +7,7 @@ import { BookUser, CalendarDays, FileSignature, HandCoins, PanelLeftClose, Panel
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { branding } from "@/lib/branding";
+import type { ShellLogos } from "@/lib/branding-db";
 import { locate, type NavSection } from "@/lib/navigation";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -98,7 +99,7 @@ function RailSection({ s, Icon, activeHref, isOpen, onOpenChange }: { s: NavSect
   );
 }
 
-export function Sidebar({ tree, account }: { tree: NavSection[]; account: AccountProps }) {
+export function Sidebar({ tree, account, logos }: { tree: NavSection[]; account: AccountProps; logos: ShellLogos }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { section: openId, leaf: activeHref } = locate(tree, pathname, params);
@@ -134,8 +135,8 @@ export function Sidebar({ tree, account }: { tree: NavSection[]; account: Accoun
       {/* Logo réduit d'un cinquième et davantage d'air avant la première rubrique (maquette du 17/09). */}
       <div className={cn("flex items-center pb-6 pt-1", collapsed ? "flex-col gap-2" : "flex-col gap-2 lg:flex-row lg:justify-between lg:px-1")}>
         <Link href="/portefeuille" className="flex items-center justify-center" aria-label={`${branding().longName} · Portefeuille`}>
-          <Logo variant="color" className={cn("w-[120px]", collapsed ? "hidden" : "hidden lg:block")} />
-          <Logo variant="mark" decorative className={cn("w-8", collapsed ? "block" : "lg:hidden")} />
+          <Logo img={logos.color} className={cn("w-[120px]", collapsed ? "hidden" : "hidden lg:block")} />
+          <Logo img={logos.mark} decorative className={cn("w-8", collapsed ? "block" : "lg:hidden")} />
         </Link>
         <button
           type="button"

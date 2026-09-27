@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
 import { Logo } from "@/components/shell/logo";
+import { getLogos } from "@/lib/branding-db";
 
-// Cadre des pages hors session (connexion, mot de passe) : le logo, une carte, rien d'autre.
-export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
+// Cadre des pages hors session (connexion, mot de passe) : le logo, une carte, rien d'autre. Async pour lire le logo couleur
+// résolu (téléversé par un admin, sinon celui du fichier client — getLogos) : les trois pages qui l'utilisent restent
+// inchangées, React attend les composants serveur asynchrones qu'elles soient elles-mêmes async ou non.
+export async function AuthShell({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
+  const logos = await getLogos();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
-        <Logo variant="color" className="mx-auto mb-6 w-[170px]" />
+        <Logo img={logos.color} className="mx-auto mb-6 w-[170px]" />
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <h1 className="text-[22px] font-bold leading-tight tracking-[-0.5px]">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}

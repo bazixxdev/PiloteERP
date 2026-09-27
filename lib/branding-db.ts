@@ -10,9 +10,12 @@ export function brandUrl(kind: BrandKind, updatedAt: Date): string {
   return `/marque/${kind === "logo" ? "logo" : "logo-petit"}?v=${updatedAt.getTime()}`;
 }
 
+// Ce que le layout calcule une fois par requête et transmet à la barre latérale et au bandeau (tâche 3).
+export type ShellLogos = { color: Img; mark: Img };
+
 // Les logos affichés (spec connexion § 3) : ceux téléversés par un admin, sinon ceux du fichier client. Le logo « blanc »
 // (fond sombre) reste celui du fichier client.
-export async function getLogos(): Promise<{ color: Img; mark: Img; favicon: { src: string; uploaded: boolean } }> {
+export async function getLogos(): Promise<ShellLogos & { favicon: { src: string; uploaded: boolean } }> {
   const b = branding();
   const rows = await prisma.brandAsset.findMany({ select: { key: true, width: true, height: true, updatedAt: true } });
   const big = rows.find((r) => r.key === "logo");

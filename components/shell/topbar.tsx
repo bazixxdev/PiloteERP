@@ -13,11 +13,12 @@ import { hasModule } from "@/lib/modules";
 import { noteColor, NOTE_CONTEXTS } from "@/lib/notes";
 import { QuickMenu, type QuickItem } from "./quick-menus";
 import type { NavSection } from "@/lib/navigation";
+import type { ShellLogos } from "@/lib/branding-db";
 
 // Barre haute (maquette du 17/09) : la recherche à gauche, Notes / Tâches / notifications à droite. Le compte est en bas de la
 // barre latérale ; sur mobile (pas de barre latérale) un avatar compact le remplace ici. Le fil d'Ariane est au-dessus du
 // titre de la page (PageBreadcrumb, dans le layout).
-export async function Topbar() {
+export async function Topbar({ logos }: { logos: ShellLogos }) {
   const [current, editions, account] = await Promise.all([getCurrentPerson(), getNavEditions(), getAccountProps()]);
   const notifications = await prisma.notification.findMany({ where: { personId: current.id }, include: { sender: true }, orderBy: { createdAt: "desc" }, take: 20 });
   // Menus rapides Notes / Tâches : les cinq dernières de la personne (notes par date, tâches à faire par échéance).
@@ -30,7 +31,7 @@ export async function Topbar() {
   return (
     <header className="flex h-[56px] shrink-0 items-center justify-between gap-3 border-b bg-card px-4 md:px-6 print:hidden">
       <div className="flex min-w-0 flex-1 items-center gap-4">
-        <span className="md:hidden"><Logo variant="mark" className="w-6" /></span>
+        <span className="md:hidden"><Logo img={logos.mark} className="w-6" /></span>
         <QuickSearch editions={editions.map((e) => ({ id: e.id, label: `${e.project.name} · ${e.year}` }))} />
       </div>
       <div className="flex items-center gap-2">

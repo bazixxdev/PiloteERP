@@ -4,8 +4,9 @@ import { getSessionCookie } from "better-auth/cookies";
 // Garde d'entrée (lot F) : sans cookie de session, on va à la page de connexion. Vérification optimiste (présence du cookie) ;
 // la vraie vérification et les droits se font côté serveur, page par page (getCurrentPerson, lib/rights.ts).
 // Publics : la connexion et la réinitialisation, l'API d'auth, les flux agenda (jeton dans l'adresse), les exports avec jeton d'API,
-// et le favicon du client (lot I, app/icon.tsx : l'adresse /icon n'a pas d'extension, le matcher ne l'exclut pas).
-const PUBLIC = ["/connexion", "/mot-de-passe-oublie", "/reinitialiser", "/api/auth", "/api/agenda", "/icon"];
+// le favicon du client (lot I, app/icon.tsx : l'adresse /icon n'a pas d'extension, le matcher ne l'exclut pas), et les logos
+// téléversés (spec connexion § 3, app/marque/[kind]/route.ts : la page de connexion les affiche sans session).
+const PUBLIC = ["/connexion", "/mot-de-passe-oublie", "/reinitialiser", "/api/auth", "/api/agenda", "/icon", "/marque"];
 
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;

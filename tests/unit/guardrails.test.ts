@@ -61,6 +61,7 @@ test("saveField : aucun champ ajouté sans relecture de l'invariant (SEC-27)", (
 const ROUTE_GUARDS = ["getCurrentPerson", "exportDenial", "sessionExportAllowed", "toNextJsHandler"];
 const ROUTE_EXCEPTIONS: Record<string, string> = {
   "app/api/agenda/[token]/route.ts": "active", // flux ICS par jeton personnel : vérifie Person.active (SEC-08)
+  "app/marque/[kind]/route.ts": "KEYS", // logos publics par construction (spec connexion § 3) : la page de connexion les affiche sans session
 };
 
 test("chaque route.ts porte une garde d'accès connue (SEC-02/03/08/17)", () => {

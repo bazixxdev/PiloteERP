@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getCurrentPersonOrNull, getPeople, getSettings } from "@/lib/session";
+import { getLogos } from "@/lib/branding-db";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
 import { canDecideValidation, canLockMonths } from "@/lib/rights";
 import { seesSomeoneElse } from "@/lib/time-visibility";
@@ -43,12 +44,13 @@ export const dynamic = "force-dynamic";
 // La passerelle échéances → notifications tourne ici, à chaque chargement : c'est le cron quotidien du prototype.
 async function counters() {
   const me = await getCurrentPerson();
-  const [pending, { reminders }, requests, people, settings] = await Promise.all([
+  const [pending, { reminders }, requests, people, settings, logos] = await Promise.all([
     prisma.validationRequest.findMany({ where: { status: "pending" }, select: { requesterId: true, requiredLevel: true, edition: { select: { project: { select: { pilotId: true, poleId: true, secondaryPoles: { select: { poleId: true } } } } } } } }),
     syncDeadlineNotifications(),
     prisma.request.findMany({ where: { status: { in: ["open", "doing"] } }, select: { assigneeId: true, poleId: true } }),
     getPeople(),
     getSettings(),
+    getLogos(),
   ]);
   const modules = me.modules.split(",").map((x) => x.trim()).filter(Boolean);
   // Même règle que la vue « À traiter par moi » de /demandes (traiter implique voir : pas besoin de canSeeRequest ici).
@@ -61,6 +63,7 @@ async function counters() {
   return {
     role: me.role,
     modules,
+    logos,
     tree: navTreeFor({
       role: me.role,
       permissions: me.permissions,
@@ -102,10 +105,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <div className="flex h-screen overflow-hidden">
           {/* useSearchParams (entrée active selon ?vue=, ?section=…) exige une frontière Suspense dans un layout. */}
           <Suspense fallback={<aside className="hidden h-screen w-[60px] shrink-0 border-r bg-sidebar md:block lg:w-[244px]" />}>
-            <Sidebar tree={c.tree} account={await getAccountProps()} />
+            <Sidebar tree={c.tree} account={await getAccountProps()} logos={c.logos} />
           </Suspense>
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar />
+            <Topbar logos={c.logos} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
               <PageBreadcrumb tree={c.tree} />
               {children}
