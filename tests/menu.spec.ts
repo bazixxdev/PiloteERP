@@ -10,6 +10,10 @@ test("la direction voit six sections ; l'entrée reste active sur un onglet", as
   await page.goto("/ma-semaine");
   for (const id of ["travail", "projets", "financements", "reseau", "ressources", "admin"]) await expect(page.getByTestId(`rail-${id}`)).toBeVisible();
   await expect(page.getByTestId("rail-demandes")).toHaveCount(0);
+  // Contrôle positif : la direction (CODIR) voit « À décider » dans le panneau de Projets.
+  await page.getByTestId("rail-projets").click();
+  await expect(page.getByTestId("rail-panel-projets").getByRole("link", { name: "À décider" })).toHaveCount(1);
+  await page.keyboard.press("Escape");
   await page.goto("/conventions?vue=obtenus");
   await expect(page.getByRole("tab", { name: "Obtenus" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("rail-financements")).toHaveAttribute("aria-current", "page");
@@ -23,5 +27,7 @@ test(`sans droit ${W.codir.one} ni admin : pas d'Admin, pas de « À décider »
   await iAm(page, "Lucas Perrin");
   await expect(page.getByTestId("rail-admin")).toHaveCount(0);
   await page.getByTestId("rail-projets").click();
+  // Le panneau s'est bien ouvert (sinon l'absence de « À décider » ne prouverait rien) : « Échéances » y est toujours.
+  await expect(page.getByTestId("rail-panel-projets")).toContainText("Échéances");
   await expect(page.getByTestId("rail-panel-projets").getByRole("link", { name: "À décider" })).toHaveCount(0);
 });
