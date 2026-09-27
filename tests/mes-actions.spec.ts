@@ -8,6 +8,7 @@ import { W, cap, pl } from "./vocab";
 // pour elle-même, ses tâches — jamais celles d'un tiers. La coordination (droit sur le temps de l'équipe) voit la page
 // de chacun via `personne=`. Projet créé pour le test : rien du jeu de démo ne bouge.
 const year = new Date().getFullYear();
+const PROJECT = "Projet recette Mes actions";
 const ENTRUSTED = "Six ateliers menés, dix structures accompagnées.";
 const LATITUDE = "Jusqu'à 500 € par achat sans validation.";
 const MILESTONE = "Bilan à mi-parcours";
@@ -24,7 +25,7 @@ async function createProject(page: Page, name: string, code: string) {
 }
 
 test("Mes actions : ce qui est confié, la marge de décision, les jalons de la période et mes tâches ; la coordination voit les actions de chacun", async ({ page, request }) => {
-  await createProject(page, "Projet recette Mes actions", "MA-01");
+  await createProject(page, PROJECT, "MA-01");
 
   // Une action, avec un responsable (Lucas Perrin) et une personne associée (Nadia Ferrand).
   await page.getByRole("tab", { name: cap(pl(W.action)) }).click();
@@ -82,7 +83,11 @@ test("Mes actions : ce qui est confié, la marge de décision, les jalons de la 
   const milestones = page.getByTestId(`mes-actions-milestones-${actionId}`);
   await expect(milestones).toContainText(MILESTONE);
   await expect(milestones.locator('[aria-label="Point de contrôle"]')).toBeVisible();
-  const editionId = (await page.locator("[data-testid^=mes-actions-project-]").first().getAttribute("data-testid"))!.replace("mes-actions-project-", "");
+  // Lucas (contributeur de longue date du jeu de démo) peut déjà avoir d'autres actions : on cible la carte de CE projet,
+  // jamais la première de la page.
+  const projectCard = page.locator("[data-testid^=mes-actions-project-]").filter({ hasText: PROJECT });
+  await expect(projectCard).toHaveCount(1);
+  const editionId = (await projectCard.getAttribute("data-testid"))!.replace("mes-actions-project-", "");
   await expect(page.getByTestId(`mes-actions-tasks-${editionId}`)).toContainText(TASK);
 
   // « Toute l'année » : le jalon proche reste visible (une action pleine année en couvre toutes les périodes).
