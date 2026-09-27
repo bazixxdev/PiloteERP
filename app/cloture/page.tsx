@@ -12,7 +12,6 @@ import { seesSomeoneElse } from "@/lib/time-visibility";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
-import { TimeNav } from "@/components/common/time-nav";
 import { teamTabs } from "@/app/temps/team-tabs";
 import { V, le, au } from "@/lib/vocab";
 
@@ -77,7 +76,6 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   return (
     <div className="p-4 md:p-6">
       <PageTabs tabs={teamTabs("cloture", { team: showTeam, close: true })} />
-      <TimeNav current="cloture" showTeam showCloture />
       <PageHeader
         title="Clôture mensuelle"
         subtitle={`${monthLabel(month)} · ${days.length} jours ouvrés · ${weeksOfMonth.length} semaines · ${summary.partial + summary.missing ? `${summary.missing} sans saisie, ${summary.partial} à compléter` : "aucune anomalie"} · ${summary.locked} verrouillé${summary.locked > 1 ? "s" : ""}, ${summary.complete} complet${summary.complete > 1 ? "s" : ""}.`}

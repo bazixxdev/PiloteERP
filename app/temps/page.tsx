@@ -14,7 +14,6 @@ import { dayjs, fmtNumber, monthKey } from "@/lib/format";
 import { expectedHoursOn, loadRhythms, parseWeek, rhythmAt, weekDays, weekKey } from "@/lib/time";
 import { TimeGrid, type GridRow } from "./grid";
 import { PersonSelect } from "./person-select";
-import { TimeNav } from "@/components/common/time-nav";
 import { teamTabs } from "./team-tabs";
 import { canLockMonths } from "@/lib/rights";
 import { hasModule } from "@/lib/modules";
@@ -97,6 +96,8 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const prevKey = weekKey(start.subtract(1, "week"));
   const nextKey = weekKey(start.add(1, "week"));
   const qs = (w: string, extra = "") => `/temps?semaine=${w}${readOnly ? `&personne=${person.id}` : ""}${splitMode ? "&mode=parts" : ""}${inFocus ? "&focus=1" : ""}${extra}`;
+  // Cible historique du bouton « Temps de l'équipe » (ancien TimeNav) : la première personne visible, semaine courante.
+  const teamHref = firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined;
   const visible = visibleAll;
   const currentHours: Record<string, number> = {};
   for (const t of entries) { const k = key(t); currentHours[k] = (currentHours[k] ?? 0) + t.hours; }
@@ -105,8 +106,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   if (person.fixedShare) {
     return (
       <div className="p-4 md:p-6">
-        {teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me) })} />}
-        <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
+        {teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me), teamHref })} />}
         <PageHeader title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"} />
         <div className="rounded-md border bg-mint-soft px-4 py-4 text-sm" data-testid="fixed-share-banner">
           <b>Part fixe.</b> {person.fixedShareNote || "Pourcentage déclaré sur lettre de mission"} : aucune répartition hebdomadaire n'est attendue {readOnly ? "de cette personne" : "de vous"}{`. Le pourcentage est porté par la lettre de mission et par la couche « moyens » des ${pl(V.edition)} concernées ; ${le(V.raf)} l'applique dans son export.`}<p className="mt-2 text-xs text-muted-foreground">Référence : règlement (UE) 2021/1060, art. 55 §5 — frais de personnel déclarés à pourcentage fixe, sans système d'enregistrement du temps. À confirmer avec le gestionnaire du FSE.</p>
@@ -118,8 +118,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   return (
     <div className={cn("p-4 md:p-6", inFocus && "mx-auto max-w-5xl")}>
       <FocusMode on={inFocus} exitHref={qs(weekKey(start)).replace("&focus=1", "")} />
-      {!inFocus && teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me) })} />}
-      {!inFocus && <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />}
+      {!inFocus && teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me), teamHref })} />}
       {/* En-tête compact : titre, puis la navigation de semaine sur une seule ligne (cibles de 44 px sur mobile), le rythme en retrait. */}
       <PageHeader
         title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"}
