@@ -62,6 +62,7 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
     {
       id: "projets",
       label: "Projets",
+      badge: ctx.badges.reminders,
       also: ["/edition", "/action", "/seminaire"],
       items: [
         { label: `Tous les ${pl(V.projet)}`, href: "/projets", path: ["/projets", "/portefeuille"] },

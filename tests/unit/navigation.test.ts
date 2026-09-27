@@ -26,6 +26,10 @@ test("Mon travail : À traiter porte le badge des demandes ; Mon temps disparaî
   assert.ok(!labels(base({ tracksTime: false }), "travail").includes("Mon temps"));
 });
 
+test("Projets porte le badge des échéances (comme Mon travail porte celui des demandes)", () => {
+  assert.equal(navTreeFor(base()).find((s) => s.id === "projets")?.badge, 2);
+});
+
 test("Trésorerie : visible avec le module et le droit, absente sans le droit, absente sans le module", () => {
   assert.ok(labels(base({ permissions: ["treasury.view"] }), "ressources").includes("Trésorerie"));
   assert.ok(!labels(base(), "ressources").includes("Trésorerie"));
