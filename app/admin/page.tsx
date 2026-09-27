@@ -204,7 +204,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {current === "referentiels" && (
         <div className="grid gap-4 lg:grid-cols-3">
           <Section title="Financeurs" description="Les financeurs et leurs contacts se tiennent dans Réseau (Organisations, genre Financeur).">
-            <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>{`. Les projets et leurs ${pl(V.edition)} sont aussi dans `}<Link href="/projets" className="text-primary hover:underline">{`Projets et ${pl(V.edition)}`}</Link>.</p>
+            <p className="text-sm text-muted-foreground">{funders.length} financeur{funders.length > 1 ? "s" : ""} · <Link href="/financeurs" className="text-primary hover:underline">ouvrir la liste des financeurs</Link>{`. Les projets et leurs ${pl(V.edition)} sont aussi dans `}<Link href="/projets" className="text-primary hover:underline">{`Tous les ${pl(V.projet)}`}</Link>.</p>
           </Section>
           <Section title="Fournisseurs" description={<>Organisations de genre « fournisseur » (lot E2) : alimentées depuis les demandes de validation (un nom inconnu s'y ajoute d'une case à cocher), tenues dans l'<Link href="/organisations" className="text-primary hover:underline">annuaire des organisations</Link>.</>} actions={rw ? <AddSimpleForm kind="supplier" placeholder="Nouveau fournisseur" compact /> : undefined} testId="suppliers">
             {suppliers.length === 0 ? <p className="text-sm text-muted-foreground">Aucun fournisseur encore.</p> : (
@@ -375,7 +375,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             {rw && <ApiCard apiToken={settings.apiToken} />}
           </Section>
           {current === "donnees" && (
-            <Section title="Brevo" description="Le connecteur lit tous les contacts du compte Brevo et leurs attributs dans l'annuaire (Projets et financements › Contacts), et tient en miroir les listes Brevo suivies. Sens Brevo → outil ; l'inverse se fait liste par liste (« Envoyer vers Brevo »). Désinscrits et supprimés sont marqués, jamais effacés.">
+            <Section title="Brevo" description="Le connecteur lit tous les contacts du compte Brevo et leurs attributs dans l'annuaire (Réseau › Contacts), et tient en miroir les listes Brevo suivies. Sens Brevo → outil ; l'inverse se fait liste par liste (« Envoyer vers Brevo »). Désinscrits et supprimés sont marqués, jamais effacés.">
               {rw ? <BrevoPanel configured={!!brevoConfig()} syncedAt={settings.brevoSyncedAt ? fmtDate(settings.brevoSyncedAt) : null} report={settings.brevoSyncReport} inBrevo={await prisma.contact.count({ where: { brevoContactId: { not: null } } })} /> : <p className="text-xs text-muted-foreground">Réservé à l&apos;administration.</p>}
             </Section>
           )}
