@@ -13,6 +13,10 @@ test.describe("SEC-40 — logos de l'organisation", () => {
     expect((await expectAnonymous(page, "/marque/autre")).status()).toBe(404);
   });
 
+  test("une clé de prototype JavaScript (constructor) répond 404, pas 500", async ({ page }) => {
+    expect((await expectAnonymous(page, "/marque/constructor")).status()).toBe(404);
+  });
+
   test("un logo téléversé est servi sans session, en PNG, sans reniflage du type", async ({ page }) => {
     const png = await sharp({ create: { width: 10, height: 10, channels: 4, background: "#e02020" } }).png().toBuffer();
     await prisma.brandAsset.upsert({ where: { key: "logo" }, create: { key: "logo", png, width: 10, height: 10 }, update: { png } });
