@@ -26,7 +26,8 @@ export async function processLogo(input: Buffer, kind: BrandKind): Promise<{ png
       .raw()
       .toBuffer({ resolveWithObject: true });
     return { png, width: info.width, height: info.height, palette: paletteFromPixels(sample.data, sample.info.width, sample.info.height) };
-  } catch {
+  } catch (e) {
+    console.error("[brand-images] image illisible", e);
     throw new BrandImageError("Image illisible : envoyez un PNG, un JPEG, un WebP ou un SVG.");
   }
 }
