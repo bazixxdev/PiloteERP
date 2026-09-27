@@ -125,9 +125,15 @@ test("« suit son temps » décochée : sort du plan de charge et de la clôture
   await expect(page.getByRole("button", { name: "Lucas Perrin" })).toBeVisible();
   await page.keyboard.press("Escape");
 
+  // Claire suit son temps : elle voit « Mon temps » dans la barre dépliée (sinon le contrôle qui suit ne prouverait rien).
+  await page.goto("/ma-semaine");
+  const sidebarNav = page.getByRole("navigation", { name: "Navigation principale" });
+  await expect(sidebarNav.getByRole("link", { name: "Mon temps" })).toHaveCount(1);
+
   // Sa propre navigation : la section Temps a disparu, un accès direct à /temps renvoie vers sa semaine.
   await iAm(page, "Lucas Perrin");
-  await expect(page.getByTestId("rail-temps")).toHaveCount(0);
+  await page.goto("/ma-semaine");
+  await expect(sidebarNav.getByRole("link", { name: "Mon temps" })).toHaveCount(0);
   await page.goto("/temps");
   await expect(page).toHaveURL(/\/ma-semaine/);
 
