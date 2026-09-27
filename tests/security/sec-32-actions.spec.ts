@@ -22,13 +22,22 @@ test.describe("SEC-32 — commandes de l'action", () => {
 
   test("une personne hors du projet ne modifie l'action par aucune commande ni par saveField", async ({ baseURL }) => {
     const url = String(baseURL);
-    const before = await prisma.action.findUniqueOrThrow({ where: { id: actionId }, include: { people: true, milestones: true } });
     const lucas = await prisma.person.findUniqueOrThrow({ where: { email: SECURITY_ACTORS.contributor.email }, select: { id: true } });
+    // Jalon témoin pour updateMilestone / deleteMilestone (I2) : posé hors de toute commande, pour ne dépendre d'aucun jalon
+    // déjà semé sur cette action.
+    const seeded = await prisma.action.findUniqueOrThrow({ where: { id: actionId }, select: { startDate: true } });
+    const milestone = await prisma.milestone.create({ data: { actionId, date: seeded.startDate!, label: "SEC32_I2_FIXTURE_MILESTONE" } });
+    const before = await prisma.action.findUniqueOrThrow({ where: { id: actionId }, include: { people: true, milestones: true } });
     const attempts: [string, string, unknown[]][] = [
       [FILE, "setActionPeriod", [actionId, "2020-01-01", "2020-12-31"]],
       [FILE, "addMilestone", [actionId, { date: "2026-05-04", label: "SEC32_MILESTONE" }]],
       [FILE, "setActionPeople", [actionId, [lucas.id]]],
       [FILE, "deleteAction", [actionId]],
+      // I2 (revue finale) : createAction sur une année du projet « outside », updateMilestone (dont une tentative
+      // isPublic:true — un jalon ne doit pas entrer dans le flux iCal public sans jeton par ce chemin) et deleteMilestone.
+      [FILE, "createAction", [before.editionId, { name: "SEC32_I2_CREATED" }]],
+      [FILE, "updateMilestone", [milestone.id, { isPublic: true }]],
+      [FILE, "deleteMilestone", [milestone.id]],
       ["app/actions/fields.ts", "saveField", ["action", actionId, "name", "SEC32_RENAMED"]],
     ];
     for (const [file, name, args] of attempts) {
@@ -42,6 +51,11 @@ test.describe("SEC-32 — commandes de l'action", () => {
     expect(after.endDate?.toISOString()).toBe(before.endDate?.toISOString());
     expect(after.people.map((p) => p.personId).sort()).toEqual(before.people.map((p) => p.personId).sort());
     expect(after.milestones.length).toBe(before.milestones.length);
+    // isPublic n'a pas bougé : rien n'est entré dans le flux public par ce chemin.
+    const m = await prisma.milestone.findUniqueOrThrow({ where: { id: milestone.id } });
+    expect(m.isPublic).toBe(false);
+    expect(m.done).toBe(false);
+    expect(await prisma.action.count({ where: { name: "SEC32_I2_CREATED" } })).toBe(0);
   });
 
   test("une personne associée modifie l'action, mais ne gère pas la liste des associés et ne la supprime pas", async ({ baseURL }) => {
