@@ -1,8 +1,9 @@
-// Arbre de navigation à deux niveaux (proto validé le 17/09) : une section = une icône et des feuilles ; la section
-// active se déplie d'après l'adresse, une seule à la fois. Tout est calculé ici, côté serveur, à partir des droits et des
-// modules ; la barre latérale ne fait qu'afficher et reconnaître l'entrée active. Module pur : pas de base, pas de React.
-import { canAdmin, canLockMonths, canViewTreasury, isCodir, type Actor } from "./rights";
-import { V, cap, pl } from "@/lib/vocab";
+// Arbre de navigation à deux niveaux, rangé par usage (spec menu du 27/09) : « Mon travail » (le quotidien), puis par objet —
+// Projets, Financements, Réseau, Ressources, Admin. Une vue d'une même liste est un onglet de la page, pas une entrée ; un moment
+// de l'année est une entrée de saison. Tout est calculé ici, côté serveur, à partir des droits et des modules. Module pur.
+import { canAdmin, canViewTreasury, isCodir, type Actor } from "./rights";
+import { preparedYear, prepareInSeason } from "./season";
+import { V, pl } from "@/lib/vocab";
 
 export type NavLeaf = {
   label: string;
@@ -10,160 +11,100 @@ export type NavLeaf = {
   badge?: number;
   // Reconnaissance de l'entrée active : préfixe(s) d'adresse, puis conditions sur la chaîne de requête.
   path: string | string[];
-  exact?: boolean; // l'adresse exacte seulement (pas ses sous-pages)
-  param?: { key: string; oneOf: (string | null)[] }; // la valeur du paramètre (ou son absence, null) doit être dans la liste
-  present?: string[]; // actif si l'un de ces paramètres est présent
-  absent?: string[]; // actif seulement si aucun de ces paramètres n'est présent
+  exact?: boolean;
+  param?: { key: string; oneOf: (string | null)[] };
+  present?: string[];
+  absent?: string[];
+  // Adresses qui activent aussi cette entrée, sans condition de paramètres (pages d'onglet, pages rattachées : /cloture, /cafe).
+  alsoPaths?: string[];
 };
 
 export type NavSection = {
-  id: "travail" | "temps" | "projets" | "financements" | "annuaire" | "demandes" | "adherents" | "tresorerie" | "materiel" | "echeances" | "direction" | "admin";
+  id: "travail" | "projets" | "financements" | "reseau" | "ressources" | "admin";
   label: string;
   badge?: number;
   items: NavLeaf[];
-  // Adresses qui appartiennent à la section sans être une feuille (la page Édition sous Portefeuille, par exemple).
   also?: string[];
 };
 
 export type NavContext = Actor & {
-  modules: string[]; // modules de la personne (Mon compte)
-  veille: boolean; // module d'instance « appels à projets »
-  adherents: boolean; // module d'instance « adhérents »
-  tresorerie: boolean; // module d'instance « trésorerie »
-  materiel: boolean; // module d'instance « matériel »
-  tracksTime: boolean; // suit son temps (sinon la section Temps disparaît, même la clôture)
+  modules: string[];
+  veille: boolean;
+  adherents: boolean;
+  tresorerie: boolean;
+  materiel: boolean;
+  tracksTime: boolean; // suit son temps : sinon seule « Mon temps » disparaît (spec menu § 6.6)
   showTeam: boolean; // au moins une autre personne dont le temps est visible
-  wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
+  canCloseMonths: boolean; // droit de clôturer les mois (onglet Clôture de Temps de l'équipe)
+  wide: string | null;
   badges: { requests: number; reminders: number };
+  today: Date; // la saison de « Préparer » (lib/season.ts)
 };
 
 export function navTreeFor(ctx: NavContext): NavSection[] {
   const codir = isCodir(ctx);
-  // Ordre demandé par Gaël (17/09) : Mon travail, Portefeuille, Projets et financements, Demandes, Échéances, Temps.
+  const inSeason = prepareInSeason(ctx.today);
   const sections: NavSection[] = [
     {
       id: "travail",
       label: "Mon travail",
+      badge: ctx.badges.requests,
+      also: ["/notifications"],
       items: [
         { label: "Ma semaine", href: "/ma-semaine", path: "/ma-semaine" },
+        { label: "À traiter", href: "/demandes", badge: ctx.badges.requests, path: ["/demandes", "/validations"] },
         ...(ctx.modules.includes("tasks") ? [{ label: "Tâches", href: "/taches", path: "/taches" }] : []),
         ...(ctx.modules.includes("notes") ? [{ label: "Notes", href: "/notes", path: "/notes" }] : []),
-        // Remplace « Ma délégation » (26/09, fin de la délégation comme objet à part) : pour tout le monde, plus de module.
+        ...(ctx.tracksTime ? [{ label: "Mon temps", href: "/temps", path: "/temps", absent: ["equipe", "personne"] }] : []),
         { label: `Mes ${pl(V.action)}`, href: "/mes-actions", path: "/mes-actions" },
       ],
     },
-    // Retour de Gaël (18/09) : « ce qu'on fait » (projets, éditions) d'un côté, « comment c'est payé » de l'autre, et l'annuaire
-    // (organisations dont les financeurs, contacts) ailleurs — ce n'est pas là qu'on pilote.
     {
       id: "projets",
       label: "Projets",
-      also: ["/edition", "/action"],
+      also: ["/edition", "/action", "/seminaire"],
       items: [
-        { label: "Projets", href: "/projets", path: "/projets" },
-        { label: codir ? "Portefeuille" : "Mes projets", href: "/portefeuille", path: "/portefeuille" },
+        { label: `Tous les ${pl(V.projet)}`, href: "/projets", path: ["/projets", "/portefeuille"] },
         { label: "Vue annuelle", href: "/annuel", path: "/annuel" },
         { label: "Plan de charge", href: "/plan-de-charge", path: "/plan-de-charge" },
+        { label: "Échéances", href: "/echeances", badge: ctx.badges.reminders, path: ["/echeances", "/rappels"], alsoPaths: ["/cafe"] },
+        ...(codir ? [{ label: "À décider", href: "/codir", path: "/codir" }] : []),
+        ...(codir && inSeason ? [{ label: `Préparer ${preparedYear(ctx.today)}`, href: "/seminaire", path: "/seminaire" }] : []),
       ],
     },
     {
       id: "financements",
       label: "Financements",
       items: [
-        { label: "Dossiers de financement", href: "/conventions", path: "/conventions", absent: ["vue"] },
-        { label: "Financements obtenus", href: "/conventions?vue=obtenus", path: "/conventions", present: ["vue"] },
+        { label: "Dossiers", href: "/conventions", path: "/conventions" },
         { label: "Qui finance quoi", href: "/matrice", path: "/matrice" },
         ...(ctx.veille ? [{ label: "Appels à projets", href: "/appels", path: "/appels" }] : []),
       ],
     },
     {
-      id: "annuaire",
-      label: "Annuaire",
+      id: "reseau",
+      label: "Réseau",
       also: ["/financeurs"],
       items: [
         { label: "Organisations", href: "/organisations", path: "/organisations" },
+        ...(ctx.adherents ? [{ label: "Adhérents", href: "/adherents", path: "/adherents" }] : []),
         { label: "Contacts", href: "/contacts", path: "/contacts" },
       ],
     },
-    ...(ctx.adherents ? [{
-      id: "adherents" as const,
-      label: "Adhérents",
-      items: [
-        { label: "Adhérents", href: "/adherents", path: "/adherents", absent: ["vue"] },
-        { label: "Cotisations", href: "/adherents?vue=cotisations", path: "/adherents", present: ["vue"] },
-      ],
-    }] : []),
-    ...(ctx.tresorerie && canViewTreasury(ctx) ? [{
-      id: "tresorerie" as const,
-      label: "Trésorerie",
-      items: [{ label: "Plan de trésorerie", href: "/tresorerie", path: "/tresorerie" }],
-    }] : []),
-    ...(ctx.materiel ? [{
-      id: "materiel" as const,
-      label: "Prêts",
-      items: [
-        { label: "Prêts en cours", href: "/materiel/prets", path: "/materiel/prets", absent: ["vue"] },
-        { label: "Prêts terminés", href: "/materiel/prets?vue=termines", path: "/materiel/prets", present: ["vue"] },
-        { label: "Inventaire", href: "/materiel", path: "/materiel", exact: true },
-      ],
-      also: ["/materiel/pret"],
-    }] : []),
     {
-      id: "demandes",
-      label: "Demandes",
-      badge: ctx.badges.requests,
+      id: "ressources",
+      label: "Ressources",
       items: [
-        { label: "Qu'on me fait", href: "/demandes", badge: ctx.badges.requests, path: ["/demandes", "/validations"], param: { key: "vue", oneOf: ["moi", null] } },
-        { label: "Que j'ai faites", href: "/demandes?vue=mes", path: "/demandes", param: { key: "vue", oneOf: ["mes"] } },
-        ...(ctx.wide ? [{ label: ctx.wide, href: "/demandes?vue=toutes", path: "/demandes", param: { key: "vue", oneOf: ["toutes"] } }] : []),
+        ...(ctx.tresorerie && canViewTreasury(ctx) ? [{ label: "Trésorerie", href: "/tresorerie", path: "/tresorerie" }] : []),
+        ...(ctx.materiel ? [{ label: "Matériel et prêts", href: "/materiel/prets", path: "/materiel" }] : []),
+        ...(ctx.showTeam || ctx.canCloseMonths
+          ? [{ label: "Temps de l'équipe", href: ctx.showTeam ? "/temps?equipe=1" : "/cloture", path: "/temps", present: ["equipe", "personne"], alsoPaths: ["/cloture"] }]
+          : []),
       ],
     },
-    {
-      id: "echeances",
-      label: "Échéances",
-      badge: ctx.badges.reminders,
-      items: [
-        { label: "Échéances", href: "/echeances", badge: ctx.badges.reminders, path: ["/echeances", "/rappels"] },
-        { label: "Notifications", href: "/notifications", path: "/notifications" },
-      ],
-    },
-    // Une personne qui ne suit pas son temps (membre du CA, bénévole) n'a ni saisie ni relance ni clôture : toute la section
-    // disparaît, plutôt que de montrer une « Ma répartition » vide (26/09, spec actions § 1).
-    ...(ctx.tracksTime ? [{
-      id: "temps" as const,
-      label: "Temps",
-      items: [
-        { label: "Ma répartition", href: "/temps", path: "/temps", absent: ["equipe", "personne"] },
-        ...(ctx.showTeam ? [{ label: "Temps de l'équipe", href: "/temps?equipe=1", path: "/temps", present: ["equipe", "personne"] }] : []),
-        ...(canLockMonths(ctx) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
-      ],
-    }] : []),
   ];
-  if (codir) {
-    sections.push({
-      id: "direction",
-      label: cap(V.direction),
-      items: [
-        // Ex-« Écran CODIR » (spec vocabulaire-gouvernance § 3) : le nom du groupe qui arbitre ne change pas, l'écran s'appelle « Arbitrages ».
-        { label: "Arbitrages", href: "/codir", path: "/codir" },
-        // Ex-« Séminaire » (spec vocabulaire-gouvernance § 3) : l'année qu'on prépare, la suivante ; l'adresse ne change pas.
-        { label: `Préparer ${new Date().getFullYear() + 1}`, href: "/seminaire", path: "/seminaire" },
-        { label: "Écran café", href: "/cafe", path: "/cafe" },
-      ],
-    });
-  }
-  if (canAdmin(ctx)) {
-    sections.push({
-      id: "admin",
-      label: "Admin",
-      items: [
-        { label: "Personnes", href: "/admin", path: "/admin", param: { key: "section", oneOf: ["personnes", null] } },
-        { label: "Référentiels", href: "/admin?section=referentiels", path: "/admin", param: { key: "section", oneOf: ["referentiels"] } },
-        { label: "Paramètres", href: "/admin?section=parametres", path: "/admin", param: { key: "section", oneOf: ["parametres"] } },
-        { label: "Import / export", href: "/admin?section=donnees", path: "/admin", param: { key: "section", oneOf: ["donnees"] } },
-      ],
-    });
-  }
-  return sections;
+  if (canAdmin(ctx)) sections.push({ id: "admin", label: "Admin", items: [{ label: "Admin", href: "/admin", path: "/admin" }] });
+  return sections.filter((s) => s.items.length > 0);
 }
 
 function underPath(pathname: string, p: string): boolean {
@@ -171,6 +112,7 @@ function underPath(pathname: string, p: string): boolean {
 }
 
 export function leafMatches(leaf: NavLeaf, pathname: string, params: URLSearchParams): boolean {
+  if (leaf.alsoPaths?.some((p) => underPath(pathname, p))) return true;
   const paths = Array.isArray(leaf.path) ? leaf.path : [leaf.path];
   if (!paths.some((p) => (leaf.exact ? pathname === p : underPath(pathname, p)))) return false;
   if (leaf.param && !leaf.param.oneOf.includes(params.get(leaf.param.key))) return false;

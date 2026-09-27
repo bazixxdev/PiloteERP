@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookUser, CalendarDays, CalendarClock, Clock, FileSignature, HandCoins, Inbox, Landmark, PanelLeftClose, PanelLeftOpen, Package, Settings, ChevronRight, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BookUser, CalendarDays, FileSignature, HandCoins, PanelLeftClose, PanelLeftOpen, Package, Settings, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { branding } from "@/lib/branding";
@@ -19,16 +19,10 @@ import type { AccountProps } from "./account-data";
 // sous `lg`, elle est toujours en rail. L'arbre vient du serveur (lib/navigation.ts), ici on n'affiche que ce qu'on reçoit.
 const SECTION_ICONS: Record<NavSection["id"], LucideIcon> = {
   travail: CalendarDays,
-  temps: Clock,
-  demandes: Inbox,
   projets: FileSignature,
   financements: HandCoins,
-  annuaire: BookUser,
-  adherents: Users,
-  tresorerie: Wallet,
-  materiel: Package,
-  echeances: CalendarClock,
-  direction: Landmark,
+  reseau: BookUser,
+  ressources: Package,
   admin: Settings,
 };
 
