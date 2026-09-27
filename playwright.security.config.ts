@@ -34,7 +34,9 @@ export default defineConfig({
   },
   webServer: {
     command: "NEXT_DIST_DIR=.next-security npm run build && NEXT_DIST_DIR=.next-security npm run start -- -p 3200",
-    url: `${baseURL}/connexion`,
+    // Sonde sans base : /matrice/export répond 401 sans session avant toute requête (comme la recette). /connexion lit la
+    // table des logos, absente tant que globalSetup (lancé après le serveur) n'a pas appliqué les migrations.
+    url: `${baseURL}/matrice/export`,
     reuseExistingServer: false,
     timeout: 300_000,
     env: {
