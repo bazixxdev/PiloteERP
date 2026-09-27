@@ -5,7 +5,7 @@
 // plus aucune lecture de la table Delegation ici.
 import { prisma } from "./db";
 import { attachYearActions } from "./actions-db";
-import { runsInRange, milestoneTitle } from "./actions";
+import { attachable, runsInRange, milestoneTitle } from "./actions";
 import { dueInPeriod, periodFor, periodsOf } from "./delegation";
 
 const editionSelect = { id: true, year: true, projectId: true, project: { select: { name: true } } };
@@ -27,7 +27,8 @@ export async function loadMesActions(personId: string, year: number, periodKey: 
   const projects = years
     .map((e) => {
       // Mode léger (attachYearActions lean) : les personnes associées ne portent que `person` (pas `personId` à plat).
-      const mine = e.actions.filter((a) => (a.ownerId === personId || a.people.some((p) => p.person.id === personId)) && runsInRange(a, period.from, period.to));
+      // Une action abandonnée ne sort ni ici ni dans la feuille de mission (même règle que les sélecteurs, lib/actions.ts).
+      const mine = e.actions.filter((a) => attachable(a) && (a.ownerId === personId || a.people.some((p) => p.person.id === personId)) && runsInRange(a, period.from, period.to));
       for (const a of mine) actionIds.push(a.id);
       return {
         id: e.id,

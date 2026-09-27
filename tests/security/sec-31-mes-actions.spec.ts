@@ -23,6 +23,19 @@ test.describe("SEC-31 — Mes actions", () => {
     await page.context().close();
   });
 
+  test("un responsable d'un autre pôle ne lit ni la page ni l'export d'une personne hors de son pôle", async ({ browser, baseURL }) => {
+    // Julien Barbot (poleLead) dirige un autre pôle que Thomas Guérin (pilot, fixture) : leadsPole exige le même pôle,
+    // canSeeTimeOf refuse donc — même garde que /temps?personne= pour un responsable de pôle sur un tiers hors périmètre.
+    const page = await pageFor(browser, SECURITY_ACTORS.poleLead, baseURL);
+    const res = await page.goto(`/mes-actions?personne=${personId}`, { waitUntil: "networkidle" });
+    expect(res?.status()).toBe(404);
+    const html = await page.content();
+    expect(html).not.toContain(SECRET);
+    expect(html).not.toContain(TASK);
+    expect((await page.request.get(`/mes-actions/export?personne=${personId}`)).status()).toBe(403);
+    await page.context().close();
+  });
+
   test("la direction lit ce qui est confié, sans les tâches de la personne", async ({ browser, baseURL }) => {
     const page = await pageFor(browser, SECURITY_ACTORS.director, baseURL);
     const res = await page.goto(`/mes-actions?personne=${personId}&periode=annee`, { waitUntil: "networkidle" });

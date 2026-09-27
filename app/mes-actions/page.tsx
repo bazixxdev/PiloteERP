@@ -9,7 +9,7 @@ import { loadMesActions } from "@/lib/mes-actions-db";
 import { canSeeTimeOf } from "@/lib/rights";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { V, cap, pl } from "@/lib/vocab";
+import { V, aucun, cap, e, pl } from "@/lib/vocab";
 
 // « Mes actions » (26/09) remplace « Ma délégation » : les actions dont une personne est responsable ou associée, avec ce
 // qui leur est confié, leur marge de décision et leurs jalons de la période, plus ses tâches (elle seule). `personne=`
@@ -30,6 +30,10 @@ export default async function MesActionsPage({ searchParams }: { searchParams: P
 
   const href = (q: Record<string, string | number>) => `/mes-actions?${new URLSearchParams({ personne: personId, annee: String(year), ...Object.fromEntries(Object.entries(q).map(([k, v]) => [k, String(v)])) })}`;
   const total = sheet.projects.reduce((s, p) => s + p.actions.length, 0);
+  // Personnes que je peux ouvrir ici (spec § 4, « la coordination voit Mes actions de chacun ») : même droit que /temps?personne=
+  // (canSeeTimeOf), sur les personnes déjà chargées pour la page — aucune donnée en plus n'est calculée pour qui n'y a pas droit.
+  // Un simple contributeur (droit refusé pour tout le monde) ne voit personne d'autre que lui-même : la liste est vide, cachée.
+  const visiblePeople = people.filter((p) => p.id !== me.id && canSeeTimeOf(me, p, settings.timeVisibility)).sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   return (
     <div className="grid gap-4 p-4 md:p-6" data-testid="mes-actions-page">
@@ -39,6 +43,25 @@ export default async function MesActionsPage({ searchParams }: { searchParams: P
         actions={total > 0 ? <a href={withBase(`/mes-actions/export?personne=${personId}&annee=${year}&periode=${sheet.period.key}`)} className="inline-flex items-center gap-1 text-sm text-primary hover:underline" data-testid="mes-actions-export"><Download className="size-4" />Exporter en .docx</a> : undefined}
       />
 
+      <div className={cn("grid gap-4", visiblePeople.length > 0 && "lg:grid-cols-[16rem_1fr]")}>
+        {visiblePeople.length > 0 && (
+          <aside className="grid content-start gap-3">
+            <Section title="Personnes" testId="mes-actions-people">
+              <ul className="grid gap-1 text-sm">
+                <li>
+                  <Link href={href({ personne: me.id, periode: sheet.period.key })} className={cn("block rounded-md px-2 py-1 hover:bg-muted", isSelf && "bg-muted font-semibold")}>Moi</Link>
+                </li>
+                {visiblePeople.map((p) => (
+                  <li key={p.id}>
+                    <Link href={href({ personne: p.id, periode: sheet.period.key })} className={cn("block rounded-md px-2 py-1 hover:bg-muted", p.id === personId && "bg-muted font-semibold")}>{p.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          </aside>
+        )}
+
+        <div className="grid content-start gap-4">
       <nav className="flex flex-wrap items-center gap-1.5 text-sm" aria-label="Période">
         {sheet.periods.map((p) => (
           <Link key={p.key} href={href({ periode: p.key })} className={cn("rounded-full border px-2.5 py-0.5", p.key === sheet.period.key ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")} data-testid={`mes-actions-period-${p.key}`}>{p.label}</Link>
@@ -46,7 +69,7 @@ export default async function MesActionsPage({ searchParams }: { searchParams: P
       </nav>
 
       {total === 0 ? (
-        <p className="text-sm text-muted-foreground" data-testid="mes-actions-empty">{`Aucune ${V.action.one} confiée pour ${year}, sur cette période.`}</p>
+        <p className="text-sm text-muted-foreground" data-testid="mes-actions-empty">{`${cap(aucun(V.action))} confié${e(V.action)} pour ${year}, sur cette période.`}</p>
       ) : (
         sheet.projects.map((p) => (
           <Section key={p.id} testId={`mes-actions-project-${p.id}`} title={p.name} description={<Link href={`/edition/${p.id}`} className="text-primary hover:underline">{`Ouvrir la fiche ${p.name} ${year}`}</Link>}>
@@ -93,6 +116,8 @@ export default async function MesActionsPage({ searchParams }: { searchParams: P
           </Section>
         ))
       )}
+        </div>
+      </div>
     </div>
   );
 }

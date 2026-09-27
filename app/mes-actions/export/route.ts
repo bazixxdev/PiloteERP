@@ -21,7 +21,9 @@ export async function GET(req: Request) {
     if (!target || !canSeeTimeOf(me, target, settings.timeVisibility)) return NextResponse.json({ error: "Export non autorisé" }, { status: 403 });
   }
   const year = Number(url.searchParams.get("annee")) || new Date().getFullYear();
-  const sheet = await loadMesActions(personId, year, url.searchParams.get("periode") ?? undefined, isSelf);
+  // Jamais les tâches dans l'export, même pour soi-même (elles ne figurent pas dans la feuille de mission) : `false`, pas
+  // `isSelf`, pour que la requête des tâches ne soit même pas faite.
+  const sheet = await loadMesActions(personId, year, url.searchParams.get("periode") ?? undefined, false);
   if (!sheet) return new NextResponse("Introuvable", { status: 404 });
 
   const p = (text: string) => new Paragraph({ text });

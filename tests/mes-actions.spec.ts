@@ -89,6 +89,8 @@ test("Mes actions : ce qui est confié, la marge de décision, les jalons de la 
   await expect(projectCard).toHaveCount(1);
   const editionId = (await projectCard.getAttribute("data-testid"))!.replace("mes-actions-project-", "");
   await expect(page.getByTestId(`mes-actions-tasks-${editionId}`)).toContainText(TASK);
+  // Simple contributeur, aucun droit sur le temps de personne d'autre : pas de liste « Personnes » (rien à y montrer).
+  await expect(page.getByTestId("mes-actions-people")).toHaveCount(0);
 
   // « Toute l'année » : le jalon proche reste visible (une action pleine année en couvre toutes les périodes).
   await page.getByTestId("mes-actions-period-annee").click();
@@ -108,9 +110,12 @@ test("Mes actions : ce qui est confié, la marge de décision, les jalons de la 
   await expect(page.getByTestId(`mes-actions-tasks-${editionId}`)).toContainText("Aucune.");
   await expect(page.getByTestId(`mes-actions-tasks-${editionId}`)).not.toContainText(TASK);
 
-  // Claire (direction, droit sur le temps de l'équipe) : voit les actions de Lucas via `personne=`, jamais ses tâches.
+  // Claire (direction, droit sur le temps de l'équipe) : atteint la page de Lucas depuis la liste « Personnes » (spec § 4,
+  // « la coordination voit Mes actions de chacun »), jamais une adresse tapée à la main ; voit ses actions, jamais ses tâches.
   await iAm(page, "Claire Vasseur");
-  await page.goto(`/mes-actions?personne=${lucasId}&annee=${year}`);
+  await page.goto("/mes-actions");
+  await page.getByTestId("mes-actions-people").getByRole("link", { name: "Lucas Perrin" }).click();
+  await expect(page).toHaveURL(new RegExp(`personne=${lucasId}`));
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Lucas Perrin");
   await expect(page.getByTestId(`mes-actions-entrusted-${actionId}`)).toHaveText(ENTRUSTED);
   await expect(page.getByTestId(`mes-actions-tasks-${editionId}`)).toHaveCount(0);
