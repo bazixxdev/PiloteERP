@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listFunders } from "@/lib/organisations";
 import { DossiersHeader } from "@/components/common/dossiers-nav";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { prisma } from "@/lib/db";
@@ -52,6 +53,10 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
         <DossiersHeader current="conventions" title="Dossiers de financement"
           summary={`${open.length} dossier${open.length > 1 ? "s" : ""} en cours · ${fmtEuro(asked)} visés${closed.length ? ` · ${closed.length} écarté${closed.length > 1 ? "s" : ""} ou refusé${closed.length > 1 ? "s" : ""}` : ""}`}
           actions={rw ? <NewDossierDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} projects={projects.map((p) => ({ value: p.id, label: p.name }))} people={people.map((p) => ({ value: p.id, label: p.name }))} /> : undefined} />
+        <PageTabs tabs={[
+          { href: "/conventions", label: "En cours", active: !obtenus },
+          { href: "/conventions?vue=obtenus", label: "Obtenus", active: obtenus },
+        ]} />
         <ConventionFilters funders={funders.map((f) => ({ value: f.id, label: f.name }))} statuses={statusOpts} current={{ vue: "", financeur: sp.financeur ?? "", statut: sp.statut ?? "", type: "" }} withType={false} />
         {shown.length === 0 ? <EmptyState title="Aucun dossier" hint="Un dossier s'ouvre ici, ou depuis un appel à projets (« Ouvrir un dossier »)." /> : (
           <div className="overflow-auto rounded-md border bg-card">
@@ -94,6 +99,10 @@ export default async function ConventionsPage({ searchParams }: { searchParams: 
       <DossiersHeader current="conventions" title="Financements obtenus"
         summary={`${won.length} financement${won.length > 1 ? "s" : ""} · ${fmtEuro(totalNotified)} notifiés · ${fmtEuro(totalGranted)} affectés aux ${pl(V.edition)} · ${fmtEuro(totalReceived)} versés${overCount ? ` · ${overCount} en dépassement` : ""}${lateCount ? ` · ${lateCount} versement${lateCount > 1 ? "s" : ""} en retard` : ""}`}
         actions={rw ? <CreateConventionDialog funders={funders.map((f) => ({ value: f.id, label: f.name }))} /> : undefined} />
+      <PageTabs tabs={[
+        { href: "/conventions", label: "En cours", active: !obtenus },
+        { href: "/conventions?vue=obtenus", label: "Obtenus", active: obtenus },
+      ]} />
       <ConventionFilters funders={funders.map((f) => ({ value: f.id, label: f.name }))} statuses={statusOpts} current={{ vue: "obtenus", financeur: sp.financeur ?? "", statut: sp.statut ?? "", type: sp.type ?? "" }} withType />
       {rows.length === 0 ? <EmptyState title={won.length === 0 ? "Aucun financement obtenu" : "Aucun financement pour ces filtres"} hint={won.length === 0 ? "Un dossier déposé et obtenu arrive ici ; un financement déjà acquis s'enregistre directement." : "Changez le filtre."} /> : (
         <div className="overflow-auto rounded-md border bg-card" tabIndex={0} aria-label={`Tableau des ${rows.length} financements obtenus`}>

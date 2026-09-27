@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { Section } from "@/components/common/section";
 import { StatusBadge } from "@/components/common/status-badge";
 import { prisma } from "@/lib/db";
@@ -89,14 +90,14 @@ export default async function DemandesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Mes demandes" subtitle={<>{forMe.length} qu&apos;on me fait, à traiter · {mine.filter((l) => l.open).length} que j&apos;ai faites, en cours · demandes internes et validations au même endroit.</>} actions={
+      <PageHeader title="À traiter" subtitle={<>{forMe.length} qu&apos;on me fait, à traiter · {mine.filter((l) => l.open).length} que j&apos;ai faites, en cours · demandes internes et validations au même endroit.</>} actions={
         <NewDemandPanel people={peopleOpts.filter((p) => p.id !== me.id)} poles={poles.map((p) => ({ id: p.id, name: p.name }))} editions={editions} validation={{ editions: editionChoices, suppliers, kinds: REF_DEFAULTS.validation_kind.map((k) => ({ value: k.code, label: refLabel(refs, "validation_kind", k.code) })), afterHref: "/demandes?vue=mes" }} />
       } />
-      <div className="subnav mb-3 flex flex-wrap gap-1">
-        {[["moi", `Qu'on me fait (${forMe.length})`], ["mes", `Que j'ai faites (${mine.filter((l) => l.open).length})`], ...(wide ? [["toutes", `${wide} (${all.filter((l) => l.open).length})`]] : [])].map(([k, label]) => (
-          <Link key={k} href={`/demandes?vue=${k}`} className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm", view === k ? "border-primary bg-primary text-white" : "bg-card hover:bg-muted")} data-testid={`requests-view-${k}`}>{label}</Link>
-        ))}
-      </div>
+      <PageTabs tabs={[
+        { href: "/demandes", label: "Qu'on me fait", count: forMe.length, active: view === "moi", testId: "requests-view-moi" },
+        { href: "/demandes?vue=mes", label: "Que j'ai faites", count: mine.filter((l) => l.open).length, active: view === "mes", testId: "requests-view-mes" },
+        ...(wide ? [{ href: "/demandes?vue=toutes", label: wide, count: all.filter((l) => l.open).length, active: view === "toutes", testId: "requests-view-toutes" }] : []),
+      ]} />
       <Section title={view === "moi" ? "Qu'on me fait · en cours" : view === "mes" ? "Que j'ai faites · en cours" : `${cap(tout(V.org))} · en cours`} description={view === "toutes" ? `Pour ${le(V.direction)} : toutes les demandes en cours. Un seul geste ici — réaiguiller (changer à qui on demande) ; la personne à l'origine est prévenue.` : view === "moi" ? `Les demandes qui vous sont adressées (ou à votre ${V.pole.one}), et les validations de votre niveau. Prendre, faire, décliner, confier ; approuver ou refuser.` : "Ce que vous avez demandé, validations comprises ; retirez une demande si elle n'a plus lieu d'être."} testId="for-me">
         {openShown.length === 0 ? <p className="px-1 text-sm text-muted-foreground" data-testid="requests-open">{view === "moi" ? `Rien à traiter — rien à valider pour vous. Les demandes qui vous sont adressées, ou adressées à votre ${V.pole.one}, arriveront ici.` : "Rien en cours."}</p> : <div className="-mx-4 -mb-4 rounded-b-2xl" data-testid="requests-open">{openShown.map((l) => <Row key={l.id} l={l} />)}</div>}
       </Section>
