@@ -1484,3 +1484,15 @@ model FicheValidation {
 
   @@index([editionId])
 }
+
+// Logos téléversés par un admin (spec connexion du 27/09) : « logo » (grand : connexion, barre latérale dépliée) et
+// « logo_small » (petit : barre repliée, bandeau mobile, favicon). Toujours stockés convertis en PNG ; la palette du panneau
+// de connexion n'existe que pour le grand logo. En base plutôt que dans public/ : survit aux déploiements, part dans pg_dump.
+model BrandAsset {
+  key       String   @id
+  png       Bytes
+  width     Int
+  height    Int
+  palette   Json?
+  updatedAt DateTime @updatedAt
+}
