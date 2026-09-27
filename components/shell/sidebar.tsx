@@ -116,11 +116,6 @@ export function Sidebar({ tree, account }: { tree: NavSection[]; account: Accoun
   }, []);
   const rail = narrow !== null && (collapsed || narrow);
   useEffect(() => { if (!rail) setFlyout(null); }, [rail]);
-  // Les sous-onglets en page (classe `subnav`) se cachent quand la barre montre déjà le niveau 2 : voir globals.css.
-  useEffect(() => {
-    document.documentElement.dataset.sidebar = collapsed ? "rail" : "open";
-    return () => { delete document.documentElement.dataset.sidebar; };
-  }, [collapsed]);
   const toggle = () => {
     const next = !collapsed;
     setCollapsed(next);
