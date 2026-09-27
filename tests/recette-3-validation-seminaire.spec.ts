@@ -72,8 +72,13 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   // jamais proposé (26/09, action composante — lib/preparer.ts) ; le compteur ne peut donc pas atteindre N sur N.
   const summary = page.getByText(new RegExp(`\\d+ sur \\d+ ${pl(W.projet)} ont déjà leur ${W.edition.one} 2027`));
   await expect(summary).toBeVisible({ timeout: 20_000 });
-  const [done, total] = (await summary.innerText()).match(/(\d+) sur (\d+)/)!.slice(1).map(Number);
-  expect(done).toBe(total - 1);
+  // Le compteur peut encore montrer le texte d'avant le lot (14 sur 32) le temps que la page se rafraîchisse : on attend
+  // l'écart final (un seul projet non proposé), sans affaiblir l'assertion (course relevée par le contrôleur, pas un bug
+  // de cette tâche).
+  await expect.poll(async () => {
+    const [done, total] = (await summary.innerText()).match(/(\d+) sur (\d+)/)!.slice(1).map(Number);
+    return total - done;
+  }, { timeout: 20_000 }).toBe(1);
   await expect(page.getByTestId("seminar-table").locator("tr", { hasText: "Refonte du site internet" })).toContainText("non proposé");
   await expect(page.getByTestId("load-table").locator("tr[data-testid^=load-row-]").first()).toBeVisible();
   await expect(page.getByTestId("batch-create")).toHaveCount(0);
