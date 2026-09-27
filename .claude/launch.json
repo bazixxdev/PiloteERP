@@ -1,24 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "pilote", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--", "-p", "3001"], "port": 3001 },
-    {
-      "name": "pilote-tlst",
-      "runtimeExecutable": "env",
-      "runtimeArgs": [
-        "NEXT_PUBLIC_CLIENT=tlst",
-        "DATABASE_URL=postgresql://pilote:pilote@localhost:5432/pilote_test_tlst",
-        "BETTER_AUTH_URL=http://localhost:3011/api/auth",
-        "NEXT_DIST_DIR=.next-test-tlst",
-        "UPLOAD_DIR=./uploads-test-tlst",
-        "npm",
-        "run",
-        "dev",
-        "--",
-        "-p",
-        "3011"
-      ],
-      "port": 3011
-    }
+    { "name": "pilote", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--", "-p", "3001"], "port": 3001 }
   ]
 }

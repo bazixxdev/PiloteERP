@@ -720,8 +720,9 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
     const primary = await prisma.action.findFirst({ where: { editionId: obs.id, name: "Petit-déjeuner ORESS · mars · emploi" } });
     if (primary) {
       await prisma.action.update({ where: { id: primary.id }, data: { name: "Petit-déjeuner ORESS", recurrence: "Trois rencontres thématiques par an (mars, juin, octobre)." } });
-      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · juin · réemploi", "Petit-déjeuner ORESS · juin · réemploi", 1);
-      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · octobre · égalité", "Petit-déjeuner ORESS · octobre · égalité", 2);
+      // Le libellé du jalon perd le nom de l'action (déjà « Petit-déjeuner ORESS » sur la fiche) : juste le thème.
+      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · juin · réemploi", "juin · réemploi", 1);
+      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · octobre · égalité", "octobre · égalité", 2);
       await restateFromMilestones(primary.id);
     }
   }
@@ -791,18 +792,25 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
       description: "Tenue de stands sur les forums d'orientation et salons professionnels, de la rentrée de novembre à la fin de l'hiver.",
       audience: "Lycéens, étudiants, demandeurs d'emploi en réorientation.",
     } });
-    await prisma.milestone.createMany({ data: [
-      { actionId: orientation.id, date: dayjs("2026-11-19").toDate(), label: "Salon de l'orientation — Orléans", isPublic: true, order: 0 },
-      { actionId: orientation.id, date: dayjs("2027-01-21").toDate(), label: "Forum des métiers — Tours", isPublic: true, order: 1 },
-      { actionId: orientation.id, date: dayjs("2027-03-11").toDate(), label: "Salon Studyrama — Blois", isPublic: true, order: 2 },
-    ] });
+    // Même calcul que « Séquences acheteurs » et « Forums et salons » ci-dessus (isBefore(today)) : les trois dates sont
+    // dans le futur au moment du seed, mais la règle doit rester la même partout, pas une exception qui ne tient que
+    // parce que la date d'aujourd'hui l'arrange.
+    const orientationOcc: [string, string][] = [
+      ["2026-11-19", "Salon de l'orientation — Orléans"],
+      ["2027-01-21", "Forum des métiers — Tours"],
+      ["2027-03-11", "Salon Studyrama — Blois"],
+    ];
+    await prisma.milestone.createMany({ data: orientationOcc.map(([day, label], order) => {
+      const date = dayjs(day);
+      return { actionId: orientation.id, date: date.toDate(), label, isPublic: true, done: date.isBefore(today, "day"), order };
+    }) });
   }
 
   // Une action financée par deux lignes, chacune avec un montant.
   {
     const obs = ed("OBS-01");
     const chiffresEmploi = await prisma.action.findFirst({ where: { editionId: obs.id, name: "Chiffres de l'emploi" } });
-    const obsLines = await prisma.fundingLine.findMany({ where: { editionId: obs.id } });
+    const obsLines = await prisma.fundingLine.findMany({ where: { editionId: obs.id }, orderBy: { id: "asc" } });
     if (chiffresEmploi && obsLines.length >= 2) {
       await prisma.actionFunding.createMany({ data: [
         { actionId: chiffresEmploi.id, fundingLineId: obsLines[0].id, amount: 6000 },
@@ -857,18 +865,23 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
     return supplierIds.get(name)!;
   };
   for (const [name, email] of [["Traiteur Les Saveurs", "commande@lessaveurs.exemple.fr"], ["Location Salle Beaugency", "resa@salle-beaugency.exemple.fr"], ["Transport Berry", null]] as const) await supplierIdFor(name, email ?? undefined);
-  type V = { code: string; kind: string; label: string; amount: number | null; age: number; level: number; supplier?: string; email?: string; by?: { id: string } };
-  const pendingV: V[] = [
-    { code: "SEN-01", kind: "quote", label: "Devis sonorisation de la soirée de remise", amount: 480, age: 1, level: 3, supplier: "Sono & Lumière 45", email: "contact@sono-lumiere45.exemple.fr" },
-    { code: "TES-02", kind: "quote", label: "Devis captation vidéo conférence 3", amount: 1350, age: 2, level: 2, supplier: "Studio Vidéo Loire", email: "devis@studio-video-loire.exemple.fr" },
-    { code: "DLA-01", kind: "expense", label: "Frais de déplacement comité d'appui", amount: 180, age: 3, level: 1 },
-    { code: "OBS-01", kind: "quote", label: "Devis impression de la note de conjoncture", amount: 380, age: 2, level: 1, supplier: "Imprimerie du Loiret", email: "devis@imprimerie-loiret.exemple.fr" },
-    { code: "REP-02", kind: "sending", label: "Envoi de la lettre AIESSE n°2", amount: null, age: 4, level: 2 },
-    { code: "TES-05", kind: "quote", label: "Devis traiteur journée du lab", amount: 2600, age: 7, level: 2, supplier: "Traiteur Les Saveurs", email: "commande@lessaveurs.exemple.fr" },
+  // `action` : seul pendingV s'en sert (decidedV ne rattache rien à une action). Nommée (comme ach()) plutôt que prise par
+  // indice dans e.actionIds : cet indice était figé au moment de la création des actions et ne suit pas les actions
+  // fondues en jalons ni supprimées depuis (26/09, action composante) — un indice devenu invalide ferait échouer la
+  // création avec une erreur de clé étrangère.
+  type V = { code: string; action?: string; kind: string; label: string; amount: number | null; age: number; level: number; supplier?: string; email?: string; by?: { id: string } };
+  const pendingV: (V & { action: string })[] = [
+    { code: "SEN-01", action: "Soirée de remise", kind: "quote", label: "Devis sonorisation de la soirée de remise", amount: 480, age: 1, level: 3, supplier: "Sono & Lumière 45", email: "contact@sono-lumiere45.exemple.fr" },
+    { code: "TES-02", action: "Conférence 3", kind: "quote", label: "Devis captation vidéo conférence 3", amount: 1350, age: 2, level: 2, supplier: "Studio Vidéo Loire", email: "devis@studio-video-loire.exemple.fr" },
+    { code: "DLA-01", action: "Comité d'appui", kind: "expense", label: "Frais de déplacement comité d'appui", amount: 180, age: 3, level: 1 },
+    { code: "OBS-01", action: "Note de conjoncture", kind: "quote", label: "Devis impression de la note de conjoncture", amount: 380, age: 2, level: 1, supplier: "Imprimerie du Loiret", email: "devis@imprimerie-loiret.exemple.fr" },
+    { code: "REP-02", action: "Lettre AIESSE n°2", kind: "sending", label: "Envoi de la lettre AIESSE n°2", amount: null, age: 4, level: 2 },
+    { code: "TES-05", action: "Journée du lab", kind: "quote", label: "Devis traiteur journée du lab", amount: 2600, age: 7, level: 2, supplier: "Traiteur Les Saveurs", email: "commande@lessaveurs.exemple.fr" },
   ];
   for (const v of pendingV) {
     const e = ed(v.code);
-    const r = await prisma.validationRequest.create({ data: { editionId: e.id, actionId: e.actionIds[Math.min(3, e.actionIds.length - 1)], kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "pending", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null, supplierId: await supplierIdFor(v.supplier, v.email) } });
+    const target = await prisma.action.findFirst({ where: { editionId: e.id, name: v.action } });
+    const r = await prisma.validationRequest.create({ data: { editionId: e.id, actionId: target?.id ?? null, kind: v.kind, label: v.label, requesterId: e.pilotId, amount: v.amount, requiredLevel: v.level, status: "pending", targetDelayDays: 5, createdAt: d(-v.age), supplier: v.supplier ?? null, supplierEmail: v.email ?? null, supplierId: await supplierIdFor(v.supplier, v.email) } });
     if (v.amount && v.kind === "quote") { const pdf = storePdf(`${v.label} - ${v.amount} EUR`); await prisma.attachment.create({ data: { editionId: e.id, validationId: r.id, kind: "quote", label: v.label, fileName: `devis-${v.code.toLowerCase()}-${v.amount}.pdf`, mimeType: "application/pdf", uploadedById: e.pilotId, createdAt: d(-v.age), ...pdf } }); }
   }
   const decidedV: (V & { decided: number; invoice?: "received" | "paid" | null; service?: boolean })[] = [

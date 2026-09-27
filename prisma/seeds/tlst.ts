@@ -58,8 +58,11 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
   // Ateliers mensuels du jardin (26/09, action composante) : une action récurrente à plusieurs jalons, plutôt qu'une
   // action par occurrence — le jeu de démo TLST montre la même règle que la CRESS (petits-déjeuners de l'Observatoire).
   const ateliers = await createAction(prisma, editions[0], { editionId: editions[0].id, name: "Ateliers mensuels", ownerId: chloe.id, milestoneDate: d(-120), timeTarget: 40, state: "doing", order: 90, isPublic: true, recurrence: "Un atelier par mois, toute l'année." });
-  // Le premier jalon (posé par createAction depuis milestoneDate) est déjà passé : « fait », comme les autres jalons passés.
-  await prisma.milestone.update({ where: { id: `ms_${ateliers.id}` }, data: { label: `Atelier du ${dayjs(d(-120)).format("D MMMM")}`, done: true } });
+  // Le premier jalon (posé par createAction depuis milestoneDate) est déjà passé : « fait », comme les autres jalons
+  // passés. Trouvé par actionId (pas par l'identifiant `ms_<id>` que createAction lui donne : une convention interne à
+  // common.ts, pas un contrat à reprendre ici).
+  const primoJalon = await prisma.milestone.findFirst({ where: { actionId: ateliers.id }, orderBy: { order: "asc" } });
+  if (primoJalon) await prisma.milestone.update({ where: { id: primoJalon.id }, data: { label: `Atelier du ${dayjs(d(-120)).format("D MMMM")}`, done: true } });
   for (const [oi, off] of [-90, -60, -30, 0, 30, 60].entries()) {
     const date = d(off);
     await prisma.milestone.create({ data: { actionId: ateliers.id, date, label: `Atelier du ${dayjs(date).format("D MMMM")}`, done: dayjs(date).isBefore(today, "day"), isPublic: true, order: oi + 1 } });
