@@ -4,13 +4,28 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canLockMonths } from "@/lib/rights";
+import { attachRefusal } from "@/lib/actions";
 import { dayjs, monthKey } from "@/lib/format";
 import { weekKey } from "@/lib/time";
-import { V, cap, le, au, seul } from "@/lib/vocab";
+import { V, cap, ce, le, au, seul, e as fem } from "@/lib/vocab";
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 export type TimeCellKey = { projectId?: string | null; actionId?: string | null; timeCodeId?: string | null };
+
+// Rattacher une saisie de temps à une action, ce n'est pas différent d'y rattacher une dépense ou un indicateur (I3, revue
+// finale) : même règle (attachRefusal, lib/actions.ts) — l'action est du projet donné, sa période couvre l'année de la date.
+// `current` (l'actionId déjà enregistré sur CETTE cellule) se garde toujours, même si l'action ne qualifie plus depuis : on ne
+// casse pas rétroactivement une saisie déjà faite, on refuse seulement d'en poser une nouvelle sur une action qui ne convient pas.
+async function actionAttachmentRefusal(actionId: string, projectId: string | null, date: Date, current?: string | null): Promise<Result | null> {
+  const a = await prisma.action.findUnique({ where: { id: actionId }, select: { id: true, projectId: true, startDate: true, endDate: true, state: true } });
+  const refusal = attachRefusal(a, { projectId: projectId ?? "", year: date.getFullYear() }, { current });
+  if (refusal === "missing") return { ok: false, error: `${cap(V.action)} introuvable.` };
+  if (refusal === "project") return { ok: false, error: `${cap(ce(V.action))} appartient à un autre projet.` };
+  if (refusal === "year") return { ok: false, error: `${cap(ce(V.action))} ne court pas en ${date.getFullYear()}.` };
+  if (refusal === "state") return { ok: false, error: `${cap(ce(V.action))} est abandonné${fem(V.action)} : on n'y rattache plus rien.` };
+  return null;
+}
 
 // Ne suit pas son temps (CA, bénévole, 26/09) : aucune TimeEntry/WeekDeclaration ne s'écrit pour elle, jamais — même par une
 // main autorisée à saisir pour un tiers (`saveTime` avec `personId`, RAF). Un seul point de vérité, appelé avant toute lecture
@@ -34,6 +49,10 @@ export async function saveTime(input: TimeCellKey & { date: string; hours: numbe
 
   const where = { personId, date: date.toDate(), projectId: input.projectId ?? null, actionId: input.actionId ?? null, timeCodeId: input.timeCodeId ?? null };
   const existing = await prisma.timeEntry.findFirst({ where });
+  if (input.actionId) {
+    const refusal = await actionAttachmentRefusal(input.actionId, input.projectId ?? null, date.toDate(), existing ? input.actionId : null);
+    if (refusal) return refusal;
+  }
   const hours = Math.round((Number(input.hours) || 0) * 100) / 100;
   if (hours <= 0 && !input.comment) {
     if (existing) await prisma.timeEntry.delete({ where: { id: existing.id } });
@@ -60,7 +79,7 @@ export async function declareWeek(week: string): Promise<Result> {
 }
 
 // Propose les valeurs de la semaine précédente (EF-D1) : copie les lignes non renseignées.
-export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copied: number }>> {
+export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copied: number; skipped: number }>> {
   const me = await getCurrentPerson();
   const refusal = await assertCanWriteTime(me, me.id);
   if (refusal) return refusal;
@@ -74,19 +93,25 @@ export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copi
   if (locks.length) return { ok: false, error: "Un mois de cette semaine est verrouillé." };
   const prevEntries = await prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: prev.toDate(), lt: start.toDate() } } });
   const current = await prisma.timeEntry.findMany({ where: { personId: me.id, date: { gte: start.toDate(), lt: start.add(1, "week").toDate() } } });
-  const creates = prevEntries.flatMap((p) => {
+  const creates: { personId: string; date: Date; projectId: string | null; actionId: string | null; timeCodeId: string | null; hours: number }[] = [];
+  let skipped = 0;
+  for (const p of prevEntries) {
     const date = dayjs(p.date).add(1, "week");
-    if (date.isAfter(dayjs(), "day")) return [];
+    if (date.isAfter(dayjs(), "day")) continue;
     const dup = current.find((c) => dayjs(c.date).isSame(date, "day") && c.projectId === p.projectId && c.actionId === p.actionId && c.timeCodeId === p.timeCodeId);
-    return dup ? [] : [{ personId: me.id, date: date.toDate(), projectId: p.projectId, actionId: p.actionId, timeCodeId: p.timeCodeId, hours: p.hours }];
-  });
+    if (dup) continue;
+    // I3 (revue finale) : une action copiée qui ne court plus sur l'année de la nouvelle date, ou qui n'est plus du même
+    // projet, ne reçoit pas la copie — on la compte à part, on ne bloque pas le reste de la semaine.
+    if (p.actionId && (await actionAttachmentRefusal(p.actionId, p.projectId, date.toDate()))) { skipped++; continue; }
+    creates.push({ personId: me.id, date: date.toDate(), projectId: p.projectId, actionId: p.actionId, timeCodeId: p.timeCodeId, hours: p.hours });
+  }
   await prisma.$transaction(async (tx) => {
     for (const data of creates) await tx.timeEntry.create({ data });
     if (creates.length) await tx.weekDeclaration.deleteMany({ where: { personId: me.id, week: weekKey(start) } });
   });
   const copied = creates.length;
   revalidatePath("/temps");
-  return { ok: true, data: { copied } };
+  return { ok: true, data: { copied, skipped } };
 }
 
 // Verrouillage mensuel par la RAF (EF-D5) ; déverrouillage possible.
@@ -123,6 +148,13 @@ export async function saveWeekSplit(weekStart: string, parts: { projectId: strin
   const refusal = await assertCanWriteTime(me, me.id);
   if (refusal) return refusal;
   const start = dayjs(weekStart).startOf("isoWeek");
+  // I3 (revue finale) : avant tout calcul de rythme ou écriture, chaque part rattachée à une action passe la même garde que
+  // les autres rattachements (attachRefusal) — sur la semaine entière, pas jour par jour (une semaine ne se répartit qu'en entier).
+  for (const p of parts) {
+    if (!p.actionId) continue;
+    const refusal = await actionAttachmentRefusal(p.actionId, p.projectId, start.toDate());
+    if (refusal) return refusal;
+  }
   const { loadRhythms, rhythmAt, expectedHoursOn, weekDays } = await import("@/lib/time");
   const [rhythms, full] = await Promise.all([loadRhythms(), prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } } } })]);
   if (!full) return { ok: false, error: "Personne introuvable." };

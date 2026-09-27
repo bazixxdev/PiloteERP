@@ -90,7 +90,7 @@ export function TimeGrid(p: { personId: string; weekStart: string; days: string[
           <p className="mt-1.5 hidden text-xs text-muted-foreground md:block">Le total attendu vient de votre rythme : une clé de répartition, pas un pointage.</p>
         </div>
         {p.canCopyPrevious ? (
-          <Button size="sm" variant="outline" className="h-11 md:h-8" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente`); router.refresh(); } })}>
+          <Button size="sm" variant="outline" className="h-11 md:h-8" disabled={pending} data-testid="copy-previous" onClick={() => start(async () => { const r = await copyPreviousWeek(p.weekStart); if (!r.ok) toast.error(r.error); else { const skip = r.data!.skipped ? ` ; ${r.data!.skipped} ignorée(s) : ${un(V.action)} qui ne court plus sur cette semaine` : ""; toast.success(`${r.data!.copied} saisie(s) reprise(s) de la semaine précédente${skip}`); router.refresh(); } })}>
             <History />Reprendre la semaine précédente
           </Button>
         ) : <span />}
