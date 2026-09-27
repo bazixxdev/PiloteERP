@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HandHelping } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { EmptyState } from "@/components/common/empty-state";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getSettings } from "@/lib/session";
@@ -11,6 +12,7 @@ import { loadEditionOpts } from "@/lib/tasks";
 import { borrowerName, isLate, loadEquipment, loadOpenLoans } from "@/lib/equipment";
 import { cn } from "@/lib/utils";
 import { LoanDialog, ReturnButton } from "../controls";
+import { materielTabs } from "../tabs";
 
 // Prêts (retour de Gaël, 18/09) : l'entrée principale du module — les prêts en cours (retards en tête), les prêts terminés,
 // et « Nouveau prêt » qui choisit le matériel dans le dialogue. L'inventaire est à côté.
@@ -28,6 +30,7 @@ export default async function PretsPage({ searchParams }: { searchParams: Promis
   ]);
   const late = open.filter((l) => isLate(l));
   const num = (n: number) => `P-${String(n).padStart(4, "0")}`;
+  const current = done ? "termines" : "encours";
   return (
     <div className="p-4 md:p-6">
       <PageHeader
@@ -35,6 +38,7 @@ export default async function PretsPage({ searchParams }: { searchParams: Promis
         subtitle={done ? <>{closed.length} prêt{closed.length > 1 ? "s" : ""} rendu{closed.length > 1 ? "s" : ""}</> : <>{open.length} prêt{open.length > 1 ? "s" : ""} en cours{late.length ? <span className="text-danger"> · {late.length} retour{late.length > 1 ? "s" : ""} en retard</span> : ""} · <Link href="/materiel" className="text-primary hover:underline">inventaire du matériel</Link></>}
         actions={<LoanDialog equipments={items.filter((e) => e.state !== "retired").map((e) => ({ id: e.id, name: e.name, available: e.available }))} people={people} organisations={organisations} editions={editions} />}
       />
+      <PageTabs tabs={materielTabs(current)} />
       <div className="rounded-md border bg-card">
         {done ? (
           closed.length === 0 ? <div className="p-4"><EmptyState title="Aucun prêt terminé" hint="Les retours enregistrés apparaîtront ici, avec leur commentaire." icon={<HandHelping className="size-5" />} /></div> : (

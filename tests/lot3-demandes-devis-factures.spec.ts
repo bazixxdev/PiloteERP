@@ -23,7 +23,7 @@ test("une demande interne se dépose, arrive chez l'assistante, devient une tâc
   await page.goto("/demandes");
   const line = page.locator("[data-testid^=request-line-]", { hasText: "jury du Prix" });
   await expect(line).toBeVisible();
-  await expect(page.locator("aside").first().getByRole("link", { name: /Demandes/ })).toContainText("2");
+  await expect(page.locator("aside").first().getByRole("link", { name: /À traiter/ })).toContainText("2");
   await line.locator("[data-testid^=request-take-]").click();
   await expect(page.getByText("Demande prise : elle est dans vos tâches")).toBeVisible();
   await expect(line.locator("[data-testid^=request-task-link-]")).toBeVisible();

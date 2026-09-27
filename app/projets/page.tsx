@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { FileDown, Lightbulb } from "lucide-react";
 import { DossiersHeader } from "@/components/common/dossiers-nav";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { StatusBadge } from "@/components/common/status-badge";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
-import { canAdmin } from "@/lib/rights";
+import { canAdmin, isCodir } from "@/lib/rights";
 import { refLabel } from "@/lib/refs";
 import { CreateProjectDialog } from "@/app/admin/forms";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { withBase } from "@/lib/base-path";
 import { PROJECT_STATES, projectState } from "@/lib/projects";
 import { cn } from "@/lib/utils";
 import { ProjectsToolbar } from "./controls";
+import { projectTabs } from "./tabs";
 import { V, cap, pl } from "@/lib/vocab";
 
 // Projets (lot 1 du 19/09, retour de Gaël) : une liste sobre — le nom, l'état, la raison d'être, le pôle, le pilote, les
@@ -53,6 +55,7 @@ export default async function ProjetsPage({ searchParams }: { searchParams: Prom
           </>
         }
       />
+      <PageTabs tabs={projectTabs("tous", isCodir(me))} />
       <div className="overflow-x-auto rounded-md border bg-card">
         <table className="w-full text-[13px]" data-testid="projects-table">
           <thead className="text-left text-[10px] font-semibold text-muted-foreground">

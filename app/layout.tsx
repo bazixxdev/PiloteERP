@@ -11,7 +11,8 @@ import { Shortcuts } from "@/components/shell/shortcuts";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getCurrentPersonOrNull, getPeople, getSettings } from "@/lib/session";
 import { syncDeadlineNotifications } from "@/lib/deadline-notifications";
-import { canDecideValidation, canLockMonths, canSeeTimeOf } from "@/lib/rights";
+import { canDecideValidation, canLockMonths } from "@/lib/rights";
+import { seesSomeoneElse } from "@/lib/time-visibility";
 import { instanceHas } from "@/lib/modules";
 import { navTreeFor } from "@/lib/navigation";
 import { canTreatRequest, wideViewLabel } from "@/lib/requests";
@@ -70,7 +71,7 @@ async function counters() {
       tresorerie: instanceHas(settings, "tresorerie"),
       materiel: instanceHas(settings, "materiel"),
       tracksTime: me.tracksTime,
-      showTeam: people.some((p) => p.id !== me.id && p.tracksTime && canSeeTimeOf(me, p, settings.timeVisibility)),
+      showTeam: seesSomeoneElse(me, people, settings.timeVisibility),
       canCloseMonths: canLockMonths(me),
       wide: wideViewLabel(me),
       badges,

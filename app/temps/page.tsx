@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
@@ -14,6 +15,7 @@ import { expectedHoursOn, loadRhythms, parseWeek, rhythmAt, weekDays, weekKey } 
 import { TimeGrid, type GridRow } from "./grid";
 import { PersonSelect } from "./person-select";
 import { TimeNav } from "@/components/common/time-nav";
+import { teamTabs } from "./team-tabs";
 import { canLockMonths } from "@/lib/rights";
 import { hasModule } from "@/lib/modules";
 import { loadWeekTraces } from "@/lib/traces";
@@ -95,7 +97,6 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   const prevKey = weekKey(start.subtract(1, "week"));
   const nextKey = weekKey(start.add(1, "week"));
   const qs = (w: string, extra = "") => `/temps?semaine=${w}${readOnly ? `&personne=${person.id}` : ""}${splitMode ? "&mode=parts" : ""}${inFocus ? "&focus=1" : ""}${extra}`;
-  void teamMode;
   const visible = visibleAll;
   const currentHours: Record<string, number> = {};
   for (const t of entries) { const k = key(t); currentHours[k] = (currentHours[k] ?? 0) + t.hours; }
@@ -104,6 +105,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   if (person.fixedShare) {
     return (
       <div className="p-4 md:p-6">
+        {teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me) })} />}
         <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />
         <PageHeader title={readOnly ? `Temps de ${person.name}` : "Répartition de mon temps"} />
         <div className="rounded-md border bg-mint-soft px-4 py-4 text-sm" data-testid="fixed-share-banner">
@@ -116,6 +118,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   return (
     <div className={cn("p-4 md:p-6", inFocus && "mx-auto max-w-5xl")}>
       <FocusMode on={inFocus} exitHref={qs(weekKey(start)).replace("&focus=1", "")} />
+      {!inFocus && teamMode && <PageTabs tabs={teamTabs("equipe", { team: true, close: canLockMonths(me) })} />}
       {!inFocus && <TimeNav current={readOnly ? "team" : "me"} showTeam={visible.length > 1} showCloture={canLockMonths(me)} teamHref={firstOther ? `/temps?personne=${firstOther.id}&semaine=${weekKey(start)}` : undefined} />}
       {/* En-tête compact : titre, puis la navigation de semaine sur une seule ligne (cibles de 44 px sur mobile), le rythme en retrait. */}
       <PageHeader

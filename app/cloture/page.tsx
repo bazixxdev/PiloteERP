@@ -2,15 +2,18 @@ import Link from "next/link";
 import { withBase } from "@/lib/base-path";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getSettings } from "@/lib/session";
 import { canLockMonths, declaresTime } from "@/lib/rights";
+import { seesSomeoneElse } from "@/lib/time-visibility";
 import { dayjs, fmtNumber, monthLabel } from "@/lib/format";
 import { expectedDaysOfMonth, loadRhythms, weekKey, workingDaysOfMonth } from "@/lib/time";
 import { ClotureTable, type ClotureRow } from "./table";
 import { TimeNav } from "@/components/common/time-nav";
+import { teamTabs } from "@/app/temps/team-tabs";
 import { V, le, au } from "@/lib/vocab";
 
 export default async function CloturePage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
@@ -36,6 +39,8 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
     prisma.person.findMany({ include: { rhythmPeriods: { include: { rhythm: true } } } }),
     prisma.weekDeclaration.findMany(),
   ]);
+  // Même règle que le layout (lib/time-visibility.ts) : au moins une autre personne dont le temps m'est visible.
+  const showTeam = seesSomeoneElse(me, people, settings.timeVisibility);
   const reminders = await prisma.notification.findMany({ where: { kind: "time_reminder", title: { contains: monthLabel(month), mode: "insensitive" } }, include: { sender: true }, orderBy: { createdAt: "desc" } });
   const weeksOfMonth = [...new Set(workingDaysOfMonth(month).map((d) => weekKey(d)))];
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
@@ -71,6 +76,7 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="p-4 md:p-6">
+      <PageTabs tabs={teamTabs("cloture", { team: showTeam, close: true })} />
       <TimeNav current="cloture" showTeam showCloture />
       <PageHeader
         title="Clôture mensuelle"

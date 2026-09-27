@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lightbulb, Maximize2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Gauge } from "@/components/common/gauge";
 import { AlertChips, AlertSummary } from "@/components/common/alert-chips";
@@ -16,6 +17,7 @@ import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, daysFromNow, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PortfolioFilters } from "./filters";
+import { projectTabs } from "@/app/projets/tabs";
 import { V, cap, aucun, pl, nb, tous, e as accord } from "@/lib/vocab";
 
 type Search = { pole?: string; statut?: string; alerte?: string; mode?: string; trimestre?: string; perimetre?: string; type?: string };
@@ -83,6 +85,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           )
         }
       />
+
+      {!codir && <PageTabs tabs={projectTabs("portefeuille", isCodir(me))} />}
 
       {!codir && (
         <div className="mb-5 grid grid-cols-2 rounded-md border bg-card md:grid-cols-4" data-testid="portfolio-summary">

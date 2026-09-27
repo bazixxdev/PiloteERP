@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Package } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PageTabs } from "@/components/shell/page-tabs";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { UrlPanel } from "@/components/common/url-panel";
@@ -16,6 +17,7 @@ import { borrowerName, equipmentCategories, EQUIPMENT_STATES, isLate, loadEquipm
 import { cn } from "@/lib/utils";
 import { DeleteLoanButton, EquipmentToolbar, FilesBlock, LoanDialog, NewEquipmentDialog, RetireButton, ReturnButton } from "./controls";
 import { attachmentInclude } from "@/lib/attachments";
+import { materielTabs } from "./tabs";
 import { V, le } from "@/lib/vocab";
 
 // Matériel et prêts (module « materiel », 18/09) : l'inventaire (disponible = quantité − sorti), le registre des prêts en
@@ -44,6 +46,7 @@ export default async function MaterielPage({ searchParams }: { searchParams: Pro
         subtitle={<>{items.filter((i) => i.state !== "retired").length} matériel{items.length > 1 ? "s" : ""} · <Link href="/materiel/prets" className="text-primary hover:underline">{loans.length} prêt{loans.length > 1 ? "s" : ""} en cours</Link>{late.length ? <span className="text-danger"> · {late.length} retour{late.length > 1 ? "s" : ""} en retard</span> : ""}</>}
         actions={rw ? <NewEquipmentDialog categories={categories} /> : undefined}
       />
+      <PageTabs tabs={materielTabs("inventaire")} />
       {(
         <div className="rounded-md border bg-card">
           <EquipmentToolbar q={sp.q ?? ""} category={sp.categorie ?? ""} categories={categories} available={sp.dispo === "1"} />
