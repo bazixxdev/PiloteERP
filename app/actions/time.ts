@@ -12,11 +12,22 @@ type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string
 
 export type TimeCellKey = { projectId?: string | null; actionId?: string | null; timeCodeId?: string | null };
 
+// Ne suit pas son temps (CA, bénévole, 26/09) : aucune TimeEntry/WeekDeclaration ne s'écrit pour elle, jamais — même par une
+// main autorisée à saisir pour un tiers (`saveTime` avec `personId`, RAF). Un seul point de vérité, appelé avant toute lecture
+// ou écriture des quatre commandes de ce fichier qui créent, modifient ou déclarent des heures.
+async function assertCanWriteTime(me: { id: string; tracksTime: boolean }, personId: string): Promise<Result | null> {
+  const tracks = personId === me.id ? me.tracksTime : ((await prisma.person.findUnique({ where: { id: personId }, select: { tracksTime: true } }))?.tracksTime ?? false);
+  if (tracks) return null;
+  return { ok: false, error: personId === me.id ? "Vous ne suivez pas votre temps : aucune saisie n'est possible." : "Cette personne ne suit pas son temps : aucune saisie n'est possible pour elle." };
+}
+
 // Une saisie = personne × projet (ou action, ou code) × date × heures (EF-D1, EF-D7).
 export async function saveTime(input: TimeCellKey & { date: string; hours: number; comment?: string | null; personId?: string }): Promise<Result> {
   const me = await getCurrentPerson();
   const personId = input.personId ?? me.id;
   if (personId !== me.id && !canLockMonths(me)) return { ok: false, error: "Vous ne saisissez que vos propres temps." };
+  const refusal = await assertCanWriteTime(me, personId);
+  if (refusal) return refusal;
   const date = dayjs(input.date).startOf("day");
   const locked = await prisma.monthLock.findUnique({ where: { personId_month: { personId, month: monthKey(date.toDate()) } } });
   if (locked) return { ok: false, error: `Ce mois est verrouillé : demandez ${au(V.raf)} de le déverrouiller.` };
@@ -40,6 +51,8 @@ export async function saveTime(input: TimeCellKey & { date: string; hours: numbe
 // « Cette semaine est complète » : déclaration de la personne, lue par la RAF à la clôture ; ne verrouille rien.
 export async function declareWeek(week: string): Promise<Result> {
   const me = await getCurrentPerson();
+  const refusal = await assertCanWriteTime(me, me.id);
+  if (refusal) return refusal;
   await prisma.weekDeclaration.upsert({ where: { personId_week: { personId: me.id, week } }, create: { personId: me.id, week }, update: { declaredAt: new Date() } });
   revalidatePath("/temps");
   revalidatePath("/cloture");
@@ -49,6 +62,8 @@ export async function declareWeek(week: string): Promise<Result> {
 // Propose les valeurs de la semaine précédente (EF-D1) : copie les lignes non renseignées.
 export async function copyPreviousWeek(weekStart: string): Promise<Result<{ copied: number }>> {
   const me = await getCurrentPerson();
+  const refusal = await assertCanWriteTime(me, me.id);
+  if (refusal) return refusal;
   const start = dayjs(weekStart).startOf("isoWeek");
   const prev = start.subtract(1, "week");
   // Une semaine peut toucher deux mois : chaque date candidate doit être
@@ -105,6 +120,8 @@ export async function lockMonthForAll(month: string, personIds: string[]): Promi
 // sur les jours attendus du rythme, et l'export de la RAF ne change pas. Remplace les saisies de la semaine sur les lignes données.
 export async function saveWeekSplit(weekStart: string, parts: { projectId: string | null; actionId: string | null; timeCodeId: string | null; percent: number }[]): Promise<Result<{ hours: number }>> {
   const me = await getCurrentPerson();
+  const refusal = await assertCanWriteTime(me, me.id);
+  if (refusal) return refusal;
   const start = dayjs(weekStart).startOf("isoWeek");
   const { loadRhythms, rhythmAt, expectedHoursOn, weekDays } = await import("@/lib/time");
   const [rhythms, full] = await Promise.all([loadRhythms(), prisma.person.findUnique({ where: { id: me.id }, include: { rhythmPeriods: { include: { rhythm: true } } } })]);

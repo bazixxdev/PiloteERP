@@ -37,8 +37,9 @@ export default async function SeminairePage({ searchParams }: { searchParams: Pr
   });
   const stopped = rows.filter((r) => !r.next && r.decision === "stop").length;
   const roles = await getRoleMap();
+  // Ne suit pas son temps (CA, bénévole, 26/09) : hors contrôle de charge, comme hors plan de charge (lib/load.ts).
   const people = (await prisma.person.findMany({
-    where: { active: true },
+    where: { active: true, tracksTime: true },
     include: { pole: true, personDays: { where: { edition: { year: target } }, include: { edition: { include: { project: true } } } } },
     orderBy: [{ pole: { name: "asc" } }, { order: "asc" }],
   })).map((p) => withActor(roles, p));

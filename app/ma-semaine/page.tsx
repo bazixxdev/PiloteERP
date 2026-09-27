@@ -223,23 +223,27 @@ export default async function MaSemainePage() {
             )}
           </Panel>
 
-          <div className="order-5 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
-            <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mon temps à répartir</h4><span aria-hidden>◷</span></div>
-            <p className="mt-2 mb-4 text-xs text-muted-foreground">
-              {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est répartie jusqu'ici.<br /></> : null}
-              <b className="tabular text-foreground">{fmtNumber(weekTotal, 1)} h{expected !== null ? ` sur ${fmtNumber(expected, 1)} h attendues` : ""}</b> cette semaine.
-            </p>
-            {expected !== null && <div className="h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expected) * 100)}%` }} /></div>}
-            {missing.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5" data-testid="missing-days">
-                <span className="w-full text-[10px] text-muted-foreground">Jours des deux dernières semaines sans répartition :</span>
-                {missing.map((d) => (
-                  <Link key={d} href={`/temps?semaine=${dayjs(d).isoWeekYear()}-W${String(dayjs(d).isoWeek()).padStart(2, "0")}`} className="rounded-sm bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-foreground hover:bg-warning/30">{dayjs(d).format("ddd D MMM")}</Link>
-                ))}
-              </div>
-            )}
-            <Button asChild className="mt-4"><Link href="/temps">Compléter ma semaine →</Link></Button>
-          </div>
+          {/* Ne suit pas son temps (CA, bénévole, 26/09) : rien à répartir, et /temps la renverrait aussitôt ici (redirection
+              de app/temps/page.tsx) — le panneau et son lien n'ont pas leur place pour elle. */}
+          {me.tracksTime && (
+            <div className="order-5 rounded-md border border-[#d5ddcc] bg-[#eff2e9] p-5" data-testid="my-time">
+              <div className="flex items-center justify-between"><h4 className="text-[15px] font-bold">Mon temps à répartir</h4><span aria-hidden>◷</span></div>
+              <p className="mt-2 mb-4 text-xs text-muted-foreground">
+                {missingThisWeek.length > 0 ? <>{missingThisWeek.map((d) => d.format("dddd")).join(", ").replace(/^./, (c) => c.toUpperCase())} reste{missingThisWeek.length > 1 ? "nt" : ""} à compléter.<br /></> : weekTotal > 0 ? <>La semaine est répartie jusqu'ici.<br /></> : null}
+                <b className="tabular text-foreground">{fmtNumber(weekTotal, 1)} h{expected !== null ? ` sur ${fmtNumber(expected, 1)} h attendues` : ""}</b> cette semaine.
+              </p>
+              {expected !== null && <div className="h-[5px] overflow-hidden rounded-[3px] bg-[#e8e9e1]"><i className="block h-full rounded-[3px] bg-mint" style={{ width: `${Math.min(100, (weekTotal / expected) * 100)}%` }} /></div>}
+              {missing.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5" data-testid="missing-days">
+                  <span className="w-full text-[10px] text-muted-foreground">Jours des deux dernières semaines sans répartition :</span>
+                  {missing.map((d) => (
+                    <Link key={d} href={`/temps?semaine=${dayjs(d).isoWeekYear()}-W${String(dayjs(d).isoWeek()).padStart(2, "0")}`} className="rounded-sm bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-foreground hover:bg-warning/30">{dayjs(d).format("ddd D MMM")}</Link>
+                  ))}
+                </div>
+              )}
+              <Button asChild className="mt-4"><Link href="/temps">Compléter ma semaine →</Link></Button>
+            </div>
+          )}
         </div>
       </div>
 

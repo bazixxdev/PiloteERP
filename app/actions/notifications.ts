@@ -14,6 +14,10 @@ type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string
 export async function remindTime(personId: string, month: string): Promise<Result<{ at: Date }>> {
   const me = await getCurrentPerson();
   if (!canLockMonths(me)) return { ok: false, error: `${cap(seul(V.raf))} (ou ${le(V.direction)}) relance.` };
+  // Ne suit pas son temps (CA, bénévole, 26/09) : rien à relancer — la ligne a déjà disparu de la clôture (app/cloture/page.tsx),
+  // mais une garde serveur est due ici aussi (l'absence du bouton n'est pas une garde, AGENTS.md).
+  const target = await prisma.person.findUnique({ where: { id: personId }, select: { tracksTime: true } });
+  if (!target?.tracksTime) return { ok: false, error: "Cette personne ne suit pas son temps : rien à relancer." };
   const n = await prisma.notification.create({
     data: { personId, senderId: me.id, kind: "time_reminder", title: `Temps de ${monthLabel(month).toLowerCase()} à compléter`, body: `${me.name} vous demande de compléter et déclarer vos semaines de ${monthLabel(month).toLowerCase()} avant la clôture.`, link: `/temps?semaine=${weekKey(dayjs(month + "-01"))}` },
   });
