@@ -28,8 +28,9 @@ test.describe("la page de connexion", () => {
     await page.goto("/connexion");
     const root = page.getByTestId("auth-page");
     await expect(page.getByTestId("brand-aura")).toBeVisible();
-    const ink = await root.evaluate((el) => getComputedStyle(el).getPropertyValue("--brand-ink").trim());
-    expect(ink).toMatch(/^#[0-9a-f]{6}$/i);
+    // Le CSS pose une valeur par défaut pour --brand-ink (#212a33 sur .auth-page) : lire le calculé ne prouverait rien si
+    // l'injection côté serveur échoue silencieusement. On vérifie plutôt l'attribut style posé par brandStyle(palette).
+    await expect(root).toHaveAttribute("style", /--brand-ink:\s*#[0-9a-f]{6}/i);
     await expect(page.getByTestId("brand-aura")).toContainText("de l'idée au bilan");
     await expect(page.getByRole("heading", { name: "Se connecter" })).toBeVisible();
     for (const id of ["login-form", "login-email", "login-password", "login-submit", "login-remember"]) await expect(page.getByTestId(id)).toBeVisible();
