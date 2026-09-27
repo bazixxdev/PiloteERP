@@ -25,12 +25,12 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
         </div>
       </aside>
       <section className="auth-side">
-        <main className="auth-side__main">
+        <div className="auth-side__main">
           <Logo img={logos.color} className="auth-logo" />
           <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.5px]">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
           <div className="mt-6">{children}</div>
-        </main>
+        </div>
         <footer className="auth-side__foot"><span>© {new Date().getFullYear()} {b.longName}</span><span>Pilote</span></footer>
       </section>
     </div>
