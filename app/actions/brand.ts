@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson } from "@/lib/session";
 import { canAdmin } from "@/lib/rights";
+import { reportInternalError } from "@/lib/errors";
 import { processLogo, BrandImageError, BRAND_MAX_BYTES, BRAND_MIME, type BrandKind } from "@/lib/brand-images";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -26,7 +27,7 @@ export async function uploadBrandLogo(form: FormData): Promise<Result> {
     await prisma.brandAsset.upsert({ where: { key: kind }, create: { key: kind, ...data }, update: data });
   } catch (e) {
     if (e instanceof BrandImageError) return { ok: false, error: e.message };
-    throw e;
+    return { ok: false, ...reportInternalError("uploadBrandLogo", e) };
   }
   revalidatePath("/", "layout");
   return { ok: true };
