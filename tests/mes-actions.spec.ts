@@ -56,8 +56,13 @@ test("Mes actions : ce qui est confié, la marge de décision, les jalons de la 
   await page.getByTestId("action-latitude").blur();
   await expect(page.getByTestId("action-entrusted-field")).toHaveValue(ENTRUSTED);
 
-  // Un jalon proche (dans la période en cours), marqué point de contrôle.
-  const soon = dayjs().add(10, "day").format("YYYY-MM-DD");
+  // Un jalon proche, marqué point de contrôle : dans le semestre en cours (périodes par défaut de l'admin, 01-06/07-12) et
+  // jamais au-delà du 31/12, pour ne pas dépendre du jour de lancement (I4, revue finale du 26/09) — sinon un jalon posé à
+  // dix jours change de semestre (ou d'année) selon la date, et la page par défaut (sans `periode=`) ne le montre plus.
+  const now = dayjs();
+  const semesterEnd = now.month() < 6 ? dayjs(`${now.year()}-06-30`) : dayjs(`${now.year()}-12-31`);
+  const inTenDays = now.add(10, "day");
+  const soon = (inTenDays.isAfter(semesterEnd, "day") ? semesterEnd : inTenDays).format("YYYY-MM-DD");
   await page.getByTestId("milestone-add").click();
   await page.getByTestId("milestone-add-date").fill(soon);
   await page.getByTestId("milestone-add-label").fill(MILESTONE);
