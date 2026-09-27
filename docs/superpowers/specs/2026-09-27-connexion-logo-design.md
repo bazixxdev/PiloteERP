@@ -1,0 +1,38 @@
+# Page de connexion aux couleurs du logo, logos téléversés — conception
+
+**Date** : 27/09/2026 · **Statut** : validé par Gaël (échange du 27/09). **Source** : `CRESS/refonte login/` (hors dépôt) — `NOTICE-panneau-couleurs-logo.md` (algorithme, contrat de données, CSS du panneau), `connexion.html` (maquette de référence), `brand-palette.js` et `brand-palette.test.mjs` (module testé et ses tests).
+
+## 1. Ce que Gaël a demandé
+
+1. Refaire la **structure** de la page de connexion comme la maquette : deux colonnes, **panneau lumineux animé à gauche**, logo + formulaire à droite ; bandeau en haut sur mobile. **Pas de nouveau style** pour les champs, la typographie, les boutons : on garde les composants et la police du projet (`Input`, `Label`, `Button`, polices de `config/clients`).
+2. Le panneau prend **automatiquement les couleurs du logo** (principe ci-dessous) ; seuls les éléments que la maquette colore à la couleur foncée du logo la prennent : le texte du panneau, le bouton « Se connecter », les liens de la page et l'anneau de focus (couleur d'accent).
+3. **Nouvelle accroche** du panneau, adaptée à l'outil : pastille = nom long de l'organisation ; titre = « Piloter vos {projets} d'économie sociale et solidaire, de l'idée au bilan. » ({projets} = `pl(V.projet)`).
+4. Le **logo est téléversé par un compte admin** dans Admin › Paramètres. **Deux images** : un **grand logo** (page de connexion et barre latérale dépliée) et un **petit logo** (barre latérale repliée, bandeau mobile, **favicon**). Sans image téléversée, l'outil garde les images du fichier client (`config/clients/<client>.ts`, `public/clients/<client>/`).
+
+## 2. Le principe « dynamique lié au logo »
+
+Une seule fois, quand un admin téléverse le grand logo : le serveur lit ses pixels, repère au plus 3 couleurs (en ignorant la transparence, le blanc, le noir et les gris), et en tire une **palette claire** de 7 couleurs (`--brand-base`, `--brand-glow-1…4`, `--brand-ink`, `--brand-accent`), rangée en base avec l'image. À chaque affichage de la page de connexion, le serveur pose ces 7 variables CSS sur la page ; le panneau les lit : un fond clair, quatre taches floues en dégradé radial qui bougent lentement (19 à 29 s, aller-retour, `transform` seulement, arrêt si « réduire les animations »), le texte et le bouton à la couleur foncée du logo (contraste ≥ 7:1 sur blanc, garanti par le calcul). Aucun JavaScript à l'affichage. Logo noir et blanc ou absent : palette neutre gris-bleu. La palette est **recalculée à chaque remplacement** du grand logo, remise au neutre à sa suppression — personne ne choisit les couleurs à la main.
+
+Sans logo téléversé, la palette est calculée (une fois par démarrage du serveur, en mémoire) depuis le grand logo du fichier client : la page de connexion CRESS et TLST est colorée dès le déploiement, sans rien téléverser.
+
+## 3. Décisions techniques
+
+- **Algorithme** : `brand-palette.js` repris **à l'identique** en TypeScript (`lib/brand-palette.ts`, fonctions pures, `PALETTE_VERSION = 1`), avec ses tests convertis en `node:test` (`tests/unit/brand-palette.test.ts`), vecteur de référence (logo TLST jaune + vert) compris. Les aides navigateur (`paletteFromImage`, `applyPalette`) ne sont pas reprises : le calcul est côté serveur.
+- **Lecture des pixels et conversion** : `sharp`, ajouté en **dépendance directe** (déjà présent dans `package-lock.json` comme dépendance optionnelle de Next 15, même version 0.35.4 ; installé par `npm ci` sur le serveur) — justification écrite dans le commit (règle d'`AGENTS.md`).
+- **Stockage** : une table `BrandAsset` (clé `logo` ou `logo_small`, octets PNG, largeur, hauteur, palette JSON pour `logo`, `updatedAt`) — **en base**, pas dans `public/` : elle survit aux déploiements (`rsync --delete`), part dans les sauvegardes `pg_dump`, et n'exige pas d'écrire dans le dossier de l'application. Toute image téléversée est **convertie en PNG** par `sharp` et **réduite** (grand logo : 640 px de côté au plus ; petit logo : 256 px) : on ne stocke ni ne sert jamais le fichier d'origine — un SVG est rastérisé, donc aucun script SVG n'est servi.
+- **Téléversement** : formulaire dans Admin › Paramètres, section « Logos » ; commandes serveur `uploadBrandLogo(kind, formData)` et `deleteBrandLogo(kind)` gardées par `canAdmin` **avant** toute lecture ; types acceptés PNG, JPEG, WebP, SVG ; 2 Mo au plus ; un fichier que `sharp` ne sait pas lire est **refusé avec un message clair** (on ne peut ni l'afficher ni en tirer une couleur) — écart assumé à la notice, qui gardait le fichier avec la palette neutre. Pas de passage par `saveField` (fichier, pas un champ trivial).
+- **Service des images** : route publique `/marque/[kind]` (`kind` ∈ `logo`, `logo-petit`), ajoutée à la liste publique de `middleware.ts` (la page de connexion est publique) ; `Content-Type: image/png`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` ; l'URL porte `?v=<updatedAt>` pour que le remplacement se voie tout de suite ; 404 si aucune image téléversée pour cette clé.
+- **Injection de la palette** : rendu serveur, sur l'élément racine de la page de connexion, par `brandStyle(palette)` qui ne garde que les 7 clés connues et les valeurs `#rrggbb` (pas d'injection CSS possible depuis la base).
+- **Favicon** : `app/icon.tsx` sert le petit logo téléversé (réduit à 64 px) s'il existe, sinon le favicon du fichier client ; il passe de `force-static` à dynamique.
+- **Où les logos s'affichent** : `components/shell/logo.tsx` reçoit les images résolues (téléversées ou du fichier client) calculées une fois par le layout serveur (`getLogos()`), transmises à la barre latérale, au bandeau et au cadre des pages hors session. Le logo « blanc » (fond sombre) reste celui du fichier client.
+- **Page de connexion** : structure de la maquette (§ 7 de la notice : grille `minmax(0, 1.08fr) minmax(440px, 1fr)`, panneau à marge 12 px et rayon 20 px, colonne droite centrée de 380 px au plus, logo haut de 104 px, titre « Se connecter », pied de page « © {année} {nom long} »). Ajouts de la maquette retenus : bouton œil sur le mot de passe (`aria-pressed`, `aria-label`) ; case « Rester connecté » **cochée par défaut** (comportement actuel inchangé ; décochée, la session s'arrête à la fermeture du navigateur — `rememberMe` de Better Auth). Non retenu : « Créer un compte » (les comptes sont créés par l'admin). Les `data-testid` actuels (`login-form`, `login-email`, `login-password`, `login-error`, `login-submit`) sont conservés. Les pages « Mot de passe oublié » et « Réinitialiser » prennent la même structure (même cadre `AuthShell`).
+- **Écran d'admin** : pour chaque logo, l'aperçu, « Remplacer », « Retirer » ; pour le grand logo, les pastilles des couleurs repérées et un petit aperçu du panneau. Avertissement affiché (limite connue de la notice) : un logo prévu pour fond sombre (texte blanc) disparaît sur le blanc de la colonne droite.
+- **Rattrapage** : quand `PALETTE_VERSION` augmentera, un script `scripts/recompute-brand-palette.ts` (idempotent) recalcule les palettes de version inférieure. À la v1, rien à rattraper (aucun logo téléversé).
+
+## 4. Hors périmètre
+
+Choisir ses couleurs à la main (`mode manual` de la notice), logo pour fond sombre téléversé, écran Admin › Apparence complet (thème, polices : feuille de route), mode sombre de la page de connexion.
+
+## 5. Critères d'acceptation
+
+Ceux du § 9 de la notice, plus : un compte non admin ne téléverse ni ne retire rien (test de sécurité) ; la route `/marque/*` ne sert que des PNG, sans session ; les tests Playwright existants passent sans changer leur manière de se connecter ; `npm run check:vocab` vert (« projets » passe par `V.projet`).
