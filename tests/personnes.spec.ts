@@ -140,3 +140,19 @@ test("« suit son temps » décochée : sort du plan de charge et de la clôture
   await expect(panel2.getByTestId("person-tracksTime")).toBeChecked();
   await page.keyboard.press("Escape");
 });
+
+// Admin n'a plus qu'une seule feuille dans le menu (27/09) : ses onglets de page (Personnes, Comptes, Rôles et droits,
+// Référentiels, Paramètres, Import / export) sont désormais le seul chemin vers Comptes et Rôles et droits, y compris
+// desktop, barre latérale dépliée — la règle qui les cachait dans ce cas (doublon supposé du niveau 2) a été retirée.
+test("les onglets d'Admin restent visibles en desktop, barre dépliée", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/admin?section=personnes");
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/admin?section=personnes");
+  const tabs = page.getByTestId("admin-tabs");
+  await expect(tabs).toBeVisible();
+  await expect(tabs.getByRole("link", { name: "Comptes" })).toBeVisible();
+  await expect(tabs.getByRole("link", { name: "Rôles et droits" })).toBeVisible();
+  await tabs.getByRole("link", { name: "Comptes" }).click();
+  await expect(page).toHaveURL(/section=comptes/);
+});
