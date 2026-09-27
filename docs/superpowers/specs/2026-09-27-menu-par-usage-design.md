@@ -1,6 +1,6 @@
 # Menu rangé par usage — préconisations
 
-**Date** : 27/09/2026 · **Statut** : préconisations issues d'un échange avec Gaël, **rien de codé**. Les points marqués ✅ sont validés par Gaël ; ceux marqués ❓ sont proposés et attendent sa réponse (à trancher avant de coder).
+**Date** : 27/09/2026 · **Statut** : préconisations issues d'un échange avec Gaël, **rien de codé**. Les points marqués ✅ sont validés par Gaël. **Les points ouverts ont tous été tranchés par Gaël le 27/09 (§ 6)** ; les tableaux en tiennent compte.
 
 **Mise à jour du 27/09 (après-midi)** : relu sur l'état réel du code de la branche `feat/actions-composantes` (plan « actions composantes », tâches 1 à 20). Ce qui a changé depuis le matin : « Ma délégation » n'existe plus (remplacée par « Mes {actions} », pour tout le monde, sans module) ; l'écran CODIR s'appelle déjà « Arbitrages » et le séminaire « Préparer {N+1} » ; la section Temps disparaît pour une personne qui ne suit pas son temps ; le module `delegation` est retiré de TLST ; le guide (`lib/lexique.ts`) cite des chemins de menu qu'il faudra réécrire. **À coder après la fusion de cette branche** (elle modifie `lib/navigation.ts`).
 
@@ -25,15 +25,15 @@ Avec tous les modules, un compte CODIR + admin voit **12 sections et 35 entrées
 | Section | Entrées |
 |---|---|
 | **Mon travail** | Ma semaine · À traiter (badge) · Tâches · Notes · *Mon temps (si la personne suit son temps)* · Mes {actions} · *Mes frais (feuille de route)* |
-| **Projets** | Projets · Vue annuelle · Plan de charge · Échéances ❓ · *À décider ({CODIR})* · *Préparer {N+1} ({CODIR}, en saison)* |
+| **Projets** | Tous les {projets} · Vue annuelle · Plan de charge · Échéances · *À décider ({CODIR})* · *Préparer {N+1} ({CODIR}, en saison)* |
 | **Financements** | Dossiers · Qui finance quoi · *Appels à projets* |
 | **Réseau** (ex-Annuaire) | Organisations · *Adhérents* · Contacts |
-| **Gestion** | *Trésorerie* · *Matériel et prêts* ❓ · *Temps de l'équipe* · *Notes de frais (feuille de route)* |
+| **Ressources** (ex-« Gestion ») | *Trésorerie* · *Matériel et prêts* · *Temps de l'équipe* (onglet Clôture) · *Notes de frais (feuille de route)* |
 | **Admin** | une seule entrée |
 
 {actions}, {CODIR} : mots du vocabulaire de l'instance (`V.action`, `V.codir` — « coordination » chez TLST), jamais écrits en dur.
 
-Hors menu : **Notifications** ❓ (la cloche du bandeau y mène déjà, `components/shell/notifications-bell.tsx`) ; **Aide** (déjà dans le menu d'aide du bandeau, `components/shell/help-menu.tsx`).
+Hors menu : **Notifications** (la cloche du bandeau y mène déjà, `components/shell/notifications-bell.tsx`) ; **Aide** (déjà dans le menu d'aide du bandeau, `components/shell/help-menu.tsx`).
 
 Résultat : **6 sections, 24 entrées au maximum**, feuille de route comprise (contre 12 / 35 aujourd'hui sans elle). Une personne sans droit CODIR ni admin : 5 sections, ≈ 18 entrées.
 
@@ -44,22 +44,22 @@ Résultat : **6 sections, 24 entrées au maximum**, feuille de route comprise (c
 | Mon travail › Ma semaine, Tâches, Notes | inchangés | ✅ |
 | Mon travail › Mes {actions} (ex-« Ma délégation », remplacée le 26/09 : pour tout le monde, sans module ; liste « Personnes » pour la coordination et les responsables de pôle ; export Word « feuille de mission ») | inchangé (même place que la délégation, validée ✅) | ✅ |
 | Demandes › Qu'on me fait / Que j'ai faites / {vue large} | Mon travail › **À traiter**, trois onglets ; les validations (`/validations`) y restent rattachées ; le badge des demandes passe sur l'entrée | ✅ |
-| Échéances › Échéances | Projets › **Échéances** (radar collectif des livrables et jalons). Mes échéances personnelles restent dans Ma semaine | ❓ |
-| Échéances › Notifications | **hors menu**, accessible par la cloche | ❓ |
+| Échéances › Échéances | Projets › **Échéances** (radar collectif des livrables et jalons). Mes échéances personnelles restent dans Ma semaine | ✅ (27/09) |
+| Échéances › Notifications | **hors menu**, accessible par la cloche | ✅ (27/09) |
 | Temps › Ma répartition | Mon travail › **Mon temps**, masqué pour qui ne suit pas son temps (règle du 26/09, gardée) | ✅ |
-| Temps › Temps de l'équipe | Gestion › **Temps de l'équipe** | ✅ ; ❓ qui ne suit pas son temps (§ 6) |
-| Temps › Clôture mensuelle | **onglet** de Temps de l'équipe (même personne, même moment : la RAF en fin de mois) | ❓ |
-| Projets › Projets + Portefeuille / Mes projets | Projets › **Projets**, avec un onglet « Mes projets » (et « Portefeuille » pour le CODIR) ; le filtre financé / interne (26/09) reste un filtre de la liste | ✅ |
+| Temps › Temps de l'équipe | Ressources › **Temps de l'équipe**, selon les droits seulement (même pour qui ne suit pas son temps) | ✅ (27/09) |
+| Temps › Clôture mensuelle | **onglet** de Temps de l'équipe (même personne, même moment : la RAF en fin de mois), selon les droits | ✅ (27/09) |
+| Projets › Projets + Portefeuille / Mes projets | Projets › **Tous les {projets}** (plus de doublon avec le nom de la section), avec un onglet « Mes {projets} » (et « Portefeuille » pour le {CODIR}) ; le filtre financé / interne (26/09) reste un filtre de la liste | ✅ |
 | Projets › Vue annuelle, Plan de charge | inchangés | ✅ |
 | {Direction} › Arbitrages (`/codir`, renommé « Écran CODIR » → « Arbitrages » le 26/09) | Projets › **À décider**, {CODIR} seulement ; le nom « Arbitrages » ne parlait pas à Gaël. Renommer aussi le titre de la page `/codir` et les entrées du guide qui disent « Arbitrages » | ✅ |
-| {Direction} › Préparer {N+1} (`/seminaire`) | Projets › **Préparer {N+1}**, {CODIR}, affiché de **septembre à janvier** ; hors saison, bouton sur Vue annuelle | ✅ ; ❓ l'année affichée en janvier (§ 6) |
-| {Direction} › Écran café (`/cafe`) | **bouton** « Projeter le café du lundi » en tête d'Échéances (même contenu : la quinzaine, les blocages, qui attend quoi) | ✅ bouton ; ❓ emplacement (Échéances) |
+| {Direction} › Préparer {N+1} (`/seminaire`) | Projets › **Préparer {N+1}**, {CODIR}, affiché de **septembre à janvier** ; hors saison, bouton sur Vue annuelle | ✅ ; en janvier, l'année qui commence (27/09) |
+| {Direction} › Écran café (`/cafe`) | **bouton** « Projeter le café du lundi » en tête d'Échéances (même contenu : la quinzaine, les blocages, qui attend quoi) | ✅ bouton en tête d'Échéances (27/09) |
 | Financements › Dossiers de financement + Financements obtenus | Financements › **Dossiers**, onglets « En cours » / « Obtenus » | ✅ |
 | Financements › Qui finance quoi, Appels à projets | inchangés | ✅ |
 | Annuaire › Organisations, Contacts | Réseau › inchangés | ✅ |
 | Adhérents › Adhérents + Cotisations | Réseau › **Adhérents**, onglet « Cotisations » (une adhésion est une `Membership` sur une organisation ou un contact de l'annuaire : c'est une fiche du réseau avec un statut) | ✅ |
-| Trésorerie › Plan de trésorerie | Gestion › **Trésorerie** | ✅ |
-| Prêts › Prêts en cours / terminés / Inventaire | Gestion › **Matériel et prêts**, onglets | ❓ place (voir § 6) |
+| Trésorerie › Plan de trésorerie | Ressources › **Trésorerie** | ✅ |
+| Prêts › Prêts en cours / terminés / Inventaire | Ressources › **Matériel et prêts**, onglets | ✅ (27/09) |
 | Admin › Personnes / Référentiels / Paramètres / Import-export | Admin, **une entrée**, sections en onglets (Paramètres porte aussi, depuis le 26/09, le circuit de validation des fiches) | ✅ |
 
 Déjà des boutons, rien à changer : feuille de mission (Mes {actions}), export des {actions} financées (Qui finance quoi), plan opérationnel (Vue annuelle).
@@ -74,7 +74,7 @@ Oui, sans ajouter d'entrée hors celles notées ci-dessus :
 |---|---|
 | Heures supplémentaires (`LOTS-TLST.md`) | Onglet « Pointage » de Mon temps ; récap paie dans Temps de l'équipe |
 | Valorisation du bénévolat (`LOTS-TLST.md`) | Saisie dans Mon temps ; total des contributions en nature dans Temps de l'équipe. Attention : les bénévoles et membres du CA ont « suit son temps » décoché, donc pas de Mon temps — leur saisie de contribution devra passer par une autre porte (Mes {actions} ou une saisie par la coordination), à décider avec le chantier |
-| Notes de frais natives (`LOTS-TLST.md`, à décider plus tard) | « Mes frais » dans Mon travail (module) ; validation dans À traiter ; export dans Gestion |
+| Notes de frais natives (`LOTS-TLST.md`, à décider plus tard) | « Mes frais » dans Mon travail (module) ; validation dans À traiter ; export dans Ressources |
 | Temps passé sur les réponses aux appels à projets (chantier 2, après le plan actions) | Saisie dans Mon temps (comme le reste) ; lecture sur le dossier et dans Appels à projets |
 | Affecter une tâche à un collègue (chantier 3) | Dans Tâches ; ce qu'on m'a confié arrive dans À traiter |
 | Rapport d'activité annuel, indicateurs consolidés (`evolutions.md` V1 / V2) | Bouton et onglet sur Vue annuelle, à côté du plan opérationnel |
@@ -84,21 +84,21 @@ Oui, sans ajouter d'entrée hors celles notées ci-dessus :
 | Rapprochement bancaire, réservation de matériel, fusion de contacts, temps depuis Outlook | Dans leur écran respectif |
 | Accès invité partenaire (V2) | Menu réduit calculé par les droits (`navTreeFor` le permet déjà) |
 
-## 6. Points ouverts (à trancher avec Gaël avant de coder)
+## 6. Points tranchés par Gaël (27/09)
 
-1. ❓ **Notifications** hors menu (cloche seule) et **Échéances** dans Projets, avec le bouton café.
-2. ❓ **Matériel et prêts** dans « Gestion » : tout le monde emprunte, alors qu'une section « Gestion » sonne back-office. Pistes : garder dans Gestion ; renommer la section (« Ressources », « Structure ») ; ou mettre l'entrée ailleurs.
-3. ❓ **Clôture** en onglet de Temps de l'équipe.
-4. ❓ **Nom de l'entrée « Projets »** dans la section Projets (doublon section / entrée) et réserve déjà consignée sur « Mes projets » pour les non-CODIR (`LOTS-TLST.md`).
-5. ❓ **Préparer {N+1} en janvier** (nouveau) : aujourd'hui le libellé et l'année préparée par défaut valent toujours « année en cours + 1 » (`lib/navigation.ts`, `app/seminaire/page.tsx`). Affiché de septembre à janvier, cela donnerait « Préparer 2028 » en janvier 2027, alors qu'on finit de préparer 2027. Proposition : de septembre à décembre, N+1 ; en janvier, l'année qui commence — une seule règle, lue par le menu et par la page.
-6. ❓ **Temps de l'équipe et Clôture pour qui ne suit pas son temps** (nouveau) : depuis le 26/09, toute la section Temps disparaît pour une personne qui ne suit pas son temps, y compris ces deux entrées. Dans Gestion, elles relèvent du droit, pas du fait de saisir soi-même. Proposition : Mon temps suit le réglage de la personne ; Temps de l'équipe et Clôture suivent seulement les droits.
-7. **Instances** — vérifié le 27/09 : TLST a les modules veille, adhérents, trésorerie, matériel et budget (`delegation` retiré le 26/09 ; `budget` est une section de l'onglet Budget, pas une entrée de menu) : même menu que la CRESS. Les nouveaux libellés (« Réseau », « À traiter », « À décider », « Gestion », « Mon temps ») ne contiennent aucun mot du vocabulaire client ; « {CODIR} » dans les annotations passe par `V.codir`. À confirmer par `npm run check:vocab` et le test d'habillage TLST au moment du code.
+1. ✅ **Notifications** hors menu (cloche seule) ; **Échéances** dans Projets, avec le bouton « Projeter le café du lundi » en tête.
+2. ✅ **Matériel et prêts** : la section « Gestion » est renommée **« Ressources »** (Trésorerie, Matériel et prêts, Temps de l'équipe), pour ne pas sonner back-office auprès de qui emprunte.
+3. ✅ **Clôture** : onglet de Temps de l'équipe.
+4. ✅ **Nom de l'entrée** : « Tous les {projets} » (onglets « Mes {projets} », « Portefeuille » pour le {CODIR}) ; plus de doublon section / entrée.
+5. ✅ **Préparer {N+1}** : de septembre à décembre, l'année suivante ; en janvier, l'année qui commence. Une seule règle, lue par le menu et par `/seminaire`.
+6. ✅ **Qui ne suit pas son temps** : Mon temps disparaît ; Temps de l'équipe et Clôture suivent seulement les droits.
+7. **Instances** — vérifié le 27/09 : TLST a les modules veille, adhérents, trésorerie, matériel et budget (`delegation` retiré le 26/09 ; `budget` est une section de l'onglet Budget, pas une entrée de menu) : même menu que la CRESS. Les nouveaux libellés (« Réseau », « À traiter », « À décider », « Ressources », « Mon temps » ; « Tous les {projets} » via `V.projet`) ne contiennent aucun mot du vocabulaire client ; « {CODIR} » dans les annotations passe par `V.codir`. À confirmer par `npm run check:vocab` et le test d'habillage TLST au moment du code.
 
-## 7. Travaux (ordre proposé, une fois les points ouverts tranchés)
+## 7. Travaux (ordre proposé)
 
 0. Après la fusion de `feat/actions-composantes` (même fichier `lib/navigation.ts`), sur une branche à part.
 1. Règle d'interface dans `.agents/rules/` (§ 2), indexée dans `AGENTS.md`.
-2. `lib/navigation.ts` : nouvel arbre (`NavSection.id` : `travail`, `projets`, `financements`, `reseau`, `gestion`, `admin`), saisonnalité de Préparer (une seule fonction pour la saison et l'année préparée, partagée avec `/seminaire`), `also` pour les adresses rattachées (`/validations`, `/cafe`, `/notifications`, `/edition`, `/action`, `/financeurs`, `/materiel/pret`…) afin que `locate` garde l'entrée active ; `NavContext.tracksTime` ne masque plus que Mon temps (si le point 6 est retenu).
+2. `lib/navigation.ts` : nouvel arbre (`NavSection.id` : `travail`, `projets`, `financements`, `reseau`, `ressources`, `admin`), saisonnalité de Préparer (une seule fonction pour la saison et l'année préparée, partagée avec `/seminaire`), `also` pour les adresses rattachées (`/validations`, `/cafe`, `/notifications`, `/edition`, `/action`, `/financeurs`, `/materiel/pret`…) afin que `locate` garde l'entrée active ; `NavContext.tracksTime` ne masque plus que Mon temps (point 6).
 3. Pages dont des vues deviennent des onglets : Demandes (À traiter), Dossiers (En cours / Obtenus), Adhérents (Cotisations), Matériel (en cours / terminés / inventaire), Temps de l'équipe (+ Clôture), Projets (Mes projets / Portefeuille), Admin.
 4. Boutons : « Projeter le café du lundi », « Préparer {N+1} » hors saison sur Vue annuelle. Titre de `/codir` : « À décider ».
 5. Fil d'Ariane (`components/shell/breadcrumb.tsx`) et `topbar.tsx` alignés sur les nouvelles sections.
