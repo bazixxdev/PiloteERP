@@ -39,3 +39,15 @@ export async function getLoginPalette(): Promise<BrandPalette> {
     .catch(() => DEFAULT_PALETTE);
   return configPalette;
 }
+
+// Ce qu'Admin › Paramètres affiche (tâche 4) : l'URL de chaque logo téléversé (ou rien), la palette du grand logo pour
+// l'aperçu du panneau et les pastilles de couleurs.
+export async function getBrandAdminState(): Promise<{ logo: { url: string; palette: BrandPalette } | null; logoSmall: { url: string } | null }> {
+  const rows = await prisma.brandAsset.findMany({ select: { key: true, updatedAt: true, palette: true } });
+  const big = rows.find((r) => r.key === "logo");
+  const small = rows.find((r) => r.key === "logo_small");
+  return {
+    logo: big ? { url: brandUrl("logo", big.updatedAt), palette: (big.palette as unknown as BrandPalette) ?? DEFAULT_PALETTE } : null,
+    logoSmall: small ? { url: brandUrl("logo_small", small.updatedAt) } : null,
+  };
+}

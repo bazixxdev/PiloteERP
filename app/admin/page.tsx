@@ -11,6 +11,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs, getSettings } from "@/lib/session";
 import { REF_DEFAULTS, REF_FAMILY_LABELS, refLabel, type RefFamily } from "@/lib/refs";
 import { canAdmin, canManageRoles } from "@/lib/rights";
+import { getBrandAdminState } from "@/lib/branding-db";
+import { BrandLogos } from "./brand-logos";
 import { getRoles } from "@/lib/roles";
 import { CreateRoleButton, RoleCard, RolesMatrix } from "./roles-forms";
 import { cn } from "@/lib/utils";
@@ -66,6 +68,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     levels: (await prisma.ficheValidationLevel.findMany({ include: { _count: { select: { validations: true } } }, orderBy: [{ order: "asc" }, { id: "asc" }] })).map((l) => ({ id: l.id, label: l.label, permission: l.permission, active: l.active, decisions: l._count.validations })),
     permissions: FICHE_LEVEL_PERMISSIONS.map((key) => ({ key, label: PERMISSIONS.find((p) => p.key === key)?.label ?? key, holders: roles.filter((r) => r.permissions.includes(key)).map((r) => r.label).join(", ") })),
   } : null;
+  // Logos (Paramètres) : lecture seule impossible pour un fichier, donc réservé à qui administre.
+  const brand = current === "parametres" && rw ? await getBrandAdminState() : null;
   const [people, poles, funders, missions, timeCodes, refValues, rhythms] = await Promise.all([
     prisma.person.findMany({ include: { timeCodes: true, rhythmPeriods: { include: { rhythm: true }, orderBy: { from: "desc" } } }, orderBy: [{ active: "desc" }, { order: "asc" }] }),
     prisma.pole.findMany({ include: { lead: true }, orderBy: { name: "asc" } }),
@@ -354,6 +358,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <Section title="Modules de l'installation" description="Ce que cette installation utilise. Un module éteint disparaît de la navigation ; ses données restent. Chacun règle aussi ses propres modules dans Mon compte." testId="instance-modules">
             <InstanceModulesForm enabled={[...modulesOf(settings)]} readOnly={!rw} />
           </Section>
+          {brand && (
+            <Section title="Logos" description="Le grand logo (page de connexion, barre latérale) et le petit logo (barre repliée, mobile, onglet du navigateur), téléversés en PNG, JPEG, WebP ou SVG (2 Mo au plus). Les couleurs du panneau de la page de connexion sont tirées du grand logo, à chaque remplacement." testId="admin-brand-logos" className="lg:col-span-2">
+              <BrandLogos logo={brand.logo} logoSmall={brand.logoSmall} />
+            </Section>
+          )}
         </div>
       )}
 
