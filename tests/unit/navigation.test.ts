@@ -26,6 +26,12 @@ test("Mon travail : À traiter porte le badge des demandes ; Mon temps disparaî
   assert.ok(!labels(base({ tracksTime: false }), "travail").includes("Mon temps"));
 });
 
+test("Trésorerie : visible avec le module et le droit, absente sans le droit, absente sans le module", () => {
+  assert.ok(labels(base({ permissions: ["treasury.view"] }), "ressources").includes("Trésorerie"));
+  assert.ok(!labels(base(), "ressources").includes("Trésorerie"));
+  assert.ok(!labels(base({ permissions: ["treasury.view"], tresorerie: false }), "ressources").includes("Trésorerie"));
+});
+
 test("Temps de l'équipe suit les droits, même pour qui ne suit pas son temps", () => {
   assert.ok(labels(base({ tracksTime: false, showTeam: true }), "ressources").includes("Temps de l'équipe"));
   assert.ok(labels(base({ tracksTime: false, canCloseMonths: true }), "ressources").includes("Temps de l'équipe"));

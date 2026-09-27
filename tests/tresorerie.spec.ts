@@ -107,13 +107,14 @@ test("la RAF tient le plan : règle mensuelle, flux ponctuel, solde de départ ;
   const csv = await (await page.request.get(href)).text();
   expect(csv).toContain("Solde fin de mois");
   expect(csv).toContain("Salaires et charges;Décaissement");
-  // Un pilote ne voit ni la rubrique ni la page ; un responsable de pôle lit sans modifier.
+  // Un pilote ne voit ni la rubrique ni la page ; un responsable de pôle lit sans modifier, et voit l'entrée de menu.
   await iAm(page, "Maxime Roussel");
   await page.goto("/tresorerie");
   await expect(page.getByTestId("treasury-denied")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Plan de trésorerie" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Trésorerie", exact: true })).toHaveCount(0);
   await iAm(page, "Julien Barbot");
   await page.goto("/tresorerie");
+  await expect(page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Trésorerie", exact: true })).toHaveCount(1);
   await expect(page.getByTestId("treasury-table")).toBeVisible();
   await expect(page.getByTestId("new-rule")).toHaveCount(0);
 });
