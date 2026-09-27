@@ -9,7 +9,7 @@ import { SectionIcon } from "@/components/shell/section-icon";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getPeople, getRefs, getSettings } from "@/lib/session";
 import { actionCtx } from "@/lib/actions-rights-db";
-import { balance, fundingOverflow, runsIn, spanLabel, yearsLabel, yearsOf } from "@/lib/actions";
+import { balance, beforeDay, fundingOverflow, openForWork, runsIn, spanLabel, yearsLabel, yearsOf } from "@/lib/actions";
 import { REF_DEFAULTS, refColor, refLabel } from "@/lib/refs";
 import { canSeeTimeOf } from "@/lib/rights";
 import { hiddenPeopleLabel } from "@/lib/funded-actions";
@@ -188,7 +188,7 @@ export default async function ActionPage({ params, searchParams }: { params: Pro
           </Section>
 
           <Section title="Jalons" description={`Les dates qui rythment ${ce(V.action)} ; un jalon hors de la période l'étend.`} testId="action-milestones">
-            <Milestones actionId={a.id} readOnly={!can} items={a.milestones.map((m) => ({ id: m.id, date: fmtDateInput(m.date), label: m.label, done: m.done, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, late: !m.done && a.state !== "done" && a.state !== "abandoned" && dayjs(m.date).isBefore(today, "day") }))} />
+            <Milestones actionId={a.id} readOnly={!can} items={a.milestones.map((m) => ({ id: m.id, date: fmtDateInput(m.date), label: m.label, done: m.done, venue: m.venue, participants: m.participants, isPublic: m.isPublic, isCheckpoint: m.isCheckpoint, late: !m.done && openForWork(a) && beforeDay(m.date, today.toDate()) }))} />
           </Section>
 
           <Section title="Financements et équilibre" description={`Les lignes qui financent ${ce(V.action)}, avec le montant affecté ; lier une ligne d'un dossier pluriannuel lie ses autres années couvertes.`} testId="action-fundings">

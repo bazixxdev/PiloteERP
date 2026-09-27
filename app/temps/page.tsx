@@ -1,4 +1,5 @@
 import { attachYearActions } from "@/lib/actions-db";
+import { openForWork } from "@/lib/actions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
@@ -74,7 +75,7 @@ export default async function TempsPage({ searchParams }: { searchParams: Promis
   for (const e of editions) {
     push({ label: e.project.name, sub: `${e.project.analyticCode} · ${e.year}`, projectId: e.projectId, actionId: null, timeCodeId: null, kind: "project" });
     // Mes actions, plus celles du projet où j'ai déjà saisi cette semaine.
-    const actions = e.actions.filter((a) => ((a.ownerId === person.id || a.people.some((p) => p.personId === person.id)) && a.state !== "done" && a.state !== "abandoned") || weekEntryActionIds.has(a.id));
+    const actions = e.actions.filter((a) => ((a.ownerId === person.id || a.people.some((p) => p.personId === person.id)) && openForWork(a)) || weekEntryActionIds.has(a.id));
     for (const a of actions) {
       // Objectif et consommé sur toute la période de l'action (pas seulement l'année affichée).
       push({ label: a.name, sub: a.timeTarget ? `objectif ${a.timeTarget} h · consommé ${fmtNumber(a.hoursTotal, 0)} h` : "sans objectif de temps", projectId: e.projectId, actionId: a.id, timeCodeId: null, kind: "action" });

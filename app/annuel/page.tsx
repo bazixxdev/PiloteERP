@@ -12,7 +12,7 @@ import { loadPortfolio } from "@/lib/queries";
 import { refColor, refLabel } from "@/lib/refs";
 import { dayjs, fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { milestoneTitle } from "@/lib/actions";
+import { beforeDay, milestoneTitle, openForWork } from "@/lib/actions";
 import { AnnuelFilters } from "./filters";
 import { V, cap, du, de, aucun, pl, le } from "@/lib/vocab";
 
@@ -105,7 +105,7 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
                         <div className="flex min-w-0 flex-col gap-0.5">
                           {cell.slice(0, 3).map((m) => (
                             <Link key={m.id} href={m.action.project?.editions[0] ? `/edition/${m.action.project.editions[0].id}?onglet=actions` : `/projets/${m.action.project?.id ?? ""}`} className="flex min-w-0 items-start gap-1 rounded px-1 hover:bg-muted" title={`${milestoneTitle(m.action.name, m.label)} · ${m.action.project?.name ?? ""} · ${dayjs(m.date).format("D MMM")}`}>
-                              <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", m.done ? STATE_DOT.done : !["done", "abandoned"].includes(m.action.state) && dayjs(m.date).isBefore(dayjs(), "day") ? "bg-danger" : STATE_DOT[m.action.state])} />
+                              <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", m.done ? STATE_DOT.done : openForWork(m.action) && beforeDay(m.date, new Date()) ? "bg-danger" : STATE_DOT[m.action.state])} />
                               <span className="line-clamp-2 min-w-0 break-words leading-tight">{milestoneTitle(m.action.name, m.label)}</span>
                             </Link>
                           ))}

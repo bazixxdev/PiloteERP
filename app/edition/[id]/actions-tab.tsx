@@ -12,7 +12,7 @@ import { inMyPole } from "@/lib/scope";
 import { AddActionForm, AddIndicatorForm } from "./add-forms";
 import { Achievements } from "./achievements";
 import { TimeCell } from "./time-cell";
-import { attachable, attachOptions, milestoneTitle, spanLabel } from "@/lib/actions";
+import { attachable, attachOptions, beforeDay, milestoneTitle, openForWork, spanLabel } from "@/lib/actions";
 import { V, cap, le, ce, aucun, pl } from "@/lib/vocab";
 import { Timeline } from "./timeline";
 
@@ -25,7 +25,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
   // Le tableau se lit ; le détail (contenu, période, jalons, personnes, tâches, heures) est sur la page de l'action.
   return (
     <div className="grid gap-4">
-      <Section title={cap(pl(V.action))} description={`${e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} year={e.year} /> : undefined}>
+      <Section title={cap(pl(V.action))} description={`${e.actions.filter(openForWork).length} à mener sur ${e.actions.length}`} actions={writable ? <AddActionForm editionId={e.id} year={e.year} /> : undefined}>
         {e.actions.length === 0 ? (
           <EmptyState title={cap(aucun(V.action))} hint={`Ajoutez la première ${V.action.one} de ${ce(V.edition)} : un nom, puis sa période et ses jalons sur sa page.`} />
         ) : (
@@ -52,7 +52,7 @@ export function ActionsTab({ e, me, refs, people, isPilot, isTeam }: TabCtx) {
                   const rw = rwOwner || associate;
                   const over = a.timeTarget != null && a.hoursYear > a.timeTarget;
                   const next = a.milestones.find((m) => !m.done) ?? null;
-                  const lateMilestone = Boolean(next && a.state !== "done" && a.state !== "abandoned" && dayjs(next.date).isBefore(dayjs(), "day"));
+                  const lateMilestone = Boolean(next && openForWork(a) && beforeDay(next.date, new Date()));
                   const span = spanLabel(a, e.year);
                   return (
                     <tr key={a.id} className="group align-top" data-testid={`${V.action.one}-row-${i}`}>

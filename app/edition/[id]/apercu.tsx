@@ -28,7 +28,7 @@ export function ApercuTab({ e, me, refs, settings, isPilot, myTasks = [] }: TabC
   const timeTarget = e.actions.reduce((s, a) => s + (a.timeTarget ?? 0), 0);
   const noAction = e.yearEntries.filter((t) => !t.actionId).reduce((s, t) => s + t.hours, 0);
   // Par action à mener : son prochain jalon non fait.
-  const milestones = e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").map((a) => { const next = a.milestones.find((m) => !m.done)?.date ?? null; return { ...a, next, n: next ? daysFromNow(next) : null }; }).sort((x, y) => (x.n ?? 9999) - (y.n ?? 9999));
+  const milestones = e.actions.filter(openForWork).map((a) => { const next = a.milestones.find((m) => !m.done)?.date ?? null; return { ...a, next, n: next ? daysFromNow(next) : null }; }).sort((x, y) => (x.n ?? 9999) - (y.n ?? 9999));
   const pending = e.validations.filter((v) => v.status === "pending");
   const decided = e.validations.filter((v) => v.status !== "pending");
   const lastDecision = e.decisions[0];

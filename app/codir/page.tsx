@@ -10,7 +10,7 @@ import { loadPortfolio } from "@/lib/queries";
 import { canDecideValidation, has, isCodir } from "@/lib/rights";
 import { attachmentInclude } from "@/lib/attachments";
 import { daysFromNow, dayjs, fmtDate, fmtEuro, fmtNumber } from "@/lib/format";
-import { editionForMilestone, milestoneTitle } from "@/lib/actions";
+import { beforeDay, editionForMilestone, milestoneTitle, openForWork } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { Presentation } from "@/app/cafe/presentation";
 import { DecisionForm } from "./decision-form";
@@ -41,8 +41,8 @@ export default async function CodirPage({ searchParams }: { searchParams: Promis
   const editions = rows.filter((r) => inPole(r.project));
   const pending = validations.filter((v) => inPole(v.edition.project));
   // Un jalon non fait et dépassé d'une action en cours ; une fois, sous l'année de sa date, même si l'action court sur deux ans.
-  const lateMilestones = editions.flatMap((e) => e.actions.filter((a) => a.state !== "done" && a.state !== "abandoned").flatMap((a) => a.milestones
-    .filter((m) => !m.done && daysFromNow(m.date) < 0 && editionForMilestone(m, a, editions)?.id === e.id)
+  const lateMilestones = editions.flatMap((e) => e.actions.filter(openForWork).flatMap((a) => a.milestones
+    .filter((m) => !m.done && beforeDay(m.date, new Date()) && editionForMilestone(m, a, editions)?.id === e.id)
     .map((m) => ({ e, a: { id: m.id, name: milestoneTitle(a.name, m.label), owner: a.owner, date: m.date }, days: -daysFromNow(m.date) })))).sort((x, y) => y.days - x.days);
   const deliverables = editions.flatMap((e) => e.fundingLines.flatMap((f) => f.deliverables.filter((d) => !d.done && daysFromNow(d.dueDate) <= settings.deliverableAlertDays).map((d) => ({ e, f, d, days: daysFromNow(d.dueDate) })))).sort((x, y) => x.days - y.days);
   const envelopes = editions.filter((e) => e.budgetEnvelope && (e.used / e.budgetEnvelope) * 100 >= settings.envelopeAlertPercent).sort((x, y) => y.used / y.budgetEnvelope! - x.used / x.budgetEnvelope!);
