@@ -17,6 +17,7 @@ export type LexiqueChapter = { id: string; title: string; intro: string; entries
 
 export function lexique(): LexiqueChapter[] {
   const teamClash = V.pole.one === "équipe"; // chez TLST, « équipe » désigne déjà le grand domaine
+  const codirClash = V.codir.one === V.direction.one; // chez TLST, « coordination » nomme les deux (minor T1/M7) : une seule entrée
   return [
     {
       id: "structure",
@@ -51,9 +52,9 @@ export function lexique(): LexiqueChapter[] {
         { term: cap(V.sponsor), def: `La personne de la gouvernance (${V.direction.one}, CA) qui soutient le projet en instance ; à ne pas confondre avec le garant, qui répond du projet au quotidien. Choisie parmi toutes les personnes actives. Facultatif.`, where: "Fiche › couche 2" },
         // Millésime (spec vocabulaire § 2) : « Équipe {année} », pas « Équipe de l'année ».
         { term: "Équipe {année}", def: `Les personnes qui travaillent sur ${le(V.edition)} cette année, avec leurs jours prévus.${teamClash ? ` À ne pas confondre avec ${le(V.pole)} au sens du grand domaine : ici, ce sont des personnes.` : ""}`, where: `${cap(V.edition)} › onglet Fiche (équipe) et onglet Temps` },
-        { term: cap(V.direction), def: `Écrit le cadre stratégique des fiches, valide au niveau 3, arbitre les alertes, administre l'outil avec ${le(V.raf)}.` },
+        { term: cap(V.direction), def: `Écrit le cadre stratégique des fiches, valide au niveau 3, arbitre les alertes, administre l'outil avec ${le(V.raf)}.${codirClash ? ` Décide aussi en instance : valide les fiches (circuit de validation), suit le portefeuille, règle les alertes par une décision datée.` : ""}`, where: codirClash ? "Arbitrages" : undefined },
         { term: cap(V.raf), def: "Tient l'argent : enveloppes, devis et factures, lignes de financement, versements, réalisé comptable. Administre l'outil." },
-        { term: cap(V.codir), def: "L'instance qui décide : valide les fiches (circuit de validation), suit le portefeuille, règle les alertes par une décision datée.", where: `${cap(V.direction)} › Arbitrages` },
+        ...(codirClash ? [] : [{ term: cap(V.codir), def: "L'instance qui décide : valide les fiches (circuit de validation), suit le portefeuille, règle les alertes par une décision datée.", where: `${cap(V.direction)} › Arbitrages` }]),
         { term: "CA", def: `Le conseil d'administration : dernier niveau de validation d'une fiche (couche 4). Ses décisions se consignent dans l'outil.` },
       ],
     },
