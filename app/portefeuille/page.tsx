@@ -69,7 +69,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title={codir ? "Mode Arbitrages" : `Portefeuille des ${pl(V.projet)}`}
+        title={codir ? "À décider" : `Portefeuille des ${pl(V.projet)}`}
         subtitle={
           codir
             ? `${rows.length} ${rows.length > 1 ? pl(V.projet) : V.projet.one} en alerte ou avec des validations en attente · ${totalPending} validation${totalPending > 1 ? "s" : ""} à traiter`
@@ -77,9 +77,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         }
         actions={
           codir ? (
-            <Button asChild variant="outline"><Link href="/portefeuille">Quitter le mode Arbitrages</Link></Button>
+            <Button asChild variant="outline"><Link href="/portefeuille">Quitter À décider</Link></Button>
           ) : isCodir(me) ? (
-            <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />Mode Arbitrages</Link></Button></>
+            <><Button asChild data-testid="codir-mode"><Link href="/codir"><Maximize2 />À décider</Link></Button></>
           ) : (
             <><Button asChild variant="outline" data-testid="propose-project"><Link href="/projets/proposer"><Lightbulb />Proposer un projet</Link></Button></>
           )

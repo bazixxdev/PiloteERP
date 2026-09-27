@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { beforeDay, milestoneTitle, openForWork } from "@/lib/actions";
 import { AnnuelFilters } from "./filters";
 import { V, cap, du, de, aucun, pl, le } from "@/lib/vocab";
+import { isCodir } from "@/lib/rights";
+import { preparedYear, prepareInSeason } from "@/lib/season";
 
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
 const STATE_DOT: Record<string, string> = { done: "bg-mint", doing: "bg-primary", todo: "bg-muted-foreground/40" };
@@ -48,7 +50,18 @@ export default async function AnnuelPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"} subtitle={`${year} · missions et ${pl(V.projet)} de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`} actions={<Button asChild variant="outline" size="sm"><Link href={`/matrice?annee=${year}`} data-testid="to-matrix"><Grid3x3 />Qui finance quoi</Link></Button>} />
+      <PageHeader
+        title={sp.pole ? `Vue annuelle · ${poles.find((p) => p.id === sp.pole)?.name ?? ""}` : "Vue annuelle"}
+        subtitle={`${year} · missions et ${pl(V.projet)} de l'année par mois, jours vendus dans les conventions face aux jours disponibles.`}
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm"><Link href={`/matrice?annee=${year}`} data-testid="to-matrix"><Grid3x3 />Qui finance quoi</Link></Button>
+            {isCodir(me) && !prepareInSeason(new Date()) && (
+              <Button asChild variant="outline" size="sm" data-testid="annuel-preparer"><Link href="/seminaire">{`Préparer ${preparedYear(new Date())}`}</Link></Button>
+            )}
+          </>
+        }
+      />
       <AnnuelFilters year={year} poles={poles.map((p) => ({ value: p.id, label: p.name }))} pole={sp.pole ?? ""} allValue={isTransversal(me) ? "" : "tous"} />
 
       {sp.pole && (
