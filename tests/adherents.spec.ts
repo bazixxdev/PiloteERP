@@ -63,6 +63,10 @@ test("la reconduction prépare l'année suivante ; la synchronisation HelloAsso 
   // Reconduire N → N+1 : les adhérents de l'année (hors annulées) passent « à régler » en N+1.
   await page.goto(`/adherents?annee=${YEAR + 1}`);
   await expect(page.getByTestId("members-tiles")).toContainText("0");
+  // L'onglet Cotisations garde l'année choisie (lien construit avec l'année en cours, pas un retour à l'année courante).
+  await page.getByRole("tab", { name: "Cotisations" }).click();
+  await expect(page).toHaveURL(new RegExp(`annee=${YEAR + 1}.*vue=cotisations`));
+  await page.goto(`/adherents?annee=${YEAR + 1}`);
   await page.getByTestId("members-renew").click();
   await expect(page.getByText(/adhésions reconduites/)).toBeVisible();
   await expect(page.locator("[data-testid^=membership-][data-status]")).toHaveCount(11);

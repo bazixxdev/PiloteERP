@@ -5,10 +5,10 @@ export type PageTab = { href: string; label: string; active: boolean; count?: nu
 
 // Onglets d'une page (spec menu § 2 : une vue d'une même liste = un onglet, pas une entrée de menu). Pilotés par l'adresse :
 // chaque onglet est un lien, l'actif est calculé par la page serveur. Même dessin que les onglets d'une année (tabs-nav.tsx).
-export function PageTabs({ tabs, testId }: { tabs: PageTab[]; testId?: string }) {
+export function PageTabs({ tabs, testId, label = "Vues" }: { tabs: PageTab[]; testId?: string; label?: string }) {
   if (tabs.length < 2) return null;
   return (
-    <nav role="tablist" className="mb-4 flex gap-1 overflow-x-auto border-b" data-testid={testId}>
+    <nav role="tablist" aria-label={label} className="mb-4 flex gap-1 overflow-x-auto border-b" data-testid={testId}>
       {tabs.map((t) => (
         <Link
           key={t.href}
@@ -18,7 +18,8 @@ export function PageTabs({ tabs, testId }: { tabs: PageTab[]; testId?: string })
           data-testid={t.testId}
           className={cn("-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm", t.active ? "border-coral font-bold text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
         >
-          {t.label}{t.count !== undefined && <span className="ml-1 text-xs text-muted-foreground">({t.count})</span>}
+          {t.label}
+          {t.count !== undefined && <>{" "}<span className="text-xs text-muted-foreground">({t.count})</span></>}
         </Link>
       ))}
     </nav>

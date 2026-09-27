@@ -57,8 +57,8 @@ export default async function AdherentsPage({ searchParams }: { searchParams: Pr
         </>}
       />
       <PageTabs tabs={[
-        { href: "/adherents", label: "Adhérents", active: !money },
-        { href: "/adherents?vue=cotisations", label: "Cotisations", active: money },
+        { href: href({ vue: undefined }), label: "Adhérents", active: !money },
+        { href: href({ vue: "cotisations" }), label: "Cotisations", active: money },
       ]} />
       <div className="mb-3 flex flex-wrap items-center gap-1 border-b" data-testid="members-years">
         {years.map((y) => <Link key={y} href={href({ annee: String(y) })} className={cn("-mb-px border-b-2 px-3 py-1.5 text-sm", y === year ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground hover:text-foreground")} aria-current={y === year ? "page" : undefined} data-testid={`members-year-${y}`}>{y}</Link>)}
