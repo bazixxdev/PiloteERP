@@ -159,6 +159,7 @@ export function lexique(): LexiqueChapter[] {
         { term: "Notes", def: `Notes de réunion, rattachées à un ${V.projet.one} ou transverses ; privées par défaut, partageables.`, where: "Mon travail › Notes" },
         { term: "Plan de trésorerie", def: "Douze mois à partir du solde en banque : versements attendus, factures, cotisations, dépenses régulières (salaires, loyer). Montre le point bas et le seuil d'alerte.", where: "Ressources › Trésorerie", module: "tresorerie" },
         { term: "Prêt de matériel", def: `Un matériel de l'inventaire sorti chez quelqu'un (équipe, contact, organisation), pour un ${V.projet.one} ou non, avec une date de retour.`, where: "Ressources › Matériel et prêts", example: "Kakemono × 2 · pour le forum · retour le 22 septembre", module: "materiel" },
+        { term: "Logos", def: "Le grand logo (page de connexion, barre latérale) et le petit logo (barre repliée, mobile, onglet du navigateur), téléversés en PNG, JPEG, WebP ou SVG (2 Mo au plus). Les couleurs du panneau de la page de connexion sont tirées du grand logo, automatiquement, à chaque remplacement. Retirer un logo revient à celui livré avec l'outil.", where: "Admin › Paramètres › Logos" },
       ],
     },
   ];
