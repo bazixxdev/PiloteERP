@@ -157,8 +157,9 @@ test("la page de l'action : ouverte depuis l'onglet, période, jalons, personnes
   await expect(page.getByTestId("actions-table")).toHaveCount(0);
 });
 
-// Jeu de démo, sans rien modifier d'enregistré : « Petit-déjeuner ORESS · mars · emploi » porte 32 h de Julien Barbot
-// (responsable de pôle) ; la visibilité du temps est « soi, son responsable de pôle, la RAF ».
+// Jeu de démo, sans rien modifier d'enregistré : « Petit-déjeuner ORESS » (les trois occurrences fondues en jalons, 26/09)
+// porte le total de ses trois occurrences (53,3 h : Julien Barbot, Inès Cabral, Maxime Roussel) ; la visibilité du
+// temps est « soi, son responsable de pôle, la RAF ».
 test("heures par personne selon la visibilité du temps ; une action qui porte des heures ne se supprime pas", async ({ page }) => {
   await page.goto("/portefeuille");
   await iAm(page, "Inès Cabral");
@@ -167,10 +168,13 @@ test("heures par personne selon la visibilité du temps ; une action qui porte d
   await page.getByTestId("action-link-2").click();
   await expect(page.getByTestId("action-page")).toBeVisible();
   const url = page.url();
-  // Une chargée de mission ne voit pas le détail des heures de son responsable de pôle : la ligne agrégée seulement.
+  // Une chargée de mission voit son propre total (elle a aussi des heures sur cette action, 19,3 h) mais pas le détail
+  // des deux autres (son responsable de pôle, un pair) : la ligne agrégée seulement. Le total, lui, reste public.
   const hours = page.getByTestId("action-hours");
-  await expect(hours).toContainText("32 h");
-  await expect(hours).toContainText("1 autre personne : détail non visible.");
+  await expect(hours).toContainText("53,3 h");
+  await expect(hours).toContainText("Inès Cabral");
+  await expect(hours).toContainText("19,3 h");
+  await expect(hours).toContainText("2 autres personnes : détail non visible.");
   await expect(hours).not.toContainText("Julien Barbot");
   // Lui voit les siennes.
   await iAm(page, "Julien Barbot");

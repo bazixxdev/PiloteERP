@@ -684,6 +684,147 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
       await prisma.weekDeclaration.create({ data: { personId: p.id, week: `${ws.isoWeekYear()}-W${String(ws.isoWeek()).padStart(2, "0")}`, declaredAt: ws.add(4, "day").hour(17).toDate() } });
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  // Démos réécrites (26/09, action composante) : les occurrences dupliquées deviennent une action à jalons, une fiche ASER
+  // à séquences, une action sur deux ans, un financement à deux lignes avec montants, un membre du CA sans temps suivi.
+  // Fait ici (après les heures, avant les ajustements d'objectif) pour ne rien changer à la suite déterministe de rnd() /
+  // between() plus haut : aucune de ces actions n'existait quand elle a tourné.
+  // ─────────────────────────────────────────────────────────────────────────────────────────────
+  // Fond une occurrence dupliquée (une action par date) dans l'action qui reste, en jalon : les heures et réalisations déjà
+  // rattachées à l'occurrence supprimée suivent sur l'action qui reste, le lien de financement éventuel aussi.
+  const foldOccurrence = async (editionId: string, primaryId: string, dupName: string, label: string, order: number) => {
+    const dup = await prisma.action.findFirst({ where: { editionId, name: dupName } });
+    if (!dup) return;
+    await prisma.milestone.create({ data: { actionId: primaryId, date: dup.milestoneDate ?? dup.startDate!, label, done: dup.state === "done", venue: dup.venue, participants: dup.participants, isPublic: dup.isPublic, isCheckpoint: dup.isCheckpoint, order } });
+    await prisma.timeEntry.updateMany({ where: { actionId: dup.id }, data: { actionId: primaryId } });
+    await prisma.achievement.updateMany({ where: { actionId: dup.id }, data: { actionId: primaryId } });
+    if (dup.fundingLineId) {
+      const primary = await prisma.action.findUnique({ where: { id: primaryId } });
+      if (!primary?.fundingLineId) await prisma.action.update({ where: { id: primaryId }, data: { fundingLineId: dup.fundingLineId } });
+      await prisma.actionFunding.upsert({ where: { actionId_fundingLineId: { actionId: primaryId, fundingLineId: dup.fundingLineId } }, update: {}, create: { actionId: primaryId, fundingLineId: dup.fundingLineId, amount: null } });
+    }
+    await prisma.action.delete({ where: { id: dup.id } });
+  };
+  // État de l'action qui reste, une fois tous ses jalons posés : faite si tous ses jalons le sont, à faire si aucun ne
+  // l'est encore, en cours sinon — l'ancien état (calculé sur une seule occurrence) ne vaut plus pour plusieurs jalons.
+  const restateFromMilestones = async (actionId: string) => {
+    const ms = await prisma.milestone.findMany({ where: { actionId }, select: { done: true } });
+    const state = ms.every((m) => m.done) ? "done" : ms.every((m) => !m.done) ? "todo" : "doing";
+    await prisma.action.update({ where: { id: actionId }, data: { state } });
+  };
+
+  // Observatoire : trois petits-déjeuners thématiques, une seule action « Petit-déjeuner ORESS » avec ses trois jalons.
+  {
+    const obs = ed("OBS-01");
+    const primary = await prisma.action.findFirst({ where: { editionId: obs.id, name: "Petit-déjeuner ORESS · mars · emploi" } });
+    if (primary) {
+      await prisma.action.update({ where: { id: primary.id }, data: { name: "Petit-déjeuner ORESS", recurrence: "Trois rencontres thématiques par an (mars, juin, octobre)." } });
+      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · juin · réemploi", "Petit-déjeuner ORESS · juin · réemploi", 1);
+      await foldOccurrence(obs.id, primary.id, "Petit-déjeuner ORESS · octobre · égalité", "Petit-déjeuner ORESS · octobre · égalité", 2);
+      await restateFromMilestones(primary.id);
+    }
+  }
+
+  // Sensibilisation des jeunes : les forums SPRO tenus dans trois villes deviennent trois jalons d'« Forums et salons ».
+  {
+    const sen2 = ed("SEN-02");
+    const forums = await prisma.action.findFirst({ where: { editionId: sen2.id, name: "Forums et salons" } });
+    if (forums) {
+      await prisma.action.update({ where: { id: forums.id }, data: { venue: null, recurrence: "Trois forums d'orientation, d'octobre à novembre." } });
+      const primaryMs = await prisma.milestone.findFirst({ where: { actionId: forums.id }, orderBy: { order: "asc" } });
+      if (primaryMs) await prisma.milestone.update({ where: { id: primaryMs.id }, data: { label: "Forum SPRO — Tours", venue: "Tours" } });
+      await prisma.milestone.createMany({ data: [
+        { actionId: forums.id, date: dayjs("2026-10-27").toDate(), label: "Forum SPRO — Orléans", venue: "Orléans", isPublic: true, done: dayjs("2026-10-27").isBefore(today, "day"), order: 1 },
+        { actionId: forums.id, date: dayjs("2026-11-05").toDate(), label: "Forum SPRO — Bourges", venue: "Bourges", isPublic: true, done: dayjs("2026-11-05").isBefore(today, "day"), order: 2 },
+      ] });
+      await restateFromMilestones(forums.id);
+    }
+  }
+
+  // Refonte du site internet : projet interne, ses cinq phases deviennent les jalons d'une seule action.
+  {
+    const com2 = ed("COM-02");
+    const cahier = await prisma.action.findFirst({ where: { editionId: com2.id, name: "Cahier des charges" } });
+    if (cahier) {
+      await prisma.action.update({ where: { id: cahier.id }, data: { name: "Développement du site", recurrence: "Cinq phases dans l'année : cahier des charges, choix du prestataire, recette, mise en ligne, formation." } });
+      await foldOccurrence(com2.id, cahier.id, "Choix du prestataire", "Choix du prestataire", 1);
+      await foldOccurrence(com2.id, cahier.id, "Recette", "Recette", 2);
+      await foldOccurrence(com2.id, cahier.id, "Mise en ligne", "Mise en ligne", 3);
+      await foldOccurrence(com2.id, cahier.id, "Formation de l'équipe", "Formation de l'équipe", 4);
+      await restateFromMilestones(cahier.id);
+    }
+    await prisma.project.update({ where: { id: com2.projectId }, data: { kind: "internal" } });
+  }
+
+  // ASER (fiche action à séquences, source du 26/09) : le réseau d'acheteurs, une action à six jalons.
+  {
+    const coo2 = ed("COO-02");
+    const sequences = await prisma.action.create({ data: {
+      editionId: coo2.id, projectId: coo2.projectId, name: "Séquences acheteurs", ownerId: thomas.id, state: "doing", order: 90,
+      startDate: dayjs("2026-01-01").toDate(), endDate: dayjs("2026-12-31").toDate(), timeTarget: 28, isPublic: false,
+      recurrence: "Six séquences dans l'année : cadrage, entretiens, webinaire.",
+      description: "Constituer un réseau d'acheteurs publics et privés et faire connaître l'offre de service de l'ESS : entretiens individuels puis un webinaire.",
+      audience: "Acheteurs publics et privés de la région.",
+    } });
+    const seqOcc: [number, number, string][] = [
+      [2, 10, "Cadrage du réseau d'acheteurs"],
+      [4, 14, "Entretien acheteur — Région Centre-Val de Loire"],
+      [5, 20, "Entretien acheteur — Tours Métropole"],
+      [6, 18, "Entretien acheteur — DREETS"],
+      [9, 24, "Entretien acheteur — CIP"],
+      [11, 5, "Webinaire acheteurs (61 participants)"],
+    ];
+    for (const [oi, [m, dd, label]] of seqOcc.entries()) {
+      const date = dayjs(`2026-${String(m).padStart(2, "0")}-${String(dd).padStart(2, "0")}`);
+      await prisma.milestone.create({ data: { actionId: sequences.id, date: date.toDate(), label, done: date.isBefore(today, "day"), order: oi } });
+    }
+  }
+
+  // Une action sur deux ans : les stands et forums d'orientation débordent de l'automne sur le premier trimestre suivant.
+  {
+    const sen1 = ed("SEN-01");
+    const orientation = await prisma.action.create({ data: {
+      editionId: sen1.id, projectId: sen1.projectId, name: "Orientation : stands et forums", ownerId: hugo.id, state: "todo", order: 91,
+      startDate: dayjs("2026-11-01").toDate(), endDate: dayjs("2027-03-31").toDate(), timeTarget: 21, isPublic: true,
+      recurrence: "Présence sur les forums et salons d'orientation, de novembre à mars.",
+      description: "Tenue de stands sur les forums d'orientation et salons professionnels, de la rentrée de novembre à la fin de l'hiver.",
+      audience: "Lycéens, étudiants, demandeurs d'emploi en réorientation.",
+    } });
+    await prisma.milestone.createMany({ data: [
+      { actionId: orientation.id, date: dayjs("2026-11-19").toDate(), label: "Salon de l'orientation — Orléans", isPublic: true, order: 0 },
+      { actionId: orientation.id, date: dayjs("2027-01-21").toDate(), label: "Forum des métiers — Tours", isPublic: true, order: 1 },
+      { actionId: orientation.id, date: dayjs("2027-03-11").toDate(), label: "Salon Studyrama — Blois", isPublic: true, order: 2 },
+    ] });
+  }
+
+  // Une action financée par deux lignes, chacune avec un montant.
+  {
+    const obs = ed("OBS-01");
+    const chiffresEmploi = await prisma.action.findFirst({ where: { editionId: obs.id, name: "Chiffres de l'emploi" } });
+    const obsLines = await prisma.fundingLine.findMany({ where: { editionId: obs.id } });
+    if (chiffresEmploi && obsLines.length >= 2) {
+      await prisma.actionFunding.createMany({ data: [
+        { actionId: chiffresEmploi.id, fundingLineId: obsLines[0].id, amount: 6000 },
+        { actionId: chiffresEmploi.id, fundingLineId: obsLines[1].id, amount: 4000 },
+      ], skipDuplicates: true });
+    }
+  }
+
+  // Un membre du CA qui ne suit pas son temps (26/09, spec actions § 1), référent (gouvernance) d'un projet.
+  {
+    const boardName = "Sylvie Marchetti";
+    const boardEmail = emailOf(boardName);
+    const boardUser = await prisma.user.create({ data: { name: boardName, email: boardEmail, emailVerified: true } });
+    await prisma.account.create({ data: { userId: boardUser.id, accountId: boardUser.id, providerId: "credential", password: passwordHash } });
+    const boardMember = await prisma.person.create({ data: {
+      name: boardName, firstName: "Sylvie", lastName: "Marchetti", jobTitle: "Membre du conseil d'administration",
+      role: "contributor", workRhythm: "option_a", availableDays: 200, tracksTime: false, order: 90,
+      icsToken: randomBytes(18).toString("base64url"), email: boardEmail, userId: boardUser.id,
+    } });
+    await prisma.edition.updateMany({ where: { projectId: ed("REP-01").projectId, year: { in: [2025, 2026] } }, data: { sponsorId: boardMember.id } });
+  }
+
   // Une seule relance en cours : la RAF a relancé Élise hier.
   // Objectifs de temps cohérents avec le réalisé : un objectif se fixe en janvier avec de la marge. Une seule action dépasse
   // vraiment (le jury du Prix, plus long que prévu) : c'est l'alerte « temps hors objectif » de la démo.
@@ -824,8 +965,9 @@ export async function seedCress(prisma: PrismaClient, c: Common, uploads: string
     const action = actionName ? await prisma.action.findFirst({ where: { editionId: e.id, name: { startsWith: actionName } } }) : null;
     return prisma.achievement.create({ data: { editionId: e.id, kind, label, value, unit, date: dayjs(day).toDate(), authorId: who.id, actionId: action?.id ?? null } });
   };
-  await ach("OBS-01", "participants", "Inscrits au petit-déjeuner de mars (emploi)", 24, "personnes", "2026-03-18", ines, "Petit-déjeuner ORESS · mars");
-  await ach("OBS-01", "participants", "Inscrits au petit-déjeuner de juin (réemploi)", 31, "personnes", "2026-06-24", ines, "Petit-déjeuner ORESS · juin");
+  // Les deux occurrences (mars, juin) sont désormais des jalons de la même action « Petit-déjeuner ORESS » (26/09).
+  await ach("OBS-01", "participants", "Inscrits au petit-déjeuner de mars (emploi)", 24, "personnes", "2026-03-18", ines, "Petit-déjeuner ORESS");
+  await ach("OBS-01", "participants", "Inscrits au petit-déjeuner de juin (réemploi)", 31, "personnes", "2026-06-24", ines, "Petit-déjeuner ORESS");
   await ach("OBS-01", "deliverable", "Panorama 2025 de l'emploi ESS publié et envoyé aux têtes de réseau", null, null, "2026-05-06", ines, "Chiffres de l'emploi");
   await ach("OBS-01", "press", "Article dans La Nouvelle République sur les chiffres de l'emploi", null, null, "2026-05-20", ines);
   await ach("SEN-03", "participants", "Inscrits au forum régional", 118, "personnes", "2026-06-12", hugo, "Jour J");

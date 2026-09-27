@@ -64,10 +64,10 @@ test("les réalisations se consignent au fil de l'année et sortent dans le bila
   await expect(page.getByTestId("achievement-totals")).toContainText("82 personnes");
   const md = await page.request.get(page.url().replace(/\?.*$/, "") + "/export?format=md");
   expect(await md.text()).toContain("Inscrits au petit-déjeuner d'octobre");
-  // Occurrences : le petit-déjeuner de mars a sa fiche (la duplication a disparu avec l'action composante, 26/09).
+  // Occurrences : les trois petits-déjeuners sont désormais les jalons d'une seule action (tâche 18, action composante).
   await page.getByRole("tab", { name: new RegExp(cap(pl(W.action))) }).click();
-  const idx = 2; // troisième action du jeu de démo : le petit-déjeuner de mars
-  await expect(page.getByTestId(`action-link-${idx}`)).toHaveText("Petit-déjeuner ORESS · mars · emploi");
+  const idx = 2; // troisième action du jeu de démo : le petit-déjeuner ORESS (mars, juin, octobre)
+  await expect(page.getByTestId(`action-link-${idx}`)).toHaveText("Petit-déjeuner ORESS");
   // Le détail d'une action est sa page (26/09) : contenu, lieu et participants du jalon.
   await page.getByTestId(`action-link-${idx}`).click();
   await expect(page.getByTestId("action-description")).toHaveValue(/Chiffres de l'emploi ESS 2025/);

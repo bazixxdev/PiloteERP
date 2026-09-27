@@ -68,7 +68,13 @@ test("un devis est demandé, validé au bon niveau et engagé ; les éditions 20
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Préparer 2027");
   await page.getByTestId("batch-create").click();
   await expect(page.getByText(new RegExp(`${W.edition.one}\\(s\\) 2027 créée\\(s\\)`))).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(new RegExp(`^(\\d+) sur \\1 ${pl(W.projet)} ont déjà leur ${W.edition.one} 2027`))).toBeVisible({ timeout: 20_000 });
+  // Un seul projet reste sans année 2027 après le lot : « Refonte du site internet », interne et non récurrent, n'est
+  // jamais proposé (26/09, action composante — lib/preparer.ts) ; le compteur ne peut donc pas atteindre N sur N.
+  const summary = page.getByText(new RegExp(`\\d+ sur \\d+ ${pl(W.projet)} ont déjà leur ${W.edition.one} 2027`));
+  await expect(summary).toBeVisible({ timeout: 20_000 });
+  const [done, total] = (await summary.innerText()).match(/(\d+) sur (\d+)/)!.slice(1).map(Number);
+  expect(done).toBe(total - 1);
+  await expect(page.getByTestId("seminar-table").locator("tr", { hasText: "Refonte du site internet" })).toContainText("non proposé");
   await expect(page.getByTestId("load-table").locator("tr[data-testid^=load-row-]").first()).toBeVisible();
   await expect(page.getByTestId("batch-create")).toHaveCount(0);
   const row = page.getByTestId("seminar-table").locator("tr", { hasText: "Projet recette Préparer" });

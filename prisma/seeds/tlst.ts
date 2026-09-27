@@ -55,9 +55,32 @@ export async function seedTlst(prisma: PrismaClient, c: Common, { skeleton }: { 
     await prisma.payment.create({ data: { fundingLineId: line.id, label: "Solde sur bilan", amount: p.envelope * 0.2, expectedAt: dayjs(`${year + 1}-01-31`).toDate() } });
   }
 
-  // Délégation (25/09) : périodes du tiers-lieu (janvier-juin, été, septembre-décembre) et une délégation à relire.
+  // Ateliers mensuels du jardin (26/09, action composante) : une action récurrente à plusieurs jalons, plutôt qu'une
+  // action par occurrence — le jeu de démo TLST montre la même règle que la CRESS (petits-déjeuners de l'Observatoire).
+  const ateliers = await createAction(prisma, editions[0], { editionId: editions[0].id, name: "Ateliers mensuels", ownerId: chloe.id, milestoneDate: d(-120), timeTarget: 40, state: "doing", order: 90, isPublic: true, recurrence: "Un atelier par mois, toute l'année." });
+  // Le premier jalon (posé par createAction depuis milestoneDate) est déjà passé : « fait », comme les autres jalons passés.
+  await prisma.milestone.update({ where: { id: `ms_${ateliers.id}` }, data: { label: `Atelier du ${dayjs(d(-120)).format("D MMMM")}`, done: true } });
+  for (const [oi, off] of [-90, -60, -30, 0, 30, 60].entries()) {
+    const date = d(off);
+    await prisma.milestone.create({ data: { actionId: ateliers.id, date, label: `Atelier du ${dayjs(date).format("D MMMM")}`, done: dayjs(date).isBefore(today, "day"), isPublic: true, order: oi + 1 } });
+  }
+
+  // Périodes du tiers-lieu pour « Mes actions » (janvier-juin, été, septembre-décembre).
   await prisma.settings.update({ where: { id: 1 }, data: { delegationPeriods: "01-06,07-08,09-12" } });
-  await prisma.delegation.create({ data: { personId: projets[0].pilot.id, editionId: editions[0].id, expectations: "Le jardin ouvert deux après-midi par semaine, un groupe de bénévoles stable.", limits: "Délégation totale avec les limites suivantes : pas de dépense au-delà du budget validé sans le groupe budget et trésorerie.", controls: "Reporter mensuellement l'avancée du projet au CA ; bilan intermédiaire en juin.", createdById: coord.id } });
+  // Ce qui est confié / la marge de décision (26/09, action composante) : remplace l'ancienne délégation, sur deux actions
+  // de la même personne ; un jalon « point de contrôle » porte le bilan intermédiaire au CA.
+  await prisma.action.update({ where: { id: ateliers.id }, data: {
+    entrusted: "Le jardin ouvert deux après-midi par semaine, un groupe de bénévoles stable.",
+    latitude: "Organise librement les ateliers et leur contenu, sans dépense au-delà du budget validé.",
+  } });
+  const repasDeQuartier = await prisma.action.findFirst({ where: { editionId: editions[1].id, name: "Repas de quartier" } });
+  if (repasDeQuartier) {
+    await prisma.action.update({ where: { id: repasDeQuartier.id }, data: {
+      entrusted: "Un repas de quartier par mois, ouvert à tous.",
+      latitude: "Organise librement le menu et les partenariats, sans dépense au-delà du budget validé.",
+    } });
+    await prisma.milestone.create({ data: { actionId: repasDeQuartier.id, date: dayjs(`${year}-06-30`).toDate(), label: "Bilan intermédiaire au CA", isCheckpoint: true, done: dayjs(`${year}-06-30`).isBefore(today, "day"), order: 1 } });
+  }
 
   // Budget prévisionnel (25/09) : un prévu en brouillon sur le premier projet, pour que la section ne soit pas vide en démo.
   await prisma.budgetLine.createMany({ data: [
