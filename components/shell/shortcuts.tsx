@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SHORTCUTS_EVENT } from "./help-menu";
 import { V, un } from "@/lib/vocab";
+import { preparedYear } from "@/lib/season";
 
 type Go = { key: string; href: string; label: string; roles?: string[] };
 const CODIR = ["director", "raf", "pole_lead"];
 const ADMIN = ["director", "raf"];
 const GOS: Go[] = [
   { key: "p", href: "/portefeuille", label: "Portefeuille" }, { key: "s", href: "/ma-semaine", label: "Ma semaine" }, { key: "t", href: "/temps", label: "Temps" },
-  { key: "a", href: "/annuel", label: "Vue annuelle" }, { key: "v", href: "/validations", label: "Validations" }, { key: "c", href: "/cafe", label: "Écran café" },
-  { key: "o", href: "/codir", label: "Arbitrages", roles: CODIR }, { key: "m", href: "/seminaire", label: `Préparer ${new Date().getFullYear() + 1}`, roles: CODIR },
+  { key: "a", href: "/annuel", label: "Vue annuelle" }, { key: "v", href: "/demandes", label: "À traiter" }, { key: "c", href: "/cafe", label: "Café du lundi" },
+  { key: "o", href: "/codir", label: "À décider", roles: CODIR }, { key: "m", href: "/seminaire", label: `Préparer ${preparedYear(new Date())}`, roles: CODIR },
   { key: "l", href: "/cloture", label: "Clôture", roles: ADMIN }, { key: "d", href: "/admin", label: "Admin", roles: ADMIN },
 ];
 

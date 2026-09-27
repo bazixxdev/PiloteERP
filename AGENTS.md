@@ -24,6 +24,7 @@ Les règles détaillées vivent dans `.agents/rules/`. Lire le fichier concerné
 - **Données et migrations** - [.agents/rules/donnees-migrations.md](.agents/rules/donnees-migrations.md) - expand/contract, cascades, transactions, archivage, rejeu sur dump.
 - **Tests et recette** - [.agents/rules/tests-recette.md](.agents/rules/tests-recette.md) - les trois suites, tests indépendants du jour, artefacts hors git, sentinelles.
 - **Production et déploiement** - [.agents/rules/production-deploiement.md](.agents/rules/production-deploiement.md) - `deploy.sh` seul, fail-fast de configuration, sauvegarde/restauration, rotations.
+- **Interface et navigation** - [.agents/rules/interface-navigation.md](.agents/rules/interface-navigation.md) - menu rangé par usage : une entrée = un endroit, une vue = un onglet, un document = un bouton, un moment = une entrée de saison ; pas de section par groupe de personnes.
 
 ## Universal Rules
 

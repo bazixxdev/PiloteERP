@@ -8,17 +8,18 @@ import { AutoField } from "@/components/inline/auto-field";
 import { prisma } from "@/lib/db";
 import { getCurrentPerson, getRefs } from "@/lib/session";
 import { refColor, refLabel } from "@/lib/refs";
-import { dayjs, fmtNumber } from "@/lib/format";
+import { fmtNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BatchForm } from "./batch-form";
 import { prepareChoiceOf } from "@/lib/preparer";
+import { preparedYear } from "@/lib/season";
 import { V, cap, le, de, aucun, pl, tous } from "@/lib/vocab";
 
 // « Préparer {année} » (ex-séminaire, même adresse) : décision par projet consignée comme une Decision datée sur l'année
 // source, création en série des années N+1, puis contrôle de charge (EF-A5, EF-B3b, EF-H4).
 export default async function SeminairePage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
   const sp = await searchParams;
-  const target = Number(sp.annee) || dayjs().year() + 1;
+  const target = Number(sp.annee) || preparedYear(new Date());
   const [me, refs] = await Promise.all([getCurrentPerson(), getRefs()]);
   const codir = isCodir(me);
   // Les projets rangés (archivés, par exemple arrêtés ici avec confirmation) ne sont plus à préparer : pas listés.
