@@ -64,7 +64,7 @@ test("un projet passé interne disparaît de « sans financement » et se retrou
   await expect(page.getByTestId("project-page")).toBeVisible();
   await expect(page.getByTestId("project-identity")).toContainText("jamais signalé sans financement");
   await pick(page, "project-kind", "Interne");
-  await page.waitForTimeout(500);
+  await expect(page.getByTestId("project-kind")).toHaveAttribute("data-value", "internal");
 
   // La matrice : plus de ligne du tout (ni orphelin, ni « sans financement »).
   await page.goto("/matrice");
@@ -76,4 +76,13 @@ test("un projet passé interne disparaît de « sans financement » et se retrou
   await expect(page.getByTestId("portfolio-table")).toContainText("Vie statutaire");
   await page.goto("/portefeuille?type=finances");
   await expect(page.getByTestId("portfolio-table")).not.toContainText("Vie statutaire");
+
+  // Remise en état : REP-04 redevient financé (le seed le décrit ainsi), pour ne pas fausser les specs suivantes
+  // (séminaire, matrice) qui comptent sur ce projet financé.
+  await page.goto("/projets");
+  await page.getByTestId("projects-search").fill("Vie statutaire");
+  await page.getByTestId("projects-search").press("Enter");
+  await page.locator("[data-testid^=project-open-]").first().click();
+  await pick(page, "project-kind", "Financé");
+  await expect(page.getByTestId("project-kind")).toHaveAttribute("data-value", "funded");
 });

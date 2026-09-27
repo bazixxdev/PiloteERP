@@ -71,7 +71,14 @@ export function BatchForm({ year, rows, canRun, instances }: { year: number; row
                   ) : <span className="text-xs text-muted-foreground">—</span>}
                 </td>
                 <td className="py-1.5">
-                  {r.nextId ? <Link href={`/edition/${r.nextId}`}><StatusBadge label={r.nextStatus!} color={r.nextColor!} /></Link> : <span className="text-xs text-muted-foreground">à créer</span>}
+                  {r.nextId ? (
+                    <Link href={`/edition/${r.nextId}`}><StatusBadge label={r.nextStatus!} color={r.nextColor!} /></Link>
+                  ) : r.kind === "internal" && !r.recurring ? (
+                    // Un projet interne non récurrent ne se reconduit pas (toPrepare, lib/preparer.ts) : il ne sera jamais créé, donc pas « à créer ».
+                    <span className="text-xs text-muted-foreground">non proposé</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">à créer</span>
+                  )}
                 </td>
               </tr>
             ))}
