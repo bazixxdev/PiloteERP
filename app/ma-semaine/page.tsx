@@ -119,7 +119,8 @@ export default async function MaSemainePage() {
           <p className="mt-1 text-xs text-muted-foreground">Semaine du {weekStart.format("D")} au {days[4].format("D MMMM YYYY")} · ce qui vous attend, dans l'ordre.</p>
           </div>
         </div>
-        <Button asChild><Link href="/temps"><Clock />Répartir mon temps</Link></Button>
+        {/* Ne suit pas son temps (26/09) : /temps la renverrait aussitôt ici (app/temps/page.tsx) — même condition que le panneau « Mon temps à répartir » plus bas. */}
+        {me.tracksTime && <Button asChild><Link href="/temps"><Clock />Répartir mon temps</Link></Button>}
       </div>
 
       {attention ? (
@@ -160,7 +161,7 @@ export default async function MaSemainePage() {
         <div className="mb-4 rounded-md border bg-card px-4 py-3" data-testid="today">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-[13px] font-bold">Aujourd'hui · {dayjs().format("dddd D MMMM")}</h4>
-            <span className="text-[11px] text-muted-foreground"><b className="tabular text-foreground">{fmtNumber(todayHours, 1)} h</b> réparties{todayExpected ? ` sur ${fmtNumber(todayExpected, 1)} h attendues` : ""} · <Link href="/temps" className="text-primary hover:underline">répartir</Link></span>
+            <span className="text-[11px] text-muted-foreground"><b className="tabular text-foreground">{fmtNumber(todayHours, 1)} h</b> réparties{todayExpected ? ` sur ${fmtNumber(todayExpected, 1)} h attendues` : ""}{me.tracksTime && <> · <Link href="/temps" className="text-primary hover:underline">répartir</Link></>}</span>
           </div>
           {todayItems.length + todayTasks.length + todaySlots.length === 0 ? (
             <p className="mt-1 text-[11px] text-muted-foreground">Rien de daté aujourd'hui. Posez un créneau sur une tâche pour organiser la journée.</p>
