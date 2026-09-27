@@ -33,7 +33,7 @@ const SAVE_FIELD_ALLOWLIST: Record<string, string> = {
   call: "funderId label scheme deadline rolling recurring amountValue amountKind durationYears targetProjectId link description",
   convention: "reference scheme label description startYear endYear status form amountRequested amountKind amountNotified targetProjectId deadline ownerId helpers sources decisionNote submittedAt notifiedAt signedAt notes contactId",
   indicator: "label target actual imposed actionId",
-  person: "name firstName lastName jobTitle phone arrivedAt leftAt note role workRhythm availableDays poleId active email",
+  person: "name firstName lastName jobTitle phone arrivedAt leftAt note role workRhythm availableDays poleId active email tracksTime",
   project: "name analyticCode poleId pilotId guarantorId missionId strategicAxis recurring archived kind",
   editionPersonDays: "soldDays plannedDays availableDays",
   expense: "label supplier committed spent status reference nature actionId",

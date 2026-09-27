@@ -32,6 +32,7 @@ export type NavContext = Actor & {
   tresorerie: boolean; // module d'instance « trésorerie »
   materiel: boolean; // module d'instance « matériel »
   delegation?: boolean; // module d'instance « délégations »
+  tracksTime: boolean; // suit son temps (sinon la section Temps disparaît, même la clôture)
   showTeam: boolean; // au moins une autre personne dont le temps est visible
   wide: string | null; // libellé de la vue large des demandes (Toute la CRESS / Mon pôle / Mes projets), null si aucune
   badges: { requests: number; reminders: number };
@@ -125,15 +126,17 @@ export function navTreeFor(ctx: NavContext): NavSection[] {
         { label: "Notifications", href: "/notifications", path: "/notifications" },
       ],
     },
-    {
-      id: "temps",
+    // Une personne qui ne suit pas son temps (membre du CA, bénévole) n'a ni saisie ni relance ni clôture : toute la section
+    // disparaît, plutôt que de montrer une « Ma répartition » vide (26/09, spec actions § 1).
+    ...(ctx.tracksTime ? [{
+      id: "temps" as const,
       label: "Temps",
       items: [
         { label: "Ma répartition", href: "/temps", path: "/temps", absent: ["equipe", "personne"] },
         ...(ctx.showTeam ? [{ label: "Temps de l'équipe", href: "/temps?equipe=1", path: "/temps", present: ["equipe", "personne"] }] : []),
         ...(canLockMonths(ctx) ? [{ label: "Clôture mensuelle", href: "/cloture", path: "/cloture" }] : []),
       ],
-    },
+    }] : []),
   ];
   if (codir) {
     sections.push({

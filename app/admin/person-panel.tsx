@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AutoField } from "@/components/inline/auto-field";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
+import { FIELDS } from "@/lib/fields";
 import { fmtDate } from "@/lib/format";
 import { loadResponsibilities, responsibilityCount } from "@/lib/people";
 import { refLabel, type RefMap } from "@/lib/refs";
@@ -43,6 +44,10 @@ export async function PersonPanelBody({ id, refs, rw, poles, rhythms }: { id: st
           <F field="poleId" type="select" label={cap(V.pole)} value={p.poleId} options={poles.map((x) => ({ value: x.id, label: x.name }))} />
         </div>
         <p className="text-xs text-muted-foreground">Rythme : <b className="font-medium text-foreground">{rhythm}</b> · {p.availableDays} jours disponibles par an{p.fixedShare ? " · part fixe" : ""} — se règlent dans le tableau.</p>
+        <div>
+          <label className="flex items-center gap-2 text-xs"><AutoField model="person" id={p.id} field="tracksTime" type="bool" value={p.tracksTime} readOnly={!rw} label="Suit son temps" testId="person-tracksTime" />Suit son temps</label>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">{FIELDS.person.tracksTime.help}</p>
+        </div>
       </section>
       <section className="grid gap-2">
         <h3 className="text-xs font-semibold text-foreground">Présence</h3>

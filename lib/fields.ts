@@ -1,6 +1,6 @@
 // Champs modifiables en ligne : liste blanche par modèle, type et couche (pour les droits).
 import type { Layer } from "./rights";
-import { V, cap } from "@/lib/vocab";
+import { V, cap, pl } from "@/lib/vocab";
 
 export type FieldType = "text" | "textarea" | "number" | "date" | "bool" | "select";
 
@@ -67,6 +67,9 @@ export const FIELDS: Record<string, Record<string, FieldDef>> = {
     name: { type: "text" }, firstName: { type: "text", label: "Prénom" }, lastName: { type: "text", label: "Nom" }, jobTitle: { type: "text", label: "Fonction" }, phone: { type: "text", label: "Téléphone" },
     arrivedAt: { type: "date", label: "Arrivée" }, leftAt: { type: "date", label: "Départ" }, note: { type: "textarea", label: "Note" },
     role: { type: "select" }, workRhythm: { type: "select" }, availableDays: { type: "number" }, poleId: { type: "select" }, active: { type: "bool" }, email: { type: "text" },
+    // Suit son temps (26/09, spec actions § 1) : décoché pour un membre du CA ou un bénévole, sans effet sur les droits (il reste
+    // choisissable comme responsable d'action ou destinataire de tâche) ni sur les autres champs.
+    tracksTime: { type: "bool", label: "Suit son temps", help: `Décochez pour un membre du CA ou un bénévole : ni saisie, ni relance, ni plan de charge ; il peut porter des ${pl(V.action)} et recevoir des tâches.` },
   },
   project: {
     name: { type: "text" }, analyticCode: { type: "text" }, poleId: { type: "select" }, pilotId: { type: "select" }, guarantorId: { type: "select" }, missionId: { type: "select" }, strategicAxis: { type: "text" }, recurring: { type: "bool" }, archived: { type: "bool" },

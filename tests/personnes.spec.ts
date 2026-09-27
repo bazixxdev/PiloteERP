@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { DEMO_PASSWORD, FRESH, iAm, login, pick } from "./helpers";
+import { DEMO_PASSWORD, FRESH, iAm, login, openEditionByName, pick } from "./helpers";
 
 // Lot E1 — Fiche personne : prénom / nom, fonction, téléphone, dates ; panneau sur Admin › Personnes ; chacun tient sa
 // fonction et son téléphone dans Mon compte ; « Préparer un départ » réattribue ce que la personne porte, date et désactive
@@ -94,4 +94,48 @@ test("préparer un départ : ce qu'elle porte passe à quelqu'un d'autre, la fic
   await page.goto("/admin?section=personnes");
   await page.locator("tr").filter({ has: page.locator('input[value="Manon Girard"]') }).first().locator('input[type="checkbox"]').last().check();
   await page.waitForTimeout(500);
+});
+
+// « Suit son temps » (26/09, spec actions § 1) : décochée pour un membre du CA ou un bénévole, la personne sort du plan de
+// charge, de la clôture et de la navigation Temps, mais reste choisissable comme responsable d'action ou membre d'équipe.
+test("« suit son temps » décochée : sort du plan de charge et de la clôture, sa navigation Temps disparaît, mais reste choisissable", async ({ page }) => {
+  await page.goto("/admin?section=personnes");
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/admin?section=personnes");
+  const openLucas = () => page.locator("tr").filter({ has: page.locator('input[value="Lucas Perrin"]') }).first().locator("[data-testid^=person-open-]").click();
+  await openLucas();
+  const panel = page.getByTestId("person-panel-sheet");
+  await expect(panel.getByTestId("person-tracksTime")).toBeChecked();
+  await panel.getByTestId("person-tracksTime").uncheck();
+  await expect(panel.getByTestId("person-tracksTime")).not.toBeChecked();
+  await page.keyboard.press("Escape");
+
+  // Plan de charge : Lucas a disparu.
+  await page.goto("/plan-de-charge?horizon=6");
+  await expect(page.getByTestId("load-grid")).not.toContainText("Lucas Perrin");
+
+  // Clôture : Lucas a disparu (contributeur, il y figurait comme retardataire).
+  await page.goto("/cloture?mois=2026-08");
+  await expect(page.getByTestId("cloture-table")).not.toContainText("Lucas Perrin");
+
+  // Reste choisissable comme membre d'équipe (donc comme responsable d'action).
+  await openEditionByName(page, "PTCE et ESSOR");
+  await page.getByTestId("team-edit").click();
+  await expect(page.getByRole("button", { name: "Lucas Perrin" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Sa propre navigation : la section Temps a disparu, un accès direct à /temps renvoie vers sa semaine.
+  await iAm(page, "Lucas Perrin");
+  await expect(page.getByTestId("rail-temps")).toHaveCount(0);
+  await page.goto("/temps");
+  await expect(page).toHaveURL(/\/ma-semaine/);
+
+  // Remise en état : on réactive le suivi du temps, d'autres specs comptent sur sa présence en clôture et en plan de charge.
+  await iAm(page, "Claire Vasseur");
+  await page.goto("/admin?section=personnes");
+  await openLucas();
+  const panel2 = page.getByTestId("person-panel-sheet");
+  await panel2.getByTestId("person-tracksTime").check();
+  await expect(panel2.getByTestId("person-tracksTime")).toBeChecked();
+  await page.keyboard.press("Escape");
 });

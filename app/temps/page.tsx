@@ -1,5 +1,6 @@
 import { attachYearActions } from "@/lib/actions-db";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -24,13 +25,17 @@ import { V, le, pl } from "@/lib/vocab";
 export default async function TempsPage({ searchParams }: { searchParams: Promise<{ semaine?: string; personne?: string; equipe?: string; mode?: string; focus?: string }> }) {
   const sp = await searchParams;
   const [me, settings, people] = await Promise.all([getCurrentPerson(), getSettings(), getPeople()]);
-  const visibleAll = people.filter((p) => canSeeTimeOf(me, p, settings.timeVisibility));
+  // Ne suit pas son temps (CA, bénévole, 26/09) : exclue de « Temps de l'équipe » — rien à y voir — comme cible et comme spectatrice par défaut.
+  const visibleAll = people.filter((p) => p.tracksTime && canSeeTimeOf(me, p, settings.timeVisibility));
   const teamMode = Boolean(sp.equipe) || (Boolean(sp.personne) && sp.personne !== me.id);
   const firstOther = visibleAll.find((p) => p.id !== me.id);
-  const target = (sp.personne && people.find((p) => p.id === sp.personne)) || (sp.equipe && firstOther) || me;
+  const target = (sp.personne && people.find((p) => p.id === sp.personne && p.tracksTime)) || (sp.equipe && firstOther) || me;
   const canSee = canSeeTimeOf(me, target, settings.timeVisibility);
   const person = canSee ? target : me;
   const readOnly = person.id !== me.id;
+  // Ne suit pas son temps : ni grille ni saisie pour elle-même — direction « Ma semaine » plutôt qu'un écran de saisie vide.
+  // Voir le temps de quelqu'un d'autre (lecture seule) reste possible si les droits de visibilité l'accordent par ailleurs.
+  if (!me.tracksTime && person.id === me.id) redirect("/ma-semaine");
 
   const start = parseWeek(sp.semaine);
   const days = weekDays(start, 5);

@@ -41,8 +41,9 @@ export default async function CloturePage({ searchParams }: { searchParams: Prom
   const jeton = settings.apiToken ? `&jeton=${settings.apiToken}` : "";
   const days = workingDaysOfMonth(month);
   const rows: ClotureRow[] = people
-    // Part fixe (lettre de mission) : rien à clôturer, sauf si des heures existent.
-    .filter((p) => (declaresTime(p) && !p.fixedShare) || entries.some((t) => t.personId === p.id))
+    // Ne suit pas son temps (CA, bénévole, 26/09) : sort de la clôture, point final. Part fixe (lettre de mission) : rien à
+    // clôturer, sauf si des heures existent.
+    .filter((p) => p.tracksTime && ((declaresTime(p) && !p.fixedShare) || entries.some((t) => t.personId === p.id)))
     .map((p) => {
       const mine = entries.filter((t) => t.personId === p.id);
       const daysDone = new Set(mine.map((t) => dayjs(t.date).format("YYYY-MM-DD"))).size;

@@ -46,7 +46,8 @@ export type PersonLoad = {
 export async function loadPlan(months: string[], opts: { statuses: string[]; hoursPerDay: number; poleId?: string | null; operatingDaysPerMonth?: number }): Promise<PersonLoad[]> {
   const [rhythms, people, editions, entries] = await Promise.all([
     loadRhythms(),
-    prisma.person.findMany({ where: { active: true, role: { not: "assistant" }, ...(opts.poleId ? { poleId: opts.poleId } : {}) }, include: { pole: true, rhythmPeriods: { include: { rhythm: true } } }, orderBy: [{ pole: { name: "asc" } }, { order: "asc" }] }),
+    // Ne suit pas son temps (CA, bénévole, 26/09) : hors plan de charge, comme hors clôture.
+    prisma.person.findMany({ where: { active: true, role: { not: "assistant" }, tracksTime: true, ...(opts.poleId ? { poleId: opts.poleId } : {}) }, include: { pole: true, rhythmPeriods: { include: { rhythm: true } } }, orderBy: [{ pole: { name: "asc" } }, { order: "asc" }] }),
     prisma.edition.findMany({ where: { status: { in: opts.statuses }, year: { in: [...new Set(months.map((m) => Number(m.slice(0, 4))))] } }, include: { project: true, personDays: true, plannedLoads: true } }),
     prisma.timeEntry.findMany({ where: { date: { gte: dayjs(months[0] + "-01").toDate(), lt: dayjs(months[months.length - 1] + "-01").add(1, "month").toDate() } }, select: { personId: true, date: true, hours: true } }),
   ]);
